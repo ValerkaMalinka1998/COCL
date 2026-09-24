@@ -1,0 +1,170 @@
+/* ============================================================
+   BASE — переменные, сброс, типографика, формы, скроллбар
+   ============================================================ */
+
+/* ============ ТЕМА: Дневная (light) — по умолчанию ============ */
+:root,
+[data-theme="light"] {
+  /* Навигация (тёмная всегда) */
+  --nav-bg:       #0d1b3a;
+  --nav-bg-2:     #0a1228;
+  --nav-text:     #e0e7ff;
+  --nav-text-dim: #8892b0;
+  --nav-border:   #1f2a44;
+  --nav-hover:    rgba(0, 212, 255, 0.08);
+  --nav-active:   rgba(0, 212, 255, 0.14);
+
+  /* Рабочая область — светлая */
+  --bg-main:      #eef3fb;
+  --bg-card:      #ffffff;
+  --bg-input:     #ffffff;
+  --bg-hover:     #f5f8fe;
+
+  /* Синие акценты */
+  --blue-deep:    #1a2c52;
+  --blue-mid:     #2e5288;
+  --blue-light:   #3d6db3;
+
+  /* Неон */
+  --accent-cyan:   #00d4ff;
+  --accent-purple: #7b5cff;
+  --accent-green:  #00c47a;
+  --accent-red:    #e6244f;
+  --accent-amber:  #e89a00;
+
+  /* Текст */
+  --text-main:    #1a2643;
+  --text-second:  #5a6b8a;
+  --text-dim:     #8896b0;
+
+  /* Границы */
+  --border:       #dde5f2;
+  --border-hi:    #c4d2e8;
+
+  /* Тени карточек */
+  --card-shadow:       0 2px 8px rgba(30, 58, 95, 0.08), 0 1px 3px rgba(30, 58, 95, 0.06);
+  --card-shadow-hover: 0 4px 16px rgba(30, 58, 95, 0.12);
+
+  /* Свечения */
+  --glow-cyan:    0 0 14px rgba(0, 212, 255, 0.55);
+  --glow-cyan-sm: 0 0 8px  rgba(0, 212, 255, 0.45);
+  --glow-green:   0 0 12px rgba(0, 196, 122, 0.5);
+
+  /* Скроллбар */
+  --scroll-track: #eef3fb;
+  --scroll-thumb: #c4d2e8;
+  --scroll-thumb-hover: #2e5288;
+}
+
+/* ============ ТЕМА: Ночная (dark) ============ */
+[data-theme="dark"] {
+  /* Навигация — ещё темнее */
+  --nav-bg:       #050810;
+  --nav-bg-2:     #03060c;
+  --nav-text:     #e0e7ff;
+  --nav-text-dim: #6a7898;
+  --nav-border:   #16213e;
+  --nav-hover:    rgba(0, 212, 255, 0.1);
+  --nav-active:   rgba(0, 212, 255, 0.18);
+
+  /* Рабочая область — тёмная */
+  --bg-main:      #0a0e1a;
+  --bg-card:      #131a2e;
+  --bg-input:     #0d1424;
+  --bg-hover:     #1a2340;
+
+  /* Синие акценты — светлее для контраста на тёмном */
+  --blue-deep:    #1a2c52;
+  --blue-mid:     #3d6db3;
+  --blue-light:   #4d80cc;
+
+  /* Неон — тот же, но ярче */
+  --accent-cyan:   #00d4ff;
+  --accent-purple: #7b5cff;
+  --accent-green:  #00ff9d;
+  --accent-red:    #ff4d6d;
+  --accent-amber:  #ffb800;
+
+  /* Текст — светлый */
+  --text-main:    #e0e7ff;
+  --text-second:  #9aa5c4;
+  --text-dim:     #6b78a0;
+
+  /* Границы */
+  --border:       #1f2a44;
+  --border-hi:    #2d3d5c;
+
+  /* Тени карточек — глубже */
+  --card-shadow:       0 2px 12px rgba(0, 0, 0, 0.5);
+  --card-shadow-hover: 0 4px 20px rgba(0, 212, 255, 0.15);
+
+  /* Свечения — ярче */
+  --glow-cyan:    0 0 16px rgba(0, 212, 255, 0.6);
+  --glow-cyan-sm: 0 0 10px rgba(0, 212, 255, 0.5);
+  --glow-green:   0 0 12px rgba(0, 255, 157, 0.5);
+
+  /* Скроллбар */
+  --scroll-track: #0a0e1a;
+  --scroll-thumb: #2d3d5c;
+  --scroll-thumb-hover: #00d4ff;
+}
+
+/* ============ Сброс ============ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--bg-main);
+  color: var(--text-main);
+  font-size: 14px;
+  line-height: 1.4;
+  min-height: 100vh;
+  transition: background 0.35s ease, color 0.35s ease;
+}
+
+/* ============ Формы ============ */
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: var(--text-second);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.required::after { content: " *"; color: var(--accent-red); }
+
+input[type="text"], input[type="number"], input[type="date"],
+select, textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-hi);
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--bg-input);
+  color: var(--text-main);
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.35s ease, color 0.35s ease;
+}
+input::placeholder, textarea::placeholder { color: var(--text-dim); }
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--blue-mid);
+  box-shadow: 0 0 0 3px rgba(46, 82, 136, 0.15);
+}
+select option {
+  background: var(--bg-card);
+  color: var(--text-main);
+}
+
+/* ============ Скроллбар ============ */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--scroll-track); }
+::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: 5px;
+  border: 2px solid var(--scroll-track);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scroll-thumb-hover);
+}

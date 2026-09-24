@@ -1,0 +1,44 @@
+/* ============================================================
+   STYLE — точка входа, подключает все CSS-модули
+   ============================================================ */
+
+@import url('css/base.css');
+@import url('css/layout.css');
+@import url('css/components.css');
+
+/* ============================================================
+   ГЛОБАЛЬНЫЕ ПРАВИЛА (после модулей)
+   ============================================================ */
+
+/* --- Anti-flash: показываем только нужную вкладку до загрузки JS --- */
+html:not([data-app-ready]) .tab {
+  display: none;
+}
+
+html[data-initial-tab="check"]:not([data-app-ready]) #tab-check,
+html[data-initial-tab="editor"]:not([data-app-ready]) #tab-editor,
+html[data-initial-tab="history"]:not([data-app-ready]) #tab-history,
+html[data-initial-tab="settings"]:not([data-app-ready]) #tab-settings {
+  display: block;
+}
+
+/* --- Печать: скрываем всё лишнее --- */
+@media print {
+  header, nav, .modal-header, .modal-footer,
+  .card:not(.print-card), .site-footer {
+    display: none !important;
+  }
+  .modal-overlay {
+    position: static;
+    background: none;
+    padding: 0;
+  }
+  .modal {
+    box-shadow: none;
+    max-width: 100%;
+  }
+  body {
+    background: white;
+    color: black;
+  }
+}

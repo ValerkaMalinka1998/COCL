@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Чек-лист смены сорта</title>
+<link rel="stylesheet" href="style.css">
+<script>
+  /* Anti-flash: до рендеринга определяем нужную вкладку */
+  (function() {
+    var hashTab = location.hash.replace('#', '');
+    var savedTab = 'check';
+    try { savedTab = localStorage.getItem('cl_active_tab') || 'check'; } catch(e) {}
+    var tab = hashTab || savedTab;
+    document.documentElement.setAttribute('data-initial-tab', tab);
+  })();
+</script>
+</head>
+<body>
+
+<header>
+  <div class="header-left">Change Over CL</div>
+  <div class="header-center">SMD Cell2</div>
+  <div class="header-right-wrap">
+    <div class="header-right" id="headerDatetime"></div>
+    <button type="button" class="theme-toggle" id="themeToggle" title="Переключить тему">
+      <span class="theme-icon-light">☀️</span>
+      <span class="theme-icon-dark">🌙</span>
+    </button>
+  </div>
+</header>
+
+<div class="app-layout">
+
+  <nav class="sidebar" id="sidebar">
+    <button type="button" class="sidebar-pin-btn" id="sidebarPinBtn" title="Закрепить панель">
+      <span class="sidebar-pin-icon">
+        <svg class="pin-icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="17" x2="12" y2="22"/>
+          <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24z"/>
+        </svg>
+        <svg class="pin-icon-closed" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+          <line x1="12" y1="17" x2="12" y2="22" stroke="currentColor" stroke-width="2"/>
+          <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24z" fill="currentColor"/>
+        </svg>
+      </span>
+      <span class="sidebar-pin-label">Закрепить панель</span>
+    </button>
+
+    <div class="sidebar-divider"></div>
+
+    <a href="#check" data-tab="check" class="active" title="Проверка">
+      <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+      </span>
+      <span class="nav-label">Проверка</span>
+    </a>
+    <a href="#editor" data-tab="editor" title="Редактор стандартов">
+      <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+      </span>
+      <span class="nav-label">Редактор стандартов</span>
+    </a>
+    <a href="#history" data-tab="history" title="История">
+      <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+      </span>
+      <span class="nav-label">История</span>
+      <span class="nav-counter" id="navHistoryCounter" style="display:none">0</span>
+          <a href="#dashboard" data-tab="dashboard" title="Дашборд">
+      <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="9"/>
+          <rect x="14" y="3" width="7" height="5"/>
+          <rect x="14" y="12" width="7" height="9"/>
+          <rect x="3" y="16" width="7" height="5"/>
+        </svg>
+      </span>
+      <span class="nav-label">Дашборд</span>
+    </a>
+    </a>
+    <a href="#settings" data-tab="settings" title="Настройки">
+      <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </span>
+      <span class="nav-label">Настройки</span>
+      <span class="nav-badge-alert" id="navSettingsBadge" style="display:none" title="Есть битые ссылки на фото">!</span>
+    </a>
+    </a>
+  </nav>
+
+<main>
+
+<!-- ======================= ВКЛАДКА ПРОВЕРКА ======================= -->
+<div class="tab active" id="tab-check">
+
+  <div class="card">
+    <h2>1. Оператор и смена</h2>
+    <div class="row">
+      <div class="field" style="position:relative">
+        <label class="required">ФИО оператора</label>
+        <input type="text" id="operatorName" placeholder="Начните вводить фамилию..." autocomplete="off">
+        <div class="autocomplete-dropdown" id="operatorAutocomplete" style="display:none"></div>
+      </div>
+      <div class="field">
+        <label class="required">Смена</label>
+        <select id="shift"><option value="">— выберите —</option></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2. Номер линии и часть</h2>
+    <div class="row">
+      <div class="field">
+        <label class="required">Линия производства</label>
+        <select id="lineSelect"><option value="">— выберите —</option></select>
+      </div>
+      <div class="field">
+        <label class="required">Часть линии</label>
+        <select id="partSelect">
+          <option value="">— выберите —</option>
+          <option value="Maker">Maker (сигаретная часть)</option>
+          <option value="Packer">Packer (упаковка)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3. Тип перехода</h2>
+    <div class="row">
+      <div class="field" style="flex-basis:100%">
+        <label class="required">Тип перехода</label>
+        <input type="hidden" id="transitionType" value="">
+        <div class="type-selector" id="typeSelector">
+          <button type="button" class="type-option type-option-minor" data-value="Minor">
+            <span class="type-option-title">Minor</span>
+            <span class="type-option-time">35 мин</span>
+          </button>
+          <button type="button" class="type-option type-option-intermediate" data-value="Intermediate">
+            <span class="type-option-title">Intermediate</span>
+            <span class="type-option-time">67 мин</span>
+          </button>
+          <button type="button" class="type-option type-option-major" data-value="Major">
+            <span class="type-option-title">Major</span>
+            <span class="type-option-time">90 мин</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="brandsCard" style="display:none">
+    <h2>4. Бренды</h2>
+    <div class="row">
+      <div class="field">
+        <label class="required">С бренда</label>
+        <select id="brandFrom"><option value="">— выберите —</option></select>
+      </div>
+      <div class="field">
+        <label class="required">На бренд</label>
+        <select id="brandTo"><option value="">— выберите —</option></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="changesCard" style="display:none">
+    <h2 id="changesTitle">5. Что меняется</h2>
+    <div id="changesContainer"></div>
+  </div>
+
+  <div class="card" id="nodesCard" style="display:none">
+    <h2 id="nodesTitle">5. Замена узлов</h2>
+    <div id="nodesContainer"></div>
+    <div class="field" style="margin-top:12px">
+      <label>Дополнительно (свой узел)</label>
+      <input type="text" id="customNode" placeholder="Впишите узел, если его нет в списке">
+    </div>
+  </div>
+
+  <div class="card" id="checklistCard" style="display:none">
+    <h2>6. Чек-лист <span id="progressBadge" class="progress-badge"></span></h2>
+
+    <div class="progress-wrap" id="progressWrap" style="display:none">
+      <div class="progress-bar-outer">
+        <div class="progress-bar-inner" id="progressBarInner"></div>
+      </div>
+      <div class="progress-percent" id="progressPercent">0%</div>
+    </div>
+    <div class="progress-text" id="progressText" style="display:none"></div>
+
+    <div id="checklistContainer"></div>
+    <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap">
+      <button class="btn btn-success" id="saveCheckBtn">Сохранить проверку</button>
+      <button class="btn btn-secondary" id="resetCheckBtn">Сбросить</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ======================= ВКЛАДКА РЕДАКТОР ======================= -->
+<div class="tab" id="tab-editor">
+
+  <!-- ЭКРАН 1: Список блоков -->
+  <div id="editorBlocksView">
+    <div class="card">
+      <h2>Редактор стандартов</h2>
+      <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
+        Выберите блок участка, чтобы просмотреть линии и их стандарты OPL.
+      </p>
+      <div id="editorBlocksList"></div>
+    </div>
+  </div>
+
+  <!-- ЭКРАН 2: Список линий внутри блока -->
+  <div id="editorLinesView" style="display:none">
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px">
+        <button class="btn btn-secondary" id="editorBlocksBackBtn">← Назад к блокам</button>
+        <h2 id="editorLinesTitle" style="margin:0;border:none;padding:0;flex:1;min-width:150px"></h2>
+      </div>
+      <div id="editorLinesList"></div>
+    </div>
+  </div>
+
+  <!-- ЭКРАН 3: Стандарты линии -->
+  <div id="editorLineView" style="display:none">
+    <div class="card">
+      <!-- Хлебные крошки -->
+      <div class="breadcrumbs" id="editorBreadcrumbs"></div>
+
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px">
+        <button class="btn btn-secondary" id="editorBackBtn">← Назад к линиям</button>
+        <h2 id="editorLineTitle" style="margin:0;border:none;padding:0;flex:1;min-width:150px"></h2>
+      </div>
+
+      <div class="row" style="margin-bottom:14px">
+        <div class="field" style="flex:0 0 auto;min-width:auto">
+          <button class="btn btn-primary btn-icon-text" id="editorAddStandardBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            <span>Добавить стандарт</span>
+          </button>
+        </div>
+        <div class="field" style="flex:0 0 auto;min-width:auto">
+          <button class="btn btn-secondary btn-icon-text" id="editorDownloadTemplateBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span>Скачать шаблон</span>
+          </button>
+        </div>
+        <div class="field" style="flex:0 0 auto;min-width:auto">
+          <button class="btn btn-secondary btn-icon-text" id="editorExportBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <span>Экспорт в Excel</span>
+          </button>
+        </div>
+        <div class="field" style="flex:0 0 auto;min-width:auto">
+          <button class="btn btn-success btn-icon-text" id="editorUploadBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <span>Импорт из Excel</span>
+          </button>
+        </div>
+        <input type="file" id="editorUploadInput" accept=".xlsx,.xls" style="display:none">
+      </div>
+
+      <div class="list-toolbar">
+        <input type="text" id="editorSearch" placeholder="🔍 Поиск по №, OPL №, узлу, названию...">
+      </div>
+
+      <div class="list-toolbar" style="margin-top:0;flex-wrap:wrap">
+        <select id="editorFilterPart" style="max-width:160px">
+          <option value="">Все части</option>
+          <option value="Maker">Maker</option>
+          <option value="Packer">Packer</option>
+        </select>
+        <select id="editorFilterMachine" style="max-width:180px">
+          <option value="">Все машины</option>
+        </select>
+        <select id="editorFilterNode" style="max-width:220px">
+          <option value="">Все узлы</option>
+        </select>
+        <select id="editorFilterType" style="max-width:180px">
+          <option value="">Все типы</option>
+          <option value="Minor">Minor</option>
+          <option value="Intermediate">Intermediate</option>
+          <option value="Major">Major</option>
+          <option value="__none">Без привязки</option>
+        </select>
+        <select id="editorFilterActive" style="max-width:180px">
+          <option value="">Все стандарты</option>
+          <option value="active">Только активные</option>
+          <option value="inactive">Только неактивные</option>
+        </select>
+        <span class="list-counter" id="editorLineCounter"></span>
+      </div>
+
+      <div class="standards-table-wrap" id="editorStandardsList" style="margin-top:12px"></div>
+
+      <div class="pagination-bar" id="editorPagination"></div>
+    </div>
+  </div>
+</div>
+<!-- ======================= ВКЛАДКА ИСТОРИЯ ======================= -->
+<div class="tab" id="tab-history">
+
+  <div class="card">
+    <h2>Фильтры</h2>
+    <div class="filters">
+      <div class="field">
+        <label>Период</label>
+        <select id="periodSelect">
+          <option value="all">Все время</option>
+          <option value="week">Последняя неделя</option>
+          <option value="month">Последний месяц</option>
+          <option value="custom">Произвольный</option>
+        </select>
+      </div>
+      <div class="field" id="dateFromField" style="display:none">
+        <label>С даты</label>
+        <input type="date" id="dateFrom">
+      </div>
+      <div class="field" id="dateToField" style="display:none">
+        <label>По дату</label>
+        <input type="date" id="dateTo">
+      </div>
+      <div class="field">
+        <label>Линия</label>
+        <select id="filterLine"><option value="">Все</option></select>
+      </div>
+      <div class="field">
+        <label>Тип перехода</label>
+        <select id="filterType">
+          <option value="">Все</option>
+          <option>Minor</option><option>Intermediate</option><option>Major</option>
+        </select>
+      </div>
+      <div class="field" style="flex:0 0 auto; min-width:auto">
+        <button class="btn btn-primary" id="applyFilterBtn">Применить</button>
+      </div>
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px">
+      <button class="btn btn-secondary" id="exportCsvBtn">Экспорт CSV</button>
+      <button class="btn btn-secondary" id="exportXlsxBtn">Экспорт XLSX</button>
+      <button class="btn btn-danger" id="clearHistoryBtn">Очистить историю</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Записи (<span id="historyCount">0</span>)</h2>
+    <div id="historyList"></div>
+  </div>
+</div>
+<!-- ======================= ВКЛАДКА ДАШБОРД ======================= -->
+<div class="tab" id="tab-dashboard">
+
+  <div class="card">
+    <h2>Дашборд</h2>
+    <div id="dashboardContent">
+      <div class="empty-state">Загрузка данных...</div>
+    </div>
+  </div>
+
+</div>
+<!-- ======================= ВКЛАДКА НАСТРОЙКИ ======================= -->
+<div class="tab" id="tab-settings">
+
+  <div class="card">
+    <h2>Бэкап данных</h2>
+    <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
+      Скачайте бэкап — файл JSON со всеми стандартами, историей, узлами и настройками.
+      Сохраните его в надёжном месте. При необходимости — загрузите обратно.
+    </p>
+    <div style="display:flex; gap:10px; flex-wrap:wrap">
+      <button class="btn btn-primary btn-icon-text" id="backupDownloadBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        <span>Скачать бэкап</span>
+      </button>
+      <button class="btn btn-secondary btn-icon-text" id="backupUploadBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span>Загрузить бэкап</span>
+      </button>
+      <input type="file" id="backupFileInput" accept=".json" style="display:none">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Линии производства</h2>
+    <div class="row">
+      <div class="field">
+        <label>Новая линия</label>
+        <input type="text" id="newLineInput" placeholder="SD99">
+      </div>
+      <div class="field" style="flex:0 0 auto; min-width:auto">
+        <label>&nbsp;</label>
+        <button class="btn btn-primary" id="addLineBtn">Добавить</button>
+      </div>
+    </div>
+    <div id="linesList"></div>
+  </div>
+
+  <div class="card">
+  <h2>Блоки линий</h2>
+  <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
+    Разделите участок на блоки. Каждая линия может быть только в одном блоке.
+  </p>
+  <div class="row">
+    <div class="field">
+      <label>Новый блок</label>
+      <input type="text" id="newBlockNameInput" placeholder="Cell2 (LST 1)">
+    </div>
+    <div class="field" style="flex:0 0 auto; min-width:auto">
+      <label>&nbsp;</label>
+      <button class="btn btn-primary" id="addBlockBtn">Добавить</button>
+    </div>
+  </div>
+  <div id="blocksList"></div>
+</div>
+
+  <div class="card">
+    <h2>Машины для линий</h2>
+    <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
+      Для каждой линии задайте свой список машин. Используется при создании стандартов и в фильтрах.
+    </p>
+    <div id="lineMachinesContainer"></div>
+  </div>
+
+    <div class="card">
+    <h2>Общий список брендов <span class="list-counter" id="brandsCount"></span></h2>
+    <div class="list-toolbar">
+      <input type="text" id="brandsSearch" placeholder="🔍 Поиск по названию...">
+    </div>
+    <div class="scrollable-list" id="brandsList"></div>
+    <div class="card-actions-bar">
+      <button class="btn btn-primary btn-icon-text" id="openAddBrandModalBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span>Добавить бренд</span>
+      </button>
+      <button class="btn btn-secondary btn-icon-text" id="downloadBrandsTemplateBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span>Скачать шаблон</span>
+      </button>
+      <button class="btn btn-success btn-icon-text" id="uploadBrandsBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <span>Загрузить из Excel</span>
+      </button>
+      <input type="file" id="brandsFileInput" accept=".xlsx,.xls" style="display:none">
+    </div>
+  </div>
+
+    <div class="card">
+    <h2>Бренды для каждой линии</h2>
+    <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
+      Нажмите «Настроить» на нужной линии, чтобы выбрать бренды.
+      Если у линии нет ни одного бренда — она не появится в выборе оператора.
+    </p>
+    <div id="lineBrandsContainer"></div>
+  </div>
+
+  <div class="card">
+    <h2>Операторы <span class="list-counter" id="operatorsCount"></span></h2>
+    <div class="list-toolbar">
+      <input type="text" id="operatorsSearch" placeholder="🔍 Поиск по ФИО...">
+    </div>
+    <div class="scrollable-list" id="operatorsList"></div>
+    <div class="card-actions-bar">
+      <button class="btn btn-primary btn-icon-text" id="openAddOperatorModalBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span>Добавить оператора</span>
+      </button>
+      <button class="btn btn-secondary btn-icon-text" id="downloadOperatorsTemplateBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span>Скачать шаблон</span>
+      </button>
+      <button class="btn btn-success btn-icon-text" id="uploadOperatorsBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <span>Загрузить из Excel</span>
+      </button>
+      <input type="file" id="operatorsFileInput" accept=".xlsx,.xls" style="display:none">
+    </div>
+  </div>
+      <!-- ======================= КАРТОЧКА: ХРАНИЛИЩЕ ФОТО ======================= -->
+  <div class="card">
+    <h2>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;color:var(--accent-cyan)">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+        <circle cx="8.5" cy="8.5" r="1.5"/>
+        <polyline points="21 15 16 10 5 21"/>
+      </svg>
+      Хранилище фотографий
+    </h2>
+    <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
+      Все фотографии стандартов лежат в папке рядом с приложением. Файлы добавляются вручную — через проводник.
+    </p>
+
+    <div class="photo-path-block">
+      <div class="photo-path-label">Путь к папке с фотографиями:</div>
+      <div class="photo-path-row">
+        <code class="photo-path-value" id="photoPathValue">photos/&lt;Линия&gt;/&lt;Maker или Packer&gt;/</code>
+        <button class="btn btn-secondary btn-sm btn-icon-text" id="copyPhotoPathBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          <span>Скопировать</span>
+        </button>
+      </div>
+      <div class="photo-path-example">
+        Пример: <code>photos/SD08/Maker/max-1.jpg</code>
+      </div>
+    </div>
+
+    <div class="photo-stats-grid">
+      <div class="photo-stat">
+        <div class="photo-stat-value" id="photoStatsStandards">0</div>
+        <div class="photo-stat-label">Стандартов с фото</div>
+      </div>
+      <div class="photo-stat">
+        <div class="photo-stat-value" id="photoStatsTotal">0</div>
+        <div class="photo-stat-label">Всего фото</div>
+      </div>
+    </div>
+        <div style="margin-top:14px">
+      <button class="btn btn-primary btn-icon-text" id="checkPhotosBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        <span>Проверить фото</span>
+      </button>
+    </div>
+    <p style="color:var(--text-second);font-size:12px;margin-top:14px;line-height:1.5">
+      ⚠ Файлы не загружаются через сайт — их нужно положить в папку вручную. Пока нет сервера, каждый
+      пользователь (аналитик, оператор) должен иметь свою копию папки <code>photos/</code>. Чтобы
+      перенести фото на другой ПК — скопируйте папку целиком.
+    </p>
+  </div>
+  <div class="card" style="border-left:4px solid #c0392b">
+    <h2 style="color:#c0392b">Опасная зона</h2>
+    <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
+      Полный сброс всех данных: стандарты, история, узлы, настройки.
+      Действие необратимо. Рекомендуется сначала скачать бэкап.
+    </p>
+       <button class="btn btn-danger btn-icon-text" id="resetAllBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="3 6 5 6 21 6"/>
+        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+        <path d="M10 11v6"/>
+        <path d="M14 11v6"/>
+        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+      </svg>
+      <span>Сбросить все данные</span>
+    </button>
+  </div>
+</div>
+</main>
+</div>
+<!-- /.app-layout -->
+<!-- ======================= МОДАЛЬНОЕ ОКНО: КОММЕНТАРИЙ ======================= -->
+<div class="modal-overlay" id="commentModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Комментарий к пункту</h3>
+      <button class="modal-close" id="commentModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <p id="commentModalPoint" style="color:var(--text-second);font-size:13px;margin-bottom:12px"></p>
+      <textarea id="commentText" rows="5" placeholder="Введите комментарий..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="commentCancelBtn">Отмена</button>
+      <button class="btn btn-primary" id="commentSaveBtn">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= МОДАЛЬНОЕ ОКНО: ПРОСМОТР ЗАПИСИ ======================= -->
+<div class="modal-overlay" id="recordModal">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <h3>Просмотр проверки</h3>
+      <button class="modal-close" id="recordModalClose">✕</button>
+    </div>
+    <div class="modal-body" id="recordModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-icon-text" id="recordPrintBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 6 2 18 2 18 9"/>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+          <rect x="6" y="14" width="12" height="8"/>
+        </svg>
+        <span>Печать</span>
+      </button>
+      <button class="btn btn-primary" id="recordCloseBtn">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= МОДАЛЬНОЕ ОКНО: ПРОСМОТР ЗАПИСИ ======================= -->
+<div class="modal-overlay" id="recordModal">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <h3>Просмотр проверки</h3>
+      <button class="modal-close" id="recordModalClose">✕</button>
+    </div>
+    <div class="modal-body" id="recordModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="recordPrintBtn">🖨 Печать</button>
+      <button class="btn btn-primary" id="recordCloseBtn">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= МОДАЛЬНОЕ ОКНО: БРЕНДЫ ЛИНИИ ======================= -->
+<div class="modal-overlay" id="lineBrandsModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="lineBrandsModalTitle">Бренды линии</h3>
+      <button class="modal-close" id="lineBrandsModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field" style="margin-bottom:14px">
+        <input type="text" id="lineBrandsSearch" placeholder="🔍 Поиск по названию бренда...">
+      </div>
+      <div class="list-counter" id="lineBrandsCounter" style="margin-bottom:8px"></div>
+      <div class="scrollable-list" id="lineBrandsChecklist" style="max-height:400px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="lineBrandsClearBtn">Очистить</button>
+      <button class="btn btn-primary" id="lineBrandsDoneBtn">Готово</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= МОДАЛЬНОЕ ОКНО: ДОБАВИТЬ ОПЕРАТОРА ======================= -->
+<div class="modal-overlay" id="addOperatorModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Добавить оператора</h3>
+      <button class="modal-close" id="addOperatorModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label class="required">ФИО оператора</label>
+        <input type="text" id="newOperatorInput" placeholder="Иванов Иван Иванович">
+      </div>
+      <p style="color:var(--text-second);font-size:12px;margin-top:8px">
+        Например: <strong>Иванов Иван Иванович</strong>.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="addOperatorCancelBtn">Отмена</button>
+      <button class="btn btn-primary" id="addOperatorBtn">Добавить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= МОДАЛЬНОЕ ОКНО: ДОБАВИТЬ БРЕНД ======================= -->
+<div class="modal-overlay" id="addBrandModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Добавить бренд</h3>
+      <button class="modal-close" id="addBrandModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label class="required">Название бренда</label>
+        <input type="text" id="newBrandInput" placeholder="Например: Marlboro">
+      </div>
+      <p style="color:var(--text-second);font-size:12px;margin-top:8px">
+        Используйте название, которое будет отображаться у оператора.
+      </p>
+
+      <div class="field" style="margin-top:16px">
+        <label>Сразу добавить на линии:</label>
+        <div class="checkbox-group" id="addBrandLinesGroup"></div>
+        <p style="color:var(--text-second);font-size:12px;margin-top:6px">
+          Можно оставить пустым — потом привяжете в разделе «Бренды для каждой линии».
+        </p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="addBrandCancelBtn">Отмена</button>
+      <button class="btn btn-primary" id="addBrandBtn">Добавить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= МОДАЛЬНОЕ ОКНО: РЕДАКТИРОВАТЬ БРЕНД ======================= -->
+<div class="modal-overlay" id="editBrandModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Изменить бренд</h3>
+      <button class="modal-close" id="editBrandModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label class="required">Название бренда</label>
+        <input type="text" id="editBrandInput" placeholder="Название бренда">
+      </div>
+      <p style="color:var(--text-second);font-size:12px;margin-top:8px">
+        Новое название автоматически применится во всех линиях, где использовался этот бренд.
+      </p>
+
+      <div class="field" style="margin-top:16px">
+        <label>Привязан к линиям:</label>
+        <div class="checkbox-group" id="editBrandLinesGroup"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="editBrandCancelBtn">Отмена</button>
+      <button class="btn btn-primary" id="editBrandSaveBtn">Сохранить</button>
+    </div>
+  </div>
+</div>
+<!-- ======================= МОДАЛЬНОЕ ОКНО: ПРОСМОТР СТАНДАРТА ======================= -->
+<div class="modal-overlay" id="standardViewModal">
+  <div class="modal modal-wide sv-modal">
+    <div class="modal-header">
+      <h3 id="standardViewTitle">Просмотр стандарта</h3>
+      <button class="modal-close" id="standardViewClose">✕</button>
+    </div>
+    <div class="modal-body sv-body" id="standardViewBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" id="standardViewCloseBtn">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= ЛАЙТБОКС (просмотр фото) ======================= -->
+<div class="modal-overlay lb-overlay" id="lightboxModal">
+  <button class="lb-close" id="lightboxClose" title="Закрыть">✕</button>
+  <button class="lb-nav lb-prev" id="lightboxPrev" title="Предыдущее">‹</button>
+  <button class="lb-nav lb-next" id="lightboxNext" title="Следующее">›</button>
+  <div class="lb-content" id="lightboxContent">
+    <img id="lightboxImage" src="" alt="">
+    <div class="lb-caption">
+      <span id="lightboxName"></span>
+      <span id="lightboxCounter" class="lb-counter"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= МОДАЛЬНОЕ ОКНО: СТАНДАРТ ======================= -->
+<div class="modal-overlay" id="standardFormModal">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <h3 id="standardFormTitle">Добавить стандарт</h3>
+      <button class="modal-close" id="standardFormClose">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <input type="hidden" id="sf_id">
+
+      <h4 class="form-section-title">Основные</h4>
+      <div class="row">
+        <div class="field" style="max-width:120px">
+          <label class="required">№</label>
+          <input type="number" id="sf_number" placeholder="13">
+        </div>
+        <div class="field" style="max-width:200px">
+          <label class="required">OPL №</label>
+          <input type="text" id="sf_oplNumber" placeholder="OPL-4.2.1">
+        </div>
+        <div class="field" style="max-width:260px">
+          <label class="required">Машина</label>
+          <div class="field-with-btn">
+            <select id="sf_machine"></select>
+            <button type="button" class="btn btn-secondary btn-sm" id="sf_addMachineBtn" title="Добавить машину в список линии">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="field">
+          <label class="required">Линия</label>
+          <input type="text" id="sf_line" readonly style="background:var(--bg-hover)">
+        </div>
+      </div>
+
+      <h4 class="form-section-title">Оборудование</h4>
+      <div class="row">
+        <div class="field" style="position:relative">
+          <label class="required">Узел</label>
+          <input type="text" id="sf_node" placeholder="Узел передачи табачных палочек" autocomplete="off">
+          <div class="autocomplete-dropdown" id="sf_nodeDropdown" style="display:none"></div>
+        </div>
+        <div class="field" style="max-width:200px">
+          <label class="required">Часть линии</label>
+          <select id="sf_nodePart">
+            <option value="">— выберите —</option>
+            <option value="Maker">Maker</option>
+            <option value="Packer">Packer</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="required">Название</label>
+        <input type="text" id="sf_title" placeholder="Давление на передающем устройстве (Паук)">
+      </div>
+
+      <h4 class="form-section-title">Описания</h4>
+      <div class="field">
+        <label>Описание проблемы</label>
+        <textarea id="sf_problemDescription" rows="2" placeholder="Что происходит при отклонении"></textarea>
+      </div>
+      <div class="field">
+        <label>Описание контроля</label>
+        <textarea id="sf_controlDescription" rows="2" placeholder="Как проверять, что должно быть"></textarea>
+      </div>
+      <div class="field">
+        <label>Цель (зачем мы это делаем?)</label>
+        <textarea id="sf_purpose" rows="2" placeholder="Для чего создан стандарт"></textarea>
+      </div>
+      <div class="field">
+        <label>Почему создан</label>
+        <textarea id="sf_whyCreated" rows="2" placeholder="К чему приводит отсутствие контроля"></textarea>
+      </div>
+
+      <h4 class="form-section-title">Точки замера</h4>
+      <table class="measurements-table">
+        <thead>
+          <tr>
+            <th style="width:60px">Точка</th>
+            <th>Значение</th>
+            <th style="width:180px">Сорта</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><input type="number" id="sf_point1" value="1" readonly style="background:var(--bg-hover)"></td>
+            <td><input type="text" id="sf_value1" placeholder="-65 kPa (±10 kPa)"></td>
+            <td><input type="text" id="sf_sorts1" placeholder="Все сорта"></td>
+          </tr>
+          <tr>
+            <td><input type="number" id="sf_point2" value="2" readonly style="background:var(--bg-hover)"></td>
+            <td><input type="text" id="sf_value2" placeholder=""></td>
+            <td><input type="text" id="sf_sorts2" placeholder=""></td>
+          </tr>
+          <tr>
+            <td><input type="number" id="sf_point3" value="3" readonly style="background:var(--bg-hover)"></td>
+            <td><input type="text" id="sf_value3" placeholder=""></td>
+            <td><input type="text" id="sf_sorts3" placeholder=""></td>
+          </tr>
+          <tr>
+            <td><input type="number" id="sf_point4" value="4" readonly style="background:var(--bg-hover)"></td>
+            <td><input type="text" id="sf_value4" placeholder=""></td>
+            <td><input type="text" id="sf_sorts4" placeholder=""></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h4 class="form-section-title">Тип контроля</h4>
+      <div class="field">
+        <select id="sf_controlType">
+          <option value="">— выберите —</option>
+          <option value="ok_not_ok">ОК / Не ОК</option>
+          <option value="value_input">Ввод значения</option>
+          <option value="tolerance">В допуске / Не в допуске</option>
+        </select>
+      </div>
+
+      <h4 class="form-section-title">Применять к смене сорта</h4>
+      <div class="checkbox-group type-checkbox-group" id="sf_appliesToGroup">
+        <label class="type-checkbox type-checkbox-minor">
+          <input type="checkbox" value="Minor"> <span>Minor</span>
+        </label>
+        <label class="type-checkbox type-checkbox-intermediate">
+          <input type="checkbox" value="Intermediate"> <span>Intermediate</span>
+        </label>
+        <label class="type-checkbox type-checkbox-major">
+          <input type="checkbox" value="Major"> <span>Major</span>
+        </label>
+      </div>
+      <p style="color:var(--text-second);font-size:12px;margin-top:8px">
+        Если ничего не выбрано — стандарт хранится в системе, но оператору не показывается.
+      </p>
+
+      <h4 class="form-section-title">Триггеры (опционально)</h4>
+      <div id="sf_triggersGroup"></div>
+
+      <h4 class="form-section-title">Фотографии</h4>
+      <p style="color:var(--text-second);font-size:12px;margin-bottom:10px">
+        Укажите имена файлов из папки
+        <code id="sf_photoPathHint" style="background:var(--bg-hover);padding:1px 6px;border-radius:3px">photos/&lt;line&gt;/&lt;Maker|Packer&gt;/</code>.
+        Файлы должны лежать там заранее.
+      </p>
+
+      <div class="photo-add-row">
+        <div class="photo-add-input">
+          <label style="font-size:11px;text-transform:none;letter-spacing:0;color:var(--text-dim);margin-bottom:4px;display:block">
+            Имена файлов — через запятую или с новой строки
+          </label>
+          <textarea id="sf_newPhotoName" rows="2"
+                    placeholder="max-1.jpg, max-2.jpg&#10;drum-front.jpg"
+                    autocomplete="off" spellcheck="false"></textarea>
+        </div>
+        <button type="button" class="btn btn-secondary btn-icon-text" id="sf_addPhotoBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span>Добавить</span>
+        </button>
+      </div>
+
+      <div id="sf_photosGrid" class="photos-grid"></div>
+      <div id="sf_photosEmpty" class="photos-empty">Фотографий пока нет</div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="standardFormCancel">Отмена</button>
+      <button class="btn btn-primary" id="standardFormSave">Сохранить</button>
+    </div>
+  </div>
+</div>
+<!-- ======================= МОДАЛЬНОЕ ОКНО: БЛОК ЛИНИЙ ======================= -->
+<div class="modal-overlay" id="blockModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="blockModalTitle">Блок линий</h3>
+      <button class="modal-close" id="blockModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="blockModalId">
+
+      <div class="field">
+        <label class="required">Название блока</label>
+        <input type="text" id="blockModalName" placeholder="Cell2 (LST 1)">
+      </div>
+
+      <div class="field" style="margin-top:16px">
+        <label class="required">Линии в блоке</label>
+        <div class="checkbox-group" id="blockModalLinesGroup"></div>
+        <p style="color:var(--text-second);font-size:12px;margin-top:8px">
+          Линии, назначенные в другой блок, недоступны.
+        </p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="blockModalCancelBtn">Отмена</button>
+      <button class="btn btn-primary" id="blockModalSaveBtn">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= МОДАЛЬНОЕ ОКНО: МАШИНА ======================= -->
+<div class="modal-overlay" id="machineModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="machineModalTitle">Добавить машину</h3>
+      <button class="modal-close" id="machineModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="machineModalLine">
+      <input type="hidden" id="machineModalOldName">
+
+      <p id="machineModalLineLabel" style="color:var(--text-second);font-size:13px;margin-bottom:14px"></p>
+
+      <div class="field">
+        <label class="required">Название машины</label>
+        <input type="text" id="machineModalName" placeholder="SE, M1, MAX, GD...">
+      </div>
+      <p style="color:var(--text-second);font-size:12px;margin-top:8px">
+        Используйте короткое обозначение: <strong>SE</strong>, <strong>M1</strong>, <strong>MAX</strong>.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="machineModalCancelBtn">Отмена</button>
+      <button class="btn btn-primary" id="machineModalSaveBtn">Добавить</button>
+    </div>
+  </div>
+</div>
+<!-- ======================= МОДАЛЬНОЕ ОКНО: БЫСТРОЕ ДОБАВЛЕНИЕ МАШИНЫ ======================= -->
+<div class="modal-overlay" id="quickAddMachineModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Добавить машину</h3>
+      <button class="modal-close" id="quickAddMachineClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <p id="quickAddMachineLineLabel" style="color:var(--text-second);font-size:13px;margin-bottom:14px"></p>
+      <div class="field">
+        <label class="required">Название машины</label>
+        <input type="text" id="quickAddMachineName" placeholder="SE, M1, MAX, GD...">
+      </div>
+      <p style="color:var(--text-second);font-size:12px;margin-top:8px">
+        Машина будет добавлена в список линии и сразу выбрана в форме стандарта.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="quickAddMachineCancelBtn">Отмена</button>
+      <button class="btn btn-primary" id="quickAddMachineSaveBtn">Добавить</button>
+    </div>
+  </div>
+</div>
+<!-- ======================= МОДАЛЬНОЕ ОКНО: ПРОВЕРКА ФОТО ======================= -->
+<div class="modal-overlay" id="checkPhotosModal">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <h3>Проверка фотографий</h3>
+      <button class="modal-close" id="checkPhotosModalClose">✕</button>
+    </div>
+    <div class="modal-body" id="checkPhotosModalBody">
+      <!-- Содержимое формируется в JS -->
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-icon-text" id="checkPhotosCopyBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        <span>Скопировать отчёт</span>
+      </button>
+      <button class="btn btn-primary" id="checkPhotosCloseBtn">Закрыть</button>
+    </div>
+  </div>
+</div>
+<!-- ======================= МОДАЛЬНОЕ ОКНО: СПИСОК МАШИН ЛИНИИ ======================= -->
+<div class="modal-overlay" id="machinesListModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="machinesListModalTitle">Машины линии</h3>
+      <button class="modal-close" id="machinesListModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="machinesListModalLine">
+      <div id="machinesListContent"></div>
+      <button class="btn btn-secondary machines-add-btn" id="machinesListAddBtn">
+        ➕ Добавить машину
+      </button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" id="machinesListDoneBtn">Готово</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<footer class="site-footer">
+  Created by <span>V.Malinovskiy</span> / <span>R.Shubin</span>
+</footer>
+
+<script src="js/exceljs.min.js"></script>
+<script src="js/router.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
