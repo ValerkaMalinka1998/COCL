@@ -476,12 +476,48 @@ let html = `
            <span>${photoCount}</span>
          </span>`
       : '';
+    // --- НОВОЕ: иконка комментария к деактивации ---
+    const isDeactivated = st.active === false;
+    const hasComment = st.deactivationComment && st.deactivationComment.trim().length > 0;
 
+    // Кнопка-иконка: активна только у деактивированных
+    const commentBtnClass = isDeactivated
+      ? (hasComment ? 'std-comment-btn has-comment' : 'std-comment-btn')
+      : 'std-comment-btn inactive';
+
+    const commentBtnTitle = isDeactivated
+      ? (hasComment ? 'Комментарий к деактивации (открыть)' : 'Добавить комментарий к деактивации')
+      : 'Стандарт активен';
+
+    const commentBtn = `
+      <button class="${commentBtnClass}"
+              type="button"
+              data-deactivation-comment="${st.id}"
+              title="${escapeAttr(commentBtnTitle)}"
+              ${isDeactivated ? '' : 'disabled'}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      </button>
+    `;
+
+    // Строка с комментарием под названием (если стандарт деактивирован и есть текст)
+    const commentLineHtml = (isDeactivated && hasComment)
+      ? `<div class="standard-comment">
+           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+           </svg>
+           <span>${escapeHtml(st.deactivationComment)}</span>
+         </div>`
+      : '';
 return `
   <tr class="${rowClass}" data-std-id="${st.id}">
-    <td>
-      <input type="checkbox" class="std-active-cb" ${isActive ? 'checked' : ''}
-             onchange="toggleStandardActive('${st.id}', this.checked)">
+    <td class="td-active">
+      <div class="std-active-cell">
+        <input type="checkbox" class="std-active-cb" ${isActive ? 'checked' : ''}
+               onchange="toggleStandardActive('${st.id}', this.checked)">
+        ${commentBtn}
+      </div>
     </td>
     <td>${numText}</td>
     <td class="td-opl" onclick="openStandardForm('${st.id}')">${oplText}</td>
@@ -493,6 +529,7 @@ return `
         ${photoBadge}
       </div>
       ${partText}
+      ${commentLineHtml}
     </td>
     <td>${typesHtml}</td>
     <td class="td-actions">
@@ -524,7 +561,14 @@ return `
 
   html += '</tbody></table>';
   list.innerHTML = html;
-
+  // --- Делегирование клика по иконке комментария к деактивации ---
+  list.querySelectorAll('[data-deactivation-comment]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const stdId = btn.dataset.deactivationComment;
+      if (stdId) openDeactivationCommentModal(stdId);
+    });
+  });
   // Делегирование клика по сортировке — один обработчик на всю таблицу
   list.querySelector('thead')?.addEventListener('click', (e) => {
     const th = e.target.closest('th[data-sort]');
@@ -611,13 +655,139 @@ window.toggleStandardActive = function(id, isActive) {
   const all = getStandards();
   const st = all.find(s => s.id === id);
   if (!st) return;
-  st.active = isActive;
+
+  const wasActive = st.active !== false;
+  const willBeActive = !!isActive;
+
+  // --- При активации: архивируем комментарий, если он есть ---
+  if (!wasActive && willBeActive) {
+    if (st.deactivationComment && st.deactivationComment.trim()) {
+      if (!Array.isArray(st.deactivationHistory)) st.deactivationHistory = [];
+      st.deactivationHistory.push({
+        text: st.deactivationComment.trim(),
+        date: new Date().toISOString()
+      });
+      st.deactivationComment = '';
+    }
+  }
+
+  st.active = willBeActive;
   setStandards(all);
   renderEditorStandardsList();
   renderEditorLinesView(localStorage.getItem('cl_editor_block'));
-  showToast(isActive ? 'Стандарт активирован' : 'Стандарт деактивирован');
+
+  if (willBeActive) {
+    showToast('Стандарт активирован');
+  } else {
+    showToast('Стандарт деактивирован');
+  }
+};
+/* ============================================================
+   КОММЕНТАРИЙ К ДЕАКТИВАЦИИ
+   ============================================================ */
+
+let currentDeactivationStdId = null;
+
+/* Открыть модалку комментария */
+window.openDeactivationCommentModal = function(stdId) {
+  const st = getStandards().find(s => s.id === stdId);
+  if (!st) return;
+
+  // Если стандарт активен — не открываем
+  if (st.active !== false) {
+    return showToast('Комментарий можно оставить только для деактивированного стандарта', true);
+  }
+
+  currentDeactivationStdId = stdId;
+
+  const modal = $('#deactivationCommentModal');
+  if (!modal) return;
+
+  $('#deactivationCommentPoint').textContent =
+    `Стандарт: ${st.oplNumber || '—'} — ${st.title || ''}`;
+  $('#deactivationCommentText').value = st.deactivationComment || '';
+
+  // Архив
+  const archiveBlock = $('#deactivationArchiveBlock');
+  const archiveList = $('#deactivationArchiveList');
+  const history = Array.isArray(st.deactivationHistory) ? st.deactivationHistory : [];
+
+  if (history.length) {
+    archiveBlock.style.display = 'block';
+    archiveList.innerHTML = history
+      .slice()
+      .reverse()  // новые сверху
+      .map(h => `
+        <div class="deactivation-archive-item">
+          <div class="deactivation-archive-date">${formatDateTime(h.date)}</div>
+          <div class="deactivation-archive-text">${escapeHtml(h.text)}</div>
+        </div>
+      `)
+      .join('');
+  } else {
+    archiveBlock.style.display = 'none';
+    archiveList.innerHTML = '';
+  }
+
+  // Кнопка «Очистить» — активна только если есть текст
+  const clearBtn = $('#deactivationClearBtn');
+  if (clearBtn) {
+    clearBtn.style.display = (st.deactivationComment && st.deactivationComment.trim()) ? '' : 'none';
+  }
+
+  modal.classList.add('active');
+  setTimeout(() => {
+    const ta = $('#deactivationCommentText');
+    if (ta) ta.focus();
+  }, 100);
 };
 
+function closeDeactivationCommentModal() {
+  const modal = $('#deactivationCommentModal');
+  if (modal) modal.classList.remove('active');
+  currentDeactivationStdId = null;
+}
+
+/* --- Обработчики модалки --- */
+$('#deactivationCommentClose')?.addEventListener('click', closeDeactivationCommentModal);
+$('#deactivationCancelBtn')?.addEventListener('click', closeDeactivationCommentModal);
+$('#deactivationCommentModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'deactivationCommentModal') closeDeactivationCommentModal();
+});
+
+/* Сохранить */
+$('#deactivationSaveBtn')?.addEventListener('click', () => {
+  if (!currentDeactivationStdId) return;
+  const text = ($('#deactivationCommentText').value || '').trim();
+
+  const all = getStandards();
+  const st = all.find(s => s.id === currentDeactivationStdId);
+  if (!st) return;
+
+  st.deactivationComment = text;
+  setStandards(all);
+
+  renderEditorStandardsList();
+  closeDeactivationCommentModal();
+  showToast(text ? 'Комментарий сохранён' : 'Комментарий удалён');
+});
+
+/* Очистить */
+$('#deactivationClearBtn')?.addEventListener('click', () => {
+  if (!currentDeactivationStdId) return;
+  if (!confirm('Очистить комментарий к деактивации?')) return;
+
+  const all = getStandards();
+  const st = all.find(s => s.id === currentDeactivationStdId);
+  if (!st) return;
+
+  st.deactivationComment = '';
+  setStandards(all);
+
+  renderEditorStandardsList();
+  closeDeactivationCommentModal();
+  showToast('Комментарий удалён');
+});
 /* Обработчики поиска/фильтров — со сбросом пагинации */
 const resetPageAndRender = () => {
   currentPage = 1;
@@ -1231,11 +1401,6 @@ function escapeHtml(s) {
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
-function escapeHtml(s) {
-  return String(s == null ? '' : s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-}
 
 /* Собрать относительный путь к фото */
 function getPhotoPath(standard, fileName) {
@@ -1292,7 +1457,11 @@ function createEmptyStandard() {
     createdAt: null,
     updatedAt: null,
 
-    photos: []
+    photos: [],
+
+    // --- НОВОЕ: комментарий к деактивации ---
+    deactivationComment: '',
+    deactivationHistory: []   // массив { text, date }
   };
 }
 
@@ -1314,7 +1483,10 @@ function normalizeStandard(st) {
     // --- НОВОЕ: миграция истории ---
     author: typeof st.author === 'string' ? st.author : '',
     createdAt: st.createdAt || null,
-    updatedAt: st.updatedAt || null
+    updatedAt: st.updatedAt || null,
+    // --- НОВОЕ: миграция комментария к деактивации ---
+    deactivationComment: typeof st.deactivationComment === 'string' ? st.deactivationComment : '',
+    deactivationHistory: Array.isArray(st.deactivationHistory) ? st.deactivationHistory : []
   };
 }
 /* ============================================================
@@ -1676,47 +1848,45 @@ function renderChecklist(items) {
         </div>`;
     } else if (st.controlType === 'value_input') {
       answerHtml = `
-        <label>Значение:</label>
-        <input type="number" step="any" data-ans-value placeholder="0">
-        ${mainValue ? `<span style="margin-left:8px;color:var(--text-second);font-size:12px">Норма: ${escapeHtml(mainValue)}</span>` : ''}`;
+        <div class="answer-field">
+          <input type="number" step="any" data-ans-value placeholder="0">
+        </div>`;
     } else if (st.controlType === 'tolerance') {
       answerHtml = `
-        <label>Значение:</label>
-        <input type="number" step="any" data-ans-value placeholder="0">
-        ${mainValue ? `<span style="margin-left:8px;color:var(--text-second);font-size:12px">Допуск: ${escapeHtml(mainValue)}</span>` : ''}
-        <div class="radio-group" style="margin-left:8px">
+        <div class="answer-field">
+          <input type="number" step="any" data-ans-value placeholder="0">
+        </div>
+        <div class="radio-group">
           <label><input type="radio" name="tol_${st.id}" value="OK" data-tol> В допуске</label>
           <label><input type="radio" name="tol_${st.id}" value="FAIL" data-tol> Не в допуске</label>
         </div>`;
     }
-
     return `
       <div class="checklist-item" data-std-id="${st.id}">
         <div class="meta">
-          <span><strong>№:</strong> ${escapeHtml(st.number || '—')}</span>
-          <span><strong>OPL:</strong> ${escapeHtml(st.oplNumber || '—')}</span>
-          ${st.machine ? `<span><strong>Машина:</strong> ${escapeHtml(st.machine)}</span>` : ''}
-          <span><strong>Узел:</strong> ${escapeHtml(st.node || '—')}</span>
           <span><strong>Часть:</strong> ${escapeHtml(st.nodePart || '—')}</span>
+          ${st.machine ? `<span><strong>Машина:</strong> ${escapeHtml(st.machine)}</span>` : ''}
+          <span><strong>OPL:</strong> ${escapeHtml(st.oplNumber || '—')}</span>
+          <span><strong>Узел:</strong> ${escapeHtml(st.node || '—')}</span>
         </div>
         <div class="title">${escapeHtml(st.title || '')}</div>
-        ${st.controlDescription ? `<div class="desc">${escapeHtml(st.controlDescription)}</div>` : ''}
-        ${st.purpose ? `<div class="desc" style="font-style:italic">${escapeHtml(st.purpose)}</div>` : ''}
         <div class="answer">
           ${answerHtml}
-          <button type="button" class="view-btn" data-view-btn data-std-id="${st.id}" title="Посмотреть стандарт">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-              <circle cx="12" cy="12" r="3"/>
-            </svg>
-          </button>
-          <button type="button" class="comment-btn" data-comment-btn title="Добавить комментарий">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-              <line x1="9" y1="10" x2="15" y2="10"/>
-              <line x1="9" y1="14" x2="13" y2="14"/>
-            </svg>
-          </button>
+          <div class="answer-actions">
+            <button type="button" class="view-btn" data-view-btn data-std-id="${st.id}" title="Посмотреть стандарт">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+            <button type="button" class="comment-btn" data-comment-btn title="Добавить комментарий">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                <line x1="9" y1="10" x2="15" y2="10"/>
+                <line x1="9" y1="14" x2="13" y2="14"/>
+              </svg>
+            </button>
+          </div>
         </div>
         <div class="comment-preview" style="display:none" data-comment-preview></div>
       </div>`;
@@ -1889,12 +2059,18 @@ window.openStandardView = function(stdId) {
   const modal = $('#standardViewModal');
   const body = $('#standardViewBody');
   const title = $('#standardViewTitle');
+  const chipsEl = $('#standardViewChips');
   if (!modal || !body) return;
 
   // Заголовок модалки
   if (title) title.textContent = 'Просмотр стандарта · ' + (st.oplNumber || '—');
 
-  // Заполняем body
+  // Чипы в шапке
+  if (chipsEl) {
+    chipsEl.innerHTML = renderStandardViewHeaderChips(st);
+  }
+
+  // Тело модалки (без чипов)
   body.innerHTML = renderStandardViewContent(st);
 
   // Навешиваем обработчики на превью фото (открытие лайтбокса)
@@ -1908,18 +2084,27 @@ window.openStandardView = function(stdId) {
   modal.classList.add('active');
 };
 
-/* Сформировать HTML содержимого модалки */
-function renderStandardViewContent(st) {
+/* Отрисовать чипы для шапки модалки */
+function renderStandardViewHeaderChips(st) {
   const blockName = getBlockNameForLine(st.line) || '';
   const ceh = 'SMD';
 
-  // ----- Левая колонка: основное -----
   const chips = [];
   if (ceh) chips.push(`<span class="sv-chip sv-chip-cyan">${escapeHtml(ceh)}</span>`);
   if (blockName) chips.push(`<span class="sv-chip sv-chip-cyan">${escapeHtml(blockName)}</span>`);
   if (st.line) chips.push(`<span class="sv-chip sv-chip-cyan">${escapeHtml(st.line)}</span>`);
   if (st.nodePart) chips.push(`<span class="sv-chip sv-chip-purple">${escapeHtml(st.nodePart)}</span>`);
   if (st.machine) chips.push(`<span class="sv-chip sv-chip-amber">${escapeHtml(st.machine)}</span>`);
+
+  return chips.join('');
+}
+
+/* Сформировать HTML содержимого модалки */
+function renderStandardViewContent(st) {
+  const blockName = getBlockNameForLine(st.line) || '';
+  const ceh = 'SMD';
+
+  // ----- Левая колонка: основное -----
 
   const htmlSection = (label, value) => {
     const isEmpty = !value || !String(value).trim();
@@ -1967,14 +2152,11 @@ function renderStandardViewContent(st) {
 
   const mainHtml = `
     <div class="sv-title">${escapeHtml(st.title || '—')}</div>
-    <div class="sv-chips">${chips.join('')}</div>
-    ${htmlSection('Название OPL', st.title)}
-    ${htmlSection('Описание проблемы', st.problemDescription)}
     ${htmlSection('Описание контроля', st.controlDescription)}
+    ${pointsHtml}
+    ${htmlSection('Описание проблемы', st.problemDescription)}
     ${htmlSection('Цель', st.purpose)}
     ${htmlSection('Почему создан', st.whyCreated)}
-    ${pointsHtml}
-    ${controlTypeHtml}
   `;
 
   // ----- Правая колонка: фото + связанные объекты -----
@@ -2505,13 +2687,9 @@ function buildDetailsTextForCsv(record) {
 
 function exportToCsv(hist) {
   const headers = [
-    '№', 'OPL №', 'Машина', 'Узел', 'Часть линии', 'Название', 'Линия', 'Тип контроля',
-    'Описание проблемы', 'Описание контроля', 'Цель', 'Почему создан',
-    'Точка 1', 'Значение 1', 'Сорта 1',
-    'Точка 2', 'Значение 2', 'Сорта 2',
-    'Точка 3', 'Значение 3', 'Сорта 3',
-    'Точка 4', 'Значение 4', 'Сорта 4',
-    'Применять к', 'Триггеры', 'Фото'
+    'Дата/время','Оператор','Смена','Линия','Часть','Тип перехода',
+    'С бренда','На бренд','Триггеры','Доп. узел',
+    'Пунктов','Не ОК','Детали проверки'
   ];
   const rows = [headers];
 
@@ -3220,23 +3398,6 @@ function renderDashboardOperatorStats(items, maxCount) {
         Топ операторов (7 дней)
       </div>
       <div class="dash-bars">${rows}</div>
-    </div>
-  `;
-}
-
-/* Двухколоночный блок: последние проверки + топ проблемных */
-function renderDashboardMainBlock(stats) {
-  return `
-    <div class="dash-grid">
-
-      <div>
-        ${renderDashboardRecentChecks(stats.recentChecks)}
-      </div>
-
-      <div>
-        ${renderDashboardTopProblems(stats.topProblems, stats.topProblemsMax)}
-      </div>
-
     </div>
   `;
 }
@@ -6112,4 +6273,4 @@ async function parseStandardsExcelV3(file, targetLine) {
 
   return result;
 }
-init();
+init(); 

@@ -1,0 +1,1353 @@
+{
+  "version": 3,
+  "exportedAt": "2026-09-24T21:57:55.663Z",
+  "standards": [
+    {
+      "id": "id_1789941092375_xshd6",
+      "active": true,
+      "number": "13",
+      "oplNumber": "OPL-4.2.1",
+      "machine": "ывааыв",
+      "title": "Давление на передающем устройстве (Паук)",
+      "line": "SD01",
+      "node": "Узел передачи табачных палочек",
+      "nodePart": "Maker",
+      "controlType": "value_input",
+      "problemDescription": "Отклонение от OPL может приводить к падению табачных палочек",
+      "controlDescription": "Показания манометра должны соответствовать значению в т.1",
+      "purpose": "Предотвращение падения табачных палочек",
+      "whyCreated": "Отсутствие контроля приводит к обрывам штранга B1M",
+      "measurements": [
+        {
+          "point": 1,
+          "value": "-65 kPa (±10 kPa)",
+          "sorts": "Все сорта"
+        },
+        {
+          "point": 2,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 3,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 4,
+          "value": "",
+          "sorts": ""
+        }
+      ],
+      "appliesTo": [
+        "Minor",
+        "Intermediate"
+      ],
+      "triggers": [
+        "tobacco"
+      ],
+      "author": "",
+      "createdAt": null,
+      "updatedAt": null,
+      "photos": []
+    },
+    {
+      "id": "id_1789941102968_qszm7",
+      "active": true,
+      "number": "13",
+      "oplNumber": "OPL-4.2.1",
+      "machine": "re",
+      "title": "Давление на передающем устройстве (Паук)",
+      "line": "SD03",
+      "node": "Узел передачи табачных палочек",
+      "nodePart": "Maker",
+      "controlType": "value_input",
+      "problemDescription": "Отклонение от OPL может приводить к падению табачных палочек",
+      "controlDescription": "Показания манометра должны соответствовать значению в т.1",
+      "purpose": "Предотвращение падения табачных палочек",
+      "whyCreated": "Отсутствие контроля приводит к обрывам штранга B1M",
+      "measurements": [
+        {
+          "point": 1,
+          "value": "-65 kPa (±10 kPa)",
+          "sorts": "Все сорта"
+        },
+        {
+          "point": 2,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 3,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 4,
+          "value": "",
+          "sorts": ""
+        }
+      ],
+      "appliesTo": [
+        "Minor",
+        "Intermediate"
+      ],
+      "triggers": [
+        "tobacco"
+      ],
+      "author": "",
+      "createdAt": null,
+      "updatedAt": null,
+      "photos": []
+    },
+    {
+      "id": "id_1790019459433_fvt4i",
+      "active": true,
+      "number": "4324",
+      "oplNumber": "321",
+      "machine": "332211",
+      "title": "вап",
+      "line": "SD01",
+      "node": "вап",
+      "nodePart": "Packer",
+      "controlType": "ok_not_ok",
+      "problemDescription": "апр",
+      "controlDescription": "апр",
+      "purpose": "авап",
+      "whyCreated": "вап",
+      "measurements": [
+        {
+          "point": 1,
+          "value": "4",
+          "sorts": "5324"
+        },
+        {
+          "point": 2,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 3,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 4,
+          "value": "",
+          "sorts": ""
+        }
+      ],
+      "appliesTo": [
+        "Minor"
+      ],
+      "triggers": [],
+      "author": "",
+      "createdAt": null,
+      "updatedAt": null,
+      "photos": []
+    },
+    {
+      "id": "id_1790031889805_tmmrs",
+      "active": true,
+      "number": "45",
+      "oplNumber": "45",
+      "machine": "rtgfd",
+      "title": "fdgdf",
+      "line": "SD01",
+      "node": "gdfg",
+      "nodePart": "Maker",
+      "controlType": "ok_not_ok",
+      "problemDescription": "gdfg",
+      "controlDescription": "dfg",
+      "purpose": "hfgh",
+      "whyCreated": "dfgdfg",
+      "measurements": [
+        {
+          "point": 1,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 2,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 3,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 4,
+          "value": "",
+          "sorts": ""
+        }
+      ],
+      "appliesTo": [
+        "Minor"
+      ],
+      "triggers": [
+        "tobacco"
+      ],
+      "author": "",
+      "createdAt": null,
+      "updatedAt": null,
+      "photos": []
+    },
+    {
+      "id": "id_1790031907899_ee4sz",
+      "active": true,
+      "number": "234",
+      "oplNumber": "sdf",
+      "machine": "rtgfd",
+      "title": "sdf",
+      "line": "SD01",
+      "node": "fdg",
+      "nodePart": "Maker",
+      "controlType": "value_input",
+      "problemDescription": "fdg",
+      "controlDescription": "asd",
+      "purpose": "asd",
+      "whyCreated": "fdgsd",
+      "measurements": [
+        {
+          "point": 1,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 2,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 3,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 4,
+          "value": "",
+          "sorts": ""
+        }
+      ],
+      "appliesTo": [],
+      "triggers": [
+        "tobacco",
+        "node:Форматный блок"
+      ],
+      "author": "",
+      "createdAt": null,
+      "updatedAt": null,
+      "photos": []
+    },
+    {
+      "id": "id_1790031924087_t2xdg",
+      "active": true,
+      "number": "234",
+      "oplNumber": "645gbdfgbvfxdvgfdx",
+      "machine": "rtgfd",
+      "title": "324234",
+      "line": "SD01",
+      "node": "fdg",
+      "nodePart": "Maker",
+      "controlType": "value_input",
+      "problemDescription": "fdg",
+      "controlDescription": "asd",
+      "purpose": "asd",
+      "whyCreated": "fdgsd",
+      "measurements": [
+        {
+          "point": 1,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 2,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 3,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 4,
+          "value": "",
+          "sorts": ""
+        }
+      ],
+      "appliesTo": [],
+      "triggers": [
+        "tobacco",
+        "node:Форматный блок"
+      ],
+      "author": "",
+      "createdAt": null,
+      "updatedAt": null,
+      "photos": []
+    },
+    {
+      "id": "id_1790032096395_fpjtf",
+      "active": true,
+      "number": "45",
+      "oplNumber": "435345",
+      "machine": "укепаваа",
+      "title": "укекуе",
+      "line": "SD01",
+      "node": "авпвап",
+      "nodePart": "Maker",
+      "controlType": "ok_not_ok",
+      "problemDescription": "смис",
+      "controlDescription": "мисм",
+      "purpose": "исм",
+      "whyCreated": "исми",
+      "measurements": [
+        {
+          "point": 1,
+          "value": "4ц5",
+          "sorts": "345"
+        },
+        {
+          "point": 2,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 3,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 4,
+          "value": "",
+          "sorts": ""
+        }
+      ],
+      "appliesTo": [
+        "Minor"
+      ],
+      "triggers": [],
+      "author": "",
+      "createdAt": null,
+      "updatedAt": null,
+      "photos": []
+    },
+    {
+      "id": "id_1790032282700_u7exv",
+      "active": true,
+      "number": "123123",
+      "oplNumber": "45-copy",
+      "machine": "rtgfd",
+      "title": "fdgdf",
+      "line": "SD01",
+      "node": "gdfg",
+      "nodePart": "Maker",
+      "controlType": "ok_not_ok",
+      "problemDescription": "gdfg",
+      "controlDescription": "dfg",
+      "purpose": "hfgh",
+      "whyCreated": "dfgdfg",
+      "measurements": [
+        {
+          "point": 1,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 2,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 3,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 4,
+          "value": "",
+          "sorts": ""
+        }
+      ],
+      "appliesTo": [
+        "Minor"
+      ],
+      "triggers": [
+        "tobacco"
+      ],
+      "author": "",
+      "createdAt": null,
+      "updatedAt": null,
+      "photos": []
+    },
+    {
+      "id": "id_1790032285963_i30ti",
+      "active": true,
+      "number": "124214",
+      "oplNumber": "sdf-copy",
+      "machine": "rtgfd",
+      "title": "sdf",
+      "line": "SD01",
+      "node": "fdg",
+      "nodePart": "Maker",
+      "controlType": "value_input",
+      "problemDescription": "fdg",
+      "controlDescription": "asd",
+      "purpose": "asd",
+      "whyCreated": "fdgsd",
+      "measurements": [
+        {
+          "point": 1,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 2,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 3,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 4,
+          "value": "",
+          "sorts": ""
+        }
+      ],
+      "appliesTo": [],
+      "triggers": [
+        "tobacco",
+        "node:Форматный блок"
+      ],
+      "author": "",
+      "createdAt": null,
+      "updatedAt": null,
+      "photos": []
+    },
+    {
+      "id": "id_1790032288737_bgjba",
+      "active": true,
+      "number": "321413234",
+      "oplNumber": "sdf-copy-copy",
+      "machine": "rtgfd",
+      "title": "sdf",
+      "line": "SD01",
+      "node": "fdg",
+      "nodePart": "Maker",
+      "controlType": "value_input",
+      "problemDescription": "fdg",
+      "controlDescription": "asd",
+      "purpose": "asd",
+      "whyCreated": "fdgsd",
+      "measurements": [
+        {
+          "point": 1,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 2,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 3,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 4,
+          "value": "",
+          "sorts": ""
+        }
+      ],
+      "appliesTo": [],
+      "triggers": [
+        "tobacco",
+        "node:Форматный блок"
+      ],
+      "author": "",
+      "createdAt": null,
+      "updatedAt": null,
+      "photos": []
+    },
+    {
+      "id": "id_1790034138862_de827",
+      "active": true,
+      "number": "",
+      "oplNumber": "234234-copy",
+      "machine": "rtgfd",
+      "title": "324234",
+      "line": "SD01",
+      "node": "fdg",
+      "nodePart": "Maker",
+      "controlType": "value_input",
+      "problemDescription": "fdg",
+      "controlDescription": "asd",
+      "purpose": "asd",
+      "whyCreated": "fdgsd",
+      "measurements": [
+        {
+          "point": 1,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 2,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 3,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 4,
+          "value": "",
+          "sorts": ""
+        }
+      ],
+      "appliesTo": [],
+      "triggers": [
+        "tobacco",
+        "node:Форматный блок"
+      ],
+      "author": "",
+      "createdAt": null,
+      "updatedAt": null,
+      "photos": []
+    },
+    {
+      "id": "id_1790194154929_5t9ng",
+      "active": true,
+      "number": "12",
+      "oplNumber": "OPL-4.2.2",
+      "machine": "BE",
+      "title": "Давление на передающем устройстве (Паук)",
+      "line": "SD03",
+      "node": "Узел передачи табачных палочек",
+      "nodePart": "Packer",
+      "controlType": "value_input",
+      "problemDescription": "Отклонение от OPL может приводить к падению табачных палочек",
+      "controlDescription": "Показания манометра должны соответствовать значению в т.1",
+      "purpose": "Предотвращение падения табачных палочек",
+      "whyCreated": "Отсутствие контроля приводит к обрывам штранга B1M",
+      "measurements": [
+        {
+          "point": 1,
+          "value": "-65 kPa (±10 kPa)",
+          "sorts": "Все сорта"
+        },
+        {
+          "point": 2,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 3,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 4,
+          "value": "",
+          "sorts": ""
+        }
+      ],
+      "appliesTo": [
+        "Minor",
+        "Intermediate"
+      ],
+      "triggers": [
+        "tobacco"
+      ],
+      "author": "",
+      "createdAt": null,
+      "updatedAt": null,
+      "photos": []
+    },
+    {
+      "id": "id_1790196236834_i586u",
+      "active": true,
+      "number": "",
+      "oplNumber": "45-copy",
+      "machine": "rtgfd",
+      "title": "fdgdf",
+      "line": "SD01",
+      "node": "gdfg",
+      "nodePart": "Maker",
+      "controlType": "ok_not_ok",
+      "problemDescription": "gdfg",
+      "controlDescription": "dfg",
+      "purpose": "hfgh",
+      "whyCreated": "dfgdfg",
+      "measurements": [
+        {
+          "point": 1,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 2,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 3,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 4,
+          "value": "",
+          "sorts": ""
+        }
+      ],
+      "appliesTo": [
+        "Minor"
+      ],
+      "triggers": [
+        "tobacco"
+      ],
+      "author": "",
+      "createdAt": null,
+      "updatedAt": null,
+      "photos": []
+    },
+    {
+      "id": "id_1790196519874_oo40p",
+      "active": true,
+      "number": "3",
+      "oplNumber": "OPL-4.2.2-copy",
+      "machine": "123",
+      "title": "Давление на передающем устройстве (Паук)",
+      "line": "SD08",
+      "node": "Узел передачи табачных палочек",
+      "nodePart": "Maker",
+      "controlType": "value_input",
+      "problemDescription": "Отклонение от OPL может приводить к падению табачных палочек",
+      "controlDescription": "Показания манометра должны соответствовать значению в т.1",
+      "purpose": "Предотвращение падения табачных палочек",
+      "whyCreated": "Отсутствие контроля приводит к обрывам штранга B1M",
+      "measurements": [
+        {
+          "point": 1,
+          "value": "-65 kPa (±10 kPa)",
+          "sorts": "Все сорта"
+        },
+        {
+          "point": 2,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 3,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 4,
+          "value": "",
+          "sorts": ""
+        }
+      ],
+      "appliesTo": [
+        "Minor",
+        "Intermediate"
+      ],
+      "triggers": [
+        "tobacco"
+      ],
+      "author": "",
+      "createdAt": null,
+      "updatedAt": null,
+      "photos": []
+    },
+    {
+      "id": "id_1790201158736_8qkn8",
+      "active": true,
+      "number": "13",
+      "oplNumber": "OPL-4.2.1",
+      "machine": "SE",
+      "title": "Давление на передающем устройстве (Паук)",
+      "line": "SD08",
+      "node": "Узел передачи табачных палочек",
+      "nodePart": "Maker",
+      "controlType": "value_input",
+      "problemDescription": "Отклонение от OPL может приводить к падению табачных палочек",
+      "controlDescription": "Показания манометра должны соответствовать значению в т.1",
+      "purpose": "Предотвращение падения табачных палочек",
+      "whyCreated": "Отсутствие контроля приводит к обрывам штранга B1M",
+      "measurements": [
+        {
+          "point": 1,
+          "value": "-65 kPa (±10 kPa)",
+          "sorts": "Все сорта"
+        },
+        {
+          "point": 2,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 3,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 4,
+          "value": "",
+          "sorts": ""
+        }
+      ],
+      "appliesTo": [
+        "Minor",
+        "Intermediate"
+      ],
+      "triggers": [
+        "tobacco"
+      ],
+      "author": "—",
+      "createdAt": "2026-09-23T22:05:58.736Z",
+      "updatedAt": "2026-09-24T20:46:53.201Z",
+      "photos": [
+        "max-1.jpg",
+        "max-3.jpg",
+        "max-11.jpg"
+      ]
+    },
+    {
+      "id": "id_1790201233786_ot9de",
+      "active": true,
+      "number": "12",
+      "oplNumber": "OPL-4.2.2",
+      "machine": "ТК",
+      "title": "Давление на передающем устройстве (Паук)",
+      "line": "SD08",
+      "node": "Узел передачи табачных палочек",
+      "nodePart": "Maker",
+      "controlType": "value_input",
+      "problemDescription": "Отклонение от OPL может приводить к падению табачных палочек",
+      "controlDescription": "Показания манометра должны соответствовать значению в т.1",
+      "purpose": "Предотвращение падения табачных палочек",
+      "whyCreated": "Отсутствие контроля приводит к обрывам штранга B1M",
+      "measurements": [
+        {
+          "point": 1,
+          "value": "-65 kPa (±10 kPa)",
+          "sorts": "Все сорта"
+        },
+        {
+          "point": 2,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 3,
+          "value": "",
+          "sorts": ""
+        },
+        {
+          "point": 4,
+          "value": "",
+          "sorts": ""
+        }
+      ],
+      "appliesTo": [
+        "Minor",
+        "Intermediate"
+      ],
+      "triggers": [
+        "tobacco"
+      ],
+      "author": "—",
+      "createdAt": "2026-09-23T22:07:13.786Z",
+      "updatedAt": "2026-09-24T20:41:40.988Z",
+      "photos": [
+        "max-1.jpg"
+      ]
+    }
+  ],
+  "history": [
+    {
+      "id": "id_1789927629533_9z368",
+      "timestamp": "2026-09-20T18:07:09.533Z",
+      "operator": "иванов денис авыаыва",
+      "shift": "A",
+      "line": "SD01",
+      "part": "Maker",
+      "type": "Minor",
+      "brandFrom": "A",
+      "brandTo": "A",
+      "triggers": [
+        "tobacco",
+        "materials",
+        "tobacco",
+        "materials"
+      ],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1789672779695_tokkk",
+          "standardNumber": "вап3",
+          "node": "авпва",
+          "checkPoint": "ываыва",
+          "linePart": "Maker",
+          "controlType": "value_input",
+          "answer": "3 мм",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1789672803409_dkzdz",
+          "standardNumber": "23",
+          "node": "213йцу",
+          "checkPoint": "фывфыв",
+          "linePart": "Maker",
+          "controlType": "tolerance",
+          "answer": "4 мм — не в допуске",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1789679363650_15drz",
+          "standardNumber": "вап3-copy",
+          "node": "авпва",
+          "checkPoint": "ываыва",
+          "linePart": "Maker",
+          "controlType": "value_input",
+          "answer": "4 мм",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1789923169012_f0xv4",
+          "standardNumber": "CL-4.2.2",
+          "node": "Табачный блок",
+          "checkPoint": "Совпадение меток",
+          "linePart": "Maker",
+          "controlType": "ok_not_ok",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1789927651910_mg483",
+      "timestamp": "2026-09-20T18:07:31.910Z",
+      "operator": "иванов денис гор",
+      "shift": "A",
+      "line": "SD01",
+      "part": "Packer",
+      "type": "Minor",
+      "brandFrom": "B",
+      "brandTo": "B",
+      "triggers": [
+        "foil_paper",
+        "polypropylene"
+      ],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1789923169012_nrh6d",
+          "standardNumber": "CL-4.2.1",
+          "node": "Грелки полипропилена",
+          "checkPoint": "Температура и положение",
+          "linePart": "Packer",
+          "controlType": "value_input",
+          "answer": "3 °C",
+          "status": "OK",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1789941743557_cspal",
+      "timestamp": "2026-09-20T22:02:23.557Z",
+      "operator": "иванов денис игорьевич",
+      "shift": "A",
+      "line": "SD03",
+      "part": "Maker",
+      "type": "Minor",
+      "brandFrom": "B",
+      "brandTo": "B",
+      "triggers": [
+        "tobacco",
+        "materials"
+      ],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1789941102968_qszm7",
+          "node": "Узел передачи табачных палочек",
+          "controlType": "value_input",
+          "answer": "3",
+          "status": "OK",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1789943057289_jmv15",
+      "timestamp": "2026-09-20T22:24:17.289Z",
+      "operator": "ываыва",
+      "shift": "C",
+      "line": "SD01",
+      "part": "Maker",
+      "type": "Minor",
+      "brandFrom": "A",
+      "brandTo": "B",
+      "triggers": [
+        "tobacco",
+        "materials",
+        "tobacco",
+        "materials"
+      ],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1789941092375_xshd6",
+          "node": "Узел передачи табачных палочек",
+          "controlType": "value_input",
+          "answer": "234",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1789941102968_qszm7",
+          "node": "Узел передачи табачных палочек",
+          "controlType": "value_input",
+          "answer": "324",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1789942441362_wuzhc",
+          "node": "уке",
+          "controlType": "value_input",
+          "answer": "324",
+          "status": "OK",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1790019571364_b86q3",
+      "timestamp": "2026-09-21T19:39:31.364Z",
+      "operator": "иванов денис папвп",
+      "shift": "А",
+      "line": "SD01",
+      "part": "Maker",
+      "type": "Minor",
+      "brandFrom": "A",
+      "brandTo": "A",
+      "triggers": [
+        "tobacco",
+        "materials"
+      ],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1789941092375_xshd6",
+          "number": "13",
+          "oplNumber": "OPL-4.2.1",
+          "machine": "SE",
+          "node": "Узел передачи табачных палочек",
+          "nodePart": "Maker",
+          "title": "Давление на передающем устройстве (Паук)",
+          "controlType": "value_input",
+          "norm": "-65 kPa (±10 kPa)",
+          "answer": "4",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1789942441362_wuzhc",
+          "number": "435",
+          "oplNumber": "345",
+          "machine": "345",
+          "node": "уке",
+          "nodePart": "Maker",
+          "title": "уке",
+          "controlType": "value_input",
+          "norm": "435",
+          "answer": "3",
+          "status": "OK",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1790285129063_h8bko",
+      "timestamp": "2026-09-24T21:25:29.063Z",
+      "operator": "иванов денис гор",
+      "shift": "B",
+      "line": "SD01",
+      "part": "Maker",
+      "type": "Minor",
+      "brandFrom": "B",
+      "brandTo": "B",
+      "triggers": [
+        "tobacco"
+      ],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1789941092375_xshd6",
+          "number": "13",
+          "oplNumber": "OPL-4.2.1",
+          "machine": "ывааыв",
+          "node": "Узел передачи табачных палочек",
+          "nodePart": "Maker",
+          "title": "Давление на передающем устройстве (Паук)",
+          "controlType": "value_input",
+          "norm": "-65 kPa (±10 kPa)",
+          "answer": "4",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790031889805_tmmrs",
+          "number": "45",
+          "oplNumber": "45",
+          "machine": "rtgfd",
+          "node": "gdfg",
+          "nodePart": "Maker",
+          "title": "fdgdf",
+          "controlType": "ok_not_ok",
+          "norm": "",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790032096395_fpjtf",
+          "number": "45",
+          "oplNumber": "435345",
+          "machine": "укепаваа",
+          "node": "авпвап",
+          "nodePart": "Maker",
+          "title": "укекуе",
+          "controlType": "ok_not_ok",
+          "norm": "4ц5",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790032282700_u7exv",
+          "number": "123123",
+          "oplNumber": "45-copy",
+          "machine": "rtgfd",
+          "node": "gdfg",
+          "nodePart": "Maker",
+          "title": "fdgdf",
+          "controlType": "ok_not_ok",
+          "norm": "",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790196236834_i586u",
+          "number": "",
+          "oplNumber": "45-copy",
+          "machine": "rtgfd",
+          "node": "gdfg",
+          "nodePart": "Maker",
+          "title": "fdgdf",
+          "controlType": "ok_not_ok",
+          "norm": "",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1790286279492_eyt83",
+      "timestamp": "2026-09-24T21:44:39.492Z",
+      "operator": "иванов денис авыаыва",
+      "shift": "B",
+      "line": "SD01",
+      "part": "Maker",
+      "type": "Minor",
+      "brandFrom": "B",
+      "brandTo": "A",
+      "triggers": [
+        "tobacco"
+      ],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1789941092375_xshd6",
+          "number": "13",
+          "oplNumber": "OPL-4.2.1",
+          "machine": "ывааыв",
+          "node": "Узел передачи табачных палочек",
+          "nodePart": "Maker",
+          "title": "Давление на передающем устройстве (Паук)",
+          "controlType": "value_input",
+          "norm": "-65 kPa (±10 kPa)",
+          "answer": "3",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790031889805_tmmrs",
+          "number": "45",
+          "oplNumber": "45",
+          "machine": "rtgfd",
+          "node": "gdfg",
+          "nodePart": "Maker",
+          "title": "fdgdf",
+          "controlType": "ok_not_ok",
+          "norm": "",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790032096395_fpjtf",
+          "number": "45",
+          "oplNumber": "435345",
+          "machine": "укепаваа",
+          "node": "авпвап",
+          "nodePart": "Maker",
+          "title": "укекуе",
+          "controlType": "ok_not_ok",
+          "norm": "4ц5",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790032282700_u7exv",
+          "number": "123123",
+          "oplNumber": "45-copy",
+          "machine": "rtgfd",
+          "node": "gdfg",
+          "nodePart": "Maker",
+          "title": "fdgdf",
+          "controlType": "ok_not_ok",
+          "norm": "",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790196236834_i586u",
+          "number": "",
+          "oplNumber": "45-copy",
+          "machine": "rtgfd",
+          "node": "gdfg",
+          "nodePart": "Maker",
+          "title": "fdgdf",
+          "controlType": "ok_not_ok",
+          "norm": "",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "Форматный блок",
+      "part": "Maker"
+    },
+    {
+      "name": "Блок фильтра",
+      "part": "Maker"
+    },
+    {
+      "name": "Блок обертки",
+      "part": "Packer"
+    },
+    {
+      "name": "Блок пачки",
+      "part": "Packer"
+    },
+    {
+      "name": "Блок целлофана",
+      "part": "Packer"
+    },
+    {
+      "name": "Блок блока",
+      "part": "Packer"
+    },
+    {
+      "name": "Привод главный",
+      "part": "Both"
+    },
+    {
+      "name": "Пневматика",
+      "part": "Both"
+    }
+  ],
+  "lines": [
+    "SD01",
+    "SD03",
+    "SD06",
+    "SD08",
+    "SD12",
+    "SD25",
+    "SD27",
+    "SD31"
+  ],
+  "shifts": [
+    "A",
+    "B",
+    "C",
+    "D"
+  ],
+  "brands": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+    "fff",
+    "кент",
+    "бенд",
+    "пап",
+    "ывав23",
+    "6564",
+    "укеуке",
+    "ываыва"
+  ],
+  "lineBrands": {
+    "SD01": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "M",
+      "N",
+      "L",
+      "J",
+      "I",
+      "H",
+      "K",
+      "бенд",
+      "пап"
+    ],
+    "SD03": [
+      "A",
+      "B",
+      "C",
+      "кент",
+      "бенд",
+      "пап",
+      "6564",
+      "ываыва"
+    ],
+    "SD12": [
+      "A",
+      "B",
+      "C",
+      "E",
+      "I",
+      "K",
+      "бенд"
+    ],
+    "SD31": [
+      "H",
+      "J",
+      "I"
+    ],
+    "SD06": [
+      "C",
+      "B",
+      "F",
+      "кент",
+      "бенд",
+      "6564",
+      "ываыва"
+    ],
+    "SD25": [
+      "кент"
+    ],
+    "SD27": [
+      "кент"
+    ],
+    "SD08": [
+      "пап",
+      "ываыва"
+    ]
+  },
+  "operators": [
+    "иванов денис авыаыва",
+    "иванов денис гор",
+    "иванов денис игорьевич",
+    "иванов денис папвп",
+    "Иванов дмитрий иванович",
+    "Иванов Иван Иванович",
+    "кучма дмитрий михайлович",
+    "Петров Пётр Петрович",
+    "ываываыва"
+  ],
+  "blocks": [
+    {
+      "id": "block_lst1",
+      "name": "Cell2 (LST 1)",
+      "lines": [
+        "SD12",
+        "SD27",
+        "SD31",
+        "SD06"
+      ]
+    },
+    {
+      "id": "block_lst2",
+      "name": "Cell2 (LST 2)",
+      "lines": [
+        "SD01",
+        "SD08",
+        "SD25",
+        "SD03"
+      ]
+    }
+  ],
+  "lineMachines": {
+    "SD01": [
+      "ывааыв",
+      "раппрап",
+      "выаыв",
+      "2",
+      "ываыва",
+      "321",
+      "21"
+    ],
+    "SD03": [
+      "BE",
+      "re",
+      "m5"
+    ],
+    "SD08": [
+      "SE",
+      "456",
+      "ТК"
+    ]
+  }
+}

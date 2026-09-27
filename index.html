@@ -58,6 +58,7 @@
       </span>
       <span class="nav-label">Проверка</span>
     </a>
+
     <a href="#editor" data-tab="editor" title="Редактор стандартов">
       <span class="nav-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -65,11 +66,11 @@
           <polyline points="14 2 14 8 20 8"/>
           <line x1="16" y1="13" x2="8" y2="13"/>
           <line x1="16" y1="17" x2="8" y2="17"/>
-          <polyline points="10 9 9 9 8 9"/>
         </svg>
       </span>
       <span class="nav-label">Редактор стандартов</span>
     </a>
+
     <a href="#history" data-tab="history" title="История">
       <span class="nav-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -80,7 +81,9 @@
       </span>
       <span class="nav-label">История</span>
       <span class="nav-counter" id="navHistoryCounter" style="display:none">0</span>
-          <a href="#dashboard" data-tab="dashboard" title="Дашборд">
+    </a>
+
+    <a href="#dashboard" data-tab="dashboard" title="Дашборд">
       <span class="nav-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="7" height="9"/>
@@ -91,7 +94,7 @@
       </span>
       <span class="nav-label">Дашборд</span>
     </a>
-    </a>
+
     <a href="#settings" data-tab="settings" title="Настройки">
       <span class="nav-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -102,10 +105,9 @@
       <span class="nav-label">Настройки</span>
       <span class="nav-badge-alert" id="navSettingsBadge" style="display:none" title="Есть битые ссылки на фото">!</span>
     </a>
-    </a>
   </nav>
 
-<main>
+  <main>
 
 <!-- ======================= ВКЛАДКА ПРОВЕРКА ======================= -->
 <div class="tab active" id="tab-check">
@@ -331,6 +333,7 @@
     </div>
   </div>
 </div>
+
 <!-- ======================= ВКЛАДКА ИСТОРИЯ ======================= -->
 <div class="tab" id="tab-history">
 
@@ -380,7 +383,9 @@
     <h2>Записи (<span id="historyCount">0</span>)</h2>
     <div id="historyList"></div>
   </div>
+
 </div>
+
 <!-- ======================= ВКЛАДКА ДАШБОРД ======================= -->
 <div class="tab" id="tab-dashboard">
 
@@ -392,6 +397,7 @@
   </div>
 
 </div>
+
 <!-- ======================= ВКЛАДКА НАСТРОЙКИ ======================= -->
 <div class="tab" id="tab-settings">
 
@@ -436,22 +442,22 @@
   </div>
 
   <div class="card">
-  <h2>Блоки линий</h2>
-  <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
-    Разделите участок на блоки. Каждая линия может быть только в одном блоке.
-  </p>
-  <div class="row">
-    <div class="field">
-      <label>Новый блок</label>
-      <input type="text" id="newBlockNameInput" placeholder="Cell2 (LST 1)">
+    <h2>Блоки линий</h2>
+    <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
+      Разделите участок на блоки. Каждая линия может быть только в одном блоке.
+    </p>
+    <div class="row">
+      <div class="field">
+        <label>Новый блок</label>
+        <input type="text" id="newBlockNameInput" placeholder="Cell2 (LST 1)">
+      </div>
+      <div class="field" style="flex:0 0 auto; min-width:auto">
+        <label>&nbsp;</label>
+        <button class="btn btn-primary" id="addBlockBtn">Добавить</button>
+      </div>
     </div>
-    <div class="field" style="flex:0 0 auto; min-width:auto">
-      <label>&nbsp;</label>
-      <button class="btn btn-primary" id="addBlockBtn">Добавить</button>
-    </div>
+    <div id="blocksList"></div>
   </div>
-  <div id="blocksList"></div>
-</div>
 
   <div class="card">
     <h2>Машины для линий</h2>
@@ -461,7 +467,7 @@
     <div id="lineMachinesContainer"></div>
   </div>
 
-    <div class="card">
+  <div class="card">
     <h2>Общий список брендов <span class="list-counter" id="brandsCount"></span></h2>
     <div class="list-toolbar">
       <input type="text" id="brandsSearch" placeholder="🔍 Поиск по названию...">
@@ -495,7 +501,7 @@
     </div>
   </div>
 
-    <div class="card">
+  <div class="card">
     <h2>Бренды для каждой линии</h2>
     <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
       Нажмите «Настроить» на нужной линии, чтобы выбрать бренды.
@@ -537,7 +543,8 @@
       <input type="file" id="operatorsFileInput" accept=".xlsx,.xls" style="display:none">
     </div>
   </div>
-      <!-- ======================= КАРТОЧКА: ХРАНИЛИЩЕ ФОТО ======================= -->
+
+  <!-- ======================= КАРТОЧКА: ХРАНИЛИЩЕ ФОТО ======================= -->
   <div class="card">
     <h2>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;color:var(--accent-cyan)">
@@ -578,7 +585,8 @@
         <div class="photo-stat-label">Всего фото</div>
       </div>
     </div>
-        <div style="margin-top:14px">
+
+    <div style="margin-top:14px">
       <button class="btn btn-primary btn-icon-text" id="checkPhotosBtn" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
@@ -587,19 +595,21 @@
         <span>Проверить фото</span>
       </button>
     </div>
+
     <p style="color:var(--text-second);font-size:12px;margin-top:14px;line-height:1.5">
       ⚠ Файлы не загружаются через сайт — их нужно положить в папку вручную. Пока нет сервера, каждый
-      пользователь (аналитик, оператор) должен иметь свою копию папки <code>photos/</code>. Чтобы
+      пользователь (технолог, оператор) должен иметь свою копию папки <code>photos/</code>. Чтобы
       перенести фото на другой ПК — скопируйте папку целиком.
     </p>
   </div>
+
   <div class="card" style="border-left:4px solid #c0392b">
     <h2 style="color:#c0392b">Опасная зона</h2>
     <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
       Полный сброс всех данных: стандарты, история, узлы, настройки.
       Действие необратимо. Рекомендуется сначала скачать бэкап.
     </p>
-       <button class="btn btn-danger btn-icon-text" id="resetAllBtn">
+    <button class="btn btn-danger btn-icon-text" id="resetAllBtn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="3 6 5 6 21 6"/>
         <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
@@ -610,10 +620,13 @@
       <span>Сбросить все данные</span>
     </button>
   </div>
+
 </div>
+
 </main>
 </div>
 <!-- /.app-layout -->
+
 <!-- ======================= МОДАЛЬНОЕ ОКНО: КОММЕНТАРИЙ ======================= -->
 <div class="modal-overlay" id="commentModal">
   <div class="modal">
@@ -649,21 +662,6 @@
         </svg>
         <span>Печать</span>
       </button>
-      <button class="btn btn-primary" id="recordCloseBtn">Закрыть</button>
-    </div>
-  </div>
-</div>
-
-<!-- ======================= МОДАЛЬНОЕ ОКНО: ПРОСМОТР ЗАПИСИ ======================= -->
-<div class="modal-overlay" id="recordModal">
-  <div class="modal modal-wide">
-    <div class="modal-header">
-      <h3>Просмотр проверки</h3>
-      <button class="modal-close" id="recordModalClose">✕</button>
-    </div>
-    <div class="modal-body" id="recordModalBody"></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" id="recordPrintBtn">🖨 Печать</button>
       <button class="btn btn-primary" id="recordCloseBtn">Закрыть</button>
     </div>
   </div>
@@ -771,11 +769,15 @@
     </div>
   </div>
 </div>
+
 <!-- ======================= МОДАЛЬНОЕ ОКНО: ПРОСМОТР СТАНДАРТА ======================= -->
 <div class="modal-overlay" id="standardViewModal">
   <div class="modal modal-wide sv-modal">
-    <div class="modal-header">
-      <h3 id="standardViewTitle">Просмотр стандарта</h3>
+    <div class="modal-header sv-modal-header">
+      <div class="sv-header-left">
+        <h3 id="standardViewTitle">Просмотр стандарта</h3>
+        <div class="sv-header-chips" id="standardViewChips"></div>
+      </div>
       <button class="modal-close" id="standardViewClose">✕</button>
     </div>
     <div class="modal-body sv-body" id="standardViewBody"></div>
@@ -975,6 +977,7 @@
     </div>
   </div>
 </div>
+
 <!-- ======================= МОДАЛЬНОЕ ОКНО: БЛОК ЛИНИЙ ======================= -->
 <div class="modal-overlay" id="blockModal">
   <div class="modal">
@@ -1032,6 +1035,7 @@
     </div>
   </div>
 </div>
+
 <!-- ======================= МОДАЛЬНОЕ ОКНО: БЫСТРОЕ ДОБАВЛЕНИЕ МАШИНЫ ======================= -->
 <div class="modal-overlay" id="quickAddMachineModal">
   <div class="modal">
@@ -1055,6 +1059,38 @@
     </div>
   </div>
 </div>
+
+<!-- ======================= МОДАЛЬНОЕ ОКНО: КОММЕНТАРИЙ К ДЕАКТИВАЦИИ ======================= -->
+<div class="modal-overlay" id="deactivationCommentModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="deactivationCommentTitle">Комментарий к деактивации</h3>
+      <button class="modal-close" id="deactivationCommentClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <p id="deactivationCommentPoint" style="color:var(--text-second);font-size:13px;margin-bottom:12px"></p>
+
+      <div class="field">
+        <label>Причина деактивации (опционально)</label>
+        <textarea id="deactivationCommentText" rows="4"
+                  placeholder="Например: стандарт временно не используется до утверждения нового допуска"></textarea>
+      </div>
+
+      <div id="deactivationArchiveBlock" style="display:none;margin-top:16px">
+        <div style="font-size:12px;font-weight:700;color:var(--text-second);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">
+          Архив предыдущих комментариев
+        </div>
+        <div id="deactivationArchiveList" class="deactivation-archive-list"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="deactivationClearBtn" type="button" style="margin-right:auto">Очистить</button>
+      <button class="btn btn-secondary" id="deactivationCancelBtn">Отмена</button>
+      <button class="btn btn-primary" id="deactivationSaveBtn">Сохранить</button>
+    </div>
+  </div>
+</div>
+
 <!-- ======================= МОДАЛЬНОЕ ОКНО: ПРОВЕРКА ФОТО ======================= -->
 <div class="modal-overlay" id="checkPhotosModal">
   <div class="modal modal-wide">
@@ -1077,6 +1113,7 @@
     </div>
   </div>
 </div>
+
 <!-- ======================= МОДАЛЬНОЕ ОКНО: СПИСОК МАШИН ЛИНИИ ======================= -->
 <div class="modal-overlay" id="machinesListModal">
   <div class="modal">
@@ -1087,8 +1124,12 @@
     <div class="modal-body">
       <input type="hidden" id="machinesListModalLine">
       <div id="machinesListContent"></div>
-      <button class="btn btn-secondary machines-add-btn" id="machinesListAddBtn">
-        ➕ Добавить машину
+      <button class="btn btn-secondary btn-icon-text machines-add-btn" id="machinesListAddBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span>Добавить машину</span>
       </button>
     </div>
     <div class="modal-footer">
@@ -1096,6 +1137,7 @@
     </div>
   </div>
 </div>
+
 <div class="toast" id="toast"></div>
 
 <footer class="site-footer">
