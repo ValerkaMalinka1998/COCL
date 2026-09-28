@@ -11,7 +11,8 @@ const STORAGE_KEYS = {
   lineBrands: 'cl_lineBrands_v2',
   operators: 'cl_operators_v2',
   blocks: 'cl_blocks_v1',
-  lineMachines: 'cl_lineMachines_v1'
+  lineMachines: 'cl_lineMachines_v1',
+  topLosses: 'cl_toplosses_v1'
 };
 /* ============================================================
    ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
@@ -61,6 +62,43 @@ const DEFAULT_NODES = [
   { name: 'Привод главный', part: 'Both' },
   { name: 'Пневматика', part: 'Both' }
 ];
+
+/* Top Losses — категории и потери по умолчанию */
+const DEFAULT_TOP_LOSSES = [
+  {
+    id: 'cat_stops',
+    name: 'Увеличенные остановки',
+    items: [
+      { id: 'loss_hopper',    name: 'Остановки по хопперу' },
+      { id: 'loss_strand',    name: 'Обрыв штранга' },
+      { id: 'loss_max_jam',   name: 'Заторы на MAX' },
+      { id: 'loss_foil_break',name: 'Обрыв фольги' },
+      { id: 'loss_no_label',  name: 'Нет этикета (бланка)' }
+    ]
+  },
+  {
+    id: 'cat_quality',
+    name: 'Дефекты по качеству',
+    items: [
+      { id: 'loss_cig_crush',  name: 'Замятие сигарет' },
+      { id: 'loss_tipping',    name: 'Замятие типпинга' },
+      { id: 'loss_empty_ends', name: 'Осыпка (пустые торцы сигарет)' },
+      { id: 'loss_pack_gaps',  name: 'Дефекты на пачке: щели' },
+      { id: 'loss_pack_panels',name: 'Дефекты на пачке: выступающие панели' }
+    ]
+  },
+  {
+    id: 'cat_emissions',
+    name: 'Повышенные выбросы',
+    items: [
+      { id: 'loss_les',       name: 'Выбросы по LES' },
+      { id: 'loss_otis',      name: 'Выбросы по OTIS' },
+      { id: 'loss_foil_valve',name: 'Выбросы по фольге (отрывному клапану)' },
+      { id: 'loss_tear_tape', name: 'Выбросы по отрывной ленточке пачки/блока' }
+    ]
+  }
+];
+
 /* ============================================================
    ЭКРАН 1: БЛОКИ
    ============================================================ */
@@ -485,31 +523,28 @@ let html = `
       ? (hasComment ? 'std-comment-btn has-comment' : 'std-comment-btn')
       : 'std-comment-btn inactive';
 
-    const commentBtnTitle = isDeactivated
-      ? (hasComment ? 'Комментарий к деактивации (открыть)' : 'Добавить комментарий к деактивации')
-      : 'Стандарт активен';
+    // Tooltip: с текстом комментария, если он есть
+    let commentBtnTitle;
+    if (hasComment) {
+      const preview = st.deactivationComment.length > 80
+        ? st.deactivationComment.slice(0, 80).trim() + '…'
+        : st.deactivationComment.trim();
+      commentBtnTitle = `Комментарий: «${preview}» — нажмите, чтобы открыть`;
+    } else {
+      commentBtnTitle = 'Добавить комментарий к деактивации';
+    }
 
-    const commentBtn = `
+    // Кнопка комментария — только для деактивированных
+    const commentBtn = isDeactivated ? `
       <button class="${commentBtnClass}"
               type="button"
               data-deactivation-comment="${st.id}"
-              title="${escapeAttr(commentBtnTitle)}"
-              ${isDeactivated ? '' : 'disabled'}>
+              title="${escapeAttr(commentBtnTitle)}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
         </svg>
       </button>
-    `;
-
-    // Строка с комментарием под названием (если стандарт деактивирован и есть текст)
-    const commentLineHtml = (isDeactivated && hasComment)
-      ? `<div class="standard-comment">
-           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-           </svg>
-           <span>${escapeHtml(st.deactivationComment)}</span>
-         </div>`
-      : '';
+    ` : '';
 return `
   <tr class="${rowClass}" data-std-id="${st.id}">
     <td class="td-active">
@@ -529,7 +564,6 @@ return `
         ${photoBadge}
       </div>
       ${partText}
-      ${commentLineHtml}
     </td>
     <td>${typesHtml}</td>
     <td class="td-actions">
@@ -919,6 +953,8 @@ function openStandardForm(id) {
 
   // Триггеры
   fillStandardTriggersGroup(st.triggers || []);
+    // Top Losses
+  fillStandardTopLossesGroup(st.topLosses || []);
 
   // --- НОВОЕ: фотографии ---
   formPhotos = Array.isArray(st.photos) ? [...st.photos] : [];
@@ -1207,6 +1243,50 @@ function fillStandardTriggersGroup(selected = []) {
     });
   });
 }
+
+/* ============================================================
+   TOP LOSSES — блок в форме стандарта
+   ============================================================ */
+function fillStandardTopLossesGroup(selected = []) {
+  const g = $('#sf_topLossesGroup');
+  if (!g) return;
+
+  const cats = getTopLosses();
+  const selectedSet = new Set(Array.isArray(selected) ? selected : []);
+
+  if (!cats.length) {
+    g.innerHTML = '<div class="empty-state" style="padding:14px">Справочник Top Losses пуст. Заполните его в Настройках.</div>';
+    return;
+  }
+
+  let html = '';
+  cats.forEach(cat => {
+    const items = Array.isArray(cat.items) ? cat.items : [];
+    if (!items.length) return;
+
+    html += `<div class="toploss-group">
+      <div class="toploss-group-title">${escapeHtml(cat.name)}</div>
+      <div class="checkbox-group">`;
+
+    items.forEach(it => {
+      const checked = selectedSet.has(it.id);
+      html += `<label class="${checked ? 'checked' : ''}">
+        <input type="checkbox" value="${escapeAttr(it.id)}" ${checked ? 'checked' : ''}>
+        ${escapeHtml(it.name)}
+      </label>`;
+    });
+
+    html += '</div></div>';
+  });
+
+  g.innerHTML = html;
+
+  g.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', e => {
+      e.target.closest('label').classList.toggle('checked', e.target.checked);
+    });
+  });
+}
 $('#standardFormClose')?.addEventListener('click', closeStandardForm);
 $('#standardFormCancel')?.addEventListener('click', closeStandardForm);
 /* --- Обработчики блока «Фотографии» --- */
@@ -1288,6 +1368,8 @@ if (!controlType) return showToast('Выберите тип контроля', t
 
   // Триггеры
   const triggers = [...$$('#sf_triggersGroup input:checked')].map(c => c.value);
+  // Top Losses
+  const topLosses = [...$$('#sf_topLossesGroup input:checked')].map(c => c.value);
 
   const obj = {
     id: id || uid(),
@@ -1309,6 +1391,7 @@ if (!controlType) return showToast('Выберите тип контроля', t
     measurements,
     appliesTo,
     triggers,
+    topLosses,
     photos: [...formPhotos],
     // --- НОВОЕ: история ---
     author: id
@@ -1515,6 +1598,70 @@ function setBlocks(v) { save(STORAGE_KEYS.blocks, v); }
 /* Машины для линий */
 function getLineMachines() {
   return load(STORAGE_KEYS.lineMachines, {...DEFAULT_LINE_MACHINES});
+}
+/* ============================================================
+   TOP LOSSES — доступ к данным
+   ============================================================ */
+
+function getTopLosses() {
+  const raw = load(STORAGE_KEYS.topLosses, null);
+  if (raw === null) return JSON.parse(JSON.stringify(DEFAULT_TOP_LOSSES));
+  return Array.isArray(raw) ? raw : JSON.parse(JSON.stringify(DEFAULT_TOP_LOSSES));
+}
+
+function setTopLosses(v) {
+  save(STORAGE_KEYS.topLosses, v);
+}
+
+/* Плоский список всех потерь: [{ id, name, categoryId, categoryName }] */
+function getAllLossItems() {
+  const result = [];
+  getTopLosses().forEach(cat => {
+    (cat.items || []).forEach(it => {
+      result.push({
+        id: it.id,
+        name: it.name,
+        categoryId: cat.id,
+        categoryName: cat.name
+      });
+    });
+  });
+  return result;
+}
+
+/* Найти потерю по id */
+function findLossById(lossId) {
+  return getAllLossItems().find(l => l.id === lossId) || null;
+}
+
+/* Сгенерировать id для новой потери */
+function makeLossId(name) {
+  const base = 'loss_' + String(name).toLowerCase()
+    .replace(/[^a-zа-я0-9]+/gi, '_')
+    .replace(/^_|_$/g, '')
+    .slice(0, 30);
+  const existing = new Set(getAllLossItems().map(l => l.id));
+  let candidate = base || 'loss_new';
+  let n = 1;
+  while (existing.has(candidate)) {
+    candidate = base + '_' + (++n);
+  }
+  return candidate;
+}
+
+/* Сгенерировать id для новой категории */
+function makeCategoryId(name) {
+  const base = 'cat_' + String(name).toLowerCase()
+    .replace(/[^a-zа-я0-9]+/gi, '_')
+    .replace(/^_|_$/g, '')
+    .slice(0, 30);
+  const existing = new Set(getTopLosses().map(c => c.id));
+  let candidate = base || 'cat_new';
+  let n = 1;
+  while (existing.has(candidate)) {
+    candidate = base + '_' + (++n);
+  }
+  return candidate;
 }
 function setLineMachines(v) { save(STORAGE_KEYS.lineMachines, v); }
 
@@ -2506,6 +2653,7 @@ $('#periodSelect').addEventListener('change', () => {
 $('#applyFilterBtn').addEventListener('click', renderHistory);
 $('#filterLine').addEventListener('change', renderHistory);
 $('#filterType').addEventListener('change', renderHistory);
+$('#filterMode')?.addEventListener('change', renderHistory);
 
 function fillHistoryFilters() {
   const lineFilter = $('#filterLine');
@@ -2518,6 +2666,7 @@ function getFilteredHistory() {
   const period = $('#periodSelect').value;
   const line = $('#filterLine').value;
   const type = $('#filterType').value;
+  const mode = $('#filterMode')?.value || '';
   const now = new Date();
 
   if (period === 'week') {
@@ -2538,8 +2687,18 @@ function getFilteredHistory() {
       hist = hist.filter(h => new Date(h.timestamp) <= to);
     }
   }
+
   if (line) hist = hist.filter(h => h.line === line);
   if (type) hist = hist.filter(h => h.type === type);
+
+  // Фильтр по режиму
+  if (mode === 'changeover') {
+    // COCL = всё, где mode НЕ 'toploss'
+    hist = hist.filter(h => h.mode !== 'toploss');
+  } else if (mode === 'toploss') {
+    hist = hist.filter(h => h.mode === 'toploss');
+  }
+
   return hist.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
 }
 
@@ -2551,17 +2710,17 @@ function renderHistory() {
     list.innerHTML = '<div class="empty-state">Записей нет</div>';
     return;
   }
+
   list.innerHTML = `
     <table>
       <thead>
         <tr>
           <th>Дата/время</th>
+          <th>Режим</th>
           <th>Оператор</th>
           <th>Смена</th>
           <th>Линия</th>
-          <th>Часть</th>
-          <th>Тип</th>
-          <th>Бренды</th>
+          <th>Контекст</th>
           <th>Пунктов</th>
           <th>Не ОК</th>
           <th></th>
@@ -2570,17 +2729,40 @@ function renderHistory() {
       <tbody>
         ${hist.map(h => {
           const fails = h.items.filter(i => i.status === 'FAIL').length;
-          const badgeCls = h.type === 'Minor' ? 'badge-minor' :
-                          h.type === 'Intermediate' ? 'badge-intermediate' : 'badge-major';
+          const isTopLoss = h.mode === 'toploss';
+
+          // --- Контекст: для COCL — бренды, для TOP Losses — потери ---
+          let contextHtml = '—';
+          if (isTopLoss) {
+            const names = (h.topLosses || [])
+              .map(id => findLossById(id))
+              .filter(Boolean)
+              .map(l => l.name);
+            contextHtml = names.length
+              ? `<span class="tl-history-losses">${names.map(escapeHtml).join(' · ')}</span>`
+              : '—';
+          } else {
+            const badgeCls = h.type === 'Minor' ? 'badge-minor' :
+                            h.type === 'Intermediate' ? 'badge-intermediate' : 'badge-major';
+            contextHtml = `
+              <span class="badge ${badgeCls}">${escapeHtml(h.type || '—')}</span>
+              <span class="history-brands">${escapeHtml(h.brandFrom || '—')} → ${escapeHtml(h.brandTo || '—')}</span>
+            `;
+          }
+
+          // --- Бейдж режима ---
+          const modeBadge = isTopLoss
+            ? `<span class="badge badge-mode-toploss">TOP</span>`
+            : `<span class="badge badge-mode-cocl">COCL</span>`;
+
           return `
             <tr>
               <td>${fmtDate(h.timestamp)}</td>
+              <td>${modeBadge}</td>
               <td>${escapeHtml(h.operator)}</td>
               <td>${escapeHtml(h.shift)}</td>
               <td>${escapeHtml(h.line)}</td>
-              <td>${escapeHtml(h.part || '—')}</td>
-              <td><span class="badge ${badgeCls}">${h.type}</span></td>
-              <td>${escapeHtml(h.brandFrom)} → ${escapeHtml(h.brandTo)}</td>
+              <td>${contextHtml}</td>
               <td>${h.items.length}</td>
               <td>${fails ? `<span class="badge badge-fail">${fails}</span>` : '<span class="badge badge-ok">0</span>'}</td>
               <td><button class="btn btn-secondary btn-sm" onclick="viewRecord('${h.id}')">Открыть</button></td>
@@ -2599,21 +2781,56 @@ window.viewRecord = function(id) {
 
   const fails = h.items.filter(i => i.status === 'FAIL').length;
   const oks = h.items.length - fails;
+  const isTopLoss = h.mode === 'toploss';
+
+  // --- Собираем контекст в зависимости от режима ---
+  let contextBlock = '';
+
+  if (isTopLoss) {
+    const lossNames = (h.topLosses || [])
+      .map(lid => findLossById(lid))
+      .filter(Boolean)
+      .map(l => l.name);
+
+    contextBlock = `
+      <div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-second);font-weight:700;margin-bottom:6px">
+          Проверенные потери
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${lossNames.map(n => `<span class="tl-summary-chip">${escapeHtml(n)}</span>`).join('')}
+        </div>
+      </div>
+    `;
+  } else {
+    contextBlock = `
+      <div><strong>Тип перехода:</strong> ${escapeHtml(h.type || '—')}</div>
+      <div><strong>Бренды:</strong> ${escapeHtml(h.brandFrom || '—')} → ${escapeHtml(h.brandTo || '—')}</div>
+      ${h.triggers && h.triggers.length ? `<div><strong>Триггеры:</strong> ${h.triggers.map(t => escapeHtml(t.replace('node:',''))).join(', ')}</div>` : ''}
+      ${h.customNode ? `<div><strong>Доп. узел:</strong> ${escapeHtml(h.customNode)}</div>` : ''}
+    `;
+  }
 
   let html = `
     <div class="record-info">
+      <div>
+        <strong>Режим:</strong>
+        ${isTopLoss
+          ? '<span class="badge badge-mode-toploss">TOP Losses</span>'
+          : '<span class="badge badge-mode-cocl">COCL</span>'}
+      </div>
       <div><strong>Дата:</strong> ${fmtDate(h.timestamp)}</div>
       <div><strong>Оператор:</strong> ${escapeHtml(h.operator)}</div>
       <div><strong>Смена:</strong> ${escapeHtml(h.shift)}</div>
-      <div><strong>Линия:</strong> ${escapeHtml(h.line)} / ${escapeHtml(h.part || '—')}</div>
-      <div><strong>Тип перехода:</strong> ${escapeHtml(h.type)}</div>
-      <div><strong>Бренды:</strong> ${escapeHtml(h.brandFrom)} → ${escapeHtml(h.brandTo)}</div>
-      ${h.triggers && h.triggers.length ? `<div><strong>Триггеры:</strong> ${h.triggers.map(t => escapeHtml(t.replace('node:',''))).join(', ')}</div>` : ''}
-      ${h.customNode ? `<div><strong>Доп. узел:</strong> ${escapeHtml(h.customNode)}</div>` : ''}
-      <div><strong>Итого:</strong> ${h.items.length} пунктов, ${oks} ОК, ${fails} Не ОК</div>
+      <div><strong>Линия:</strong> ${escapeHtml(h.line)}${!isTopLoss && h.part ? ' / ' + escapeHtml(h.part) : ''}</div>
+      ${contextBlock}
+      <div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)">
+        <strong>Итого:</strong> ${h.items.length} пунктов, ${oks} ОК, ${fails} Не ОК
+      </div>
     </div>
   `;
 
+  // --- Таблица пунктов проверки ---
   html += `
     <table class="record-items">
       <thead>
@@ -2687,8 +2904,8 @@ function buildDetailsTextForCsv(record) {
 
 function exportToCsv(hist) {
   const headers = [
-    'Дата/время','Оператор','Смена','Линия','Часть','Тип перехода',
-    'С бренда','На бренд','Триггеры','Доп. узел',
+    'Дата/время','Режим','Оператор','Смена','Линия','Часть','Тип перехода',
+    'С бренда','На бренд','Потери','Триггеры','Доп. узел',
     'Пунктов','Не ОК','Детали проверки'
   ];
   const rows = [headers];
@@ -2696,17 +2913,32 @@ function exportToCsv(hist) {
   hist.forEach(h => {
     const fails = h.items.filter(i => i.status === 'FAIL').length;
     const triggersText = (h.triggers || []).map(t => t.replace('node:','')).join(', ');
+    const isTopLoss = h.mode === 'toploss';
+
+    // Режим: текст
+    const modeText = isTopLoss ? 'Top Losses' : 'COCL';
+
+    // Потери (для TOP Losses): названия через запятую
+    const lossesText = isTopLoss
+      ? (h.topLosses || [])
+          .map(lid => findLossById(lid))
+          .filter(Boolean)
+          .map(l => l.name)
+          .join(', ')
+      : '';
 
     rows.push([
       fmtDate(h.timestamp),
+      modeText,
       h.operator,
       h.shift,
       h.line,
       h.part || '',
-      h.type,
-      h.brandFrom,
-      h.brandTo,
-      triggersText,
+      isTopLoss ? '' : (h.type || ''),
+      isTopLoss ? '' : (h.brandFrom || ''),
+      isTopLoss ? '' : (h.brandTo || ''),
+      lossesText,
+      isTopLoss ? '' : triggersText,
       h.customNode || '',
       h.items.length,
       fails,
@@ -2744,8 +2976,8 @@ const XL_COLOR_OK_TX   = 'FF27AE60';
 const XL_COLOR_BORDER  = 'FFCBD2D9';
 
 const EXPORT_HEADERS = [
-  'Дата/время','Оператор','Смена','Линия','Часть','Тип перехода',
-  'С бренда','На бренд','Триггеры','Доп. узел',
+  'Дата/время','Режим','Оператор','Смена','Линия','Часть','Тип перехода',
+  'С бренда','На бренд','Потери','Триггеры','Доп. узел',
   'Пунктов','Не ОК','Детали проверки'
 ];
 
@@ -2762,6 +2994,12 @@ async function exportToXlsx(hist) {
   buildSheetChecks(wb, hist);
   buildSheetAnalytics(wb, hist);
 
+  // Только если есть TOP Losses записи
+  const hasTopLoss = hist.some(h => h.mode === 'toploss');
+  if (hasTopLoss) {
+    buildSheetLosses(wb, hist);
+  }
+
   const buf = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
@@ -2777,16 +3015,18 @@ function buildSheetChecks(wb, hist) {
   /* ---- Жёстко заданные ширины колонок (в символах Excel) ---- */
   /* Подобраны под самые длинные заголовки + запас */
 const COLUMN_WIDTHS = [
-  28,   // Дата/время       ← увеличили с 22 до 28
-  30,   // Оператор         ← увеличили с 28 до 30 (ФИО длинные)
+  28,   // Дата/время
+  16,   // Режим
+  30,   // Оператор
   12,   // Смена
-  14,   // Линия            ← увеличили с 12
-  14,   // Часть            ← увеличили с 12
-  28,   // Тип перехода     ← увеличили с 26
-  20,   // С бренда         ← увеличили с 18
-  20,   // На бренд         ← увеличили с 18
-  55,   // Триггеры         ← увеличили с 50
-  28,   // Доп. узел        ← увеличили с 26
+  14,   // Линия
+  14,   // Часть
+  28,   // Тип перехода
+  20,   // С бренда
+  20,   // На бренд
+  50,   // Потери
+  55,   // Триггеры
+  28,   // Доп. узел
   14,   // Пунктов
   12,   // Не ОК
   100   // Детали проверки
@@ -2802,16 +3042,28 @@ const COLUMN_WIDTHS = [
     const fails = h.items.filter(i => i.status === 'FAIL').length;
     const triggersText = (h.triggers || []).map(t => t.replace('node:','')).join(', ');
 
+    const isTopLoss = h.mode === 'toploss';
+    const modeText = isTopLoss ? 'Top Losses' : 'COCL';
+    const lossesText = isTopLoss
+      ? (h.topLosses || [])
+          .map(lid => findLossById(lid))
+          .filter(Boolean)
+          .map(l => l.name)
+          .join(', ')
+      : '';
+
     const row = ws.addRow([
       fmtDate(h.timestamp),
+      modeText,
       h.operator,
       h.shift,
       h.line,
       h.part || '',
-      h.type,
-      h.brandFrom,
-      h.brandTo,
-      triggersText,
+      isTopLoss ? '' : (h.type || ''),
+      isTopLoss ? '' : (h.brandFrom || ''),
+      isTopLoss ? '' : (h.brandTo || ''),
+      lossesText,
+      isTopLoss ? '' : triggersText,
       h.customNode || '',
       h.items.length,
       fails,
@@ -2833,10 +3085,10 @@ const COLUMN_WIDTHS = [
       };
       cell.font = { name: 'Calibri', size: XL_FONT_SIZE };
 
-      if (colNumber === 13) {
+      if (colNumber === 15) {
         // Детали — по левому краю, wrap
         cell.alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
-      } else if (colNumber === 11 || colNumber === 12) {
+      } else if (colNumber === 13 || colNumber === 14) {
         // Пунктов, Не ОК — центр
         cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: false };
       } else {
@@ -2849,7 +3101,7 @@ const COLUMN_WIDTHS = [
     });
 
     // Цвет и жирность цифры «Не ОК»
-    const failCell = row.getCell(12);
+    const failCell = row.getCell(14);
     failCell.font = {
       name: 'Calibri',
       size: XL_FONT_SIZE + 1,
@@ -2888,13 +3140,13 @@ function buildSheetAnalytics(wb, hist) {
   const ws = wb.addWorksheet('Аналитика');
 
   /* ---- ФИКСИРОВАННЫЕ ШИРИНЫ (покрывают все таблицы аналитики) ---- */
-ws.columns = [
+  ws.columns = [
   { width: 36 },   // A — «Оператор», «Переход», «№ стандарта», названия разделов
   { width: 30 },   // B — «Проверок», «Узел»
   { width: 26 },   // C — «Пунктов», «Не ОК», «Всего»
   { width: 32 },   // D — «Среднее отклонений», «% отклонений», «Не ОК»
   { width: 28 }    // E — «% отклонений»
-];
+  ];
 
 
   const totalChecks = hist.length;
@@ -3062,6 +3314,123 @@ $('#exportXlsxBtn').addEventListener('click', () => {
 });
 
 /* ============================================================
+   XLSX: лист «Потери» — аналитика по TOP Losses
+   ============================================================ */
+function buildSheetLosses(wb, hist) {
+  const ws = wb.addWorksheet('Потери');
+
+  ws.columns = [
+    { width: 50 },   // A — потеря
+    { width: 20 },   // B — категория
+    { width: 20 },   // C — проверок
+    { width: 20 },   // D — пунктов
+    { width: 16 },   // E — не ОК
+    { width: 20 }    // F — % отклонений
+  ];
+
+  // Фильтруем только Top Losses
+  const topLossHist = hist.filter(h => h.mode === 'toploss');
+
+  // Агрегация
+  const lossAgg = {};
+  topLossHist.forEach(h => {
+    h.items.forEach(it => {
+      const st = getStandards().find(s => s.id === it.standardId);
+      if (!st || !Array.isArray(st.topLosses)) return;
+      st.topLosses.forEach(lid => {
+        if (!(h.topLosses || []).includes(lid)) return;
+        if (!lossAgg[lid]) {
+          const l = findLossById(lid);
+          lossAgg[lid] = {
+            name: l ? l.name : lid,
+            categoryName: l ? l.categoryName : '—',
+            checks: new Set(),
+            total: 0,
+            fails: 0
+          };
+        }
+        lossAgg[lid].checks.add(h.id);
+        lossAgg[lid].total++;
+        if (it.status === 'FAIL') lossAgg[lid].fails++;
+      });
+    });
+  });
+
+  const addTitle = (text) => {
+    const row = ws.addRow([text]);
+    row.height = 36;
+    const cell = row.getCell(1);
+    cell.font = { name: 'Calibri', size: 15, bold: true, color: { argb: XL_COLOR_PRIMARY } };
+    cell.alignment = { vertical: 'middle', horizontal: 'left' };
+    ws.mergeCells(row.number, 1, row.number, 6);
+  };
+
+  const addHeader = (arr) => {
+    const row = ws.addRow(arr);
+    row.height = 32;
+    for (let c = 1; c <= 6; c++) {
+      const cell = row.getCell(c);
+      cell.font = {
+        name: 'Calibri',
+        size: XL_FONT_SIZE_HEADER,
+        bold: true,
+        color: { argb: XL_COLOR_HEADER_TEXT }
+      };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLOR_PRIMARY } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: false };
+      cell.border = {
+        top:    { style: 'thin', color: { argb: XL_COLOR_PRIMARY } },
+        bottom: { style: 'thin', color: { argb: XL_COLOR_PRIMARY } },
+        left:   { style: 'thin', color: { argb: XL_COLOR_PRIMARY } },
+        right:  { style: 'thin', color: { argb: XL_COLOR_PRIMARY } }
+      };
+    }
+  };
+
+  const addDataRow = (arr) => {
+    const row = ws.addRow(arr);
+    row.height = 24;
+    for (let c = 1; c <= 6; c++) {
+      const cell = row.getCell(c);
+      cell.font = { name: 'Calibri', size: XL_FONT_SIZE };
+      cell.alignment = { vertical: 'middle', horizontal: 'left' };
+      cell.border = {
+        top:    { style: 'thin', color: { argb: XL_COLOR_BORDER } },
+        bottom: { style: 'thin', color: { argb: XL_COLOR_BORDER } },
+        left:   { style: 'thin', color: { argb: XL_COLOR_BORDER } },
+        right:  { style: 'thin', color: { argb: XL_COLOR_BORDER } }
+      };
+    }
+  };
+
+  addTitle('📊 Аналитика по потерям (TOP Losses)');
+  ws.addRow([]);
+  addDataRow(['Дата формирования:', fmtDate(new Date()), '', '', '', '']);
+  addDataRow(['Всего проверок потерь:', topLossHist.length, '', '', '', '']);
+  ws.addRow([]);
+
+  addHeader(['Потеря', 'Категория', 'Проверок', 'Пунктов', 'Не ОК', '% отклонений']);
+
+  const rows = Object.values(lossAgg).map(v => [
+    v.name,
+    v.categoryName,
+    v.checks.size,
+    v.total,
+    v.fails,
+    v.total > 0 ? ((v.fails / v.total) * 100).toFixed(1) + '%' : '0%'
+  ]);
+
+  // Сортировка по отклонениям (убывание)
+  rows.sort((a, b) => b[4] - a[4]);
+
+  if (rows.length === 0) {
+    addDataRow(['—', 'Отклонений по потерям не зафиксировано', '', '', '', '']);
+  } else {
+    rows.forEach(r => addDataRow(r));
+  }
+}
+
+/* ============================================================
    СКАЧИВАНИЕ ФАЙЛОВ
    ============================================================ */
 function downloadBlob(blob, filename) {
@@ -3084,6 +3453,999 @@ $('#clearHistoryBtn').addEventListener('click', () => {
 });
 
 /* ============================================================
+   ВКЛАДКА TOP LOSSES — ЭКРАН ВЫБОРА ПОТЕРЬ (Этап 3)
+   ============================================================ */
+
+/* Текущее состояние экрана выбора */
+const tlState = {
+  selectedLossIds: new Set(),  // выбранные id потерь
+  expandedCategoryIds: new Set() // раскрытые категории
+};
+
+/* ----------------------------------------
+   Заполнение формы (смена, линия, оператор)
+   ---------------------------------------- */
+function fillTopLossTab() {
+  fillTopLossShifts();
+  fillTopLossLines();
+  initTopLossOperatorAutocomplete();
+
+  // Явно сбрасываем линию в пустое значение
+  const lineEl = $('#tlLine');
+  if (lineEl) lineEl.value = '';
+}
+
+/* Смена */
+function fillTopLossShifts() {
+  const el = $('#tlShift');
+  if (!el) return;
+  el.innerHTML = '<option value="">— выберите —</option>' +
+    getShifts().map(s => `<option>${escapeHtml(s)}</option>`).join('');
+}
+
+/* Линия — только те, у которых есть бренды (как в COCL) */
+function fillTopLossLines() {
+  const el = $('#tlLine');
+  if (!el) return;
+
+  const available = getAvailableLines();
+  if (!available.length) {
+    el.innerHTML = '<option value="">— нет доступных линий —</option>';
+    el.value = '';
+    return;
+  }
+  el.innerHTML = '<option value="">— выберите —</option>' +
+    available.map(l => `<option>${escapeHtml(l)}</option>`).join('');
+
+  // Явный сброс — чтобы браузер не выбирал первую линию автоматически
+  el.value = '';
+}
+/* ----------------------------------------
+   Автокомплит оператора (копия логики из initOperatorAutocomplete,
+   но привязан к #tlOperator / #tlOperatorAutocomplete)
+   ---------------------------------------- */
+function initTopLossOperatorAutocomplete() {
+  const input = document.getElementById('tlOperator');
+  const dropdown = document.getElementById('tlOperatorAutocomplete');
+  if (!input || !dropdown) return;
+  if (input.dataset.acReady === '1') return;
+  input.dataset.acReady = '1';
+
+  let activeIndex = -1;
+  let currentMatches = [];
+
+  function highlightMatch(fullText, query) {
+    const idx = fullText.toLowerCase().indexOf(query.toLowerCase());
+    if (idx === -1) return escapeHtml(fullText);
+    const before = fullText.slice(0, idx);
+    const match = fullText.slice(idx, idx + query.length);
+    const after = fullText.slice(idx + query.length);
+    return escapeHtml(before) + '<strong>' + escapeHtml(match) + '</strong>' + escapeHtml(after);
+  }
+
+  function renderDropdown(matches, query) {
+    currentMatches = matches;
+    activeIndex = -1;
+    if (!matches.length) {
+      if (query.length >= 1) {
+        dropdown.innerHTML = '<div class="autocomplete-empty">Ничего не найдено</div>';
+        dropdown.style.display = 'block';
+      } else {
+        dropdown.style.display = 'none';
+      }
+      return;
+    }
+    dropdown.innerHTML = matches.map((name, i) =>
+      `<div class="autocomplete-item" data-index="${i}">${highlightMatch(name, query)}</div>`
+    ).join('');
+    dropdown.style.display = 'block';
+
+    dropdown.querySelectorAll('.autocomplete-item').forEach(el => {
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        selectItem(parseInt(el.dataset.index, 10));
+      });
+    });
+  }
+
+  function selectItem(index) {
+    if (index < 0 || index >= currentMatches.length) return;
+    input.value = currentMatches[index];
+    dropdown.style.display = 'none';
+    activeIndex = -1;
+  }
+
+  function updateActive() {
+    dropdown.querySelectorAll('.autocomplete-item').forEach((el, i) => {
+      el.classList.toggle('active', i === activeIndex);
+    });
+    if (activeIndex >= 0) {
+      const el = dropdown.querySelector(`[data-index="${activeIndex}"]`);
+      if (el) el.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  const MAX_SUGGESTIONS = 7;
+
+  function filterOperators(query) {
+    const q = query.toLowerCase();
+    const all = sortOperatorsRus(getOperators());
+    const starts = [];
+    const contains = [];
+    all.forEach(op => {
+      const low = op.toLowerCase();
+      if (low.startsWith(q)) starts.push(op);
+      else if (low.includes(q)) contains.push(op);
+    });
+    return [...starts, ...contains];
+  }
+
+  input.addEventListener('input', () => {
+    const query = input.value.trim();
+    const operators = getOperators();
+    if (!operators.length) {
+      dropdown.style.display = 'none';
+      return;
+    }
+    if (!query) {
+      renderDropdown(sortOperatorsRus(getOperators()).slice(0, MAX_SUGGESTIONS), '');
+      return;
+    }
+    renderDropdown(filterOperators(query).slice(0, 15), query);
+  });
+
+  input.addEventListener('focus', () => {
+    const operators = getOperators();
+    if (operators.length && !input.value.trim()) {
+      renderDropdown(sortOperatorsRus(getOperators()).slice(0, MAX_SUGGESTIONS), '');
+    }
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (dropdown.style.display !== 'block') return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIndex = Math.min(activeIndex + 1, currentMatches.length - 1);
+      updateActive();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIndex = Math.max(activeIndex - 1, 0);
+      updateActive();
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0) {
+        e.preventDefault();
+        selectItem(activeIndex);
+      }
+    } else if (e.key === 'Escape') {
+      dropdown.style.display = 'none';
+    }
+  });
+
+  input.addEventListener('blur', () => {
+    setTimeout(() => { dropdown.style.display = 'none'; }, 150);
+  });
+}
+
+/* ----------------------------------------
+   Подсчёт стандартов для потери
+   ---------------------------------------- */
+function countStandardsForLoss(lossId) {
+  const line = ($('#tlLine')?.value || '').trim();
+  const standards = getStandards();
+  return standards.filter(st => {
+    if (st.active === false) return false;
+    if (line && st.line !== line) return false;
+    return Array.isArray(st.topLosses) && st.topLosses.includes(lossId);
+  }).length;
+}
+/* ----------------------------------------
+   Отрисовка категорий и потерь
+   ---------------------------------------- */
+function renderTopLossCategories() {
+  const container = $('#tlCategoriesContainer');
+  if (!container) return;
+
+  const cats = getTopLosses();
+
+  if (!cats.length) {
+    container.innerHTML = '<div class="tl-empty">Справочник Top Losses пуст. Добавьте категории в Настройках.</div>';
+    return;
+  }
+
+  container.innerHTML = cats.map(cat => {
+    const items = Array.isArray(cat.items) ? cat.items : [];
+    const isExpanded = tlState.expandedCategoryIds.has(cat.id);
+
+    // Есть ли выбранные в этой категории
+    const hasSelected = items.some(it => tlState.selectedLossIds.has(it.id));
+
+    // Общий счётчик стандартов категории (уникальные стандарты по всем потерям)
+    // — с учётом выбранной линии (если она указана)
+    const line = ($('#tlLine')?.value || '').trim();
+    const stdIds = new Set();
+    items.forEach(it => {
+      const standards = getStandards();
+      standards.forEach(st => {
+        if (st.active === false) return;
+        if (line && st.line !== line) return;
+        if (Array.isArray(st.topLosses) && st.topLosses.includes(it.id)) {
+          stdIds.add(st.id);
+        }
+      });
+    });
+    const categoryStdCount = stdIds.size;
+
+    const itemsHtml = items.map(it => {
+      const isChecked = tlState.selectedLossIds.has(it.id);
+      const stdCount = countStandardsForLoss(it.id);
+      const countClass = stdCount === 0 ? 'tl-loss-std-count empty' : 'tl-loss-std-count';
+      const countTitle = stdCount === 0
+        ? 'Нет стандартов для этой потери'
+        : `${stdCount} стандарт(ов)`;
+
+      return `
+        <label class="tl-loss-row ${isChecked ? 'checked' : ''}" data-loss-id="${escapeAttr(it.id)}">
+          <input type="checkbox" class="tl-loss-checkbox" ${isChecked ? 'checked' : ''}>
+          <span class="tl-loss-name">${escapeHtml(it.name)}</span>
+          <span class="${countClass}" title="${escapeAttr(countTitle)}">${stdCount}</span>
+        </label>
+      `;
+    }).join('');
+
+    const bodyHtml = items.length
+      ? `<div class="tl-category-body">${itemsHtml}</div>`
+      : `<div class="tl-category-body"><div class="tl-empty">В категории нет потерь</div></div>`;
+
+    return `
+      <div class="tl-category ${isExpanded ? 'expanded' : ''} ${hasSelected ? 'has-selected' : ''}" data-cat-id="${escapeAttr(cat.id)}">
+        <div class="tl-category-head" data-cat-toggle="${escapeAttr(cat.id)}">
+          <span class="tl-category-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </span>
+          <span class="tl-category-name">${escapeHtml(cat.name)}</span>
+          <span class="tl-category-count" title="${categoryStdCount} стандарт(ов) во всей категории">${categoryStdCount}</span>
+        </div>
+        ${bodyHtml}
+      </div>
+    `;
+  }).join('');
+
+  // Обработчики: клик по заголовку — раскрытие
+  container.querySelectorAll('[data-cat-toggle]').forEach(head => {
+    head.addEventListener('click', () => {
+      const catId = head.dataset.catToggle;
+      toggleTopLossCategory(catId);
+    });
+  });
+
+  // Обработчики: клик по потере — выбор
+  container.querySelectorAll('.tl-loss-row').forEach(row => {
+    row.addEventListener('click', (e) => {
+      // если кликнули прямо по чек-боксу — не мешаем, браузер сам переключит
+      if (e.target.matches('input[type="checkbox"]')) return;
+      e.preventDefault();
+      const lossId = row.dataset.lossId;
+      toggleTopLossSelection(lossId);
+    });
+    const cb = row.querySelector('input[type="checkbox"]');
+    if (cb) {
+      cb.addEventListener('change', () => {
+        const lossId = row.dataset.lossId;
+        if (cb.checked) tlState.selectedLossIds.add(lossId);
+        else tlState.selectedLossIds.delete(lossId);
+        updateTlSelectedCounter();
+        renderTopLossCategories();
+      });
+    }
+  });
+
+  updateTlSelectedCounter();
+
+}
+/* ----------------------------------------
+   Раскрыть/свернуть категорию
+   ---------------------------------------- */
+function toggleTopLossCategory(catId) {
+  if (tlState.expandedCategoryIds.has(catId)) {
+    tlState.expandedCategoryIds.delete(catId);
+  } else {
+    tlState.expandedCategoryIds.add(catId);
+  }
+  renderTopLossCategories();
+}
+
+/* ----------------------------------------
+   Выбрать/снять потерю
+   ---------------------------------------- */
+function toggleTopLossSelection(lossId) {
+  if (tlState.selectedLossIds.has(lossId)) {
+    tlState.selectedLossIds.delete(lossId);
+  } else {
+    tlState.selectedLossIds.add(lossId);
+  }
+  renderTopLossCategories();
+}
+
+/* ----------------------------------------
+   Счётчик выбранных + активность кнопки
+   ---------------------------------------- */
+function updateTlSelectedCounter() {
+  const counter = $('#tlSelectedCounter');
+  const countEl = $('#tlSelectedCount');
+  const btn = $('#tlBuildChecklistBtn');
+  const n = tlState.selectedLossIds.size;
+
+  if (counter && countEl) {
+    countEl.textContent = n;
+    counter.style.display = n > 0 ? '' : 'none';
+  }
+  if (btn) {
+    btn.disabled = n === 0;
+  }
+}
+
+/* ----------------------------------------
+   Сброс выбора
+   ---------------------------------------- */
+function resetTopLossSelection() {
+  tlState.selectedLossIds.clear();
+  tlState.expandedCategoryIds.clear();
+  renderTopLossCategories();
+}
+
+/* ----------------------------------------
+   Сформировать чек-лист — Этап 4.1
+   ---------------------------------------- */
+function buildTopLossChecklist() {
+  const operator = ($('#tlOperator')?.value || '').trim();
+  const shift = $('#tlShift')?.value || '';
+  const line = $('#tlLine')?.value || '';
+  const lossIds = [...tlState.selectedLossIds];
+
+  if (!operator) return showToast('Укажите ФИО оператора', true);
+  if (!shift)    return showToast('Укажите смену', true);
+  if (!line)     return showToast('Укажите линию', true);
+  if (!lossIds.length) return showToast('Выберите хотя бы одну потерю', true);
+
+  // Собираем уникальные стандарты по выбранным потерям
+  const { items, lossMap, standardToLosses } = collectStandardsForLosses(lossIds, line);
+
+  if (!items.length) {
+    return showToast('По выбранным потерям нет активных стандартов на линии ' + line, true);
+  }
+
+  // Отрисовываем чек-лист
+  renderTopLossChecklist(items, standardToLosses, lossIds);
+
+  // Переключаем экраны
+  $('#tlSelectView').style.display = 'none';
+  $('#tlChecklistView').style.display = 'block';
+  $('#tlSummaryView').style.display = 'none';
+
+  // Прокручиваем наверх
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ----------------------------------------
+   Сбор стандартов по выбранным потерям
+   Возвращает:
+   - items: массив стандартов (уникальные)
+   - lossMap: { [lossId]: [standardId, ...] } — какие стандарты у каждой потери
+   - standardToLosses: { [standardId]: [lossId, ...] } — к каким потерям относится стандарт
+   ---------------------------------------- */
+function collectStandardsForLosses(lossIds, line) {
+  const all = getStandards();
+  const lossSet = new Set(lossIds);
+
+  // Стандарт подходит, если:
+  // - активен
+  // - на нужной линии
+  // - имеет topLosses, пересекающиеся с выбранными
+  const items = [];
+  const standardToLosses = {};
+
+  all.forEach(st => {
+    if (st.active === false) return;
+    if (st.line !== line) return;
+    if (!Array.isArray(st.topLosses) || !st.topLosses.length) return;
+
+    const matched = st.topLosses.filter(id => lossSet.has(id));
+    if (!matched.length) return;
+
+    items.push(st);
+    standardToLosses[st.id] = matched;
+  });
+
+  // Сортируем: по OPL, потом по названию
+  items.sort((a, b) => {
+    const oa = (a.oplNumber || '').toString();
+    const ob = (b.oplNumber || '').toString();
+    if (oa !== ob) return oa.localeCompare(ob, 'ru');
+    return (a.title || '').localeCompare(b.title || '', 'ru');
+  });
+
+  // Обратная карта: lossId → [standardId, ...]
+  const lossMap = {};
+  lossIds.forEach(lid => { lossMap[lid] = []; });
+  Object.entries(standardToLosses).forEach(([stdId, lids]) => {
+    lids.forEach(lid => {
+      if (lossMap[lid]) lossMap[lid].push(stdId);
+    });
+  });
+
+  return { items, lossMap, standardToLosses };
+}
+
+/* ----------------------------------------
+   Отрисовка чек-листа TOP Losses
+   ---------------------------------------- */
+function renderTopLossChecklist(items, standardToLosses, lossIds) {
+  const container = $('#tlChecklistView');
+  if (!container) return;
+
+  // Заголовок с чипами выбранных потерь
+  const lossChips = lossIds
+    .map(id => findLossById(id))
+    .filter(Boolean)
+    .map(l => `<span class="tl-summary-chip">${escapeHtml(l.name)}</span>`)
+    .join('');
+
+  // Шапка
+  let html = `
+    <div class="card">
+      <div class="tl-header-row">
+        <h2>Чек-лист по потерям</h2>
+        <div class="tl-selected-counter">
+          Пунктов: <strong>${items.length}</strong>
+        </div>
+      </div>
+      <div class="tl-losses-bar">
+        <span class="tl-losses-bar-label">Проверяем потери:</span>
+        ${lossChips}
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Пункты проверки</h2>
+      <div class="progress-wrap" id="tlProgressWrap">
+        <div class="progress-bar-outer">
+          <div class="progress-bar-inner" id="tlProgressBarInner"></div>
+        </div>
+        <div class="progress-percent" id="tlProgressPercent">0%</div>
+      </div>
+      <div class="progress-text" id="tlProgressText" style="display:none"></div>
+
+      <div id="tlChecklistContainer">
+        ${items.map(st => renderTopLossChecklistItem(st, standardToLosses[st.id] || [])).join('')}
+      </div>
+    </div>
+
+    <div class="tl-select-footer">
+      <button class="btn btn-secondary" id="tlBackToSelectBtn">← К выбору потерь</button>
+      <button class="btn btn-success btn-icon-text" id="tlSaveChecklistBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        <span>Сохранить проверку</span>
+      </button>
+    </div>
+  `;
+
+  container.innerHTML = html;
+
+  // Обработчики ответов
+  container.querySelectorAll('input[data-ans], input[data-tol]').forEach(r => {
+    r.addEventListener('change', (e) => {
+      const item = e.target.closest('.checklist-item');
+      const val = e.target.value;
+      item.classList.remove('answered-ok', 'answered-fail');
+      if (val === 'OK') item.classList.add('answered-ok');
+      if (val === 'FAIL') item.classList.add('answered-fail');
+      updateCommentUrgency(item);
+      updateTlChecklistProgress();
+    });
+  });
+  container.querySelectorAll('input[data-ans-value]').forEach(inp => {
+    inp.addEventListener('input', updateTlChecklistProgress);
+  });
+
+  // Иконка комментария — переиспользуем openCommentModal
+  container.querySelectorAll('[data-comment-btn]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const item = e.target.closest('.checklist-item');
+      openCommentModal(item);
+    });
+  });
+
+  // Иконка глаза — переиспользуем openStandardView
+  container.querySelectorAll('[data-view-btn]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const stdId = btn.dataset.stdId;
+      if (stdId) openStandardView(stdId);
+    });
+  });
+
+  // Кнопки
+  $('#tlBackToSelectBtn')?.addEventListener('click', backToTopLossSelect);
+  $('#tlSaveChecklistBtn')?.addEventListener('click', saveTopLossCheck);   // Этап 4.2
+
+  // Прогресс
+  updateTlChecklistProgress();
+}
+
+/* ----------------------------------------
+   Отрисовка одного пункта чек-листа TOP Losses
+   ---------------------------------------- */
+function renderTopLossChecklistItem(st, lossIds) {
+  // Строка «Относится к: …»
+  const lossNames = lossIds
+    .map(id => findLossById(id))
+    .filter(Boolean)
+    .map(l => l.name);
+
+  const lossesText = lossNames.length
+    ? `<div class="tl-item-losses">Относится к: ${lossNames.map(escapeHtml).join(' · ')}</div>`
+    : '';
+
+  // Главное значение — из measurements[0]
+  const mainValue = (st.measurements && st.measurements[0] && st.measurements[0].value) || '';
+
+  // Ответ — по типу контроля
+  let answerHtml = '';
+  if (st.controlType === 'ok_not_ok') {
+    answerHtml = `
+      <div class="radio-group">
+        <label><input type="radio" name="tl_ans_${st.id}" value="OK" data-ans> ОК</label>
+        <label><input type="radio" name="tl_ans_${st.id}" value="FAIL" data-ans> Не ОК</label>
+      </div>`;
+  } else if (st.controlType === 'value_input') {
+    answerHtml = `
+      <div class="answer-field">
+        <input type="number" step="any" data-ans-value placeholder="0">
+      </div>`;
+  } else if (st.controlType === 'tolerance') {
+    answerHtml = `
+      <div class="answer-field">
+        <input type="number" step="any" data-ans-value placeholder="0">
+      </div>
+      <div class="radio-group">
+        <label><input type="radio" name="tl_tol_${st.id}" value="OK" data-tol> В допуске</label>
+        <label><input type="radio" name="tl_tol_${st.id}" value="FAIL" data-tol> Не в допуске</label>
+      </div>`;
+  }
+
+  return `
+    <div class="checklist-item" data-std-id="${escapeAttr(st.id)}">
+      <div class="meta">
+        <span><strong>Часть:</strong> ${escapeHtml(st.nodePart || '—')}</span>
+        ${st.machine ? `<span><strong>Машина:</strong> ${escapeHtml(st.machine)}</span>` : ''}
+        <span><strong>OPL:</strong> ${escapeHtml(st.oplNumber || '—')}</span>
+        <span><strong>Узел:</strong> ${escapeHtml(st.node || '—')}</span>
+      </div>
+      <div class="title">${escapeHtml(st.title || '')}</div>
+      ${lossesText}
+      <div class="answer">
+        ${answerHtml}
+        <div class="answer-actions">
+          <button type="button" class="view-btn" data-view-btn data-std-id="${escapeAttr(st.id)}" title="Посмотреть стандарт">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+          <button type="button" class="comment-btn" data-comment-btn title="Добавить комментарий">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              <line x1="9" y1="10" x2="15" y2="10"/>
+              <line x1="9" y1="14" x2="13" y2="14"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="comment-preview" style="display:none" data-comment-preview></div>
+    </div>`;
+}
+
+/* ----------------------------------------
+   Прогресс для чек-листа TOP Losses
+   ---------------------------------------- */
+function updateTlChecklistProgress() {
+  const items = $$('#tlChecklistContainer .checklist-item');
+  const wrap = $('#tlProgressWrap');
+  const bar = $('#tlProgressBarInner');
+  const percent = $('#tlProgressPercent');
+  const text = $('#tlProgressText');
+
+  if (!items.length) {
+    if (wrap) wrap.style.display = 'none';
+    if (text) text.style.display = 'none';
+    return;
+  }
+
+  let filled = 0;
+  items.forEach(item => {
+    const std = getStandards().find(s => s.id === item.dataset.stdId);
+    if (!std) return;
+    const valueFilled = (() => {
+      const inp = item.querySelector('input[data-ans-value]');
+      return inp && inp.value !== '';
+    })();
+    if (std.controlType === 'ok_not_ok') {
+      if (item.querySelector('input[data-ans]:checked')) filled++;
+    } else if (std.controlType === 'value_input') {
+      if (valueFilled) filled++;
+    } else if (std.controlType === 'tolerance') {
+      if (valueFilled && item.querySelector('input[data-tol]:checked')) filled++;
+    }
+  });
+
+  const total = items.length;
+  const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
+
+  if (wrap) wrap.style.display = 'flex';
+  if (text) {
+    text.style.display = 'block';
+    text.textContent = `Заполнено ${filled} из ${total} пунктов`;
+  }
+
+  if (bar) {
+    bar.style.width = pct + '%';
+    bar.classList.remove('low', 'mid', 'high', 'done');
+    if (pct === 100)     bar.classList.add('done');
+    else if (pct >= 67)  bar.classList.add('high');
+    else if (pct >= 34)  bar.classList.add('mid');
+    else                 bar.classList.add('low');
+  }
+  if (percent) percent.textContent = pct + '%';
+}
+
+/* ----------------------------------------
+   Сохранение проверки TOP Losses — Этап 4.2
+   ---------------------------------------- */
+function saveTopLossCheck() {
+  const operator = ($('#tlOperator')?.value || '').trim();
+  const shift = $('#tlShift')?.value || '';
+  const line = $('#tlLine')?.value || '';
+  const lossIds = [...tlState.selectedLossIds];
+
+  // Валидация
+  if (!operator) return showToast('Укажите ФИО оператора', true);
+  if (!shift)    return showToast('Укажите смену', true);
+  if (!line)     return showToast('Укажите линию', true);
+  if (!lossIds.length) return showToast('Не выбрано ни одной потери', true);
+
+  // Собираем ответы
+  const items = [];
+  let hasEmpty = false;
+
+  $$('#tlChecklistContainer .checklist-item').forEach(item => {
+    const stdId = item.dataset.stdId;
+    const st = getStandards().find(s => s.id === stdId);
+    if (!st) return;
+
+    let answer = null;
+    let status = null;
+
+    if (st.controlType === 'ok_not_ok') {
+      const r = item.querySelector('input[data-ans]:checked');
+      if (!r) { hasEmpty = true; return; }
+      answer = r.value === 'OK' ? 'ОК' : 'Не ОК';
+      status = r.value;
+    } else if (st.controlType === 'value_input') {
+      const v = item.querySelector('input[data-ans-value]').value;
+      if (v === '') { hasEmpty = true; return; }
+      answer = v;
+      status = 'OK';
+    } else if (st.controlType === 'tolerance') {
+      const v = item.querySelector('input[data-ans-value]').value;
+      const r = item.querySelector('input[data-tol]:checked');
+      if (v === '' || !r) { hasEmpty = true; return; }
+      answer = v + ' — ' + (r.value === 'OK' ? 'в допуске' : 'не в допуске');
+      status = r.value;
+    }
+
+    const mainValue = (st.measurements && st.measurements[0] && st.measurements[0].value) || '';
+
+    items.push({
+      standardId: st.id,
+      number: st.number,
+      oplNumber: st.oplNumber,
+      machine: st.machine,
+      node: st.node,
+      nodePart: st.nodePart,
+      title: st.title,
+      controlType: st.controlType,
+      norm: mainValue,
+      answer: answer,
+      status: status,
+      comment: item.dataset.comment || ''
+    });
+  });
+
+  if (hasEmpty) {
+    return showToast('Заполните все пункты чек-листа', true);
+  }
+
+  if (!items.length) {
+    return showToast('Нет пунктов для сохранения', true);
+  }
+
+  // Запись в Историю — mode: 'toploss'
+  const record = {
+    id: uid(),
+    timestamp: new Date().toISOString(),
+    mode: 'toploss',
+    operator,
+    shift,
+    line,
+    topLosses: lossIds.slice(),
+    items
+  };
+
+  const hist = getHistory();
+  hist.push(record);
+  setHistory(hist);
+  updateNavHistoryCounter();
+
+  showToast('Проверка сохранена');
+
+  // Показываем экран резюме
+  renderTopLossSummary(record);
+}
+
+/* ----------------------------------------
+   Экран 3 — Резюме проверки
+   ---------------------------------------- */
+function renderTopLossSummary(record) {
+  const container = $('#tlSummaryView');
+  if (!container) return;
+
+  // Собираем статистику по потерям
+  const selectedLosses = (record.topLosses || [])
+    .map(id => findLossById(id))
+    .filter(Boolean);
+
+  // Карта: standardId → [lossId, ...]
+  const stdToLosses = {};
+  record.items.forEach(it => {
+    const st = getStandards().find(s => s.id === it.standardId);
+    if (st && Array.isArray(st.topLosses)) {
+      stdToLosses[it.standardId] = st.topLosses.filter(lid =>
+        record.topLosses.includes(lid)
+      );
+    } else {
+      stdToLosses[it.standardId] = [];
+    }
+  });
+
+  // Статистика по каждой выбранной потере
+  const lossStats = selectedLosses.map(loss => {
+    const relatedStdIds = record.items
+      .filter(it => (stdToLosses[it.standardId] || []).includes(loss.id))
+      .map(it => it.standardId);
+
+    const relatedItems = record.items.filter(it =>
+      relatedStdIds.includes(it.standardId)
+    );
+
+    const total = relatedItems.length;
+    const oks = relatedItems.filter(it => it.status === 'OK').length;
+    const fails = relatedItems.filter(it => it.status === 'FAIL').length;
+    const ok = fails === 0 && total > 0;
+
+    // Список «не ОК» для этой потери
+    const failItems = relatedItems.filter(it => it.status === 'FAIL');
+
+    return { loss, total, oks, fails, ok, failItems };
+  });
+
+  const okLosses = lossStats.filter(s => s.ok);
+  const attentionLosses = lossStats.filter(s => !s.ok);
+
+  const totalItems = record.items.length;
+  const totalFails = record.items.filter(it => it.status === 'FAIL').length;
+
+  // HTML
+  let html = `
+    <div class="card tl-summary-card">
+      <div class="tl-summary-head">
+        <div class="tl-summary-icon tl-summary-icon-ok">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </div>
+        <div>
+          <div class="tl-summary-title">Проверка сохранена</div>
+          <div class="tl-summary-sub">
+            Смена: <strong>${escapeHtml(record.shift)}</strong> ·
+            Оператор: <strong>${escapeHtml(record.operator)}</strong> ·
+            ${formatDateTime(record.timestamp)}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="tl-summary-stats">
+        <div class="tl-summary-stat">
+          <div class="tl-summary-stat-value">${totalItems}</div>
+          <div class="tl-summary-stat-label">Проверено стандартов</div>
+        </div>
+        <div class="tl-summary-stat tl-summary-stat-fail">
+          <div class="tl-summary-stat-value">${totalFails}</div>
+          <div class="tl-summary-stat-label">Отклонений</div>
+        </div>
+        <div class="tl-summary-stat tl-summary-stat-cyan">
+          <div class="tl-summary-stat-value">${selectedLosses.length}</div>
+          <div class="tl-summary-stat-label">Проверено потерь</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Потери под контролем
+  if (okLosses.length) {
+    html += `
+      <div class="card">
+        <h2>Потери под контролем</h2>
+        <div class="tl-summary-list">
+          ${okLosses.map(s => `
+            <div class="tl-summary-loss tl-summary-loss-ok">
+              <div class="tl-summary-loss-head">
+                <span class="tl-summary-loss-dot tl-summary-loss-dot-ok"></span>
+                <span class="tl-summary-loss-name">${escapeHtml(s.loss.name)}</span>
+                <span class="tl-summary-loss-count">${s.oks} / ${s.total} OK</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // Требуют внимания
+  if (attentionLosses.length) {
+    html += `
+      <div class="card" style="border-left:4px solid var(--accent-red)">
+        <h2 style="color:var(--accent-red)">Требуют внимания</h2>
+        <div class="tl-summary-list">
+          ${attentionLosses.map(s => `
+            <div class="tl-summary-loss tl-summary-loss-fail">
+              <div class="tl-summary-loss-head">
+                <span class="tl-summary-loss-dot tl-summary-loss-dot-fail"></span>
+                <span class="tl-summary-loss-name">${escapeHtml(s.loss.name)}</span>
+                <span class="tl-summary-loss-count tl-summary-loss-count-fail">${s.fails} / ${s.total} не в норме</span>
+              </div>
+              ${s.failItems.length ? `
+                <div class="tl-summary-loss-details">
+                  ${s.failItems.map(it => `
+                    <div class="tl-summary-fail-row">
+                      <span class="tl-summary-fail-opl">${escapeHtml(it.oplNumber || it.number || '—')}</span>
+                      <span class="tl-summary-fail-title">${escapeHtml(it.title || '')}</span>
+                      <span class="tl-summary-fail-status">Не ОК</span>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // Если ни одной потери не выбрано (не должно случиться, но на всякий)
+  if (!okLosses.length && !attentionLosses.length) {
+    html += `
+      <div class="card">
+        <div class="empty-state">Нет данных для отображения.</div>
+      </div>
+    `;
+  }
+
+  // Кнопки
+  html += `
+    <div class="tl-select-footer">
+      <button class="btn btn-secondary" id="tlBackToListBtn">← К списку потерь</button>
+      <button class="btn btn-primary btn-icon-text" id="tlCheckAnotherBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+        <span>Проверить ещё потерю</span>
+      </button>
+    </div>
+  `;
+
+  container.innerHTML = html;
+
+  // Показываем экран 3, скрываем 1 и 2
+  $('#tlSelectView').style.display = 'none';
+  $('#tlChecklistView').style.display = 'none';
+  $('#tlSummaryView').style.display = 'block';
+
+  // Обработчики кнопок
+  $('#tlBackToListBtn')?.addEventListener('click', backToTopLossList);
+  $('#tlCheckAnotherBtn')?.addEventListener('click', checkAnotherTopLoss);
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ----------------------------------------
+   «← К списку потерь» — полный сброс
+   ---------------------------------------- */
+function backToTopLossList() {
+  // Очищаем выбранные потери
+  tlState.selectedLossIds.clear();
+  tlState.expandedCategoryIds.clear();
+
+  // Сбрасываем форму (оператор, смена, линия)
+  const opEl = $('#tlOperator');
+  const shEl = $('#tlShift');
+  const lnEl = $('#tlLine');
+  if (opEl) opEl.value = '';
+  if (shEl) shEl.value = '';
+  if (lnEl) lnEl.value = '';
+
+  // Обновляем выбор
+  renderTopLossCategories();
+
+  // Переключаем экраны
+  $('#tlSelectView').style.display = 'block';
+  $('#tlChecklistView').style.display = 'none';
+  $('#tlSummaryView').style.display = 'none';
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ----------------------------------------
+   «Проверить ещё потерю» — сохраняем оператора/смену/линию
+   ---------------------------------------- */
+function checkAnotherTopLoss() {
+  // Очищаем только выбранные потери
+  tlState.selectedLossIds.clear();
+  tlState.expandedCategoryIds.clear();
+
+  // Форму НЕ трогаем: оператор/смена/линия остаются
+
+  renderTopLossCategories();
+
+  $('#tlSelectView').style.display = 'block';
+  $('#tlChecklistView').style.display = 'none';
+  $('#tlSummaryView').style.display = 'none';
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ----------------------------------------
+   Возврат на экран выбора
+   ---------------------------------------- */
+function backToTopLossSelect() {
+  $('#tlSelectView').style.display = 'block';
+  $('#tlChecklistView').style.display = 'none';
+  $('#tlSummaryView').style.display = 'none';
+}
+
+/* ----------------------------------------
+   Обработчики вкладки TOP Losses
+   ---------------------------------------- */
+$('#tlResetSelectionBtn')?.addEventListener('click', resetTopLossSelection);
+$('#tlBuildChecklistBtn')?.addEventListener('click', buildTopLossChecklist);
+
+/* Смена линии — пересчитываем счётчики и перерисовываем категории */
+$('#tlLine')?.addEventListener('change', () => {
+  // При смене линии сбрасываем выбранные потери:
+  // могло оказаться, что для новой линии у потерь нет стандартов.
+  tlState.selectedLossIds.clear();
+  renderTopLossCategories();
+});
+
+/* ============================================================
    ВКЛАДКА НАСТРОЙКИ
    ============================================================ */
 function renderSettings() {
@@ -3091,6 +4453,7 @@ function renderSettings() {
   renderBlocksSettings();
   renderLinesSettings();
   renderLineMachinesSettings();
+  renderTopLossesSettings();
   renderBrandsSettings();
   renderLineBrandsSettings();
   renderOperatorsSettings();
@@ -3109,6 +4472,7 @@ function renderDashboard() {
     ${renderDashboardMainBlock(stats)}
     ${renderDashboardSecondaryBlock(stats)}
     ${renderDashboardTertiaryBlock(stats)}
+    ${renderDashboardAttention(stats.attentionItems)}
   `;
 
   // Кнопки «Открыть» в списке последних проверок
@@ -3128,11 +4492,30 @@ function renderDashboard() {
   });
   container.querySelector('[data-dash-action="photos"]')?.addEventListener('click', () => {
     if (typeof switchTab === 'function') switchTab('settings');
-    // Небольшая задержка — сначала переключимся, потом откроем модалку
     setTimeout(() => {
       const btn = $('#checkPhotosBtn');
       if (btn) btn.click();
     }, 200);
+  });
+
+  // --- Кнопки в блоке «Требует внимания» ---
+  container.querySelectorAll('[data-dash-attention-btn]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.dashAttentionBtn;
+      if (action === 'editor') {
+        if (typeof switchTab === 'function') switchTab('editor');
+      } else if (action === 'settings') {
+        if (typeof switchTab === 'function') switchTab('settings');
+      } else if (action === 'photos-check') {
+        if (typeof switchTab === 'function') switchTab('settings');
+        setTimeout(() => {
+          const pbtn = $('#checkPhotosBtn');
+          if (pbtn) pbtn.click();
+        }, 200);
+      } else if (action === 'toploss') {
+        if (typeof switchTab === 'function') switchTab('toploss');
+      }
+    });
   });
 }
 
@@ -3143,11 +4526,19 @@ function renderDashboardTertiaryBlock(stats) {
       <div>${renderDashboardDaysChart(stats.daysSeries, stats.daysSeriesMax)}</div>
       <div>${renderDashboardTypesDonut(stats.typeSegments, stats.typesTotal)}</div>
     </div>
+    <div class="dash-grid">
+      <div>${renderDashboardMachineStats(stats.machineStats)}</div>
+      <div>${renderDashboardWeekDynamics(stats.weekStats)}</div>
+    </div>
+    <div class="dash-grid">
+      <div>${renderDashboardTopLossesStats(stats.topLossStats)}</div>
+      <div></div>
+    </div>
     ${renderDashboardActions()}
   `;
 }
 
-/* Виджет: столбики по дням */
+/* Виджет: столбики по дням (7 дней, двухцветные) */
 function renderDashboardDaysChart(series, maxCount) {
   if (!series.length) {
     return `
@@ -3158,7 +4549,7 @@ function renderDashboardDaysChart(series, maxCount) {
             <line x1="12" y1="20" x2="12" y2="4"/>
             <line x1="6" y1="20" x2="6" y2="14"/>
           </svg>
-          Проверки по дням (14 дней)
+          Проверки по дням (7 дней)
         </div>
         <div class="dash-widget-empty">Нет данных</div>
       </div>
@@ -3166,17 +4557,41 @@ function renderDashboardDaysChart(series, maxCount) {
   }
 
   const cols = series.map(d => {
-    // Высота в процентах: 0 → минимум 2px, max → 100%
-    const heightPercent = maxCount > 0 ? Math.round((d.count / maxCount) * 100) : 0;
-    const isEmpty = d.count === 0;
-    const barClass = isEmpty ? 'dash-day-bar dash-day-bar-empty' : 'dash-day-bar';
-    // Для пустых оставляем минимум 2px через min-height
-    const style = isEmpty ? '' : `height: ${Math.max(heightPercent, 4)}%;`;
+    const isEmpty = d.total === 0;
+    const heightPercent = maxCount > 0 ? (d.total / maxCount) * 100 : 0;
+
+    // Пропорции зелёной и красной части в столбике
+    const failShare = d.total > 0 ? (d.withFails / d.total) : 0;
+    const okShare = 1 - failShare;
+
+    // Общая высота столбика
+    const barStyle = isEmpty ? '' : `height: ${Math.max(heightPercent, 4)}%;`;
+
+    // Tooltip
+    const tooltip = isEmpty
+      ? `${d.label}: проверок не было`
+      : `${d.label}: ${d.total} ${d.total === 1 ? 'проверка' : 'проверок'}, из них ${d.withFails} с отклонениями`;
+
+    // Содержимое столбика — два сегмента (внутренний flex по вертикали)
+    let inner = '';
+    if (!isEmpty) {
+      // Верх столбика — красный (fail), низ — зелёный (ok).
+      // Это визуально удобно: положительный результат снизу, проблемы сверху — как в реальности.
+      inner = `
+        <div class="dash-day-bar-inner">
+          ${d.withFails > 0 ? `<div class="dash-day-bar-fail" style="height:${failShare * 100}%"></div>` : ''}
+          ${d.withoutFails > 0 ? `<div class="dash-day-bar-ok" style="height:${okShare * 100}%"></div>` : ''}
+        </div>
+      `;
+    }
 
     return `
       <div class="dash-day-col">
-        <div class="${barClass}" style="${style}" title="${d.label}: ${d.count}">
-          ${d.count > 0 ? `<span class="dash-day-bar-value">${d.count}</span>` : ''}
+        <div class="dash-day-bar-wrap" title="${escapeAttr(tooltip)}">
+          ${d.total > 0 ? `<span class="dash-day-bar-value">${d.total}</span>` : ''}
+          <div class="dash-day-bar ${isEmpty ? 'dash-day-bar-empty' : ''}" style="${barStyle}">
+            ${inner}
+          </div>
         </div>
         <span class="dash-day-label">${d.label}</span>
       </div>
@@ -3191,9 +4606,172 @@ function renderDashboardDaysChart(series, maxCount) {
           <line x1="12" y1="20" x2="12" y2="4"/>
           <line x1="6" y1="20" x2="6" y2="14"/>
         </svg>
-        Проверки по дням (14 дней)
+        Проверки по дням (7 дней)
       </div>
       <div class="dash-days-chart">${cols}</div>
+    </div>
+  `;
+}
+/* Виджет: Отклонения по машинам (30 дней) */
+function renderDashboardMachineStats(items) {
+  if (!items.length) {
+    return `
+      <div class="dash-widget">
+        <div class="dash-widget-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+          </svg>
+          Отклонения по машинам (30 дней)
+        </div>
+        <div class="dash-widget-empty">Отклонений за месяц не зафиксировано</div>
+      </div>
+    `;
+  }
+
+  const rows = items.map(item => {
+    const failsPct = item.percent;
+    const oksPct = 100 - failsPct;
+
+    const percentText = failsPct.toFixed(1) + '%';
+    const numbersText = `${item.fails} из ${item.total}`;
+
+    const failWidth = Math.max(failsPct, 1.5);
+
+    return `
+      <div class="dash-bar-item">
+        <span class="dash-bar-label">${escapeHtml(item.machine)}</span>
+        <div class="dash-bar-track dash-bar-track-ok">
+          <div class="dash-bar-fill-ok" style="width:${oksPct}%"></div>
+          <div class="dash-bar-fill-fail" style="width:${failWidth}%"></div>
+        </div>
+        <span class="dash-bar-value">
+          ${percentText}
+          <span class="dash-bar-sub">${numbersText}</span>
+        </span>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="dash-widget">
+      <div class="dash-widget-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+        </svg>
+        Отклонения по машинам (30 дней)
+      </div>
+      <div class="dash-bars">${rows}</div>
+    </div>
+  `;
+}
+/* Виджет: Динамика % отклонений по ISO-неделям (4 недели) */
+function renderDashboardWeekDynamics(items) {
+  if (!items.length) {
+    return `
+      <div class="dash-widget">
+        <div class="dash-widget-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+          Динамика отклонений по неделям
+        </div>
+        <div class="dash-widget-empty">За последний месяц проверок не было</div>
+      </div>
+    `;
+  }
+
+  const rows = items.map(item => {
+    const failsPct = item.percent;
+    const oksPct = 100 - failsPct;
+
+    const percentText = failsPct.toFixed(1) + '%';
+    const numbersText = `${item.fails} из ${item.total}`;
+
+    const failWidth = Math.max(failsPct, 1.5);
+
+    const label = `${item.label} (${item.range})`;
+
+    return `
+      <div class="dash-bar-item dash-bar-item-week">
+        <span class="dash-bar-label dash-bar-label-week" title="${escapeAttr(label)}">${escapeHtml(item.label)}</span>
+        <div class="dash-bar-track dash-bar-track-ok">
+          <div class="dash-bar-fill-ok" style="width:${oksPct}%"></div>
+          <div class="dash-bar-fill-fail" style="width:${failWidth}%"></div>
+        </div>
+        <span class="dash-bar-value">
+          ${percentText}
+          <span class="dash-bar-sub">${numbersText}</span>
+        </span>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="dash-widget">
+      <div class="dash-widget-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        Динамика отклонений по неделям
+      </div>
+      <div class="dash-bars">${rows}</div>
+    </div>
+  `;
+}
+
+/* Виджет: Топ-5 потерь по отклонениям (30 дней) */
+function renderDashboardTopLossesStats(items) {
+  if (!items.length) {
+    return `
+      <div class="dash-widget">
+        <div class="dash-widget-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          Топ-5 потерь по отклонениям (30 дней)
+        </div>
+        <div class="dash-widget-empty">Отклонений по потерям за месяц не зафиксировано</div>
+      </div>
+    `;
+  }
+
+  const rows = items.map(item => {
+    const failsPct = item.percent;
+    const oksPct = 100 - failsPct;
+
+    const percentText = failsPct.toFixed(1) + '%';
+    const numbersText = `${item.fails} из ${item.total}`;
+
+    const failWidth = Math.max(failsPct, 1.5);
+
+    return `
+      <div class="dash-bar-item">
+        <span class="dash-bar-label dash-bar-label-plain" title="${escapeAttr(item.name)}">${escapeHtml(item.name)}</span>
+        <div class="dash-bar-track dash-bar-track-ok">
+          <div class="dash-bar-fill-ok" style="width:${oksPct}%"></div>
+          <div class="dash-bar-fill-fail" style="width:${failWidth}%"></div>
+        </div>
+        <span class="dash-bar-value">
+          ${percentText}
+          <span class="dash-bar-sub">${numbersText}</span>
+        </span>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="dash-widget">
+      <div class="dash-widget-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        Топ-5 потерь по отклонениям (30 дней)
+      </div>
+      <div class="dash-bars">${rows}</div>
     </div>
   `;
 }
@@ -3288,6 +4866,70 @@ function renderDashboardActions() {
     </div>
   `;
 }
+/* Виджет: «Требует внимания» */
+function renderDashboardAttention(items) {
+  // Иконки для разных типов проблем
+  const iconSvg = (key) => {
+    switch (key) {
+      case 'image':
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+      case 'image-off':
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="2" x2="22" y2="22"/><path d="M10.41 10.41a2 2 0 1 1-2.83-2.83"/><line x1="13.5" y1="13.5" x2="6" y2="21"/><line x1="18" y1="12" x2="21" y2="15"/><path d="M3.59 3.59A2 2 0 0 0 3 5v14a2 2 0 0 0 2 2h14a2 2 0 0 0 1.41-.59"/></svg>';
+      case 'clock':
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+      case 'user-x':
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>';
+      case 'message':
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+      default:
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+    }
+  };
+
+  if (!items.length) {
+    return `
+      <div class="dash-widget dash-attention dash-attention-ok">
+        <div class="dash-widget-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+          Требует внимания
+        </div>
+        <div class="dash-attention-ok-text">
+          ✅ Всё в порядке — проблем не обнаружено
+        </div>
+      </div>
+    `;
+  }
+
+  const rows = items.map(it => `
+    <div class="dash-attention-item" data-dash-attention="${it.action}">
+      <span class="dash-attention-icon">${iconSvg(it.key === 'brokenPhotos' ? 'image' : it.icon)}</span>
+      <div class="dash-attention-text">
+        <div class="dash-attention-main">${escapeHtml(it.text)}</div>
+        <div class="dash-attention-hint">${escapeHtml(it.hint)}</div>
+      </div>
+      <button class="dash-attention-btn" type="button" data-dash-attention-btn="${it.action}">
+        Перейти →
+      </button>
+    </div>
+  `).join('');
+
+  return `
+    <div class="dash-widget dash-attention">
+      <div class="dash-widget-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        Требует внимания (${items.length})
+      </div>
+      <div class="dash-attention-list">${rows}</div>
+    </div>
+  `;
+}
 /* Двухколоночный блок (шаг 3) */
 function renderDashboardMainBlock(stats) {
   return `
@@ -3302,14 +4944,14 @@ function renderDashboardMainBlock(stats) {
 function renderDashboardSecondaryBlock(stats) {
   return `
     <div class="dash-grid">
-      <div>${renderDashboardLineStats(stats.lineStats, stats.lineStatsMax)}</div>
-      <div>${renderDashboardOperatorStats(stats.operatorStats, stats.operatorStatsMax)}</div>
+      <div>${renderDashboardLineStats(stats.lineStats)}</div>
+      <div>${renderDashboardOperatorStats(stats.operatorStats)}</div>
     </div>
   `;
 }
 
-/* Виджет: проверки по линиям */
-function renderDashboardLineStats(items, maxCount) {
+/* Виджет: % отклонений по линиям (7 дней) — двухцветный бар */
+function renderDashboardLineStats(items) {
   if (!items.length) {
     return `
       <div class="dash-widget">
@@ -3319,7 +4961,7 @@ function renderDashboardLineStats(items, maxCount) {
             <line x1="12" y1="20" x2="12" y2="4"/>
             <line x1="6" y1="20" x2="6" y2="14"/>
           </svg>
-          Проверки по линиям (7 дней)
+          Отклонения по линиям (7 дней)
         </div>
         <div class="dash-widget-empty">За неделю проверок не было</div>
       </div>
@@ -3327,14 +4969,27 @@ function renderDashboardLineStats(items, maxCount) {
   }
 
   const rows = items.map(item => {
-    const width = maxCount > 0 ? Math.round((item.count / maxCount) * 100) : 0;
+    // Процент ОК и процент отклонений — сумма всегда 100
+    const failsPct = item.total > 0 ? (item.fails / item.total) * 100 : 0;
+    const oksPct = 100 - failsPct;
+
+    const percentText = failsPct.toFixed(1) + '%';
+    const numbersText = `${item.fails} из ${item.total}`;
+
+    // Красная часть — узкая, если 0% — не показываем вообще
+    const failWidth = failsPct > 0 ? Math.max(failsPct, 1.5) : 0; // мин. 1.5% — чтобы тонкая полоска была видна
+
     return `
       <div class="dash-bar-item">
         <span class="dash-bar-label">${escapeHtml(item.line)}</span>
-        <div class="dash-bar-track">
-          <div class="dash-bar-fill dash-bar-fill-cyan" style="width:${width}%"></div>
+        <div class="dash-bar-track dash-bar-track-ok">
+          <div class="dash-bar-fill-ok" style="width:${oksPct}%"></div>
+          <div class="dash-bar-fill-fail" style="width:${failWidth}%"></div>
         </div>
-        <span class="dash-bar-value">${item.count}</span>
+        <span class="dash-bar-value">
+          ${percentText}
+          <span class="dash-bar-sub">${numbersText}</span>
+        </span>
       </div>
     `;
   }).join('');
@@ -3347,15 +5002,15 @@ function renderDashboardLineStats(items, maxCount) {
           <line x1="12" y1="20" x2="12" y2="4"/>
           <line x1="6" y1="20" x2="6" y2="14"/>
         </svg>
-        Проверки по линиям (7 дней)
+        Отклонения по линиям (7 дней)
       </div>
       <div class="dash-bars">${rows}</div>
     </div>
   `;
 }
 
-/* Виджет: топ операторов */
-function renderDashboardOperatorStats(items, maxCount) {
+/* Виджет: Топ операторов по отклонениям (30 дней) */
+function renderDashboardOperatorStats(items) {
   if (!items.length) {
     return `
       <div class="dash-widget">
@@ -3366,22 +5021,34 @@ function renderDashboardOperatorStats(items, maxCount) {
             <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
             <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
           </svg>
-          Топ операторов (7 дней)
+          Топ операторов по отклонениям (30 дней)
         </div>
-        <div class="dash-widget-empty">За неделю проверок не было</div>
+        <div class="dash-widget-empty">Отклонений за месяц не зафиксировано</div>
       </div>
     `;
   }
 
   const rows = items.map(item => {
-    const width = maxCount > 0 ? Math.round((item.count / maxCount) * 100) : 0;
+    const failsPct = item.percent;
+    const oksPct = 100 - failsPct;
+
+    const percentText = failsPct.toFixed(1) + '%';
+    const numbersText = `${item.fails} из ${item.total}`;
+
+    // Минимальная ширина красной части, чтобы тонкая полоска была заметна
+    const failWidth = Math.max(failsPct, 1.5);
+
     return `
       <div class="dash-bar-item">
         <span class="dash-bar-label dash-bar-label-plain" title="${escapeAttr(item.name)}">${escapeHtml(item.name)}</span>
-        <div class="dash-bar-track">
-          <div class="dash-bar-fill dash-bar-fill-purple" style="width:${width}%"></div>
+        <div class="dash-bar-track dash-bar-track-ok">
+          <div class="dash-bar-fill-ok" style="width:${oksPct}%"></div>
+          <div class="dash-bar-fill-fail" style="width:${failWidth}%"></div>
         </div>
-        <span class="dash-bar-value">${item.count}</span>
+        <span class="dash-bar-value">
+          ${percentText}
+          <span class="dash-bar-sub">${numbersText}</span>
+        </span>
       </div>
     `;
   }).join('');
@@ -3395,7 +5062,7 @@ function renderDashboardOperatorStats(items, maxCount) {
           <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
           <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
         </svg>
-        Топ операторов (7 дней)
+        Топ операторов по отклонениям (30 дней)
       </div>
       <div class="dash-bars">${rows}</div>
     </div>
@@ -3528,9 +5195,64 @@ function calculateDashboardStats() {
     const ts = new Date(h.timestamp);
     return ts >= weekAgo;
   });
+    // --- Проверок потерь за неделю ---
+  const topLossChecksWeek = checksWeek.filter(h => h.mode === 'toploss').length;
+
+  // --- Топ-5 потерь по отклонениям (30 дней) ---
+  const monthAgoForLosses = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
+  const monthChecksForLosses = history.filter(h =>
+    h.mode === 'toploss' &&
+    new Date(h.timestamp) >= monthAgoForLosses
+  );
+
+  // { lossId: { total, fails, name } }
+  const lossAgg = {};
+  monthChecksForLosses.forEach(h => {
+    h.items.forEach(it => {
+      const st = standards.find(s => s.id === it.standardId);
+      if (!st || !Array.isArray(st.topLosses)) return;
+      st.topLosses.forEach(lid => {
+        // учитываем только те потери, что были выбраны в этой проверке
+        if (!(h.topLosses || []).includes(lid)) return;
+        if (!lossAgg[lid]) {
+          const l = findLossById(lid);
+          lossAgg[lid] = { name: l ? l.name : lid, total: 0, fails: 0 };
+        }
+        lossAgg[lid].total++;
+        if (it.status === 'FAIL') lossAgg[lid].fails++;
+      });
+    });
+  });
+
+  const topLossStats = Object.entries(lossAgg)
+    .map(([id, v]) => ({
+      id,
+      name: v.name,
+      total: v.total,
+      fails: v.fails,
+      percent: v.total > 0 ? (v.fails / v.total) * 100 : 0
+    }))
+    .filter(x => x.fails > 0)
+    .sort((a, b) => b.fails - a.fails)
+    .slice(0, 5);
+
+  // --- Потери без проверок за 30 дней ---
+  const allLosses = getAllLossItems();
+  const checkedLossIds = new Set();
+  monthChecksForLosses.forEach(h => {
+    (h.topLosses || []).forEach(lid => checkedLossIds.add(lid));
+  });
+  const lossesNeverChecked = allLosses.filter(l => !checkedLossIds.has(l.id)).length;
+
+  // --- Стандарты без связи с потерями (активные, topLosses пуст) ---
+  const standardsWithoutLosses = standards.filter(s =>
+    s.active !== false &&
+    (!Array.isArray(s.topLosses) || s.topLosses.length === 0)
+  ).length;
   const failsWeek = checksWeek.reduce((sum, h) => {
     return sum + h.items.filter(i => i.status === 'FAIL').length;
   }, 0);
+  const checksWeekCount = checksWeek.length;
 
   // --- Фото ---
   const totalPhotos = standards.reduce((sum, s) => {
@@ -3585,38 +5307,58 @@ function calculateDashboardStats() {
   // Максимум для расчёта ширины баров
   const topProblemsMax = topProblems.length ? topProblems[0].count : 1;
 
-  // --- Проверки по линиям за неделю ---
-  const lineCounts = {};
+  // --- % отклонений по линиям за неделю ---
+  const lineCounts = {};   // { line: { total: N, fails: N } }
   checksWeek.forEach(h => {
     const line = h.line || '—';
-    lineCounts[line] = (lineCounts[line] || 0) + 1;
+    if (!lineCounts[line]) lineCounts[line] = { total: 0, fails: 0 };
+    lineCounts[line].total += h.items.length;
+    lineCounts[line].fails += h.items.filter(i => i.status === 'FAIL').length;
   });
   const lineStats = Object.entries(lineCounts)
-    .map(([line, count]) => ({ line, count }))
-    .sort((a, b) => b.count - a.count);
-  const lineStatsMax = lineStats.length ? lineStats[0].count : 1;
+    .map(([line, v]) => ({
+      line,
+      total: v.total,
+      fails: v.fails,
+      percent: v.total > 0 ? (v.fails / v.total) * 100 : 0
+    }))
+    .sort((a, b) => b.percent - a.percent);   // худшие сверху
 
-  // --- Топ-5 операторов за неделю ---
-  const operatorCounts = {};
-  checksWeek.forEach(h => {
+  // --- Топ операторов по отклонениям (30 дней) ---
+  const opCounts = {};   // { operator: { total: N, fails: N } }
+  monthChecks.forEach(h => {
     const op = h.operator || '—';
-    operatorCounts[op] = (operatorCounts[op] || 0) + 1;
+    if (!opCounts[op]) opCounts[op] = { total: 0, fails: 0 };
+    opCounts[op].total += h.items.length;
+    opCounts[op].fails += h.items.filter(i => i.status === 'FAIL').length;
   });
-  const operatorStats = Object.entries(operatorCounts)
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
+  // Оставляем только тех, у кого есть хотя бы 1 отклонение
+  const operatorStats = Object.entries(opCounts)
+    .filter(([_, v]) => v.fails > 0)
+    .map(([name, v]) => ({
+      name,
+      total: v.total,
+      fails: v.fails,
+      percent: v.total > 0 ? (v.fails / v.total) * 100 : 0
+    }))
+    .sort((a, b) => b.percent - a.percent)   // худшие сверху
     .slice(0, 5);
-  const operatorStatsMax = operatorStats.length ? operatorStats[0].count : 1;
 
-    // --- Столбики по дням (14 дней) ---
+  // --- Столбики по дням (7 дней, двухцветные) ---
   const daysSeries = [];
-  for (let i = 13; i >= 0; i--) {
+  for (let i = 6; i >= 0; i--) {
     const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
     const dayEnd = new Date(dayStart.getTime() + 24 * 3600 * 1000);
-    const count = history.filter(h => {
+    const dayChecks = history.filter(h => {
       const ts = new Date(h.timestamp);
       return ts >= dayStart && ts < dayEnd;
-    }).length;
+    });
+
+    // Проверка "с отклонениями" = есть хотя бы один FAIL в items
+    const withFails = dayChecks.filter(h =>
+      h.items.some(i => i.status === 'FAIL')
+    ).length;
+    const withoutFails = dayChecks.length - withFails;
 
     // Подпись: день + месяц, например «24.09»
     const dd = String(dayStart.getDate()).padStart(2, '0');
@@ -3625,10 +5367,12 @@ function calculateDashboardStats() {
     daysSeries.push({
       label: `${dd}.${mm}`,
       date: dayStart,
-      count
+      total: dayChecks.length,
+      withFails,
+      withoutFails
     });
   }
-  const daysSeriesMax = daysSeries.reduce((max, d) => Math.max(max, d.count), 0) || 1;
+  const daysSeriesMax = daysSeries.reduce((max, d) => Math.max(max, d.total), 0) || 1;
 
   // --- Круговая по типам переходов (30 дней) ---
   const typeCounts = { Minor: 0, Intermediate: 0, Major: 0 };
@@ -3660,31 +5404,230 @@ function calculateDashboardStats() {
     });
     acc += percent;
   });
+  // --- Отклонения по машинам (30 дней) ---
+  const machineCounts = {};
+  monthChecks.forEach(h => {
+    h.items.forEach(it => {
+      const m = it.machine || '—';
+      if (!machineCounts[m]) machineCounts[m] = { total: 0, fails: 0 };
+      machineCounts[m].total++;
+      if (it.status === 'FAIL') machineCounts[m].fails++;
+    });
+  });
+  const machineStats = Object.entries(machineCounts)
+    .map(([machine, v]) => ({
+      machine,
+      total: v.total,
+      fails: v.fails,
+      percent: v.total > 0 ? (v.fails / v.total) * 100 : 0
+    }))
+    .filter(m => m.fails > 0)
+    .sort((a, b) => b.fails - a.fails)
+    .slice(0, 5);
 
+  // --- Динамика по ISO-неделям (4 последние) ---
+  const getIsoWeek = (date) => {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    const weekNum = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    return { year: d.getUTCFullYear(), week: weekNum };
+  };
+
+  const getIsoWeekRange = (year, week) => {
+    const jan4 = new Date(Date.UTC(year, 0, 4));
+    const jan4Day = jan4.getUTCDay() || 7;
+    const week1Mon = new Date(jan4.getTime() - (jan4Day - 1) * 86400000);
+    const mon = new Date(week1Mon.getTime() + (week - 1) * 7 * 86400000);
+    const sun = new Date(mon.getTime() + 6 * 86400000);
+    return { mon, sun };
+  };
+
+  const nowForWeeks = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const currentWeek = getIsoWeek(nowForWeeks);
+
+  const weekStats = [];
+  for (let i = 0; i < 4; i++) {
+    let w = currentWeek.week - i;
+    let y = currentWeek.year;
+    while (w < 1) {
+      y -= 1;
+      w += 52;
+    }
+
+    const { mon, sun } = getIsoWeekRange(y, w);
+    const upperBound = i === 0
+      ? new Date(nowForWeeks.getTime() + 86400000)
+      : new Date(sun.getTime() + 86400000);
+
+    const weekChecks = history.filter(h => {
+      const ts = new Date(h.timestamp);
+      return ts >= mon && ts < upperBound;
+    });
+
+    const total = weekChecks.reduce((s, h) => s + h.items.length, 0);
+    const fails = weekChecks.reduce((s, h) => s + h.items.filter(it => it.status === 'FAIL').length, 0);
+    const checksCount = weekChecks.length;
+
+    const fmtShort = (d) => {
+      const dd = String(d.getUTCDate()).padStart(2, '0');
+      const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+      return `${dd}.${mm}`;
+    };
+    const rangeText = `${fmtShort(mon)}–${fmtShort(sun)}`;
+
+    weekStats.push({
+      week: w,
+      year: y,
+      label: `W${w}`,
+      range: rangeText,
+      total,
+      fails,
+      checksCount,
+      percent: total > 0 ? (fails / total) * 100 : 0
+    });
+  }
+  const weekStatsFiltered = weekStats.filter(w => w.checksCount > 0);
+    // --- «Требует внимания» — агрегируем проблемы ---
+  const monthAgo2 = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
+
+  // 1) Битые ссылки (из localStorage, обновляется при «Проверить фото»)
+  const brokenPhotosCount = parseInt(localStorage.getItem('cl_photos_broken_count') || '0', 10);
+
+  // 2) Стандарты без фото (только активные — неактивные не важны)
+  const activeStandardsList = standards.filter(s => s.active !== false);
+  const standardsWithoutPhoto = activeStandardsList.filter(s =>
+    !Array.isArray(s.photos) || s.photos.length === 0
+  ).length;
+
+  // 3) Стандарты без проверок за 30 дней
+  // Собираем все standardId, которые встречались в истории за 30 дней
+  const usedStandardIds = new Set();
+  history.forEach(h => {
+    if (new Date(h.timestamp) < monthAgo2) return;
+    h.items.forEach(it => {
+      if (it.standardId) usedStandardIds.add(it.standardId);
+    });
+  });
+  const standardsNeverChecked = activeStandardsList.filter(s =>
+    !usedStandardIds.has(s.id)
+  ).length;
+
+  // 4) Операторы без активности 7 дней
+  const activeOperators = new Set();
+  history.forEach(h => {
+    if (new Date(h.timestamp) < weekAgo) return;
+    if (h.operator) activeOperators.add(h.operator);
+  });
+  const operatorsInactive = operators.filter(o =>
+    !activeOperators.has(o)
+  ).length;
+
+  // 5) Стандарты с комментарием к деактивации (деактивированы, но с записанной причиной)
+  const standardsWithDeactivationComment = standards.filter(s =>
+    s.active === false &&
+    s.deactivationComment &&
+    s.deactivationComment.trim() !== ''
+  ).length;
+
+  const attentionItems = [];
+  if (brokenPhotosCount > 0) {
+    attentionItems.push({
+      key: 'brokenPhotos',
+      icon: 'image',
+      text: `Битых ссылок на фото: ${brokenPhotosCount}`,
+      hint: 'Проверьте фотографии в Настройках',
+      action: 'photos-check'
+    });
+  }
+  if (standardsWithoutPhoto > 0) {
+    attentionItems.push({
+      key: 'noPhoto',
+      icon: 'image-off',
+      text: `Активных стандартов без фото: ${standardsWithoutPhoto}`,
+      hint: 'Добавьте фото в редакторе стандартов',
+      action: 'editor'
+    });
+  }
+  if (standardsNeverChecked > 0) {
+    attentionItems.push({
+      key: 'neverChecked',
+      icon: 'clock',
+      text: `Стандартов не проверялись более 30 дней: ${standardsNeverChecked}`,
+      hint: 'Проверьте, актуальны ли они',
+      action: 'editor'
+    });
+  }
+  if (operatorsInactive > 0) {
+    attentionItems.push({
+      key: 'opInactive',
+      icon: 'user-x',
+      text: `Операторов без активности >7 дней: ${operatorsInactive}`,
+      hint: 'Из общего списка операторов',
+      action: 'settings'
+    });
+  }
+  if (standardsWithDeactivationComment > 0) {
+    attentionItems.push({
+      key: 'deactComment',
+      icon: 'message',
+      text: `Деактивированных стандартов с комментарием: ${standardsWithDeactivationComment}`,
+      hint: 'Возможно, пора вернуть их в работу',
+      action: 'editor'
+    });
+  }
+    if (lossesNeverChecked > 0) {
+    attentionItems.push({
+      key: 'lossesNeverChecked',
+      icon: 'clock',
+      text: `Потерь без проверок >30 дней: ${lossesNeverChecked}`,
+      hint: 'Откройте вкладку TOP Losses и проведите проверку',
+      action: 'toploss'
+    });
+  }
+  if (standardsWithoutLosses > 0) {
+    attentionItems.push({
+      key: 'standardsWithoutLosses',
+      icon: 'message',
+      text: `Стандартов без связи с потерями: ${standardsWithoutLosses}`,
+      hint: 'Привяжите их к потерям в редакторе стандартов',
+      action: 'editor'
+    });
+  }
   return {
-    // ... (всё, что было)
     totalStandards,
     activeStandards,
     checksToday,
     failsWeek,
+    checksWeek,
+    checksWeekCount,
     totalPhotos,
     standardsWithPhoto,
     photoCoverage,
     totalBrands: brands.length,
     totalOperators: operators.length,
+
     recentChecks,
     topProblems,
     topProblemsMax,
     lineStats,
-    lineStatsMax,
     operatorStats,
-    operatorStatsMax,
-
-    // --- НОВОЕ ---
     daysSeries,
     daysSeriesMax,
     typeSegments,
-    typesTotal
+    typesTotal,
+    attentionItems,
+
+    // --- НОВОЕ ---
+    machineStats,
+    weekStats: weekStatsFiltered,
+
+    // --- TOP LOSSES ---
+    topLossChecksWeek,
+    topLossStats,
+    lossesNeverChecked,
+    standardsWithoutLosses
   };
 }
 
@@ -3695,7 +5638,7 @@ function renderDashboardStats(stats) {
 
       <div class="dash-stat">
         <div class="dash-stat-head">
-          <span>Стандарты</span>
+          <span>Стандарты активные</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
@@ -3717,6 +5660,19 @@ function renderDashboardStats(stats) {
         <div class="dash-stat-sub">за текущие сутки</div>
       </div>
 
+      <div class="dash-stat dash-stat-cyan">
+        <div class="dash-stat-head">
+          <span>Проверок за неделю</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/>
+            <line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+        </div>
+        <div class="dash-stat-value">${stats.checksWeekCount}</div>
+        <div class="dash-stat-sub">за последние 7 дней</div>
+      </div>
+
       <div class="dash-stat dash-stat-red">
         <div class="dash-stat-head">
           <span>Отклонений</span>
@@ -3730,30 +5686,17 @@ function renderDashboardStats(stats) {
         <div class="dash-stat-sub">за последние 7 дней</div>
       </div>
 
-      <div class="dash-stat dash-stat-purple">
-        <div class="dash-stat-head">
-          <span>Фотографий</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5"/>
-            <polyline points="21 15 16 10 5 21"/>
-          </svg>
-        </div>
-        <div class="dash-stat-value">${stats.totalPhotos}</div>
-        <div class="dash-stat-sub">в <strong>${stats.standardsWithPhoto}</strong> стандартах</div>
-      </div>
-
       <div class="dash-stat dash-stat-amber">
         <div class="dash-stat-head">
-          <span>Заполнение фото</span>
+          <span>Проверок потерь</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="20" x2="18" y2="10"/>
-            <line x1="12" y1="20" x2="12" y2="4"/>
-            <line x1="6" y1="20" x2="6" y2="14"/>
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
           </svg>
         </div>
-        <div class="dash-stat-value">${stats.photoCoverage}%</div>
-        <div class="dash-stat-sub">стандартов с фото</div>
+        <div class="dash-stat-value">${stats.topLossChecksWeek}</div>
+        <div class="dash-stat-sub">за последние 7 дней</div>
       </div>
 
     </div>
@@ -4208,7 +6151,7 @@ $('#blockModalSaveBtn')?.addEventListener('click', () => {
   showToast('Блок обновлён');
 });
 /* ============================================================
-   МАШИНЫ ДЛЯ ЛИНИЙ — компактный список
+   МАШИНЫ ДЛЯ ЛИНИЙ — плитки
    ============================================================ */
 function renderLineMachinesSettings() {
   const lines = getLines();
@@ -4221,26 +6164,80 @@ function renderLineMachinesSettings() {
     return;
   }
 
-  container.innerHTML = lines.map(line => {
+  container.innerHTML = '<div class="lm-tiles-grid">' + lines.map(line => {
     const machines = Array.isArray(lm[line]) ? lm[line] : [];
     const count = machines.length;
     const countText = count === 0
-      ? '<span style="color:var(--text-dim)">0 машин</span>'
+      ? 'Нет машин'
       : `${count} ${pluralizeMachines(count)}`;
 
+    // Превью — список машин
+    const preview = count === 0
+      ? 'Нажмите, чтобы добавить'
+      : machines.slice(0, 4).join(', ') + (count > 4 ? ` …+${count - 4}` : '');
+
+    const safeLine = escapeAttr(line);
+
     return `
-      <div class="line-machines-row">
-        <span class="line-machines-row-name">${escapeHtml(line)}</span>
-        <span class="line-machines-row-count">${countText}</span>
-        <button class="btn btn-secondary btn-sm"
-                onclick="openMachinesListModal('${escapeHtml(line).replace(/'/g,"\\'")}')">
-          ✏ Редактировать
-        </button>
+      <div class="lm-tile" onclick="openMachinesListModal('${safeLine}')" title="${safeLine}">
+        <div class="lm-tile-name">${escapeHtml(line)}</div>
+        <div class="lm-tile-count">${countText}</div>
+        <div class="lm-tile-preview">${escapeHtml(preview)}</div>
       </div>
     `;
-  }).join('');
+  }).join('') + '</div>';
+}
+/* ============================================================
+   TOP LOSSES — плитки в настройках
+   ============================================================ */
+
+function renderTopLossesSettings() {
+  const container = $('#topLossesContainer');
+  if (!container) return;
+
+  const cats = getTopLosses();
+
+  if (!cats.length) {
+    container.innerHTML = '<div class="empty-state">Категорий нет. Нажмите «Добавить категорию».</div>';
+    return;
+  }
+
+  container.innerHTML = '<div class="tl-tiles-grid">' + cats.map(cat => {
+    const items = Array.isArray(cat.items) ? cat.items : [];
+    const count = items.length;
+    const countText = count === 0
+      ? 'Нет потерь'
+      : `${count} ${pluralizeLosses(count)}`;
+
+    // Превью — первые 3 потери
+    const preview = count === 0
+      ? 'Нажмите, чтобы добавить потери'
+      : items.slice(0, 3).map(it => it.name).join(', ') + (count > 3 ? ` …+${count - 3}` : '');
+
+    return `
+      <div class="tl-tile" onclick="openTopLossCategoryItemsModal('${escapeAttr(cat.id)}')">
+        <div class="tl-tile-name">${escapeHtml(cat.name)}</div>
+        <div class="tl-tile-count">${countText}</div>
+        <div class="tl-tile-preview">${escapeHtml(preview)}</div>
+        <div class="tl-tile-footer">
+          <button class="btn btn-primary btn-sm"
+                  onclick="event.stopPropagation();openTopLossCategoryItemsModal('${escapeAttr(cat.id)}')">
+            Открыть →
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('') + '</div>';
 }
 
+/* Склонение: 1 потеря / 2 потери / 5 потерь */
+function pluralizeLosses(n) {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'потеря';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'потери';
+  return 'потерь';
+}
 /* Склонение: 1 машина / 2 машины / 5 машин */
 function pluralizeMachines(n) {
   const mod10 = n % 10;
@@ -4997,6 +6994,387 @@ $('#addOperatorBtn')?.addEventListener('click', () => {
   closeAddOperatorModal();
   showToast('Оператор добавлен');
 });
+/* ============================================================
+   TOP LOSSES — модалки: категория
+   ============================================================ */
+
+function openTopLossCategoryModal(catId) {
+  const modal = $('#topLossCategoryModal');
+  const title = $('#topLossCategoryModalTitle');
+  const saveBtn = $('#topLossCategoryModalSave');
+  if (!modal) return;
+
+  const cats = getTopLosses();
+
+  if (catId) {
+    const cat = cats.find(c => c.id === catId);
+    if (!cat) return;
+    title.textContent = 'Изменить категорию';
+    saveBtn.textContent = 'Сохранить';
+    $('#topLossCategoryModalId').value = catId;
+    $('#topLossCategoryModalName').value = cat.name || '';
+  } else {
+    title.textContent = 'Добавить категорию';
+    saveBtn.textContent = 'Добавить';
+    $('#topLossCategoryModalId').value = '';
+    $('#topLossCategoryModalName').value = '';
+  }
+
+  modal.classList.add('active');
+  setTimeout(() => $('#topLossCategoryModalName').focus(), 100);
+}
+window.openTopLossCategoryModal = openTopLossCategoryModal;
+
+/* ============================================================
+   TOP LOSSES — модалка содержимого категории
+   ============================================================ */
+
+function openTopLossCategoryItemsModal(catId) {
+  const modal = $('#topLossCategoryItemsModal');
+  if (!modal) return;
+
+  const cats = getTopLosses();
+  const cat = cats.find(c => c.id === catId);
+  if (!cat) return;
+
+  $('#topLossCategoryItemsModalCatId').value = catId;
+  $('#topLossCategoryItemsModalTitle').textContent = 'Категория: ' + (cat.name || '—');
+
+  renderTopLossCategoryItemsModalContent(catId);
+
+  modal.classList.add('active');
+}
+window.openTopLossCategoryItemsModal = openTopLossCategoryItemsModal;
+
+function renderTopLossCategoryItemsModalContent(catId) {
+  const content = $('#topLossCategoryItemsModalContent');
+  if (!content) return;
+
+  const cats = getTopLosses();
+  const cat = cats.find(c => c.id === catId);
+  if (!cat) return;
+
+  const items = Array.isArray(cat.items) ? cat.items : [];
+
+  if (!items.length) {
+    content.innerHTML = '<div class="tl-modal-empty">В этой категории пока нет потерь</div>';
+    return;
+  }
+
+  content.innerHTML = items.map(it => `
+    <div class="tl-modal-item">
+      <span class="tl-modal-item-name">${escapeHtml(it.name)}</span>
+      <div class="tl-modal-item-actions">
+        <button class="btn btn-secondary btn-sm btn-icon"
+                onclick="openTopLossItemModal('${escapeAttr(catId)}', '${escapeAttr(it.id)}')"
+                title="Изменить">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+        </button>
+        <button class="btn btn-danger btn-sm btn-icon"
+                onclick="deleteTopLossItemFromModal('${escapeAttr(catId)}', '${escapeAttr(it.id)}')"
+                title="Удалить">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* Удаление потери из модалки — с обновлением содержимого модалки */
+window.deleteTopLossItemFromModal = function(catId, itemId) {
+  const cats = getTopLosses();
+  const cat = cats.find(c => c.id === catId);
+  if (!cat) return;
+  const item = (cat.items || []).find(i => i.id === itemId);
+  if (!item) return;
+
+  if (!confirm(`Удалить потерю "${item.name}"?`)) return;
+
+  cat.items = cat.items.filter(i => i.id !== itemId);
+  setTopLosses(cats);
+
+  // Обновляем и модалку, и плитки в настройках
+  renderTopLossCategoryItemsModalContent(catId);
+  renderTopLossesSettings();
+  showToast('Потеря удалена');
+};
+
+/* Кнопка «Добавить потерю» в модалке */
+$('#topLossCategoryItemsModalAddBtn')?.addEventListener('click', () => {
+  const catId = $('#topLossCategoryItemsModalCatId').value;
+  if (!catId) return;
+  openTopLossItemModal(catId, null);
+});
+
+/* Обёртка openTopLossItemModal, чтобы после сохранения обновить содержимое модалки */
+const _origOpenTopLossItemModal = window.openTopLossItemModal;
+
+/* Закрыть модалку */
+function closeTopLossCategoryItemsModal() {
+  const modal = $('#topLossCategoryItemsModal');
+  if (modal) modal.classList.remove('active');
+}
+
+$('#topLossCategoryItemsModalClose')?.addEventListener('click', closeTopLossCategoryItemsModal);
+$('#topLossCategoryItemsModalDoneBtn')?.addEventListener('click', closeTopLossCategoryItemsModal);
+$('#topLossCategoryItemsModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'topLossCategoryItemsModal') closeTopLossCategoryItemsModal();
+});
+
+function closeTopLossCategoryModal() {
+  const modal = $('#topLossCategoryModal');
+  if (modal) modal.classList.remove('active');
+}
+
+$('#topLossCategoryModalClose')?.addEventListener('click', closeTopLossCategoryModal);
+$('#topLossCategoryModalCancel')?.addEventListener('click', closeTopLossCategoryModal);
+$('#topLossCategoryModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'topLossCategoryModal') closeTopLossCategoryModal();
+});
+
+$('#topLossCategoryModalName')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    $('#topLossCategoryModalSave')?.click();
+  }
+});
+
+$('#topLossCategoryModalSave')?.addEventListener('click', () => {
+  const id = $('#topLossCategoryModalId').value;
+  const name = ($('#topLossCategoryModalName').value || '').trim();
+  if (!name) return showToast('Введите название категории', true);
+
+  const cats = getTopLosses();
+
+  // Проверка дубликата (по имени, без учёта регистра)
+  const dup = cats.find(c => c.id !== id && c.name.toLowerCase() === name.toLowerCase());
+  if (dup) return showToast('Категория с таким названием уже есть', true);
+
+  if (id) {
+    const cat = cats.find(c => c.id === id);
+    if (!cat) return;
+    cat.name = name;
+  } else {
+    cats.push({
+      id: makeCategoryId(name),
+      name,
+      items: []
+    });
+  }
+
+  setTopLosses(cats);
+  renderTopLossesSettings();
+
+  // Обновляем заголовок модалки содержимого, если она открыта
+  const catItemsModal = $('#topLossCategoryItemsModal');
+  if (catItemsModal && catItemsModal.classList.contains('active') && id) {
+    const openCatId = $('#topLossCategoryItemsModalCatId').value;
+    if (openCatId === id) {
+      const updatedCat = getTopLosses().find(c => c.id === id);
+      if (updatedCat) {
+        $('#topLossCategoryItemsModalTitle').textContent = 'Категория: ' + updatedCat.name;
+      }
+    }
+  }
+
+  closeTopLossCategoryModal();
+  showToast(id ? 'Категория обновлена' : 'Категория добавлена');
+});
+
+/* Кнопка «Добавить категорию» в карточке */
+$('#openAddTopLossCategoryBtn')?.addEventListener('click', () => {
+  openTopLossCategoryModal(null);
+});
+
+/* ============================================================
+   TOP LOSSES — модалки: потеря
+   ============================================================ */
+
+function openTopLossItemModal(catId, itemId) {
+  const modal = $('#topLossItemModal');
+  const title = $('#topLossItemModalTitle');
+  const saveBtn = $('#topLossItemModalSave');
+  if (!modal) return;
+
+  const cats = getTopLosses();
+  const cat = cats.find(c => c.id === catId);
+  if (!cat) return;
+
+  $('#topLossItemModalCategoryId').value = catId;
+  $('#topLossItemModalCategoryLabel').textContent = 'Категория: ' + (cat.name || '—');
+
+  if (itemId) {
+    const item = (cat.items || []).find(i => i.id === itemId);
+    if (!item) return;
+    title.textContent = 'Изменить потерю';
+    saveBtn.textContent = 'Сохранить';
+    $('#topLossItemModalId').value = itemId;
+    $('#topLossItemModalName').value = item.name || '';
+  } else {
+    title.textContent = 'Добавить потерю';
+    saveBtn.textContent = 'Добавить';
+    $('#topLossItemModalId').value = '';
+    $('#topLossItemModalName').value = '';
+  }
+
+  modal.classList.add('active');
+  setTimeout(() => $('#topLossItemModalName').focus(), 100);
+}
+window.openTopLossItemModal = openTopLossItemModal;
+
+function closeTopLossItemModal() {
+  const modal = $('#topLossItemModal');
+  if (modal) modal.classList.remove('active');
+}
+
+$('#topLossItemModalClose')?.addEventListener('click', closeTopLossItemModal);
+$('#topLossItemModalCancel')?.addEventListener('click', closeTopLossItemModal);
+$('#topLossItemModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'topLossItemModal') closeTopLossItemModal();
+});
+
+$('#topLossItemModalName')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    $('#topLossItemModalSave')?.click();
+  }
+});
+
+$('#topLossItemModalSave')?.addEventListener('click', () => {
+  const catId = $('#topLossItemModalCategoryId').value;
+  const itemId = $('#topLossItemModalId').value;
+  const name = ($('#topLossItemModalName').value || '').trim();
+  if (!catId) return;
+  if (!name) return showToast('Введите название потери', true);
+
+  const cats = getTopLosses();
+  const cat = cats.find(c => c.id === catId);
+  if (!cat) return;
+  if (!Array.isArray(cat.items)) cat.items = [];
+
+  // Проверка дубликата в этой категории
+  const dup = cat.items.find(i => i.id !== itemId && i.name.toLowerCase() === name.toLowerCase());
+  if (dup) return showToast('Такая потеря уже есть в этой категории', true);
+
+  if (itemId) {
+    const item = cat.items.find(i => i.id === itemId);
+    if (!item) return;
+    item.name = name;
+  } else {
+    cat.items.push({
+      id: makeLossId(name),
+      name
+    });
+  }
+
+  setTopLosses(cats);
+  renderTopLossesSettings();
+
+  // Обновляем содержимое модалки категории, если она открыта
+  const catItemsModal = $('#topLossCategoryItemsModal');
+  if (catItemsModal && catItemsModal.classList.contains('active')) {
+    const openCatId = $('#topLossCategoryItemsModalCatId').value;
+    if (openCatId === catId) {
+      renderTopLossCategoryItemsModalContent(catId);
+    }
+  }
+
+  closeTopLossItemModal();
+  showToast(itemId ? 'Потеря обновлена' : 'Потеря добавлена');
+});
+/* Удалить потерю */
+window.deleteTopLossItem = function(catId, itemId) {
+  const cats = getTopLosses();
+  const cat = cats.find(c => c.id === catId);
+  if (!cat) return;
+  const item = (cat.items || []).find(i => i.id === itemId);
+  if (!item) return;
+
+  if (!confirm(`Удалить потерю "${item.name}"?`)) return;
+
+  cat.items = cat.items.filter(i => i.id !== itemId);
+  setTopLosses(cats);
+  renderTopLossesSettings();
+
+  // Обновляем модалку категории, если она открыта
+  const catItemsModal = $('#topLossCategoryItemsModal');
+  if (catItemsModal && catItemsModal.classList.contains('active')) {
+    const openCatId = $('#topLossCategoryItemsModalCatId').value;
+    if (openCatId === catId) {
+      renderTopLossCategoryItemsModalContent(catId);
+    }
+  }
+
+  showToast('Потеря удалена');
+};
+
+/* ============================================================
+   TOP LOSSES — модалка удаления категории
+   ============================================================ */
+
+function openTopLossDeleteModal(catId) {
+  const modal = $('#topLossDeleteModal');
+  if (!modal) return;
+
+  const cats = getTopLosses();
+  const cat = cats.find(c => c.id === catId);
+  if (!cat) return;
+
+  const itemCount = (cat.items || []).length;
+
+  // Проверяем, используется ли категория в стандартах
+  const usedInStandards = getStandards().filter(s =>
+    Array.isArray(s.topLosses) && s.topLosses.some(lossId =>
+      (cat.items || []).some(it => it.id === lossId)
+    )
+  ).length;
+
+  $('#topLossDeleteModalTitle').textContent = `Удалить категорию "${cat.name}"?`;
+  $('#topLossDeleteModalText').textContent =
+    itemCount > 0
+      ? `В категории ${itemCount} ${pluralizeLosses(itemCount)}. Они также будут удалены.`
+      : 'В категории нет потерь.';
+
+  const warn = $('#topLossDeleteModalWarning');
+  if (usedInStandards > 0) {
+    warn.textContent = `⚠ Внимание: потери этой категории используются в ${usedInStandards} стандарт(ах). Привязка будет потеряна.`;
+    warn.style.display = 'block';
+  } else {
+    warn.style.display = 'none';
+  }
+
+  $('#topLossDeleteModal').dataset.catId = catId;
+  modal.classList.add('active');
+}
+window.openTopLossDeleteModal = openTopLossDeleteModal;
+
+function closeTopLossDeleteModal() {
+  const modal = $('#topLossDeleteModal');
+  if (modal) modal.classList.remove('active');
+}
+
+$('#topLossDeleteModalClose')?.addEventListener('click', closeTopLossDeleteModal);
+$('#topLossDeleteModalCancel')?.addEventListener('click', closeTopLossDeleteModal);
+$('#topLossDeleteModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'topLossDeleteModal') closeTopLossDeleteModal();
+});
+
+$('#topLossDeleteModalConfirm')?.addEventListener('click', () => {
+  const catId = $('#topLossDeleteModal').dataset.catId;
+  if (!catId) return;
+
+  const cats = getTopLosses();
+  setTopLosses(cats.filter(c => c.id !== catId));
+  renderTopLossesSettings();
+  closeTopLossDeleteModal();
+  showToast('Категория удалена');
+});
 window.deleteOperator = function(name) {
   if (!confirm('Удалить оператора "' + name + '"?')) return;
   setOperators(getOperators().filter(o => o !== name));
@@ -5244,7 +7622,8 @@ const backup = {
   lineBrands: getLineBrands(),
   operators: getOperators(),
   blocks: getBlocks(),
-  lineMachines: getLineMachines()
+  lineMachines: getLineMachines(),
+  topLosses: getTopLosses()
 };
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8' });
   const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
@@ -5274,6 +7653,7 @@ $('#backupFileInput').addEventListener('change', (e) => {
       if (Array.isArray(data.operators)) setOperators(data.operators);
       if (Array.isArray(data.blocks)) setBlocks(data.blocks);
       if (data.lineMachines && typeof data.lineMachines === 'object') setLineMachines(data.lineMachines);
+      if (Array.isArray(data.topLosses)) setTopLosses(data.topLosses);
       init();
       showToast('Бэкап загружен');
     } catch (err) {
@@ -5302,6 +7682,7 @@ function init() {
   fillHistoryFilters();
   renderEditorBlocksView();
   renderSettings();
+  fillTopLossTab();         
   initRouter();
   updateNavCounters();
 }
@@ -5513,6 +7894,148 @@ $('#downloadOperatorsTemplateBtn')?.addEventListener('click', async () => {
   downloadBlob(blob, 'template_operators.xlsx');
   showToast('Шаблон операторов скачан');
 });
+
+/* ============================================================
+   TOP LOSSES — шаблон и импорт Excel
+   ============================================================ */
+
+/* --- Шаблон --- */
+$('#downloadTopLossesTemplateBtn')?.addEventListener('click', async () => {
+  if (typeof ExcelJS === 'undefined') {
+    return showToast('Библиотека ExcelJS не загружена', true);
+  }
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Top Losses');
+
+  ws.columns = [
+    { header: 'Категория', key: 'category', width: 40 },
+    { header: 'Потеря',    key: 'loss',     width: 50 }
+  ];
+
+  // Примеры
+  ws.addRow(['Увеличенные остановки', 'Остановки по хопперу']);
+  ws.addRow(['Увеличенные остановки', 'Обрыв штранга']);
+  ws.addRow(['Дефекты по качеству',   'Замятие сигарет']);
+  ws.addRow(['Повышенные выбросы',    'Выбросы по LES']);
+
+  // Шапка
+  const headerRow = ws.getRow(1);
+  headerRow.height = 30;
+  headerRow.eachCell((cell) => {
+    cell.font = { name: 'Calibri', size: 13, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4FA8' } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+  });
+
+  // Инструкция
+  const wsInfo = wb.addWorksheet('Инструкция');
+  wsInfo.columns = [{ width: 90 }];
+  const info = [
+    ['📋 Шаблон Top Losses'],
+    [''],
+    ['КАК ПОЛЬЗОВАТЬСЯ:'],
+    ['1. Заполните столбцы «Категория» и «Потеря». Одна потеря = одна строка.'],
+    ['2. Категория может повторяться в нескольких строках — тогда потери добавятся в одну категорию.'],
+    ['3. Сохраните файл и загрузите через кнопку «Загрузить из Excel».'],
+    [''],
+    ['ПРАВИЛА ИМПОРТА:'],
+    ['  • Если категории нет в справочнике — она создастся автоматически.'],
+    ['  • Если потеря уже есть в категории — она пропускается (дубликат).'],
+    ['  • Пустые строки игнорируются.'],
+    ['']
+  ];
+  info.forEach(([text]) => wsInfo.addRow([text]));
+  wsInfo.getRow(1).font = { bold: true, size: 16, color: { argb: 'FF0A4FA8' } };
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  downloadBlob(blob, 'template_top_losses.xlsx');
+  showToast('Шаблон Top Losses скачан');
+});
+
+/* --- Импорт --- */
+$('#uploadTopLossesBtn')?.addEventListener('click', () => {
+  $('#topLossesFileInput').click();
+});
+
+$('#topLossesFileInput')?.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = '';
+
+  try {
+    const result = await parseTopLossesExcel(file);
+    showImportReport(result, 'topLossesContainer');
+    if (result.added > 0) {
+      renderTopLossesSettings();
+      showToast(`Добавлено потерь: ${result.added}`);
+    } else {
+      showToast('Новых потерь не найдено', true);
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('Ошибка чтения файла: ' + err.message, true);
+  }
+});
+
+async function parseTopLossesExcel(file) {
+  const wb = new ExcelJS.Workbook();
+  const buf = await file.arrayBuffer();
+  await wb.xlsx.load(buf);
+
+  const ws = wb.getWorksheet('Top Losses') || wb.worksheets[0];
+  if (!ws) throw new Error('Не найден лист «Top Losses»');
+
+  const cats = getTopLosses();
+
+  const result = {
+    added: 0,
+    skipped: 0,
+    duplicates: [],
+    empty: 0,
+    errors: []
+  };
+
+  for (let i = 2; i <= ws.rowCount; i++) {
+    const row = ws.getRow(i);
+    const catName = String(row.getCell(1).value || '').trim();
+    const itemName = String(row.getCell(2).value || '').trim();
+
+    if (!catName && !itemName) {
+      result.empty++;
+      continue;
+    }
+    if (!catName || !itemName) {
+      result.errors.push({ row: i, message: 'нужны и категория, и потеря' });
+      continue;
+    }
+
+    // Найти или создать категорию
+    let cat = cats.find(c => c.name.toLowerCase() === catName.toLowerCase());
+    if (!cat) {
+      cat = { id: makeCategoryId(catName), name: catName, items: [] };
+      cats.push(cat);
+    }
+    if (!Array.isArray(cat.items)) cat.items = [];
+
+    // Проверка дубликата потери
+    if (cat.items.some(it => it.name.toLowerCase() === itemName.toLowerCase())) {
+      result.duplicates.push(`${catName} / ${itemName}`);
+      result.skipped++;
+      continue;
+    }
+
+    cat.items.push({ id: makeLossId(itemName), name: itemName });
+    result.added++;
+  }
+
+  if (result.added > 0) {
+    setTopLosses(cats);
+  }
+
+  return result;
+}
 
 /* --- Загрузка операторов --- */
 $('#uploadOperatorsBtn')?.addEventListener('click', () => {
@@ -5788,7 +8311,7 @@ $('#editorDownloadTemplateBtn')?.addEventListener('click', async () => {
     'Точка 2', 'Значение 2', 'Сорта 2',
     'Точка 3', 'Значение 3', 'Сорта 3',
     'Точка 4', 'Значение 4', 'Сорта 4',
-    'Применять к', 'Триггеры', 'Фото'
+    'Применять к', 'Триггеры', 'Top Losses', 'Фото'
   ];
 
   ws.addRow(headers);
@@ -5814,6 +8337,7 @@ $('#editorDownloadTemplateBtn')?.addEventListener('click', async () => {
     4, '', '',
     'Minor, Intermediate',
     'Табак',
+    'Обрыв штранга, Заторы на MAX',
     'max-1.jpg, max-2.jpg'
   ]);
 
@@ -5822,7 +8346,7 @@ $('#editorDownloadTemplateBtn')?.addEventListener('click', async () => {
     6, 14, 10, 26, 12, 32, 10, 14,
     34, 34, 30, 30,
     8, 22, 14, 8, 22, 14, 8, 22, 14, 8, 22, 14,
-    22, 30, 40
+    22, 30, 38, 40
   ];
   ws.columns.forEach((col, i) => { col.width = widths[i] || 14; });
 
@@ -5878,8 +8402,13 @@ $('#editorDownloadTemplateBtn')?.addEventListener('click', async () => {
     ['  • Линия — код линии, должен совпадать с открытой линией'],
     ['  • Тип контроля — ok_not_ok / value_input / tolerance'],
     [''],
+    ['TOP LOSSES (опционально):'],
+    ['  • Top Losses — названия потерь через запятую, например: Обрыв штранга, Заторы на MAX.'],
+    ['      Имена должны точно совпадать с названиями в справочнике Top Losses (Настройки → Категории Top Losses).'],
+    ['      Если потеря не найдена — она игнорируется.'],
+    [''],
     ['ФОТОГРАФИИ (опционально):'],
-    ['  • Фото — имена файлов через запятую (например: max-1.jpg, drum.jpg).'],
+    ['  • Фото — имена файлов должны быть записаны в следующем формате: Имя.jpg, опционально можно добавить несколько фото для стандарта через запятую (например: max-1.jpg, drum.jpg).'],
     ['      Файлы должны лежать в папке: photos/<Линия>/<Maker или Packer>/'],
     [''],
     ['ПРОЧИЕ ОПЦИОНАЛЬНЫЕ ПОЛЯ:'],
@@ -5926,7 +8455,7 @@ $('#editorExportBtn')?.addEventListener('click', async () => {
     'Точка 2', 'Значение 2', 'Сорта 2',
     'Точка 3', 'Значение 3', 'Сорта 3',
     'Точка 4', 'Значение 4', 'Сорта 4',
-    'Применять к', 'Триггеры', 'Фото'
+    'Применять к', 'Триггеры', 'Top Losses', 'Фото'
   ];
   ws.addRow(headers);
 
@@ -5950,6 +8479,17 @@ $('#editorExportBtn')?.addEventListener('click', async () => {
     // Фото: массив → строка через запятую
     const photos = Array.isArray(st.photos) ? st.photos.join(', ') : '';
 
+    // Top Losses: массив ID → строка имён через запятую
+    const topLossesNames = Array.isArray(st.topLosses)
+      ? st.topLosses
+          .map(id => {
+            const l = findLossById(id);
+            return l ? l.name : null;
+          })
+          .filter(Boolean)
+          .join(', ')
+      : '';
+
     ws.addRow([
       st.number || '',
       st.oplNumber || '',
@@ -5969,6 +8509,7 @@ $('#editorExportBtn')?.addEventListener('click', async () => {
       p4.point, p4.value, p4.sorts,
       appliesTo,
       triggers,
+      topLossesNames,
       photos
     ]);
   });
@@ -5978,7 +8519,7 @@ $('#editorExportBtn')?.addEventListener('click', async () => {
     6, 14, 10, 26, 12, 32, 10, 14,
     34, 34, 30, 30,
     8, 22, 14, 8, 22, 14, 8, 22, 14, 8, 22, 14,
-    22, 30, 40
+    22, 30, 38, 40
   ];
   ws.columns.forEach((col, i) => { col.width = widths[i] || 14; });
 
@@ -6147,9 +8688,10 @@ async function parseStandardsExcelV3(file, targetLine) {
     const point3 = { point: 3, value: get(20), sorts: get(21) };
     const point4 = { point: 4, value: get(23), sorts: get(24) };
 
-    const appliesToRaw = get(25);
-    const triggersRaw  = get(26);
-    const photosRaw    = get(27);
+    const appliesToRaw  = get(25);
+    const triggersRaw   = get(26);
+    const topLossesRaw  = get(27);
+    const photosRaw     = get(28);
 
     // Пустая строка — пропускаем
     if (!number && !oplNumber && !title && !node) {
@@ -6227,7 +8769,24 @@ async function parseStandardsExcelV3(file, targetLine) {
         triggers.push(t);
       }
     });
-        // --- НОВОЕ: парсим фотографии (список имён файлов через запятую) ---
+
+    // --- Парсим Top Losses ---
+    // Значения — названия потерь через запятую. Ищем ID в справочнике
+    // по точному имени (без регистра). Если не нашли — игнорируем.
+    const allLossesFlat = getAllLossItems();
+    const topLosses = [];
+
+    splitList(topLossesRaw).forEach(name => {
+      const found = allLossesFlat.find(l =>
+        l.name.toLowerCase() === name.toLowerCase()
+      );
+      if (found) {
+        topLosses.push(found.id);
+      }
+      // если не нашли — молча игнорируем (в отличие от машин)
+    });
+
+    // --- Парсим фотографии (список имён файлов через запятую) ---
     const photos = splitList(photosRaw);
 
     // Формируем стандарт
@@ -6249,6 +8808,7 @@ async function parseStandardsExcelV3(file, targetLine) {
       measurements: [point1, point2, point3, point4],
       appliesTo,
       triggers,
+      topLosses,
       photos,
       author: '—',
       createdAt: new Date().toISOString(),

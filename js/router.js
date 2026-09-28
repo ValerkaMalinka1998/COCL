@@ -61,6 +61,15 @@ function switchTab(tabName, pushHistory = true) {
     renderDashboard();
   }
 
+  if (tabName === 'toploss') {
+    if (typeof fillTopLossTab === 'function') fillTopLossTab();
+    if (typeof renderTopLossCategories === 'function') renderTopLossCategories();
+  }
+
+  if (tabName === 'toploss' && typeof fillTopLossTab === 'function') {
+    fillTopLossTab();
+  }
+
   if (tabName === 'settings' && typeof renderSettings === 'function') {
     renderSettings();
   }

@@ -49,26 +49,45 @@
 
     <div class="sidebar-divider"></div>
 
-    <a href="#check" data-tab="check" class="active" title="Проверка">
+    <!-- ============ ГРУППА: ПРОВЕРКИ ============ -->
+    <div class="nav-group-title">Проверки</div>
+
+    <a href="#check" data-tab="check" class="active" title="Проверка COCL">
       <span class="nav-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
           <polyline points="22 4 12 14.01 9 11.01"/>
         </svg>
       </span>
-      <span class="nav-label">Проверка</span>
+      <span class="nav-label">Проверка COCL</span>
     </a>
 
-    <a href="#editor" data-tab="editor" title="Редактор стандартов">
+    <a href="#toploss" data-tab="toploss" title="TOP Losses">
       <span class="nav-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/>
-          <line x1="16" y1="17" x2="8" y2="17"/>
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
       </span>
-      <span class="nav-label">Редактор стандартов</span>
+      <span class="nav-label">TOP Losses</span>
+    </a>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- ============ ГРУППА: АНАЛИЗ ============ -->
+    <div class="nav-group-title">Анализ</div>
+
+    <a href="#dashboard" data-tab="dashboard" title="Дашборд">
+      <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="9"/>
+          <rect x="14" y="3" width="7" height="5"/>
+          <rect x="14" y="12" width="7" height="9"/>
+          <rect x="3" y="16" width="7" height="5"/>
+        </svg>
+      </span>
+      <span class="nav-label">Дашборд</span>
     </a>
 
     <a href="#history" data-tab="history" title="История">
@@ -83,16 +102,21 @@
       <span class="nav-counter" id="navHistoryCounter" style="display:none">0</span>
     </a>
 
-    <a href="#dashboard" data-tab="dashboard" title="Дашборд">
+    <div class="sidebar-divider"></div>
+
+    <!-- ============ ГРУППА: НАСТРОЙКА ============ -->
+    <div class="nav-group-title">Настройка</div>
+
+    <a href="#editor" data-tab="editor" title="Редактор стандартов">
       <span class="nav-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="7" height="9"/>
-          <rect x="14" y="3" width="7" height="5"/>
-          <rect x="14" y="12" width="7" height="9"/>
-          <rect x="3" y="16" width="7" height="5"/>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
         </svg>
       </span>
-      <span class="nav-label">Дашборд</span>
+      <span class="nav-label">Редактор стандартов</span>
     </a>
 
     <a href="#settings" data-tab="settings" title="Настройки">
@@ -214,9 +238,66 @@
       <button class="btn btn-secondary" id="resetCheckBtn">Сбросить</button>
     </div>
   </div>
+</div>
+<!-- ======================= ВКЛАДКА TOP LOSSES ======================= -->
+<div class="tab" id="tab-toploss">
+
+  <!-- ЭКРАН 1: ВЫБОР ПОТЕРЬ -->
+  <div id="tlSelectView">
+
+    <div class="card">
+      <h2>1. Оператор и смена</h2>
+      <div class="row">
+        <div class="field" style="position:relative">
+          <label class="required">ФИО оператора</label>
+          <input type="text" id="tlOperator" placeholder="Начните вводить фамилию..." autocomplete="off">
+          <div class="autocomplete-dropdown" id="tlOperatorAutocomplete" style="display:none"></div>
+        </div>
+        <div class="field">
+          <label class="required">Смена</label>
+          <select id="tlShift"><option value="">— выберите —</option></select>
+        </div>
+        <div class="field">
+          <label class="required">Линия</label>
+          <select id="tlLine"><option value="">— выберите —</option></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="tl-header-row">
+        <h2>2. Выберите потери для проверки</h2>
+        <div class="tl-selected-counter" id="tlSelectedCounter" style="display:none">
+          Выбрано: <strong id="tlSelectedCount">0</strong>
+        </div>
+      </div>
+      <p class="tl-hint">
+        Отметьте одну или несколько потерь. Будут собраны все стандарты,
+        которые их контролируют (дубликаты исключаются).
+      </p>
+      <div id="tlCategoriesContainer" class="tl-select-categories"></div>
+    </div>
+
+    <div class="tl-select-footer">
+      <button class="btn btn-secondary" id="tlResetSelectionBtn">Сбросить выбор</button>
+      <button class="btn btn-primary btn-icon-text" id="tlBuildChecklistBtn" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 11l3 3L22 4"/>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
+        <span>Сформировать чек-лист</span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ЭКРАН 2: ЧЕК-ЛИСТ (Этап 4) -->
+  <div id="tlChecklistView" style="display:none"></div>
+
+  <!-- ЭКРАН 3: РЕЗЮМЕ (Этап 4) -->
+  <div id="tlSummaryView" style="display:none"></div>
 
 </div>
-
 <!-- ======================= ВКЛАДКА РЕДАКТОР ======================= -->
 <div class="tab" id="tab-editor">
 
@@ -368,6 +449,14 @@
           <option>Minor</option><option>Intermediate</option><option>Major</option>
         </select>
       </div>
+      <div class="field">
+        <label>Тип проверки</label>
+        <select id="filterMode">
+          <option value="">Все</option>
+          <option value="changeover">COCL (смена сорта)</option>
+          <option value="toploss">Top Losses</option>
+        </select>
+      </div>
       <div class="field" style="flex:0 0 auto; min-width:auto">
         <button class="btn btn-primary" id="applyFilterBtn">Применить</button>
       </div>
@@ -466,7 +555,40 @@
     </p>
     <div id="lineMachinesContainer"></div>
   </div>
-
+  <div class="card">
+    <h2>Категории Top Losses</h2>
+    <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
+      Потери, дефекты и выбросы, по которым контролируются стандарты.
+      Оператор на вкладке «TOP Losses» выбирает конкретные потери — и получает список стандартов для проверки.
+    </p>
+    <div id="topLossesContainer"></div>
+    <div class="card-actions-bar">
+      <button class="btn btn-primary btn-icon-text" id="openAddTopLossCategoryBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span>Добавить категорию</span>
+      </button>
+      <button class="btn btn-secondary btn-icon-text" id="downloadTopLossesTemplateBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span>Скачать шаблон</span>
+      </button>
+      <button class="btn btn-success btn-icon-text" id="uploadTopLossesBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <span>Загрузить из Excel</span>
+      </button>
+      <input type="file" id="topLossesFileInput" accept=".xlsx,.xls" style="display:none">
+    </div>
+  </div>
   <div class="card">
     <h2>Общий список брендов <span class="list-counter" id="brandsCount"></span></h2>
     <div class="list-toolbar">
@@ -596,11 +718,11 @@
       </button>
     </div>
 
-    <p style="color:var(--text-second);font-size:12px;margin-top:14px;line-height:1.5">
-      ⚠ Файлы не загружаются через сайт — их нужно положить в папку вручную. Пока нет сервера, каждый
-      пользователь (технолог, оператор) должен иметь свою копию папки <code>photos/</code>. Чтобы
-      перенести фото на другой ПК — скопируйте папку целиком.
-    </p>
+<p style="color:var(--text-second);font-size:12px;margin-top:14px;line-height:1.5">
+  ⚠ Файлы не загружаются через сайт — их нужно положить в папку вручную. Пока нет сервера, каждый
+  пользователь (технолог, оператор) должен иметь свою копию папки <code>photos/</code>. Чтобы
+  перенести фото на другой ПК — скопируйте папку целиком.
+</p>
   </div>
 
   <div class="card" style="border-left:4px solid #c0392b">
@@ -707,6 +829,97 @@
     <div class="modal-footer">
       <button class="btn btn-secondary" id="addOperatorCancelBtn">Отмена</button>
       <button class="btn btn-primary" id="addOperatorBtn">Добавить</button>
+    </div>
+  </div>
+</div>
+<!-- ======================= МОДАЛЬНОЕ ОКНО: КАТЕГОРИЯ TOP LOSSES ======================= -->
+<div class="modal-overlay" id="topLossCategoryModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="topLossCategoryModalTitle">Добавить категорию</h3>
+      <button class="modal-close" id="topLossCategoryModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="topLossCategoryModalId">
+      <div class="field">
+        <label class="required">Название категории</label>
+        <input type="text" id="topLossCategoryModalName" placeholder="Увеличенные остановки">
+      </div>
+      <p style="color:var(--text-second);font-size:12px;margin-top:8px">
+        Например: <strong>Увеличенные остановки</strong>, <strong>Дефекты по качеству</strong>, <strong>Повышенные выбросы</strong>.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="topLossCategoryModalCancel">Отмена</button>
+      <button class="btn btn-primary" id="topLossCategoryModalSave">Добавить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= МОДАЛЬНОЕ ОКНО: ПОТЕРЯ (внутри категории) ======================= -->
+<div class="modal-overlay" id="topLossItemModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="topLossItemModalTitle">Добавить потерю</h3>
+      <button class="modal-close" id="topLossItemModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="topLossItemModalCategoryId">
+      <input type="hidden" id="topLossItemModalId">
+      <p id="topLossItemModalCategoryLabel" style="color:var(--text-second);font-size:13px;margin-bottom:14px"></p>
+      <div class="field">
+        <label class="required">Название потери</label>
+        <input type="text" id="topLossItemModalName" placeholder="Обрыв штранга">
+      </div>
+      <p style="color:var(--text-second);font-size:12px;margin-top:8px">
+        Например: <strong>Обрыв штранга</strong>, <strong>Замятие сигарет</strong>, <strong>Выбросы по LES</strong>.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="topLossItemModalCancel">Отмена</button>
+      <button class="btn btn-primary" id="topLossItemModalSave">Добавить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= МОДАЛЬНОЕ ОКНО: ПОТЕРИ КАТЕГОРИИ ======================= -->
+<div class="modal-overlay" id="topLossCategoryItemsModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="topLossCategoryItemsModalTitle">Категория</h3>
+      <button class="modal-close" id="topLossCategoryItemsModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="topLossCategoryItemsModalCatId">
+      <div id="topLossCategoryItemsModalContent"></div>
+      <button class="btn btn-secondary btn-icon-text machines-add-btn" id="topLossCategoryItemsModalAddBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span>Добавить потерю</span>
+      </button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" id="topLossCategoryItemsModalDoneBtn">Готово</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= МОДАЛЬНОЕ ОКНО: ПОДТВЕРЖДЕНИЕ УДАЛЕНИЯ КАТЕГОРИИ ======================= -->
+<div class="modal-overlay" id="topLossDeleteModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="topLossDeleteModalTitle">Удалить категорию?</h3>
+      <button class="modal-close" id="topLossDeleteModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <p id="topLossDeleteModalText" style="font-size:13px;color:var(--text-main)"></p>
+      <p id="topLossDeleteModalWarning" style="font-size:12px;color:var(--accent-red);margin-top:10px;display:none"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="topLossDeleteModalCancel">Отмена</button>
+      <button class="btn btn-danger" id="topLossDeleteModalConfirm">Удалить</button>
     </div>
   </div>
 </div>
@@ -922,7 +1135,12 @@
           <option value="tolerance">В допуске / Не в допуске</option>
         </select>
       </div>
-
+      <h4 class="form-section-title">Top Losses (потери, которые контролирует стандарт)</h4>
+        <p style="color:var(--text-second);font-size:12px;margin-bottom:10px">
+          Отметьте потери, которые этот стандарт помогает контролировать. Оператор увидит его
+          на вкладке «TOP Losses», когда выберет эти потери.
+        </p>
+      <div id="sf_topLossesGroup"></div>
       <h4 class="form-section-title">Применять к смене сорта</h4>
       <div class="checkbox-group type-checkbox-group" id="sf_appliesToGroup">
         <label class="type-checkbox type-checkbox-minor">
@@ -941,7 +1159,7 @@
 
       <h4 class="form-section-title">Триггеры (опционально)</h4>
       <div id="sf_triggersGroup"></div>
-
+      
       <h4 class="form-section-title">Фотографии</h4>
       <p style="color:var(--text-second);font-size:12px;margin-bottom:10px">
         Укажите имена файлов из папки
