@@ -4090,3 +4090,729 @@ header,
     justify-self: start;
   }
 }
+/* ============================================================ */
+/* === TOP LOSSES: список стандартов с опциональной оценкой === */
+/* ============================================================ */
+
+/* Инфо-строка «Показано N стандартов по M потерям» */
+.tl-list-info {
+  font-size: 13px;
+  color: var(--text-second);
+  padding: 4px 0;
+}
+.tl-list-info strong {
+  color: var(--accent-cyan);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Строка действий в пункте (в свёрнутом состоянии) */
+.tl-item-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+
+/* Кнопка «Оценить» — циановая, с иконкой */
+.tl-evaluate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 16px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  background: rgba(0, 212, 255, 0.08);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0, 212, 255, 0.4);
+}
+.tl-evaluate-btn:hover {
+  background: rgba(0, 212, 255, 0.15);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.25);
+}
+.tl-evaluate-btn svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+/* Кнопка «Свернуть» — в развёрнутом состоянии */
+.tl-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 16px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--bg-input);
+  color: var(--text-second);
+  border: 1px solid var(--border-hi);
+}
+.tl-collapse-btn:hover {
+  border-color: var(--text-second);
+  color: var(--text-main);
+}
+.tl-collapse-btn svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+/* Раскрытый блок ответа */
+.tl-answer-block {
+  display: none;
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  gap: 12px;
+  flex-direction: column;
+}
+.checklist-item.answer-open .tl-answer-block {
+  display: flex;
+}
+
+/* Внутри блока — строка ответа и комментарий */
+.tl-answer-block .answer-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.tl-answer-block .radio-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.tl-answer-block .radio-group label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 16px;
+  cursor: pointer;
+  background: var(--bg-input);
+  border: 1px solid var(--border-hi);
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+  margin: 0;
+  color: var(--text-main);
+}
+.tl-answer-block .radio-group label:hover {
+  border-color: var(--accent-cyan);
+}
+.tl-answer-block .radio-group input {
+  accent-color: var(--accent-cyan);
+  cursor: pointer;
+}
+.tl-answer-block .answer-field {
+  flex: 0 0 140px;
+  min-width: 120px;
+}
+.tl-answer-block .answer-field input {
+  width: 100%;
+  padding: 8px 12px;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Иконка комментария внутри блока ответа */
+.tl-answer-block .comment-btn {
+  margin-left: auto;
+}
+
+/* Метка «Оценил(а)» на свёрнутом пункте, если ответ уже есть */
+.tl-answered-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  margin-left: auto;
+}
+.tl-answered-badge-ok {
+  background: rgba(0, 196, 122, 0.12);
+  color: var(--accent-green);
+  border: 1px solid rgba(0, 196, 122, 0.5);
+}
+.tl-answered-badge-fail {
+  background: rgba(255, 45, 111, 0.12);
+  color: var(--accent-red);
+  border: 1px solid rgba(255, 45, 111, 0.5);
+}
+
+/* ============ Футер с прогрессом ============ */
+.tl-footer-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 10px;
+  order: -1;
+}
+.tl-footer-progress .progress-bar-outer {
+  flex: 1;
+  height: 10px;
+  background: var(--bg-hover);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border-hi);
+}
+.tl-footer-progress .progress-bar-inner {
+  height: 100%;
+  width: 0%;
+  background: var(--accent-cyan);
+  border-radius: 6px;
+}
+.tl-footer-progress .progress-text {
+  font-size: 12px;
+  color: var(--text-second);
+  white-space: nowrap;
+  margin: 0;
+}
+
+/* Футер в TOP Losses — модификация для колоночной раскладки */
+.tl-select-footer.tl-footer-with-progress {
+  flex-direction: column;
+  align-items: stretch;
+}
+.tl-select-footer.tl-footer-with-progress .tl-footer-buttons {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ============================================================ */
+/* === TOP LOSSES: новое резюме (визуальное) ================== */
+/* ============================================================ */
+
+.tl-shield {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 24px 28px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.tl-shield-ok {
+  border-left: 4px solid var(--accent-green);
+}
+.tl-shield-fail {
+  border-left: 4px solid var(--accent-red);
+}
+
+/* Круговая диаграмма OK/Total */
+.tl-shield-ring {
+  --total: 100;
+  --ok: 0;
+  --percent: 0;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  position: relative;
+  background: conic-gradient(
+    var(--accent-green) 0deg calc(var(--percent) * 3.6deg),
+    var(--accent-red) calc(var(--percent) * 3.6deg) 360deg
+  );
+  box-shadow: 0 0 24px rgba(0, 0, 0, 0.15);
+}
+.tl-shield-ring-hole {
+  position: absolute;
+  inset: 14px;
+  background: var(--bg-card);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.tl-shield-ring-value {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.tl-shield-ring-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+/* Текст рядом с кольцом */
+.tl-shield-info {
+  flex: 1;
+  min-width: 220px;
+}
+.tl-shield-title {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 6px;
+  line-height: 1.2;
+}
+.tl-shield-ok .tl-shield-title { color: var(--accent-green); }
+.tl-shield-fail .tl-shield-title { color: var(--accent-red); }
+.tl-shield-sub {
+  font-size: 13px;
+  color: var(--text-second);
+  line-height: 1.5;
+}
+.tl-shield-sub strong {
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+/* Строка чипов-«медалей» */
+.tl-shield-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+.tl-shield-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'Courier New', Consolas, monospace;
+  background: var(--bg-input);
+  border: 1px solid var(--border-hi);
+  color: var(--text-second);
+  white-space: nowrap;
+}
+.tl-shield-chip-ok {
+  background: rgba(0, 196, 122, 0.1);
+  color: var(--accent-green);
+  border-color: rgba(0, 196, 122, 0.4);
+}
+.tl-shield-chip-fail {
+  background: rgba(255, 45, 111, 0.1);
+  color: var(--accent-red);
+  border-color: rgba(255, 45, 111, 0.4);
+}
+.tl-shield-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.tl-shield-chip-ok .tl-shield-chip-dot {
+  background: var(--accent-green);
+  box-shadow: 0 0 6px rgba(0, 196, 122, 0.8);
+}
+.tl-shield-chip-fail .tl-shield-chip-dot {
+  background: var(--accent-red);
+  box-shadow: 0 0 6px rgba(255, 45, 111, 0.8);
+}
+
+/* Плитки потерь */
+.tl-loss-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.tl-loss-tile {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tl-loss-tile-ok {
+  border-left: 4px solid var(--accent-green);
+}
+.tl-loss-tile-fail {
+  border-left: 4px solid var(--accent-red);
+  background: rgba(255, 45, 111, 0.04);
+}
+.tl-loss-tile-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tl-loss-tile-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  min-width: 0;
+}
+.tl-loss-tile-count {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.tl-loss-tile-ok .tl-loss-tile-count { color: var(--accent-green); }
+.tl-loss-tile-fail .tl-loss-tile-count { color: var(--accent-red); }
+
+/* Список fail-стандартов внутри плитки */
+.tl-loss-tile-fails {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+.tl-loss-tile-fail-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  padding: 4px 8px;
+  background: rgba(255, 45, 111, 0.06);
+  border-radius: 5px;
+}
+.tl-loss-tile-fail-opl {
+  font-family: 'Courier New', Consolas, monospace;
+  font-weight: 700;
+  color: var(--accent-red);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.tl-loss-tile-fail-title {
+  color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+/* ============================================================ */
+/* === TOP LOSSES: инфо-блок в шапке ========================== */
+/* ============================================================ */
+
+.tl-hint-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  margin-top: 12px;
+  background: rgba(0, 212, 255, 0.05);
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  border-left: 3px solid var(--accent-cyan);
+  border-radius: 8px;
+}
+.tl-hint-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  color: var(--accent-cyan);
+  margin-top: 1px;
+}
+.tl-hint-icon svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+.tl-hint-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-main);
+}
+.tl-hint-text strong {
+  color: var(--text-main);
+  font-weight: 700;
+}
+.tl-hint-text em {
+  color: var(--accent-cyan);
+  font-style: normal;
+  font-weight: 600;
+}
+
+/* ============================================================ */
+/* === TOP LOSSES: статус «Не проверено» ====================== */
+/* ============================================================ */
+
+.tl-answered-badge-unchecked {
+  background: var(--bg-hover);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+
+/* Чип в резюме — нейтральный (не проверено) */
+.tl-shield-chip-unchecked {
+  background: var(--bg-hover);
+  color: var(--text-dim);
+  border-color: var(--border);
+  opacity: 0.7;
+}
+.tl-shield-chip-unchecked .tl-shield-chip-dot {
+  background: var(--text-dim);
+  opacity: 0.5;
+  box-shadow: none;
+}
+
+/* Плитка потери с непроверенными */
+.tl-loss-tile-info {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-style: italic;
+  padding-top: 6px;
+}
+
+/* В резюме: строка со «Не проверено» */
+.tl-shield-sub-unchecked {
+  color: var(--text-dim);
+}
+
+/* ============================================================ */
+/* === TOP LOSSES: подсказка про Journal Machines ============== */
+/* ============================================================ */
+
+.tl-shield-journal-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(255, 184, 0, 0.08);
+  border: 1px solid rgba(255, 184, 0, 0.4);
+  border-left: 3px solid var(--accent-amber);
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-main);
+}
+.tl-shield-journal-warning svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--accent-amber);
+}
+.tl-shield-journal-warning strong {
+  color: var(--accent-amber);
+  font-weight: 700;
+}
+/* ============================================================ */
+/* === ИСТОРИЯ: бейдж «Не проверено» =========================== */
+/* ============================================================ */
+
+.badge-unchecked {
+  background: rgba(255, 184, 0, 0.12);
+  color: var(--accent-amber);
+  border: 1px solid rgba(255, 184, 0, 0.5);
+  box-shadow: 0 0 8px rgba(255, 184, 0, 0.2);
+}
+/* ============================================================ */
+/* === История: строка с «Не проверено» ======================== */
+/* ============================================================ */
+
+.record-items tr.unchecked td {
+  background: rgba(255, 184, 0, 0.05);
+}
+.record-items .status-badge.status-unchecked {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255, 184, 0, 0.15);
+  color: var(--accent-amber);
+  border: 1px solid var(--accent-amber);
+}
+
+/* ============================================================ */
+/* === История: бейдж ОК и значение ответа ===================== */
+/* ============================================================ */
+
+.record-items .status-badge.status-ok {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(0, 196, 122, 0.15);
+  color: var(--accent-green);
+  border: 1px solid var(--accent-green);
+}
+
+.record-answer-value {
+  display: inline-block;
+  margin-left: 6px;
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+}
+/* ============================================================ */
+/* === TOP LOSSES: шапка списка ============================== */
+/* ============================================================ */
+
+.tl-header-card {
+  padding-bottom: 14px;
+}
+
+.tl-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.tl-title-icon {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-amber);
+  flex-shrink: 0;
+}
+.tl-title-icon svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+.tl-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0;
+  padding: 0;
+  border: none;
+  letter-spacing: 0.3px;
+}
+/* ============================================================ */
+/* === TOP LOSSES: новая шапка ================================ */
+/* ============================================================ */
+
+.tl-header-card {
+  padding-bottom: 14px;
+}
+
+/* Строка заголовка с иконкой цели */
+.tl-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.tl-title-icon {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-amber);
+  flex-shrink: 0;
+}
+.tl-title-icon svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+.tl-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0;
+  padding: 0;
+  border: none;
+  letter-spacing: 0.3px;
+}
+
+/* Кнопка «+N» — кликабельный чип */
+.tl-summary-chip-more {
+  cursor: pointer;
+  font-family: inherit;
+}
+.tl-summary-chip-more:hover {
+  background: rgba(232, 154, 0, 0.2);
+  border-color: var(--accent-amber);
+  transform: scale(1.05);
+  box-shadow: 0 0 10px rgba(232, 154, 0, 0.4);
+}
+/* ============================================================ */
+/* === TOP LOSSES — Вариант B (плоские пункты, компактно) ===== */
+/* ============================================================ */
+
+/* Контейнер-обёртка, чтобы стили не задели COCL */
+.tl-checklist-container .checklist-item.tl-check-item {
+  border-left: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  padding: 16px 4px;
+  margin-bottom: 0;
+  transition: background 0.15s ease;
+}
+.tl-checklist-container .checklist-item.tl-check-item:last-child {
+  border-bottom: none;
+}
+.tl-checklist-container .checklist-item.tl-check-item:hover {
+  background: var(--bg-hover);
+}
+
+/* ============================================================ */
+/* === TOP LOSSES — компактная шапка ========================== */
+/* ============================================================ */
+
+/* Инфо-плашка в шапке — тоньше */
+.tl-header-card .tl-hint-card {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: rgba(0, 212, 255, 0.04);
+  border-radius: 6px;
+}
+
+/* Заголовок TOP Losses — иконка амбер */
+.tl-header-card .tl-title-icon {
+  color: var(--accent-amber);
+}
+.tl-header-card .tl-title-icon svg {
+  stroke: var(--accent-amber);
+}
+
+/* Футер — приглушённо-зелёная disabled-кнопка */
+.tl-select-footer .btn-success:disabled,
+.tl-select-footer .btn-success[disabled] {
+  background: rgba(0, 196, 122, 0.35);
+  border-color: rgba(0, 196, 122, 0.35);
+  color: rgba(255, 255, 255, 0.75);
+  box-shadow: none;
+  transform: none;
+  cursor: not-allowed;
+}

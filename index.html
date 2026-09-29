@@ -19,7 +19,7 @@
 <body>
 
 <header>
-  <div class="header-left">Change Over CL</div>
+  <div class="header-left">Tools CL</div>
   <div class="header-center">SMD Cell2</div>
   <div class="header-right-wrap">
     <div class="header-right" id="headerDatetime"></div>
@@ -65,9 +65,9 @@
     <a href="#toploss" data-tab="toploss" title="TOP Losses">
       <span class="nav-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-          <line x1="12" y1="9" x2="12" y2="13"/>
-          <line x1="12" y1="17" x2="12.01" y2="17"/>
+          <circle cx="12" cy="12" r="10"/>
+          <circle cx="12" cy="12" r="6"/>
+          <circle cx="12" cy="12" r="2"/>
         </svg>
       </span>
       <span class="nav-label">TOP Losses</span>
@@ -246,16 +246,12 @@
   <div id="tlSelectView">
 
     <div class="card">
-      <h2>1. Оператор и смена</h2>
+      <h2>1. Оператор и линия</h2>
       <div class="row">
         <div class="field" style="position:relative">
           <label class="required">ФИО оператора</label>
           <input type="text" id="tlOperator" placeholder="Начните вводить фамилию..." autocomplete="off">
           <div class="autocomplete-dropdown" id="tlOperatorAutocomplete" style="display:none"></div>
-        </div>
-        <div class="field">
-          <label class="required">Смена</label>
-          <select id="tlShift"><option value="">— выберите —</option></select>
         </div>
         <div class="field">
           <label class="required">Линия</label>
@@ -471,6 +467,7 @@
   <div class="card">
     <h2>Записи (<span id="historyCount">0</span>)</h2>
     <div id="historyList"></div>
+    <div class="pagination-bar" id="historyPagination"></div>
   </div>
 
 </div>

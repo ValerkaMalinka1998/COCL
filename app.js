@@ -341,15 +341,15 @@ window.backToLines = function() {
 };
 
 /* ============================================================
-   РЕДАКТОР СТАНДАРТОВ — СПИСОК СТАНДАРТОВ ЛИНИИ
-   ============================================================ */
-/* ============================================================
    СПИСОК СТАНДАРТОВ — таблица + пагинация + сортировка
    ============================================================ */
 let sortField = 'oplNumber';   // 'number' | 'oplNumber' | 'title' | 'machine' | 'node'
 let sortDir = 'asc';           // 'asc' | 'desc'
 let currentPage = 1;   // текущая страница пагинации
 let pageSize = 10;     // размер страницы
+/* Пагинация истории — отдельные переменные, чтобы не конфликтовать с редактором */
+let historyPage = 1;
+let historyPageSize = 10;
 
 function getFilteredStandardsForLine() {
   if (!currentEditorLine) return [];
@@ -402,17 +402,29 @@ function getFilteredStandardsForLine() {
 
   // Сортировка
   filtered.sort((a, b) => {
-    let va, vb;
+    let cmp = 0;
+
     if (sortField === 'number') {
-      va = Number(a.number) || 999999;
-      vb = Number(b.number) || 999999;
-      return sortDir === 'asc' ? va - vb : vb - va;
+      const va = Number(a.number) || 999999;
+      const vb = Number(b.number) || 999999;
+      cmp = va - vb;
+    } else if (sortField === 'oplNumber') {
+      // OPL: сначала по машине, потом по номеру OPL
+      const ma = String(a.machine || '').toLowerCase();
+      const mb = String(b.machine || '').toLowerCase();
+      cmp = ma.localeCompare(mb, 'ru');
+      if (cmp === 0) {
+        const oa = String(a.oplNumber || '').toLowerCase();
+        const ob = String(b.oplNumber || '').toLowerCase();
+        cmp = oa.localeCompare(ob, 'ru');
+      }
     } else {
-      va = String(a[sortField] || '').toLowerCase();
-      vb = String(b[sortField] || '').toLowerCase();
-      const cmp = va.localeCompare(vb, 'ru');
-      return sortDir === 'asc' ? cmp : -cmp;
+      const va = String(a[sortField] || '').toLowerCase();
+      const vb = String(b[sortField] || '').toLowerCase();
+      cmp = va.localeCompare(vb, 'ru');
     }
+
+    return sortDir === 'asc' ? cmp : -cmp;
   });
 
   return { filtered, total: all.length };
@@ -1345,15 +1357,19 @@ if (!node)        return showToast('Укажите узел', true);
 if (!nodePart)    return showToast('Выберите часть линии', true);
 if (!controlType) return showToast('Выберите тип контроля', true);
 
-  // Проверка дубликата OPL № на этой линии
+  // Проверка дубликата OPL № на этой линии + машине
   const all = getStandards();
   const dup = all.find(s =>
     s.id !== id &&
     s.line === line &&
+    s.machine === machine &&
     (s.oplNumber || '').toLowerCase() === oplNumber.toLowerCase()
   );
   if (dup) {
-    return showToast(`OPL № "${oplNumber}" уже есть на линии ${line}`, true);
+    return showToast(
+      `OPL № "${oplNumber}" уже есть на машине ${machine} линии ${line}`,
+      true
+    );
   }
 
   // Точки замера
@@ -2648,12 +2664,21 @@ $('#periodSelect').addEventListener('change', () => {
   const v = $('#periodSelect').value;
   $('#dateFromField').style.display = (v === 'custom') ? 'block' : 'none';
   $('#dateToField').style.display = (v === 'custom') ? 'block' : 'none';
+  // Период тоже влияет на список — сбрасываем страницу
+  historyPage = 1;
+  renderHistory();
 });
 
-$('#applyFilterBtn').addEventListener('click', renderHistory);
-$('#filterLine').addEventListener('change', renderHistory);
-$('#filterType').addEventListener('change', renderHistory);
-$('#filterMode')?.addEventListener('change', renderHistory);
+/* При смене любого фильтра — сбрасываем на первую страницу */
+const resetHistoryPageAndRender = () => {
+  historyPage = 1;
+  renderHistory();
+};
+
+$('#applyFilterBtn').addEventListener('click', resetHistoryPageAndRender);
+$('#filterLine').addEventListener('change', resetHistoryPageAndRender);
+$('#filterType').addEventListener('change', resetHistoryPageAndRender);
+$('#filterMode')?.addEventListener('change', resetHistoryPageAndRender);
 
 function fillHistoryFilters() {
   const lineFilter = $('#filterLine');
@@ -2705,12 +2730,26 @@ function getFilteredHistory() {
 function renderHistory() {
   const hist = getFilteredHistory();
   $('#historyCount').textContent = hist.length;
+
   const list = $('#historyList');
   if (!hist.length) {
     list.innerHTML = '<div class="empty-state">Записей нет</div>';
+    // Очищаем пагинацию
+    const pag = $('#historyPagination');
+    if (pag) pag.innerHTML = '';
     return;
   }
 
+  // --- Пагинация ---
+  const totalPages = Math.ceil(hist.length / historyPageSize);
+  if (historyPage > totalPages) historyPage = totalPages;
+  if (historyPage < 1) historyPage = 1;
+
+  const startIdx = (historyPage - 1) * historyPageSize;
+  const endIdx = Math.min(startIdx + historyPageSize, hist.length);
+  const pageItems = hist.slice(startIdx, endIdx);
+
+  // --- Таблица ---
   list.innerHTML = `
     <table>
       <thead>
@@ -2723,15 +2762,17 @@ function renderHistory() {
           <th>Контекст</th>
           <th>Пунктов</th>
           <th>Не ОК</th>
+          <th>Не проверено</th>
           <th></th>
         </tr>
       </thead>
       <tbody>
-        ${hist.map(h => {
+        ${pageItems.map(h => {
           const fails = h.items.filter(i => i.status === 'FAIL').length;
+          const unchecked = h.items.filter(i => i.status === 'UNCHECKED').length;
           const isTopLoss = h.mode === 'toploss';
 
-          // --- Контекст: для COCL — бренды, для TOP Losses — потери ---
+          // --- Контекст ---
           let contextHtml = '—';
           if (isTopLoss) {
             const names = (h.topLosses || [])
@@ -2755,22 +2796,110 @@ function renderHistory() {
             ? `<span class="badge badge-mode-toploss">TOP</span>`
             : `<span class="badge badge-mode-cocl">COCL</span>`;
 
+          // --- Колонка «Не проверено» ---
+          const uncheckedHtml = unchecked > 0
+            ? `<span class="badge badge-unchecked">${unchecked}</span>`
+            : (isTopLoss ? '<span class="badge badge-ok">0</span>' : '—');
+
           return `
             <tr>
               <td>${fmtDate(h.timestamp)}</td>
               <td>${modeBadge}</td>
               <td>${escapeHtml(h.operator)}</td>
-              <td>${escapeHtml(h.shift)}</td>
+              <td>${escapeHtml(h.shift || '—')}</td>
               <td>${escapeHtml(h.line)}</td>
               <td>${contextHtml}</td>
               <td>${h.items.length}</td>
               <td>${fails ? `<span class="badge badge-fail">${fails}</span>` : '<span class="badge badge-ok">0</span>'}</td>
+              <td>${uncheckedHtml}</td>
               <td><button class="btn btn-secondary btn-sm" onclick="viewRecord('${h.id}')">Открыть</button></td>
             </tr>`;
         }).join('')}
       </tbody>
-    </table>`;
+    </table>
+  `;
+
+  // --- Рендер пагинации ---
+  renderHistoryPagination(hist.length, totalPages, startIdx, endIdx);
 }
+
+/* Пагинация истории */
+function renderHistoryPagination(totalItems, totalPages, startIdx, endIdx) {
+  let bar = $('#historyPagination');
+
+  // Если контейнера нет — создаём после таблицы
+  if (!bar) {
+    const list = $('#historyList');
+    if (!list) return;
+    list.insertAdjacentHTML('afterend', '<div class="pagination-bar" id="historyPagination"></div>');
+    bar = $('#historyPagination');
+  }
+
+  if (!bar) return;
+
+  // Одна страница и всё влезает — только счётчик
+  if (totalPages <= 1 && totalItems <= historyPageSize) {
+    bar.innerHTML = `<span class="pagination-info">Показано ${startIdx + 1}–${endIdx} из ${totalItems}</span>`;
+    return;
+  }
+
+  let html = `<span class="pagination-info">Показано ${startIdx + 1}–${endIdx} из ${totalItems}</span>`;
+  html += '<div class="pagination-controls">';
+
+  // Назад
+  html += `<button class="pagination-btn" ${historyPage === 1 ? 'disabled' : ''}
+           onclick="changeHistoryPage(${historyPage - 1})">←</button>`;
+
+  // Страницы (сокращённо — 5 вокруг текущей)
+  const pages = [];
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || Math.abs(i - historyPage) <= 2) {
+      pages.push(i);
+    } else if (pages[pages.length - 1] !== '...') {
+      pages.push('...');
+    }
+  }
+  pages.forEach(p => {
+    if (p === '...') {
+      html += '<span class="pagination-dots">…</span>';
+    } else {
+      html += `<button class="pagination-btn ${p === historyPage ? 'active' : ''}"
+               onclick="changeHistoryPage(${p})">${p}</button>`;
+    }
+  });
+
+  // Вперёд
+  html += `<button class="pagination-btn" ${historyPage === totalPages ? 'disabled' : ''}
+           onclick="changeHistoryPage(${historyPage + 1})">→</button>`;
+
+  // Выбор размера страницы
+  html += `
+    <select class="pagination-size" onchange="changeHistoryPageSize(this.value)">
+      <option value="10" ${historyPageSize === 10 ? 'selected' : ''}>10</option>
+      <option value="20" ${historyPageSize === 20 ? 'selected' : ''}>20</option>
+      <option value="50" ${historyPageSize === 50 ? 'selected' : ''}>50</option>
+    </select>
+  `;
+
+  html += '</div>';
+  bar.innerHTML = html;
+}
+
+/* Смена страницы истории */
+window.changeHistoryPage = function(page) {
+  historyPage = page;
+  renderHistory();
+  // Плавный скролл к началу таблицы
+  const list = $('#historyList');
+  if (list) list.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+/* Смена размера страницы истории */
+window.changeHistoryPageSize = function(size) {
+  historyPageSize = parseInt(size, 10);
+  historyPage = 1;
+  renderHistory();
+};
 
 let currentRecord = null;
 
@@ -2837,6 +2966,7 @@ window.viewRecord = function(id) {
         <tr>
           <th>№</th>
           <th>OPL</th>
+          <th>Машина</th>
           <th>Узел</th>
           <th>Название</th>
           <th>Норма</th>
@@ -2845,24 +2975,57 @@ window.viewRecord = function(id) {
         </tr>
       </thead>
       <tbody>
-        ${h.items.map(it => `
-          <tr class="${it.status === 'FAIL' ? 'fail' : 'ok'}">
-            <td>${escapeHtml(it.number || '—')}</td>
-            <td>${escapeHtml(it.oplNumber || '—')}</td>
-            <td>${escapeHtml(it.node || '—')}</td>
-            <td>${escapeHtml(it.title || '—')}</td>
-            <td>${escapeHtml(it.norm || '—')}</td>
-            <td>
-              ${escapeHtml(it.answer)}
-              ${it.status === 'FAIL' ? '<br><span class="status-badge status-fail">Не ОК</span>' : ''}
-            </td>
-            <td>${it.comment ? escapeHtml(it.comment) : '—'}</td>
-          </tr>
-        `).join('')}
+        ${h.items.map(it => {
+          // Определяем класс строки: ok / fail / unchecked
+          let rowCls = 'ok';
+          if (it.status === 'FAIL')            rowCls = 'fail';
+          else if (it.status === 'UNCHECKED')  rowCls = 'unchecked';
+
+          // --- Формируем содержимое колонки «Ответ» ---
+          let answerHtml = '';
+          const ctype = it.controlType;
+
+          if (it.status === 'UNCHECKED') {
+            // Не проверено — единый бейдж
+            answerHtml = '<span class="status-badge status-unchecked">Не проверено</span>';
+          } else if (ctype === 'ok_not_ok') {
+            // ОК / Не ОК — только бейдж
+            answerHtml = it.status === 'OK'
+              ? '<span class="status-badge status-ok">ОК</span>'
+              : '<span class="status-badge status-fail">Не ОК</span>';
+          } else if (ctype === 'value_input') {
+            // Ввод значения — бейдж ОК + значение
+            answerHtml = `<span class="status-badge status-ok">ОК</span>
+              <span class="record-answer-value">${escapeHtml(it.answer || '—')}</span>`;
+          } else if (ctype === 'tolerance') {
+            // Допуск — бейдж + значение (без приписки «— в допуске»)
+            const valueOnly = (it.answer || '').replace(/\s+—\s+(в допуске|не в допуске)$/,'');
+            answerHtml = it.status === 'OK'
+              ? `<span class="status-badge status-ok">В допуске</span>
+                 <span class="record-answer-value">${escapeHtml(valueOnly || '—')}</span>`
+              : `<span class="status-badge status-fail">Не в допуске</span>
+                 <span class="record-answer-value">${escapeHtml(valueOnly || '—')}</span>`;
+          } else {
+            // Резерв — старые записи без controlType или нестандартные
+            answerHtml = escapeHtml(it.answer || '—');
+          }
+
+          return `
+            <tr class="${rowCls}">
+              <td>${escapeHtml(it.number || '—')}</td>
+              <td>${escapeHtml(it.oplNumber || '—')}</td>
+              <td>${escapeHtml(it.machine || '—')}</td>
+              <td>${escapeHtml(it.node || '—')}</td>
+              <td>${escapeHtml(it.title || '—')}</td>
+              <td>${escapeHtml(it.norm || '—')}</td>
+              <td>${answerHtml}</td>
+              <td>${it.comment ? escapeHtml(it.comment) : '—'}</td>
+            </tr>
+          `;
+        }).join('')}
       </tbody>
     </table>
   `;
-
   $('#recordModalBody').innerHTML = html;
   $('#recordModal').classList.add('active');
 };
@@ -2887,7 +3050,12 @@ $('#recordPrintBtn').addEventListener('click', () => {
    ============================================================ */
 function buildDetailsText(record) {
   return record.items.map(it => {
-    let line = `[${it.oplNumber || it.number || '—'}] ${it.node || ''} — ${it.title || ''}: ${it.answer || ''}`;
+    // Единообразие: показываем OPL + машину
+    const oplDisplay = it.machine
+      ? `${it.oplNumber || it.number || '—'} [${it.machine}]`
+      : (it.oplNumber || it.number || '—');
+
+    let line = `[${oplDisplay}] ${it.node || ''} — ${it.title || ''}: ${it.answer || ''}`;
     if (it.norm) {
       line += ` (норма: ${it.norm})`;
     }
@@ -3181,8 +3349,20 @@ function buildSheetAnalytics(wb, hist) {
     byShift[h.shift].fails += f;
 
   h.items.forEach(it => {
-    const key = it.oplNumber || it.number || '—';
-    if (!byStd[key]) byStd[key] = { node: it.node, title: it.title, total: 0, fails: 0 };
+    // Ключ: OPL + машина — чтобы стандарты с одинаковым OPL
+    // на разных машинах не сливались
+    const oplKey = it.oplNumber || it.number || '—';
+    const key = it.machine ? `${oplKey} [${it.machine}]` : oplKey;
+
+    if (!byStd[key]) {
+      byStd[key] = {
+        node: it.node,
+        title: it.title,
+        machine: it.machine,
+        total: 0,
+        fails: 0
+      };
+    }
     byStd[key].total++;
     if (it.status === 'FAIL') byStd[key].fails++;
   });
@@ -3290,7 +3470,7 @@ function buildSheetAnalytics(wb, hist) {
   ws.addRow([]);
 
   addTitle('⚠ Топ-10 проблемных стандартов');
-  addHeader(['OPL №', 'Узел', 'Всего', 'Не ОК', '% отклонений']);
+  addHeader(['OPL № + машина', 'Узел', 'Всего', 'Не ОК', '% отклонений']);
   const topFails = Object.entries(byStd)
     .filter(([_, v]) => v.fails > 0)
     .sort((a, b) => b[1].fails - a[1].fails)
@@ -3458,29 +3638,26 @@ $('#clearHistoryBtn').addEventListener('click', () => {
 
 /* Текущее состояние экрана выбора */
 const tlState = {
-  selectedLossIds: new Set(),  // выбранные id потерь
-  expandedCategoryIds: new Set() // раскрытые категории
+  selectedLossIds: new Set(),      // выбранные id потерь
+  expandedCategoryIds: new Set(),  // раскрытые категории
+  // Кэш данных для перерисовки
+  currentItems: [],                // массив стандартов
+  currentStandardToLosses: {},     // standardId → [lossId]
+  currentLossIds: [],              // выбранные lossIds
+  // Раскрытые блоки ответов (Set от stdId)
+  openAnswers: new Set()
 };
 
 /* ----------------------------------------
    Заполнение формы (смена, линия, оператор)
    ---------------------------------------- */
 function fillTopLossTab() {
-  fillTopLossShifts();
   fillTopLossLines();
   initTopLossOperatorAutocomplete();
 
   // Явно сбрасываем линию в пустое значение
   const lineEl = $('#tlLine');
   if (lineEl) lineEl.value = '';
-}
-
-/* Смена */
-function fillTopLossShifts() {
-  const el = $('#tlShift');
-  if (!el) return;
-  el.innerHTML = '<option value="">— выберите —</option>' +
-    getShifts().map(s => `<option>${escapeHtml(s)}</option>`).join('');
 }
 
 /* Линия — только те, у которых есть бренды (как в COCL) */
@@ -3792,6 +3969,7 @@ function updateTlSelectedCounter() {
 function resetTopLossSelection() {
   tlState.selectedLossIds.clear();
   tlState.expandedCategoryIds.clear();
+  tlState.openAnswers.clear();
   renderTopLossCategories();
 }
 
@@ -3800,34 +3978,30 @@ function resetTopLossSelection() {
    ---------------------------------------- */
 function buildTopLossChecklist() {
   const operator = ($('#tlOperator')?.value || '').trim();
-  const shift = $('#tlShift')?.value || '';
   const line = $('#tlLine')?.value || '';
   const lossIds = [...tlState.selectedLossIds];
 
   if (!operator) return showToast('Укажите ФИО оператора', true);
-  if (!shift)    return showToast('Укажите смену', true);
   if (!line)     return showToast('Укажите линию', true);
   if (!lossIds.length) return showToast('Выберите хотя бы одну потерю', true);
 
-  // Собираем уникальные стандарты по выбранным потерям
   const { items, lossMap, standardToLosses } = collectStandardsForLosses(lossIds, line);
 
   if (!items.length) {
     return showToast('По выбранным потерям нет активных стандартов на линии ' + line, true);
   }
 
-  // Отрисовываем чек-лист
+  // Сбрасываем раскрытые ответы при новом формировании
+  tlState.openAnswers.clear();
+
   renderTopLossChecklist(items, standardToLosses, lossIds);
 
-  // Переключаем экраны
   $('#tlSelectView').style.display = 'none';
   $('#tlChecklistView').style.display = 'block';
   $('#tlSummaryView').style.display = 'none';
 
-  // Прокручиваем наверх
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-
 /* ----------------------------------------
    Сбор стандартов по выбранным потерям
    Возвращает:
@@ -3885,59 +4059,132 @@ function renderTopLossChecklist(items, standardToLosses, lossIds) {
   const container = $('#tlChecklistView');
   if (!container) return;
 
-  // Заголовок с чипами выбранных потерь
-  const lossChips = lossIds
-    .map(id => findLossById(id))
-    .filter(Boolean)
-    .map(l => `<span class="tl-summary-chip">${escapeHtml(l.name)}</span>`)
-    .join('');
+  // Кэшируем
+  tlState.currentItems = items;
+  tlState.currentStandardToLosses = standardToLosses;
+  tlState.currentLossIds = lossIds;
 
-  // Шапка
+  // Формируем чипы потерь (адаптивно — первые 3 + «+N»)
+  const allLossObjects = lossIds
+    .map(id => findLossById(id))
+    .filter(Boolean);
+
+  const MAX_VISIBLE_LOSSES = 3;
+  let lossChipsHtml = '';
+
+  if (allLossObjects.length <= MAX_VISIBLE_LOSSES) {
+    lossChipsHtml = allLossObjects
+      .map(l => `<span class="tl-summary-chip">${escapeHtml(l.name)}</span>`)
+      .join('');
+  } else {
+    const visible = allLossObjects.slice(0, MAX_VISIBLE_LOSSES);
+    const hidden = allLossObjects.length - MAX_VISIBLE_LOSSES;
+
+    lossChipsHtml = visible
+      .map(l => `<span class="tl-summary-chip">${escapeHtml(l.name)}</span>`)
+      .join('');
+
+    lossChipsHtml += `<button type="button" class="tl-summary-chip tl-summary-chip-more"
+                              id="tlShowAllLossesBtn"
+                              title="Показать все потери">
+                        +${hidden}
+                      </button>`;
+  }
+
+  // Инфо-строка
+  const infoLine = `<div class="tl-list-info">
+    Показано <strong>${items.length}</strong> ${pluralizeStandards(items.length)}
+    по <strong>${lossIds.length}</strong> ${pluralizeLosses(lossIds.length)}
+  </div>`;
+
   let html = `
-    <div class="card">
-      <div class="tl-header-row">
-        <h2>Чек-лист по потерям</h2>
-        <div class="tl-selected-counter">
-          Пунктов: <strong>${items.length}</strong>
-        </div>
+    <div class="card tl-header-card">
+      <div class="tl-title-row">
+        <span class="tl-title-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <circle cx="12" cy="12" r="6"/>
+            <circle cx="12" cy="12" r="2"/>
+          </svg>
+        </span>
+        <h1 class="tl-title">TOP Losses</h1>
       </div>
+
       <div class="tl-losses-bar">
-        <span class="tl-losses-bar-label">Проверяем потери:</span>
-        ${lossChips}
+        <span class="tl-losses-bar-label">Потери:</span>
+        ${lossChipsHtml}
+      </div>
+
+      ${infoLine}
+
+      <div class="tl-hint-card">
+        <span class="tl-hint-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+        </span>
+        <div class="tl-hint-text">
+          Это <strong>помощник проверки</strong>. Изучите стандарты, которые влияют
+          на выбранные потери. Можете просто посмотреть — или отметить, <em>хотя бы 1 стандарт ОК / Не ОК</em>,
+          чтобы сохранить результат в Историю.
+        </div>
       </div>
     </div>
 
     <div class="card">
-      <h2>Пункты проверки</h2>
-      <div class="progress-wrap" id="tlProgressWrap">
-        <div class="progress-bar-outer">
-          <div class="progress-bar-inner" id="tlProgressBarInner"></div>
-        </div>
-        <div class="progress-percent" id="tlProgressPercent">0%</div>
-      </div>
-      <div class="progress-text" id="tlProgressText" style="display:none"></div>
-
       <div id="tlChecklistContainer">
         ${items.map(st => renderTopLossChecklistItem(st, standardToLosses[st.id] || [])).join('')}
       </div>
     </div>
 
-    <div class="tl-select-footer">
-      <button class="btn btn-secondary" id="tlBackToSelectBtn">← К выбору потерь</button>
-      <button class="btn btn-success btn-icon-text" id="tlSaveChecklistBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-          <polyline points="17 21 17 13 7 13 7 21"/>
-          <polyline points="7 3 7 8 15 8"/>
-        </svg>
-        <span>Сохранить проверку</span>
-      </button>
+    <div class="tl-select-footer" id="tlFooter">
+      <div class="tl-footer-buttons">
+        <button class="btn btn-secondary" id="tlBackToSelectBtn">← К выбору потерь</button>
+        <button class="btn btn-success btn-icon-text" id="tlSaveChecklistBtn" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+            <polyline points="17 21 17 13 7 13 7 21"/>
+            <polyline points="7 3 7 8 15 8"/>
+          </svg>
+          <span>Зафиксировать результат</span>
+        </button>
+      </div>
     </div>
   `;
 
   container.innerHTML = html;
 
-  // Обработчики ответов
+  // Делегированные обработчики
+  bindTopLossChecklistEvents();
+
+  // Обновляем прогресс и активность кнопки
+  updateTlProgressFooter();
+}
+
+/* Привязка всех обработчиков внутри списка */
+function bindTopLossChecklistEvents() {
+  const container = $('#tlChecklistContainer');
+  if (!container) return;
+
+  // Кнопка «Оценить» — раскрыть блок ответа
+  container.querySelectorAll('[data-evaluate-btn]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const stdId = btn.dataset.evaluateBtn;
+      toggleAnswerBlock(stdId, true);
+    });
+  });
+
+  // Кнопка «Свернуть» — скрыть блок ответа
+  container.querySelectorAll('[data-collapse-btn]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const stdId = btn.dataset.collapseBtn;
+      toggleAnswerBlock(stdId, false);
+    });
+  });
+
+  // Радио ОК / Не ОК, tolerance
   container.querySelectorAll('input[data-ans], input[data-tol]').forEach(r => {
     r.addEventListener('change', (e) => {
       const item = e.target.closest('.checklist-item');
@@ -3946,14 +4193,21 @@ function renderTopLossChecklist(items, standardToLosses, lossIds) {
       if (val === 'OK') item.classList.add('answered-ok');
       if (val === 'FAIL') item.classList.add('answered-fail');
       updateCommentUrgency(item);
-      updateTlChecklistProgress();
+      updateItemAnsweredBadge(item);
+      updateTlProgressFooter();
     });
   });
+
+  // Поля ввода значения
   container.querySelectorAll('input[data-ans-value]').forEach(inp => {
-    inp.addEventListener('input', updateTlChecklistProgress);
+    inp.addEventListener('input', (e) => {
+      const item = e.target.closest('.checklist-item');
+      updateItemAnsweredBadge(item);
+      updateTlProgressFooter();
+    });
   });
 
-  // Иконка комментария — переиспользуем openCommentModal
+  // Иконка комментария
   container.querySelectorAll('[data-comment-btn]').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const item = e.target.closest('.checklist-item');
@@ -3961,7 +4215,7 @@ function renderTopLossChecklist(items, standardToLosses, lossIds) {
     });
   });
 
-  // Иконка глаза — переиспользуем openStandardView
+  // Иконка глаза
   container.querySelectorAll('[data-view-btn]').forEach(btn => {
     btn.addEventListener('click', () => {
       const stdId = btn.dataset.stdId;
@@ -3969,12 +4223,162 @@ function renderTopLossChecklist(items, standardToLosses, lossIds) {
     });
   });
 
-  // Кнопки
+  // Кнопки футера
   $('#tlBackToSelectBtn')?.addEventListener('click', backToTopLossSelect);
-  $('#tlSaveChecklistBtn')?.addEventListener('click', saveTopLossCheck);   // Этап 4.2
+  $('#tlSaveChecklistBtn')?.addEventListener('click', saveTopLossCheck);
+    // Кнопка «+N» — показать все потери
+  $('#tlShowAllLossesBtn')?.addEventListener('click', () => {
+    const allLossObjects = tlState.currentLossIds
+      .map(id => findLossById(id))
+      .filter(Boolean);
 
-  // Прогресс
-  updateTlChecklistProgress();
+    const names = allLossObjects.map(l => l.name).join('\n');
+    alert('Все потери:\n\n' + names);
+  });
+}
+
+/* Раскрыть / свернуть блок ответа */
+function toggleAnswerBlock(stdId, open) {
+  const item = document.querySelector(`.checklist-item[data-std-id="${stdId}"]`);
+  if (!item) return;
+
+  if (open) {
+    tlState.openAnswers.add(stdId);
+    item.classList.add('answer-open');
+
+    const evalBtn = item.querySelector('[data-evaluate-btn]');
+    const collapseBtn = item.querySelector('[data-collapse-btn]');
+    if (evalBtn) evalBtn.style.display = 'none';
+    if (collapseBtn) collapseBtn.style.display = 'inline-flex';
+  } else {
+    tlState.openAnswers.delete(stdId);
+    item.classList.remove('answer-open');
+
+    const evalBtn = item.querySelector('[data-evaluate-btn]');
+    const collapseBtn = item.querySelector('[data-collapse-btn]');
+    if (evalBtn) evalBtn.style.display = 'inline-flex';
+    if (collapseBtn) collapseBtn.style.display = 'none';
+  }
+}
+
+/* Обновить бейдж «ОК / Не ОК / Значение» рядом с кнопкой Оценить */
+function updateItemAnsweredBadge(item) {
+  const stdId = item.dataset.stdId;
+  const st = getStandards().find(s => s.id === stdId);
+  if (!st) return;
+
+  const actionsRow = item.querySelector('.tl-item-actions-row');
+  if (!actionsRow) return;
+
+  actionsRow.querySelectorAll('.tl-answered-badge').forEach(b => b.remove());
+
+  let badge = null;
+
+  if (st.controlType === 'ok_not_ok') {
+    const checked = item.querySelector('input[data-ans]:checked');
+    if (checked) {
+      badge = checked.value === 'OK'
+        ? { cls: 'tl-answered-badge-ok', text: '✓ ОК' }
+        : { cls: 'tl-answered-badge-fail', text: '✕ Не ОК' };
+    }
+  } else if (st.controlType === 'value_input') {
+    const inp = item.querySelector('input[data-ans-value]');
+    if (inp && inp.value !== '') {
+      badge = { cls: 'tl-answered-badge-ok', text: '✓ ' + inp.value };
+    }
+  } else if (st.controlType === 'tolerance') {
+    const inp = item.querySelector('input[data-ans-value]');
+    const r = item.querySelector('input[data-tol]:checked');
+    if (inp && inp.value !== '' && r) {
+      badge = r.value === 'OK'
+        ? { cls: 'tl-answered-badge-ok', text: '✓ ' + inp.value }
+        : { cls: 'tl-answered-badge-fail', text: '✕ ' + inp.value };
+    }
+  }
+
+  if (badge) {
+    const el = document.createElement('span');
+    el.className = 'tl-answered-badge ' + badge.cls;
+    el.textContent = badge.text;
+    actionsRow.appendChild(el);
+  }
+}
+
+/* Прогресс в футере + активность кнопки «Зафиксировать» */
+function updateTlProgressFooter() {
+  const footer = $('#tlFooter');
+  const saveBtn = $('#tlSaveChecklistBtn');
+  if (!footer || !saveBtn) return;
+
+  const items = $$('#tlChecklistContainer .checklist-item');
+
+  let filled = 0;
+  items.forEach(item => {
+    const std = getStandards().find(s => s.id === item.dataset.stdId);
+    if (!std) return;
+
+    const valueFilled = (() => {
+      const inp = item.querySelector('input[data-ans-value]');
+      return inp && inp.value !== '';
+    })();
+
+    if (std.controlType === 'ok_not_ok') {
+      if (item.querySelector('input[data-ans]:checked')) filled++;
+    } else if (std.controlType === 'value_input') {
+      if (valueFilled) filled++;
+    } else if (std.controlType === 'tolerance') {
+      if (valueFilled && item.querySelector('input[data-tol]:checked')) filled++;
+    }
+  });
+
+  const total = items.length;
+  const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
+
+  footer.querySelectorAll('.tl-footer-progress').forEach(el => el.remove());
+
+  if (filled > 0 && total > 0) {
+    const unchecked = total - filled;
+    const progressHtml = `
+      <div class="tl-footer-progress">
+        <div class="progress-bar-outer">
+          <div class="progress-bar-inner" style="width:${pct}%"></div>
+        </div>
+        <div class="progress-text">
+          Отмечено: ${filled} / ${total}${unchecked > 0 ? ` · не проверено: ${unchecked}` : ''}
+        </div>
+      </div>
+    `;
+    footer.insertAdjacentHTML('afterbegin', progressHtml);
+    footer.classList.add('tl-footer-with-progress');
+  } else {
+    footer.classList.remove('tl-footer-with-progress');
+  }
+
+  saveBtn.disabled = filled === 0;
+}
+
+/* Переключение в режим проверки */
+function startTopLossCheck() {
+  tlState.checkMode = true;
+  // Перерисовываем тот же список, но уже в режиме проверки
+  renderTopLossChecklist(
+    tlState.currentItems,
+    tlState.currentStandardToLosses,
+    tlState.currentLossIds
+  );
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* Отмена проверки — возврат в режим просмотра */
+function cancelTopLossCheck() {
+  if (!confirm('Отменить проверку? Введённые ответы будут потеряны.')) return;
+  tlState.checkMode = false;
+  renderTopLossChecklist(
+    tlState.currentItems,
+    tlState.currentStandardToLosses,
+    tlState.currentLossIds
+  );
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 /* ----------------------------------------
@@ -3991,30 +4395,54 @@ function renderTopLossChecklistItem(st, lossIds) {
     ? `<div class="tl-item-losses">Относится к: ${lossNames.map(escapeHtml).join(' · ')}</div>`
     : '';
 
-  // Главное значение — из measurements[0]
-  const mainValue = (st.measurements && st.measurements[0] && st.measurements[0].value) || '';
-
-  // Ответ — по типу контроля
-  let answerHtml = '';
+  // Содержимое блока ответа — в зависимости от типа контроля
+  let answerBodyHtml = '';
   if (st.controlType === 'ok_not_ok') {
-    answerHtml = `
-      <div class="radio-group">
-        <label><input type="radio" name="tl_ans_${st.id}" value="OK" data-ans> ОК</label>
-        <label><input type="radio" name="tl_ans_${st.id}" value="FAIL" data-ans> Не ОК</label>
+    answerBodyHtml = `
+      <div class="answer-row">
+        <div class="radio-group">
+          <label><input type="radio" name="tl_ans_${st.id}" value="OK" data-ans> ОК</label>
+          <label><input type="radio" name="tl_ans_${st.id}" value="FAIL" data-ans> Не ОК</label>
+        </div>
+        <button type="button" class="comment-btn" data-comment-btn title="Добавить комментарий">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <line x1="9" y1="10" x2="15" y2="10"/>
+            <line x1="9" y1="14" x2="13" y2="14"/>
+          </svg>
+        </button>
       </div>`;
   } else if (st.controlType === 'value_input') {
-    answerHtml = `
-      <div class="answer-field">
-        <input type="number" step="any" data-ans-value placeholder="0">
+    answerBodyHtml = `
+      <div class="answer-row">
+        <div class="answer-field">
+          <input type="number" step="any" data-ans-value placeholder="0">
+        </div>
+        <button type="button" class="comment-btn" data-comment-btn title="Добавить комментарий">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <line x1="9" y1="10" x2="15" y2="10"/>
+            <line x1="9" y1="14" x2="13" y2="14"/>
+          </svg>
+        </button>
       </div>`;
   } else if (st.controlType === 'tolerance') {
-    answerHtml = `
-      <div class="answer-field">
-        <input type="number" step="any" data-ans-value placeholder="0">
-      </div>
-      <div class="radio-group">
-        <label><input type="radio" name="tl_tol_${st.id}" value="OK" data-tol> В допуске</label>
-        <label><input type="radio" name="tl_tol_${st.id}" value="FAIL" data-tol> Не в допуске</label>
+    answerBodyHtml = `
+      <div class="answer-row">
+        <div class="answer-field">
+          <input type="number" step="any" data-ans-value placeholder="0">
+        </div>
+        <div class="radio-group">
+          <label><input type="radio" name="tl_tol_${st.id}" value="OK" data-tol> В допуске</label>
+          <label><input type="radio" name="tl_tol_${st.id}" value="FAIL" data-tol> Не в допуске</label>
+        </div>
+        <button type="button" class="comment-btn" data-comment-btn title="Добавить комментарий">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <line x1="9" y1="10" x2="15" y2="10"/>
+            <line x1="9" y1="14" x2="13" y2="14"/>
+          </svg>
+        </button>
       </div>`;
   }
 
@@ -4028,28 +4456,36 @@ function renderTopLossChecklistItem(st, lossIds) {
       </div>
       <div class="title">${escapeHtml(st.title || '')}</div>
       ${lossesText}
-      <div class="answer">
-        ${answerHtml}
-        <div class="answer-actions">
-          <button type="button" class="view-btn" data-view-btn data-std-id="${escapeAttr(st.id)}" title="Посмотреть стандарт">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-              <circle cx="12" cy="12" r="3"/>
-            </svg>
-          </button>
-          <button type="button" class="comment-btn" data-comment-btn title="Добавить комментарий">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-              <line x1="9" y1="10" x2="15" y2="10"/>
-              <line x1="9" y1="14" x2="13" y2="14"/>
-            </svg>
-          </button>
-        </div>
+
+      <div class="tl-item-actions-row">
+        <button type="button" class="view-btn" data-view-btn data-std-id="${escapeAttr(st.id)}" title="Посмотреть стандарт">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+        <button type="button" class="tl-evaluate-btn" data-evaluate-btn="${escapeAttr(st.id)}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 11 12 14 22 4"/>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+          <span>Оценить</span>
+        </button>
+        <button type="button" class="tl-collapse-btn" data-collapse-btn="${escapeAttr(st.id)}" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="18 15 12 9 6 15"/>
+          </svg>
+          <span>Свернуть</span>
+        </button>
       </div>
+
+      <div class="tl-answer-block">
+        ${answerBodyHtml}
+      </div>
+
       <div class="comment-preview" style="display:none" data-comment-preview></div>
     </div>`;
 }
-
 /* ----------------------------------------
    Прогресс для чек-листа TOP Losses
    ---------------------------------------- */
@@ -4108,44 +4544,44 @@ function updateTlChecklistProgress() {
    ---------------------------------------- */
 function saveTopLossCheck() {
   const operator = ($('#tlOperator')?.value || '').trim();
-  const shift = $('#tlShift')?.value || '';
   const line = $('#tlLine')?.value || '';
   const lossIds = [...tlState.selectedLossIds];
 
   // Валидация
   if (!operator) return showToast('Укажите ФИО оператора', true);
-  if (!shift)    return showToast('Укажите смену', true);
   if (!line)     return showToast('Укажите линию', true);
   if (!lossIds.length) return showToast('Не выбрано ни одной потери', true);
 
   // Собираем ответы
   const items = [];
-  let hasEmpty = false;
 
   $$('#tlChecklistContainer .checklist-item').forEach(item => {
     const stdId = item.dataset.stdId;
     const st = getStandards().find(s => s.id === stdId);
     if (!st) return;
 
-    let answer = null;
-    let status = null;
+    let answer = '—';
+    let status = 'UNCHECKED';
 
     if (st.controlType === 'ok_not_ok') {
       const r = item.querySelector('input[data-ans]:checked');
-      if (!r) { hasEmpty = true; return; }
-      answer = r.value === 'OK' ? 'ОК' : 'Не ОК';
-      status = r.value;
+      if (r) {
+        answer = r.value === 'OK' ? 'ОК' : 'Не ОК';
+        status = r.value;
+      }
     } else if (st.controlType === 'value_input') {
       const v = item.querySelector('input[data-ans-value]').value;
-      if (v === '') { hasEmpty = true; return; }
-      answer = v;
-      status = 'OK';
+      if (v !== '') {
+        answer = v;
+        status = 'OK';
+      }
     } else if (st.controlType === 'tolerance') {
       const v = item.querySelector('input[data-ans-value]').value;
       const r = item.querySelector('input[data-tol]:checked');
-      if (v === '' || !r) { hasEmpty = true; return; }
-      answer = v + ' — ' + (r.value === 'OK' ? 'в допуске' : 'не в допуске');
-      status = r.value;
+      if (v !== '' && r) {
+        answer = v + ' — ' + (r.value === 'OK' ? 'в допуске' : 'не в допуске');
+        status = r.value;
+      }
     }
 
     const mainValue = (st.measurements && st.measurements[0] && st.measurements[0].value) || '';
@@ -4166,12 +4602,10 @@ function saveTopLossCheck() {
     });
   });
 
-  if (hasEmpty) {
-    return showToast('Заполните все пункты чек-листа', true);
-  }
-
-  if (!items.length) {
-    return showToast('Нет пунктов для сохранения', true);
+  // Сохраняем, только если есть хотя бы один отмеченный ответ
+  const checkedCount = items.filter(it => it.status !== 'UNCHECKED').length;
+  if (checkedCount === 0) {
+    return showToast('Отметьте хотя бы один стандарт', true);
   }
 
   // Запись в Историю — mode: 'toploss'
@@ -4180,7 +4614,6 @@ function saveTopLossCheck() {
     timestamp: new Date().toISOString(),
     mode: 'toploss',
     operator,
-    shift,
     line,
     topLosses: lossIds.slice(),
     items
@@ -4204,7 +4637,7 @@ function renderTopLossSummary(record) {
   const container = $('#tlSummaryView');
   if (!container) return;
 
-  // Собираем статистику по потерям
+  // --- Статистика ---
   const selectedLosses = (record.topLosses || [])
     .map(id => findLossById(id))
     .filter(Boolean);
@@ -4222,35 +4655,108 @@ function renderTopLossSummary(record) {
     }
   });
 
-  // Статистика по каждой выбранной потере
+  // Статистика по каждой потере
   const lossStats = selectedLosses.map(loss => {
-    const relatedStdIds = record.items
-      .filter(it => (stdToLosses[it.standardId] || []).includes(loss.id))
-      .map(it => it.standardId);
-
     const relatedItems = record.items.filter(it =>
-      relatedStdIds.includes(it.standardId)
+      (stdToLosses[it.standardId] || []).includes(loss.id)
     );
 
     const total = relatedItems.length;
     const oks = relatedItems.filter(it => it.status === 'OK').length;
     const fails = relatedItems.filter(it => it.status === 'FAIL').length;
-    const ok = fails === 0 && total > 0;
-
-    // Список «не ОК» для этой потери
+    const unchecked = relatedItems.filter(it => it.status === 'UNCHECKED').length;
+    const checkedTotal = oks + fails;
+    // «Под контролем» — если все проверенные ОК и нет непроверенных
+    const ok = fails === 0 && unchecked === 0 && total > 0;
     const failItems = relatedItems.filter(it => it.status === 'FAIL');
 
-    return { loss, total, oks, fails, ok, failItems };
+    return { loss, total, oks, fails, unchecked, checkedTotal, ok, failItems };
   });
-
-  const okLosses = lossStats.filter(s => s.ok);
-  const attentionLosses = lossStats.filter(s => !s.ok);
 
   const totalItems = record.items.length;
   const totalFails = record.items.filter(it => it.status === 'FAIL').length;
+  const totalOks = record.items.filter(it => it.status === 'OK').length;
+  const totalUnchecked = record.items.filter(it => it.status === 'UNCHECKED').length;
+  const checkedTotal = totalOks + totalFails;
+  // Процент ОК — от проверенных
+  const percentOk = checkedTotal > 0 ? Math.round((totalOks / checkedTotal) * 100) : 0;
+  // Всё под контролем — если нет FAIL и нет непроверенных
+  const allOk = totalFails === 0 && totalUnchecked === 0;
 
-  // HTML
-  let html = `
+  // --- Верх: «щит контроля» с кольцом ---
+  const shieldClass = allOk ? 'tl-shield-ok' : 'tl-shield-fail';
+  const shieldTitle = allOk ? 'Потери под контролем' : 'Требуют внимания';
+
+  const shieldSubParts = [];
+  if (checkedTotal > 0) {
+    shieldSubParts.push(`Проверено: <strong>${checkedTotal}</strong> из ${totalItems}`);
+  }
+  if (totalFails > 0) {
+    shieldSubParts.push(`вне нормы: <strong>${totalFails}</strong>`);
+  }
+  if (totalUnchecked > 0) {
+    shieldSubParts.push(`<span class="tl-shield-sub-unchecked">не проверено: ${totalUnchecked}</span>`);
+  }
+  const shieldSub = shieldSubParts.join(' · ');
+
+  // Чипы-медальоны (первые 20, чтобы не заваливать экран)
+  const chipItems = record.items.slice(0, 20);
+  const chipsHtml = chipItems.map(it => {
+    let cls;
+    if (it.status === 'OK')          cls = 'tl-shield-chip-ok';
+    else if (it.status === 'FAIL')   cls = 'tl-shield-chip-fail';
+    else                             cls = 'tl-shield-chip-unchecked';
+
+    const oplDisplay = it.machine
+      ? `${it.oplNumber || it.number || '—'} [${it.machine}]`
+      : (it.oplNumber || it.number || '—');
+    return `<span class="tl-shield-chip ${cls}" title="${escapeAttr(it.title || '')}">
+      <span class="tl-shield-chip-dot"></span>
+      ${escapeHtml(oplDisplay)}
+    </span>`;
+  }).join('');
+  const chipMore = record.items.length > 20
+    ? `<span class="tl-shield-chip">+${record.items.length - 20}</span>`
+    : '';
+
+  // --- Средняя часть: плитки по потерям ---
+  const lossTilesHtml = lossStats.map(s => {
+    const cls = s.ok ? 'tl-loss-tile-ok' : 'tl-loss-tile-fail';
+
+    const failsHtml = s.failItems.length ? `
+      <div class="tl-loss-tile-fails">
+        ${s.failItems.map(it => {
+          const oplDisplay = it.machine
+            ? `${it.oplNumber || it.number || '—'} [${it.machine}]`
+            : (it.oplNumber || it.number || '—');
+          return `
+            <div class="tl-loss-tile-fail-row">
+              <span class="tl-loss-tile-fail-opl">${escapeHtml(oplDisplay)}</span>
+              <span class="tl-loss-tile-fail-title">${escapeHtml(it.title || '')}</span>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    ` : '';
+
+    return `
+      <div class="tl-loss-tile ${cls}">
+        <div class="tl-loss-tile-head">
+          <span class="tl-loss-tile-name">${escapeHtml(s.loss.name)}</span>
+          <span class="tl-loss-tile-count">
+            ${s.checkedTotal === 0
+              ? 'не проверено'
+              : `${s.oks} OK${s.fails > 0 ? ` · ${s.fails} Не ОК` : ''}${s.unchecked > 0 ? ` · ${s.unchecked} не проверено` : ''}`
+            }
+          </span>
+        </div>
+        ${failsHtml}
+      </div>
+    `;
+  }).join('');
+
+  // --- Итоговый HTML ---
+  const html = `
     <div class="card tl-summary-card">
       <div class="tl-summary-head">
         <div class="tl-summary-icon tl-summary-icon-ok">
@@ -4262,94 +4768,48 @@ function renderTopLossSummary(record) {
         <div>
           <div class="tl-summary-title">Проверка сохранена</div>
           <div class="tl-summary-sub">
-            Смена: <strong>${escapeHtml(record.shift)}</strong> ·
             Оператор: <strong>${escapeHtml(record.operator)}</strong> ·
+            Линия: <strong>${escapeHtml(record.line)}</strong> ·
             ${formatDateTime(record.timestamp)}
           </div>
         </div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="tl-summary-stats">
-        <div class="tl-summary-stat">
-          <div class="tl-summary-stat-value">${totalItems}</div>
-          <div class="tl-summary-stat-label">Проверено стандартов</div>
+    <!-- Визуальный «щит» с кольцом -->
+    <div class="tl-shield ${shieldClass}">
+      <div class="tl-shield-ring" style="--percent: ${percentOk}">
+        <div class="tl-shield-ring-hole">
+          <div class="tl-shield-ring-value">${percentOk}%</div>
+          <div class="tl-shield-ring-label">ОК</div>
         </div>
-        <div class="tl-summary-stat tl-summary-stat-fail">
-          <div class="tl-summary-stat-value">${totalFails}</div>
-          <div class="tl-summary-stat-label">Отклонений</div>
-        </div>
-        <div class="tl-summary-stat tl-summary-stat-cyan">
-          <div class="tl-summary-stat-value">${selectedLosses.length}</div>
-          <div class="tl-summary-stat-label">Проверено потерь</div>
+      </div>
+      <div class="tl-shield-info">
+        <div class="tl-shield-title">${shieldTitle}</div>
+        <div class="tl-shield-sub">${shieldSub}</div>
+        ${totalFails > 0 ? `
+          <div class="tl-shield-journal-warning">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span>Есть отклонения. Зафиксируйте их в <strong>Journal Machines</strong>.</span>
+          </div>
+        ` : ''}
+        <div class="tl-shield-chips">
+          ${chipsHtml}
+          ${chipMore}
         </div>
       </div>
     </div>
-  `;
 
-  // Потери под контролем
-  if (okLosses.length) {
-    html += `
-      <div class="card">
-        <h2>Потери под контролем</h2>
-        <div class="tl-summary-list">
-          ${okLosses.map(s => `
-            <div class="tl-summary-loss tl-summary-loss-ok">
-              <div class="tl-summary-loss-head">
-                <span class="tl-summary-loss-dot tl-summary-loss-dot-ok"></span>
-                <span class="tl-summary-loss-name">${escapeHtml(s.loss.name)}</span>
-                <span class="tl-summary-loss-count">${s.oks} / ${s.total} OK</span>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
-  }
+    <!-- Плитки по потерям -->
+    <div class="card">
+      <h2>Детали по потерям</h2>
+      <div class="tl-loss-tiles">${lossTilesHtml}</div>
+    </div>
 
-  // Требуют внимания
-  if (attentionLosses.length) {
-    html += `
-      <div class="card" style="border-left:4px solid var(--accent-red)">
-        <h2 style="color:var(--accent-red)">Требуют внимания</h2>
-        <div class="tl-summary-list">
-          ${attentionLosses.map(s => `
-            <div class="tl-summary-loss tl-summary-loss-fail">
-              <div class="tl-summary-loss-head">
-                <span class="tl-summary-loss-dot tl-summary-loss-dot-fail"></span>
-                <span class="tl-summary-loss-name">${escapeHtml(s.loss.name)}</span>
-                <span class="tl-summary-loss-count tl-summary-loss-count-fail">${s.fails} / ${s.total} не в норме</span>
-              </div>
-              ${s.failItems.length ? `
-                <div class="tl-summary-loss-details">
-                  ${s.failItems.map(it => `
-                    <div class="tl-summary-fail-row">
-                      <span class="tl-summary-fail-opl">${escapeHtml(it.oplNumber || it.number || '—')}</span>
-                      <span class="tl-summary-fail-title">${escapeHtml(it.title || '')}</span>
-                      <span class="tl-summary-fail-status">Не ОК</span>
-                    </div>
-                  `).join('')}
-                </div>
-              ` : ''}
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
-  }
-
-  // Если ни одной потери не выбрано (не должно случиться, но на всякий)
-  if (!okLosses.length && !attentionLosses.length) {
-    html += `
-      <div class="card">
-        <div class="empty-state">Нет данных для отображения.</div>
-      </div>
-    `;
-  }
-
-  // Кнопки
-  html += `
     <div class="tl-select-footer">
       <button class="btn btn-secondary" id="tlBackToListBtn">← К списку потерь</button>
       <button class="btn btn-primary btn-icon-text" id="tlCheckAnotherBtn">
@@ -4364,7 +4824,7 @@ function renderTopLossSummary(record) {
 
   container.innerHTML = html;
 
-  // Показываем экран 3, скрываем 1 и 2
+  // Экраны
   $('#tlSelectView').style.display = 'none';
   $('#tlChecklistView').style.display = 'none';
   $('#tlSummaryView').style.display = 'block';
@@ -4380,22 +4840,24 @@ function renderTopLossSummary(record) {
    «← К списку потерь» — полный сброс
    ---------------------------------------- */
 function backToTopLossList() {
+  // Сбрасываем состояние
+  tlState.openAnswers.clear();
+  tlState.currentItems = [];
+  tlState.currentStandardToLosses = {};
+  tlState.currentLossIds = [];
+
   // Очищаем выбранные потери
   tlState.selectedLossIds.clear();
   tlState.expandedCategoryIds.clear();
 
-  // Сбрасываем форму (оператор, смена, линия)
+  // Сбрасываем форму (оператор, линия)
   const opEl = $('#tlOperator');
-  const shEl = $('#tlShift');
   const lnEl = $('#tlLine');
   if (opEl) opEl.value = '';
-  if (shEl) shEl.value = '';
   if (lnEl) lnEl.value = '';
 
-  // Обновляем выбор
   renderTopLossCategories();
 
-  // Переключаем экраны
   $('#tlSelectView').style.display = 'block';
   $('#tlChecklistView').style.display = 'none';
   $('#tlSummaryView').style.display = 'none';
@@ -4407,6 +4869,12 @@ function backToTopLossList() {
    «Проверить ещё потерю» — сохраняем оператора/смену/линию
    ---------------------------------------- */
 function checkAnotherTopLoss() {
+  // Сбрасываем состояние
+  tlState.openAnswers.clear();
+  tlState.currentItems = [];
+  tlState.currentStandardToLosses = {};
+  tlState.currentLossIds = [];
+
   // Очищаем только выбранные потери
   tlState.selectedLossIds.clear();
   tlState.expandedCategoryIds.clear();
@@ -4426,6 +4894,12 @@ function checkAnotherTopLoss() {
    Возврат на экран выбора
    ---------------------------------------- */
 function backToTopLossSelect() {
+  // Сбрасываем раскрытые ответы и кэш
+  tlState.openAnswers.clear();
+  tlState.currentItems = [];
+  tlState.currentStandardToLosses = {};
+  tlState.currentLossIds = [];
+
   $('#tlSelectView').style.display = 'block';
   $('#tlChecklistView').style.display = 'none';
   $('#tlSummaryView').style.display = 'none';
@@ -5140,10 +5614,15 @@ function renderDashboardTopProblems(problems, maxCount) {
 
   const items = problems.map(p => {
     const width = maxCount > 0 ? Math.round((p.count / maxCount) * 100) : 0;
+    // Показываем OPL + машину, если машина есть
+    const oplDisplay = p.machine
+      ? `${p.opl} [${p.machine}]`
+      : p.opl;
+
     return `
       <div class="dash-top-item">
         <div class="dash-top-head">
-          <span class="dash-top-opl">${escapeHtml(p.opl)}</span>
+          <span class="dash-top-opl">${escapeHtml(oplDisplay)}</span>
           <span class="dash-top-title" title="${escapeAttr(p.title)}">${escapeHtml(p.title || '—')}</span>
           <span class="dash-top-count">${p.count} откл.</span>
         </div>
@@ -5282,14 +5761,20 @@ function calculateDashboardStats() {
   const monthAgo = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
   const monthChecks = history.filter(h => new Date(h.timestamp) >= monthAgo);
 
-  const stdFails = {};   // ключ = oplNumber || number, значение = { opl, title, node, line, count }
+  const stdFails = {};   // ключ = "OPL [machine]"
   monthChecks.forEach(h => {
     h.items.forEach(it => {
       if (it.status !== 'FAIL') return;
-      const key = it.oplNumber || it.number || '—';
+
+      const oplNumber = it.oplNumber || it.number || '—';
+      const machine = it.machine || '';
+      // Ключ: OPL + машина — чтобы одинаковые OPL на разных машинах не сливались
+      const key = machine ? `${oplNumber} [${machine}]` : oplNumber;
+
       if (!stdFails[key]) {
         stdFails[key] = {
-          opl: it.oplNumber || it.number || '—',
+          opl: oplNumber,
+          machine: machine,
           title: it.title || '',
           node: it.node || '',
           line: h.line || '',
@@ -8393,7 +8878,8 @@ $('#editorDownloadTemplateBtn')?.addEventListener('click', async () => {
     [''],
     ['ОБЯЗАТЕЛЬНЫЕ ПОЛЯ (8):'],
     ['  • № — порядковый номер'],
-    ['  • OPL № — номер вида OPL-4.2.1'],
+    ['  • OPL № — номер вида OPL-4.2.1.'],
+    ['      Уникален в пределах линии + машины (на разных машинах могут быть одинаковые номера).'],
     ['  • Машина — обозначение (SE, M1, …).'],
     ['      Если машины нет в списке линии — она будет добавлена автоматически.'],
     ['  • Узел'],
@@ -8630,10 +9116,11 @@ async function parseStandardsExcelV3(file, targetLine) {
   };
 
   const existing = getStandards();
-  const existingOplOnLine = new Set(
+  // Ключ: line|machine|oplNumber (lowercase)
+  const existingOplKeys = new Set(
     existing
       .filter(s => s.line === targetLine)
-      .map(s => (s.oplNumber || '').toLowerCase())
+      .map(s => `${s.line}|${s.machine || ''}|${(s.oplNumber || '').toLowerCase()}`)
   );
 
   // --- НОВОЕ: получаем актуальный список машин для линии ---
@@ -8720,9 +9207,10 @@ async function parseStandardsExcelV3(file, targetLine) {
       rowErrors.push(`линия в файле «${lineFromExcel}», а импорт идёт в «${targetLine}»`);
     }
 
-    // Дубликат по OPL № на этой линии
-    if (oplNumber && existingOplOnLine.has(oplNumber.toLowerCase())) {
-      result.duplicates.push(oplNumber);
+    // Дубликат по OPL № на этой линии + машине
+    const oplKey = `${targetLine}|${machine || ''}|${oplNumber.toLowerCase()}`;
+    if (oplNumber && existingOplKeys.has(oplKey)) {
+      result.duplicates.push(`${oplNumber} (${machine})`);
       result.skipped++;
       continue;
     }
@@ -8815,7 +9303,7 @@ async function parseStandardsExcelV3(file, targetLine) {
       updatedAt: new Date().toISOString()
     };
     existing.push(newStandard);
-    existingOplOnLine.add(oplNumber.toLowerCase());
+    existingOplKeys.add(oplKey);
     result.added++;
   }
 
