@@ -29,27 +29,43 @@ function switchTab(tabName, pushHistory = true) {
 
   // Специальная логика для вкладок
   if (tabName === 'editor') {
-    const savedLine = localStorage.getItem('cl_editor_line');
-    const savedBlock = localStorage.getItem('cl_editor_block');
     const blocksView = document.getElementById('editorBlocksView');
     const linesView = document.getElementById('editorLinesView');
     const lineView = document.getElementById('editorLineView');
+    const elecView = document.getElementById('editorElectronicView');
 
-    // Скрываем все экраны
+    // Скрываем все экраны (и мех, и электрон)
     if (blocksView) blocksView.style.display = 'none';
     if (linesView) linesView.style.display = 'none';
     if (lineView) lineView.style.display = 'none';
+    if (elecView) elecView.style.display = 'none';
 
-    if (savedLine && savedBlock && typeof openEditorLine === 'function') {
-      // Открыта конкретная линия
-      openEditorLine(savedLine);
-    } else if (savedBlock && typeof openEditorBlock === 'function') {
-      // Открыт блок (список линий)
-      openEditorBlock(savedBlock);
+    // Смотрим, какой режим был в прошлый раз
+    const savedMode = localStorage.getItem('cl_editor_mode');
+    if (savedMode === 'elec' && typeof switchEditorMode === 'function') {
+      // Электронный режим — пусть switchEditorMode сам всё покажет
+      switchEditorMode('elec');
     } else {
-      // Список блоков
-      if (blocksView) blocksView.style.display = 'block';
-      if (typeof renderEditorBlocksView === 'function') renderEditorBlocksView();
+      // Механический режим — восстанавливаем сохранённый блок/линию
+      const savedLine = localStorage.getItem('cl_editor_line');
+      const savedBlock = localStorage.getItem('cl_editor_block');
+
+      if (savedLine && savedBlock && typeof openEditorLine === 'function') {
+        openEditorLine(savedLine);
+      } else if (savedBlock && typeof openEditorBlock === 'function') {
+        openEditorBlock(savedBlock);
+      } else {
+        if (blocksView) blocksView.style.display = 'block';
+        if (typeof renderEditorBlocksView === 'function') renderEditorBlocksView();
+      }
+
+      // Синхронизируем подсветку кнопок переключателя
+      if (typeof switchEditorMode === 'function') {
+        // Вызываем только для подсветки, но не для смены контента
+        document.querySelectorAll('#editorModeSwitch .editor-mode-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.mode === 'mech');
+        });
+      }
     }
   }
 
@@ -66,8 +82,8 @@ function switchTab(tabName, pushHistory = true) {
     if (typeof renderTopLossCategories === 'function') renderTopLossCategories();
   }
 
-  if (tabName === 'toploss' && typeof fillTopLossTab === 'function') {
-    fillTopLossTab();
+  if (tabName === 'electronic') {
+    if (typeof fillElectronicTab === 'function') fillElectronicTab();
   }
 
   if (tabName === 'settings' && typeof renderSettings === 'function') {

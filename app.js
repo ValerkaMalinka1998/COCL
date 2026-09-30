@@ -12,7 +12,10 @@ const STORAGE_KEYS = {
   operators: 'cl_operators_v2',
   blocks: 'cl_blocks_v1',
   lineMachines: 'cl_lineMachines_v1',
-  topLosses: 'cl_toplosses_v1'
+  topLosses: 'cl_toplosses_v1',
+  electronicShiftCfg: 'cl_electronic_shiftcfg_v1',
+  electronicParams: 'cl_electronic_params_v1',
+  electronicBrandSchedule: 'cl_electronic_brandschedule_v1'
 };
 /* ============================================================
    ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
@@ -98,6 +101,15 @@ const DEFAULT_TOP_LOSSES = [
     ]
   }
 ];
+
+/* ============================================================
+   CL ELECTRONIC — дефолтная конфигурация графика смен
+   ============================================================ */
+const DEFAULT_ELECTRONIC_SHIFT_CFG = {
+  dayCycle:   ['B','D','D','A','A','C','C','B','B','D','D','A','A','C','C','B'],
+  nightCycle: ['A','C','C','B','B','D','D','A','A','C','C','B','B','D','D','A'],
+  startDate:  '2026-10-01'
+};
 
 /* ============================================================
    ЭКРАН 1: БЛОКИ
@@ -224,6 +236,504 @@ function renderEditorLinesView(blockId) {
     `;
   }).join('');
 }
+/* ============================================================
+   РЕДАКТОР — ЭЛЕКТРОННЫЙ РЕЖИМ
+   ============================================================ */
+
+/* Текущее состояние электронного редактора */
+let currentElectronicLine = null;   // выбранная линия
+let currentElectronicMachine = null; // выбранная машина
+
+/* Экран 1: список линий с электронными параметрами */
+function renderElectronicView() {
+  const container = $('#editorElectronicView');
+  if (!container) return;
+
+  currentElectronicLine = null;
+  currentElectronicMachine = null;
+
+  const allParams = getElectronicParams().map(normalizeElectronicParam);
+  const lines = getLines();
+
+  // Для каждой линии — сколько параметров
+  const linesWithCount = lines.map(line => {
+    const count = allParams.filter(p => p.line === line).length;
+    return { line, count };
+  });
+
+  // Показываем только те линии, где есть хотя бы один параметр?
+  // Нет — показываем все, чтобы технолог мог добавить первый.
+  // Но сортируем: сначала те, где параметров больше.
+
+  container.innerHTML = `
+      <div class="blocks-grid">
+        ${linesWithCount.map(({line, count}) => {
+          const scheduleCount = getElectronicBrandScheduleForLine(line).length;
+          const scheduleText = scheduleCount === 0
+            ? '<span style="color:var(--accent-amber);font-style:italic">— расписание не задано</span>'
+            : `${scheduleCount} ${pluralizeDays(scheduleCount)} в расписании`;
+          return `
+            <div class="block-tile" onclick="openElectronicLine('${escapeHtml(line).replace(/'/g,"\\'")}')">
+              <div class="block-tile-head">
+                <span class="block-tile-name">${escapeHtml(line)}</span>
+              </div>
+              <div class="block-tile-lines">
+                ${count === 0
+                  ? '<span style="color:var(--text-dim);font-style:italic">— нет параметров</span>'
+                  : `${count} ${pluralizeParams(count)}`}
+              </div>
+              <div class="block-tile-lines" style="min-height:auto">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;vertical-align:-2px;margin-right:4px">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                ${scheduleText}
+              </div>
+              <div class="block-tile-footer" style="flex-wrap:wrap;gap:6px">
+                <span class="block-tile-count">${count > 0 ? count : ''}</span>
+                <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openElectronicBrandSchedule('${escapeHtml(line).replace(/'/g,"\\'")}')" title="Расписание брендов">
+                  📅 Расписание
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openElectronicLine('${escapeHtml(line).replace(/'/g,"\\'")}')">
+                  Открыть →
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function pluralizeParams(n) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'параметр';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'параметра';
+  return 'параметров';
+}
+function pluralizeDays(n) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'день';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'дня';
+  return 'дней';
+}
+
+/* Экран 2: список машин на линии + список параметров */
+window.openElectronicLine = function(line) {
+  const container = $('#editorElectronicView');
+  if (!container) return;
+
+  currentElectronicLine = line;
+
+  const params = getElectronicParamsForLine(line);
+  const machines = getMachinesForLine(line);
+
+  // Машины, у которых есть параметры, + все остальные из справочника
+  const machinesSet = new Set(machines);
+  params.forEach(p => machinesSet.add(p.machine));
+  const allMachines = [...machinesSet].filter(Boolean).sort((a, b) => a.localeCompare(b, 'ru'));
+
+  // Счётчики
+  const machinesWithCount = allMachines.map(m => ({
+    machine: m,
+    count: params.filter(p => p.machine === m).length
+  }));
+
+  container.innerHTML = `
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px">
+        <button class="btn btn-secondary" id="elecBackBtn">← К линиям</button>
+        <h2 style="margin:0;border:none;padding:0;flex:1;min-width:150px">${escapeHtml(line)} — электронные параметры</h2>
+        <button class="btn btn-primary btn-icon-text" id="elecAddParamBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span>Добавить параметр</span>
+        </button>
+      </div>
+
+      ${allMachines.length === 0
+        ? '<div class="empty-state">На этой линии нет машин. Добавьте их в Настройках → «Машины для линий».</div>'
+        : `
+          <div class="elec-machines-grid">
+            ${machinesWithCount.map(({machine, count}) => `
+              <div class="elec-machine-tile" onclick="openElectronicMachine('${escapeHtml(machine).replace(/'/g,"\\'")}')">
+                <div class="elec-machine-tile-name">${escapeHtml(machine)}</div>
+                <div class="elec-machine-tile-count">
+                  ${count === 0
+                    ? '— нет параметров'
+                    : `${count} ${pluralizeParams(count)}`}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `}
+    </div>
+  `;
+
+  $('#elecBackBtn')?.addEventListener('click', () => {
+    renderElectronicView();
+  });
+
+  $('#elecAddParamBtn')?.addEventListener('click', () => {
+    // Открываем форму для первой машины из списка
+    if (!allMachines.length) {
+      return showToast('Сначала добавьте машину для линии', true);
+    }
+    currentElectronicMachine = allMachines[0];
+    openElectronicParamForm(null);
+  });
+};
+
+/* Экран 3: список параметров на выбранной машине */
+window.openElectronicMachine = function(machine) {
+  const container = $('#editorElectronicView');
+  if (!container || !currentElectronicLine) return;
+
+  currentElectronicMachine = machine;
+
+  const params = getElectronicParamsForMachine(currentElectronicLine, machine);
+
+  container.innerHTML = `
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px">
+        <button class="btn btn-secondary" id="elecBackToLineBtn">← К машинам</button>
+        <h2 style="margin:0;border:none;padding:0;flex:1;min-width:200px">
+          ${escapeHtml(currentElectronicLine)} · ${escapeHtml(machine)}
+        </h2>
+        <button class="btn btn-primary btn-icon-text" id="elecAddParamBtn2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span>Добавить параметр</span>
+        </button>
+      </div>
+
+      ${params.length === 0
+        ? '<div class="empty-state">На этой машине пока нет параметров. Нажмите «Добавить параметр».</div>'
+        : params.map(p => renderElectronicParamRow(p)).join('')}
+    </div>
+  `;
+
+  $('#elecBackToLineBtn')?.addEventListener('click', () => {
+    openElectronicLine(currentElectronicLine);
+  });
+
+  $('#elecAddParamBtn2')?.addEventListener('click', () => {
+    openElectronicParamForm(null);
+  });
+
+  // Обработчики на кнопки параметров (edit / delete / toggle)
+  container.querySelectorAll('[data-elec-edit]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openElectronicParamForm(btn.dataset.elecEdit);
+    });
+  });
+  container.querySelectorAll('[data-elec-delete]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteElectronicParam(btn.dataset.elecDelete);
+    });
+  });
+  container.querySelectorAll('[data-elec-toggle]').forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      e.stopPropagation();
+      toggleElectronicParamActive(cb.dataset.elecToggle, cb.checked);
+    });
+  });
+};
+
+/* Отрисовка одной строки параметра */
+function renderElectronicParamRow(p) {
+  const freqLabels = {
+    daily:    'Каждый день',
+    rotation: 'Ротация',
+    weekly:   'По дням недели',
+    once:     'Разовые даты'
+  };
+
+  const workClass = p.work === 'Run' ? 'work-run' : 'work-stop';
+
+  // Описание нормы
+  let normInfo;
+  if (p.controlType === 'ok_not_ok') {
+    normInfo = p.normText ? escapeHtml(p.normText) : '<span style="color:var(--text-dim)">— без нормы</span>';
+  } else {
+    const brandsCount = (p.valuesByBrand || []).filter(v =>
+      v.target !== '' && v.target != null && v.tolerance !== '' && v.tolerance != null
+    ).length;
+    normInfo = brandsCount > 0
+      ? `${brandsCount} ${brandsCount === 1 ? 'бренд' : 'бренда'}`
+      : '<span style="color:var(--text-dim)">— нет норм</span>';
+  }
+
+  const isActive = p.active !== false;
+
+  return `
+    <div class="elec-param-row ${isActive ? '' : 'inactive'}">
+      <div class="std-active-cell" style="flex-shrink:0">
+        <input type="checkbox" class="std-active-cb" ${isActive ? 'checked' : ''}
+               data-elec-toggle="${escapeAttr(p.id)}" title="Активен">
+      </div>
+      <div class="elec-param-row-info">
+        <div class="elec-param-row-name">${escapeHtml(p.paramName || '—')}</div>
+        <div class="elec-param-row-meta">
+          <span><strong>Тип:</strong> ${p.controlType === 'ok_not_ok' ? 'ОК/Не ОК' : 'Числовой'}</span>
+          <span><strong>Норма:</strong> ${normInfo}</span>
+          <span><strong>Работа:</strong> ${p.work}</span>
+          ${p.timeFrom ? `<span><strong>Время:</strong> ${escapeHtml(p.timeFrom)}–${escapeHtml(p.timeTo || '')}</span>` : ''}
+          <span><strong>Периодичность:</strong> ${freqLabels[p.frequency?.type] || '—'}</span>
+        </div>
+      </div>
+      <div class="elec-param-row-actions">
+        <button class="btn btn-secondary btn-sm btn-icon" data-elec-edit="${escapeAttr(p.id)}" title="Изменить">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+        </button>
+        <button class="btn btn-danger btn-sm btn-icon" data-elec-delete="${escapeAttr(p.id)}" title="Удалить">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6"/><path d="M14 11v6"/>
+            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+/* Удаление параметра */
+function deleteElectronicParam(id) {
+  const p = getElectronicParams().find(x => x.id === id);
+  if (!p) return;
+  if (!confirm(`Удалить параметр "${p.paramName}"?`)) return;
+
+  setElectronicParams(getElectronicParams().filter(x => x.id !== id));
+  if (currentElectronicMachine) {
+    openElectronicMachine(currentElectronicMachine);
+  } else {
+    renderElectronicView();
+  }
+  showToast('Параметр удалён');
+}
+
+/* Переключение активности */
+function toggleElectronicParamActive(id, isActive) {
+  const all = getElectronicParams();
+  const p = all.find(x => x.id === id);
+  if (!p) return;
+  p.active = !!isActive;
+  p.updatedAt = new Date().toISOString();
+  setElectronicParams(all);
+  openElectronicMachine(currentElectronicMachine);
+  showToast(isActive ? 'Параметр активирован' : 'Параметр деактивирован');
+}
+/* ============================================================
+   ФОРМА ЭЛЕКТРОННОГО ПАРАМЕТРА
+   ============================================================ */
+
+function openElectronicParamForm(id) {
+  const modal = $('#electronicParamModal');
+  if (!modal) return;
+  if (!currentElectronicLine) return showToast('Сначала выберите линию', true);
+  if (!currentElectronicMachine) return showToast('Сначала выберите машину', true);
+
+  const title = $('#electronicParamTitle');
+  let p;
+
+  if (id) {
+    p = getElectronicParams().map(normalizeElectronicParam).find(x => x.id === id);
+    if (!p) return;
+    title.textContent = 'Изменить параметр: ' + (p.paramName || '');
+  } else {
+    p = {
+      id: '',
+      active: true,
+      line: currentElectronicLine,
+      machine: currentElectronicMachine,
+      paramName: '',
+      work: 'Run',
+      timeFrom: '09:10',
+      timeTo: '10:00',
+      controlType: 'value_input',
+      normText: '',
+      valuesByBrand: [],
+      frequency: { type: 'daily', shifts: ['A','B','C','D'], daysOfWeek: [], dates: [] }
+    };
+    title.textContent = 'Добавить электронный параметр — ' + currentElectronicMachine;
+  }
+
+  // Основные
+  $('#ep_id').value = id || '';
+  $('#ep_line').value = currentElectronicLine;
+
+  // Машина — выпадающий список
+  fillElectronicMachineSelect(currentElectronicLine, p.machine);
+  $('#ep_paramName').value = p.paramName || '';
+  $('#ep_timeFrom').value = p.timeFrom || '09:10';
+  $('#ep_timeTo').value = p.timeTo || '10:00';
+
+  // Работа — чипы
+  $('#ep_workChips').querySelectorAll('.elec-work-chip').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.work === p.work);
+  });
+
+  // Тип контроля
+  $('#ep_controlType').value = p.controlType;
+  $('#ep_controlTypeSelector').querySelectorAll('.type-option').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === p.controlType);
+  });
+  updateElectronicFormVisibility();
+
+  // Текстовая норма
+  $('#ep_normText').value = p.normText || '';
+
+  // Таблица брендов
+  renderElectronicBrandsTable(p.valuesByBrand || []);
+
+  // Периодичность
+  $('#ep_freqType').value = p.frequency.type;
+  renderFreqShiftsCheckboxes('ep_freqDailyShifts',  p.frequency.shifts || ['A','B','C','D']);
+  renderFreqShiftsCheckboxes('ep_freqWeeklyShifts', p.frequency.shifts || ['A','B','C','D']);
+  renderFreqShiftsCheckboxes('ep_freqOnceShifts',   p.frequency.shifts || ['A','B','C','D']);
+  renderFreqDaysCheckboxes('ep_freqWeeklyDays',     p.frequency.daysOfWeek || []);
+  $('#ep_freqOnceDates').value = (p.frequency.dates || []).join(', ');
+
+  updateFreqBlocksVisibility();
+
+  modal.classList.add('active');
+}
+window.openElectronicParamForm = openElectronicParamForm;
+
+function closeElectronicParamForm() {
+  const modal = $('#electronicParamModal');
+  if (modal) modal.classList.remove('active');
+}
+
+/* Заполнить выпадающий список машин для линии */
+function fillElectronicMachineSelect(line, currentValue) {
+  const select = $('#ep_machine');
+  if (!select) return;
+
+  const machines = getMachinesForLine(line);
+  let html = '<option value="">— выберите —</option>';
+  if (currentValue && !machines.includes(currentValue)) {
+    html += `<option value="${escapeHtml(currentValue)}">${escapeHtml(currentValue)} (не в списке)</option>`;
+  }
+  html += machines.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+  select.innerHTML = html;
+  if (currentValue) select.value = currentValue;
+}
+
+/* Показать/скрыть блоки в зависимости от controlType */
+function updateElectronicFormVisibility() {
+  const ct = $('#ep_controlType').value;
+  $('#ep_normTextBlock').style.display = (ct === 'ok_not_ok') ? 'block' : 'none';
+  $('#ep_brandsBlock').style.display    = (ct === 'value_input') ? 'block' : 'none';
+}
+
+/* ============================================================
+   Таблица брендов
+   ============================================================ */
+
+function renderElectronicBrandsTable(rows) {
+  const tbody = $('#ep_brandsTbody');
+  if (!tbody) return;
+
+  const lineBrands = getBrandsForLine(currentElectronicLine);
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-dim);font-style:italic;padding:14px">Нет строк. Нажмите «Добавить бренд».</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map((r, idx) => {
+    const brandOpts = ['<option value="">— выберите —</option>']
+      .concat(lineBrands.map(b => {
+        const selected = (b === r.brand) ? ' selected' : '';
+        return `<option value="${escapeHtml(b)}"${selected}>${escapeHtml(b)}</option>`;
+      })).join('');
+
+    return `
+      <tr data-row-idx="${idx}">
+        <td><select data-brand>${brandOpts}</select></td>
+        <td><input type="number" step="any" data-target value="${escapeAttr(r.target != null ? r.target : '')}" placeholder="0"></td>
+        <td><input type="number" step="any" data-tolerance value="${escapeAttr(r.tolerance != null ? r.tolerance : '')}" placeholder="0"></td>
+        <td>
+          <button type="button" class="elec-brands-remove" data-remove-row title="Удалить">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  tbody.querySelectorAll('[data-remove-row]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tr = btn.closest('tr');
+      if (tr) tr.remove();
+      if (!tbody.querySelector('tr')) {
+        renderElectronicBrandsTable([]);
+      }
+    });
+  });
+}
+
+/* ============================================================
+   Периодичность: чек-боксы смен и дней недели
+   ============================================================ */
+
+function renderFreqShiftsCheckboxes(containerId, selectedShifts) {
+  const c = document.getElementById(containerId);
+  if (!c) return;
+  c.innerHTML = ['A','B','C','D'].map(s => {
+    const checked = selectedShifts.includes(s) ? 'checked' : '';
+    const cls = checked ? 'checked' : '';
+    return `<label class="${cls}"><input type="checkbox" value="${s}" ${checked}> ${s}</label>`;
+  }).join('');
+  c.querySelectorAll('input').forEach(cb => {
+    cb.addEventListener('change', e => {
+      e.target.closest('label').classList.toggle('checked', e.target.checked);
+    });
+  });
+}
+
+function renderFreqDaysCheckboxes(containerId, selectedDays) {
+  const c = document.getElementById(containerId);
+  if (!c) return;
+  const names = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  c.innerHTML = names.map((name, idx) => {
+    const checked = selectedDays.includes(idx) ? 'checked' : '';
+    const cls = checked ? 'checked' : '';
+    return `<label class="${cls}"><input type="checkbox" value="${idx}" ${checked}> ${name}</label>`;
+  }).join('');
+  c.querySelectorAll('input').forEach(cb => {
+    cb.addEventListener('change', e => {
+      e.target.closest('label').classList.toggle('checked', e.target.checked);
+    });
+  });
+}
+
+function updateFreqBlocksVisibility() {
+  const type = $('#ep_freqType').value;
+  $('#ep_freqDailyBlock').style.display    = (type === 'daily')    ? 'block' : 'none';
+  $('#ep_freqRotationBlock').style.display = (type === 'rotation') ? 'block' : 'none';
+  $('#ep_freqWeeklyBlock').style.display   = (type === 'weekly')   ? 'block' : 'none';
+  $('#ep_freqOnceBlock').style.display     = (type === 'once')     ? 'block' : 'none';
+}
+
 /* Открыть линию */
 window.openEditorLine = function(line) {
   currentEditorLine = line;
@@ -1464,6 +1974,236 @@ $('#editorAddStandardBtn')?.addEventListener('click', () => {
 });
 
 /* ============================================================
+   ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМА РЕДАКТОРА (Механический / Электронный)
+   ============================================================ */
+
+function switchEditorMode(mode) {
+  const mechView = $('#editorBlocksView');
+  const elecView = $('#editorElectronicView');
+
+  // Скрываем все мех-экраны
+  const mechViews = ['#editorBlocksView', '#editorLinesView', '#editorLineView'];
+  mechViews.forEach(sel => {
+    const el = $(sel);
+    if (el) el.style.display = 'none';
+  });
+  if (elecView) elecView.style.display = 'none';
+
+  if (mode === 'elec') {
+    if (elecView) {
+      elecView.style.display = 'block';
+      renderElectronicView();
+    }
+  } else {
+    // Механический — с учётом сохранённых блоков/линий
+    if (mechView) mechView.style.display = 'block';
+    if (typeof renderEditorBlocksView === 'function') renderEditorBlocksView();
+  }
+
+  // Подсветка кнопок
+  document.querySelectorAll('#editorModeSwitch .editor-mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+
+  // Сохраняем выбор
+  try { localStorage.setItem('cl_editor_mode', mode); } catch(e) {}
+}
+
+/* Обработчики кнопок переключателя */
+document.querySelectorAll('#editorModeSwitch .editor-mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    switchEditorMode(btn.dataset.mode);
+  });
+});
+
+/* ============================================================
+   ОБРАБОТЧИКИ ФОРМЫ ЭЛЕКТРОННОГО ПАРАМЕТРА
+   ============================================================ */
+
+// Закрытие
+$('#electronicParamClose')?.addEventListener('click', closeElectronicParamForm);
+$('#electronicParamCancel')?.addEventListener('click', closeElectronicParamForm);
+$('#electronicParamModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'electronicParamModal') closeElectronicParamForm();
+});
+
+// Работа — чипы Run/Stop
+$('#ep_workChips')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.elec-work-chip');
+  if (!btn) return;
+  $('#ep_workChips').querySelectorAll('.elec-work-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+});
+
+// Тип контроля — чипы
+$('#ep_controlTypeSelector')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.type-option');
+  if (!btn) return;
+  $('#ep_controlType').value = btn.dataset.value;
+  $('#ep_controlTypeSelector').querySelectorAll('.type-option').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateElectronicFormVisibility();
+});
+
+// Тип периодичности
+$('#ep_freqType')?.addEventListener('change', updateFreqBlocksVisibility);
+
+// Быстрое добавление машины (через общую модалку, как в форме стандарта)
+$('#ep_addMachineBtn')?.addEventListener('click', () => {
+  quickAddMachineContext = 'electronic';
+  openQuickAddMachineModal();
+});
+
+// Добавить строку бренда
+$('#ep_addBrandRowBtn')?.addEventListener('click', () => {
+  const tbody = $('#ep_brandsTbody');
+  if (!tbody) return;
+
+  // Если сейчас показывается "Нет строк" — очищаем
+  if (tbody.querySelector('td[colspan]')) tbody.innerHTML = '';
+
+  const lineBrands = getBrandsForLine(currentElectronicLine);
+  const brandOpts = ['<option value="">— выберите —</option>']
+    .concat(lineBrands.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`))
+    .join('');
+
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><select data-brand>${brandOpts}</select></td>
+    <td><input type="number" step="any" data-target placeholder="0"></td>
+    <td><input type="number" step="any" data-tolerance placeholder="0"></td>
+    <td>
+      <button type="button" class="elec-brands-remove" data-remove-row title="Удалить">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </td>
+  `;
+  tbody.appendChild(tr);
+
+  tr.querySelector('[data-remove-row]').addEventListener('click', () => {
+    tr.remove();
+    if (!tbody.querySelector('tr')) renderElectronicBrandsTable([]);
+  });
+});
+
+// Сохранение
+$('#electronicParamSave')?.addEventListener('click', () => {
+  const id = $('#ep_id').value;
+  const machine = ($('#ep_machine')?.value || '').trim();
+  const paramName = ($('#ep_paramName')?.value || '').trim();
+  const controlType = $('#ep_controlType').value;
+  const normText = ($('#ep_normText')?.value || '').trim();
+  const work = $('#ep_workChips')?.querySelector('.elec-work-chip.active')?.dataset.work || 'Run';
+  const timeFrom = ($('#ep_timeFrom')?.value || '').trim();
+  const timeTo = ($('#ep_timeTo')?.value || '').trim();
+  const freqType = $('#ep_freqType').value;
+
+  // Валидация
+  if (!machine)     return showToast('Выберите машину', true);
+  if (!paramName)   return showToast('Укажите название параметра', true);
+  if (controlType === 'ok_not_ok' && !normText) {
+    return showToast('Укажите текст нормы', true);
+  }
+
+  // Собираем значения по брендам
+  const valuesByBrand = [];
+  if (controlType === 'value_input') {
+    const tbody = $('#ep_brandsTbody');
+    tbody?.querySelectorAll('tr').forEach(tr => {
+      const brand = tr.querySelector('[data-brand]')?.value;
+      const target = tr.querySelector('[data-target]')?.value;
+      const tolerance = tr.querySelector('[data-tolerance]')?.value;
+      if (brand && target !== '' && tolerance !== '') {
+        valuesByBrand.push({
+          brand,
+          target: Number(target),
+          tolerance: Number(tolerance)
+        });
+      }
+    });
+
+    if (!valuesByBrand.length) {
+      return showToast('Добавьте хотя бы один бренд с нормой', true);
+    }
+  }
+
+  // Периодичность
+  const frequency = { type: freqType, shifts: [], daysOfWeek: [], dates: [] };
+
+  if (freqType === 'daily') {
+    frequency.shifts = [...($$('#ep_freqDailyShifts input:checked'))].map(cb => cb.value);
+    if (!frequency.shifts.length) return showToast('Выберите хотя бы одну смену', true);
+  } else if (freqType === 'rotation') {
+    // Ничего не нужно — ротация определяется графиком смен
+  } else if (freqType === 'weekly') {
+    frequency.daysOfWeek = [...($$('#ep_freqWeeklyDays input:checked'))].map(cb => Number(cb.value));
+    frequency.shifts = [...($$('#ep_freqWeeklyShifts input:checked'))].map(cb => cb.value);
+    if (!frequency.daysOfWeek.length) return showToast('Выберите дни недели', true);
+    if (!frequency.shifts.length) return showToast('Выберите хотя бы одну смену', true);
+  } else if (freqType === 'once') {
+    const raw = ($('#ep_freqOnceDates')?.value || '').trim();
+    frequency.dates = raw.split(/[\s,]+/).map(s => s.trim()).filter(s => /^\d{4}-\d{2}-\d{2}$/.test(s));
+    frequency.shifts = [...($$('#ep_freqOnceShifts input:checked'))].map(cb => cb.value);
+    if (!frequency.dates.length) return showToast('Укажите хотя бы одну дату в формате YYYY-MM-DD', true);
+    if (!frequency.shifts.length) return showToast('Выберите хотя бы одну смену', true);
+  }
+
+  // Проверка дубликата (line + machine + paramName)
+  const all = getElectronicParams().map(normalizeElectronicParam);
+  const dup = all.find(p =>
+    p.id !== id &&
+    p.line === currentElectronicLine &&
+    p.machine === machine &&
+    (p.paramName || '').toLowerCase() === paramName.toLowerCase()
+  );
+  if (dup) {
+    return showToast(`Параметр «${paramName}» уже есть на машине ${machine}`, true);
+  }
+
+  // Формируем объект
+  const obj = {
+    id: id || makeElectronicParamId(),
+    active: id ? (all.find(p => p.id === id)?.active !== false) : true,
+    line: currentElectronicLine,
+    machine,
+    paramName,
+    work,
+    timeFrom,
+    timeTo,
+    controlType,
+    normText: controlType === 'ok_not_ok' ? normText : '',
+    valuesByBrand: controlType === 'value_input' ? valuesByBrand : [],
+    frequency,
+    author: id ? (all.find(p => p.id === id)?.author || '') : '',
+    createdAt: id ? (all.find(p => p.id === id)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  if (id) {
+    const idx = all.findIndex(p => p.id === id);
+    if (idx !== -1) all[idx] = obj;
+  } else {
+    all.push(obj);
+  }
+
+  setElectronicParams(all);
+  closeElectronicParamForm();
+
+  // Перерисовываем список параметров на машине
+  if (currentElectronicMachine) {
+    openElectronicMachine(currentElectronicMachine);
+  }
+
+  showToast(id ? 'Параметр обновлён' : 'Параметр добавлен');
+});
+/* Контекст для модалки быстрого добавления машины:
+   'standard' — из формы механического стандарта (читаем #sf_line)
+   'electronic' — из формы электронного параметра (читаем currentElectronicLine) */
+let quickAddMachineContext = 'standard';
+/* ============================================================
    УТИЛИТЫ
    ============================================================ */
 function $(sel) { return document.querySelector(sel); }
@@ -1624,6 +2364,1647 @@ function getTopLosses() {
   if (raw === null) return JSON.parse(JSON.stringify(DEFAULT_TOP_LOSSES));
   return Array.isArray(raw) ? raw : JSON.parse(JSON.stringify(DEFAULT_TOP_LOSSES));
 }
+/*========================================================
+  CL ELECTRONIC — доступ к параметрам
+============================================================ */
+
+function getElectronicParams() {
+  return load(STORAGE_KEYS.electronicParams, []);
+}
+function setElectronicParams(v) {
+  save(STORAGE_KEYS.electronicParams, v);
+}
+
+/* Генерация ID для нового параметра */
+function makeElectronicParamId() {
+  return 'elec_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+}
+
+/* Нормализация одного параметра (защита от старых данных) */
+function normalizeElectronicParam(p) {
+  return {
+    id: p.id || makeElectronicParamId(),
+    active: p.active !== false,
+
+    line: p.line || '',
+    machine: p.machine || '',
+    paramName: p.paramName || '',
+    work: (p.work === 'Stop') ? 'Stop' : 'Run',
+    timeFrom: p.timeFrom || '',
+    timeTo: p.timeTo || '',
+
+    controlType: (p.controlType === 'ok_not_ok') ? 'ok_not_ok' : 'value_input',
+    normText: typeof p.normText === 'string' ? p.normText : '',
+
+    valuesByBrand: Array.isArray(p.valuesByBrand)
+      ? p.valuesByBrand.filter(v => v && v.brand)
+      : [],
+
+    frequency: normalizeElectronicFrequency(p.frequency),
+
+    author: typeof p.author === 'string' ? p.author : '',
+    createdAt: p.createdAt || null,
+    updatedAt: p.updatedAt || null
+  };
+}
+
+/* Нормализация периодичности */
+function normalizeElectronicFrequency(f) {
+  const def = { type: 'daily', shifts: ['day','night'], daysOfWeek: [], dates: [] };
+  if (!f || typeof f !== 'object') return def;
+
+  // type: rotation больше нет — мигрируем в daily
+  let type = ['daily','weekly','once'].includes(f.type) ? f.type : 'daily';
+
+  // shifts: поддерживаем старый формат ['A','B','C','D'] → ['day','night']
+  let shifts = Array.isArray(f.shifts) ? f.shifts : [];
+  const legacyShifts = shifts.some(s => ['A','B','C','D'].includes(s));
+  if (legacyShifts) {
+    shifts = ['day', 'night'];
+  } else {
+    shifts = shifts.filter(s => s === 'day' || s === 'night');
+    if (!shifts.length) shifts = ['day', 'night'];
+  }
+
+  return {
+    type,
+    shifts,
+    daysOfWeek: Array.isArray(f.daysOfWeek)
+      ? f.daysOfWeek.filter(d => Number.isInteger(d) && d >= 0 && d <= 6)
+      : [],
+    dates: Array.isArray(f.dates)
+      ? f.dates.filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
+      : []
+  };
+}
+/* Получить параметры конкретной линии */
+function getElectronicParamsForLine(line) {
+  return getElectronicParams()
+    .map(normalizeElectronicParam)
+    .filter(p => p.line === line);
+}
+
+/* Получить параметры конкретной линии и машины */
+function getElectronicParamsForMachine(line, machine) {
+  return getElectronicParamsForLine(line)
+    .filter(p => p.machine === machine);
+}
+
+/* Бренды линии, у которых есть хотя бы один электронный параметр
+   с заполненной нормой (target+tolerance или normText). */
+function getElectronicBrandsForLine(line) {
+  const params = getElectronicParamsForLine(line).filter(p => p.active !== false);
+  const lineBrands = getBrandsForLine(line);
+  const result = new Set();
+
+  params.forEach(p => {
+    if (p.controlType === 'ok_not_ok') {
+      // Для ok_not_ok достаточно, чтобы normText был заполнен —
+      // но у него нет привязки к бренду. Значит, он доступен всем брендам линии.
+      if (p.normText && p.normText.trim()) {
+        lineBrands.forEach(b => result.add(b));
+      }
+    } else {
+      // value_input — только те бренды, для которых есть target+tolerance
+      (p.valuesByBrand || []).forEach(v => {
+        const hasTarget = v.target !== '' && v.target != null;
+        const hasTol = v.tolerance !== '' && v.tolerance != null;
+        if (hasTarget && hasTol && lineBrands.includes(v.brand)) {
+          result.add(v.brand);
+        }
+      });
+    }
+  });
+
+  return [...result].sort((a, b) => a.localeCompare(b, 'ru'));
+}
+/* ============================================================
+   CL ELECTRONIC — расписание брендов
+   ============================================================
+   Структура в localStorage:
+   {
+     SD01: [
+       { date: '2026-09-28', brand: 'A' },
+       { date: '2026-09-29', brand: 'A' },
+       { date: '2026-09-30', brand: 'B' },
+       ...
+     ],
+     SD03: [ ... ]
+   }
+   ============================================================ */
+
+function getElectronicBrandSchedule() {
+  return load(STORAGE_KEYS.electronicBrandSchedule, {});
+}
+function setElectronicBrandSchedule(v) {
+  save(STORAGE_KEYS.electronicBrandSchedule, v);
+}
+/* ============================================================
+   CL ELECTRONIC — модалка «Расписание брендов»
+   ============================================================ */
+
+/* Текущее состояние модалки (для кнопки «Сохранить») */
+let ebsState = {
+  line: null,
+  mode: 'period',      // 'period' | 'daily'
+  dailyEntries: [],    // [{ date, brand }] — рабочая копия строк в режиме «По дням»
+  periodEntries: []    // накопленные периоды (только для отображения)
+};
+
+/* Открыть модалку */
+window.openElectronicBrandSchedule = function(line) {
+  const modal = $('#electronicBrandScheduleModal');
+  if (!modal) return;
+
+  const brands = getBrandsForLine(line);
+  if (!brands.length) {
+    return showToast('На линии нет брендов. Добавьте их в Настройках → «Бренды для каждой линии».', true);
+  }
+
+  ebsState.line = line;
+  ebsState.mode = 'period';
+  ebsState.dailyEntries = [];
+  ebsState.periodEntries = [];
+
+  // Заголовок
+  $('#electronicBrandScheduleTitle').textContent = 'Расписание брендов — ' + line;
+  $('#ebs_line').value = line;
+
+  // Переключаем режим на «По периодам»
+  document.querySelectorAll('#ebsModeSwitch .ebs-mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === 'period');
+  });
+  $('#ebsPeriodMode').style.display = 'block';
+  $('#ebsDailyMode').style.display = 'none';
+
+  // Заполняем бренды в обоих селектах
+  fillBrandSelectOptions('#ebsPeriodBrand', brands);
+  fillBrandSelectOptions('#ebsDailyRollBrand', brands);
+
+  // Сбрасываем поля периода
+  $('#ebsPeriodFrom').value = todayISO();
+  $('#ebsPeriodTo').value = addDaysISO(todayISO(), 6);
+  $('#ebsPeriodBrand').value = '';
+
+  // Инициализируем «По дням» существующим расписанием (на 14 дней вперёд)
+  const existing = getElectronicBrandScheduleForLine(line);
+  const existingMap = {};
+  existing.forEach(x => { existingMap[x.date] = x.brand; });
+
+  const today = todayISO();
+  ebsState.dailyEntries = [];
+  for (let i = 0; i < 14; i++) {
+    const date = addDaysISO(today, i);
+    ebsState.dailyEntries.push({ date, brand: existingMap[date] || '' });
+  }
+
+  renderEbsDailyRows();
+  renderEbsPreview();
+
+  modal.classList.add('active');
+};
+
+/* Закрыть */
+function closeElectronicBrandSchedule() {
+  const modal = $('#electronicBrandScheduleModal');
+  if (modal) modal.classList.remove('active');
+  ebsState.line = null;
+}
+
+/* Заполнить select опциями брендов */
+function fillBrandSelectOptions(selector, brands) {
+  const el = $(selector);
+  if (!el) return;
+  el.innerHTML = '<option value="">— выберите —</option>' +
+    brands.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('');
+}
+
+/* ============================================================
+   Режим «По дням» — рендер строк
+   ============================================================ */
+
+function renderEbsDailyRows() {
+  const wrap = $('#ebsDailyRows');
+  if (!wrap) return;
+
+  const brands = getBrandsForLine(ebsState.line);
+  const brandOpts = (selected) =>
+    '<option value="">— выберите —</option>' +
+    brands.map(b => {
+      const sel = (b === selected) ? ' selected' : '';
+      return `<option value="${escapeHtml(b)}"${sel}>${escapeHtml(b)}</option>`;
+    }).join('');
+
+  if (!ebsState.dailyEntries.length) {
+    wrap.innerHTML = '<div class="empty-state" style="padding:16px">Нет строк. Нажмите «+ Добавить день».</div>';
+    return;
+  }
+
+  wrap.innerHTML = ebsState.dailyEntries.map((entry, idx) => {
+    const shift = getShiftForDate(entry.date);
+    return `
+      <div class="ebs-day-row" data-idx="${idx}">
+        <input type="date" data-date value="${escapeAttr(entry.date)}">
+        <select data-brand>${brandOpts(entry.brand)}</select>
+        <button type="button" class="ebs-remove" data-remove-row title="Удалить">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  // Обработчики
+  wrap.querySelectorAll('.ebs-day-row').forEach(row => {
+    const idx = parseInt(row.dataset.idx, 10);
+
+    row.querySelector('[data-date]')?.addEventListener('change', (e) => {
+      ebsState.dailyEntries[idx].date = e.target.value;
+      renderEbsPreview();
+    });
+
+    row.querySelector('[data-brand]')?.addEventListener('change', (e) => {
+      ebsState.dailyEntries[idx].brand = e.target.value;
+      renderEbsPreview();
+    });
+
+    row.querySelector('[data-remove-row]')?.addEventListener('click', () => {
+      ebsState.dailyEntries.splice(idx, 1);
+      renderEbsDailyRows();
+      renderEbsPreview();
+    });
+  });
+}
+
+/* ============================================================
+   Превью итогового расписания
+   ============================================================ */
+
+function renderEbsPreview() {
+  const wrap = $('#ebsPreview');
+  if (!wrap) return;
+
+  // Собираем все записи: сначала существующие в localStorage, потом наложим текущие правки
+  const saved = getElectronicBrandScheduleForLine(ebsState.line);
+  const map = {};
+  saved.forEach(x => { map[x.date] = x.brand; });
+
+  // Из режима «По дням» — только непустые
+  ebsState.dailyEntries.forEach(e => {
+    if (e.date) {
+      if (e.brand && e.brand.trim()) {
+        map[e.date] = e.brand;
+      } else {
+        delete map[e.date];
+      }
+    }
+  });
+
+  const entries = Object.entries(map).sort((a, b) => a[0].localeCompare(b[0]));
+
+  if (!entries.length) {
+    wrap.innerHTML = '<div class="ebs-preview-empty">Расписание пустое. Добавьте период или заполните дни вручную.</div>';
+    return;
+  }
+
+  wrap.innerHTML = '<div class="ebs-preview-list">' +
+    entries.map(([date, brand]) => {
+      const shift = getShiftForDate(date);
+      return `
+        <div class="ebs-preview-row">
+          <span class="ebs-preview-date">${escapeHtml(fmtISODate(date))}</span>
+          <span class="ebs-preview-shift ebs-preview-shift-${shift}">${shift}</span>
+          <span class="ebs-preview-brand">${escapeHtml(brand)}</span>
+        </div>
+      `;
+    }).join('') +
+    '</div>';
+}
+
+/* ============================================================
+   Обработчики модалки расписания брендов
+   ============================================================ */
+
+// Закрытие
+$('#electronicBrandScheduleClose')?.addEventListener('click', closeElectronicBrandSchedule);
+$('#electronicBrandScheduleCancel')?.addEventListener('click', closeElectronicBrandSchedule);
+$('#electronicBrandScheduleModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'electronicBrandScheduleModal') closeElectronicBrandSchedule();
+});
+
+// Переключатель режима
+$('#ebsModeSwitch')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.ebs-mode-btn');
+  if (!btn) return;
+  const mode = btn.dataset.mode;
+
+  document.querySelectorAll('#ebsModeSwitch .ebs-mode-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+
+  ebsState.mode = mode;
+  $('#ebsPeriodMode').style.display = (mode === 'period') ? 'block' : 'none';
+  $('#ebsDailyMode').style.display  = (mode === 'daily')  ? 'block' : 'none';
+});
+
+// Режим «По периодам» — добавить
+$('#ebsPeriodAddBtn')?.addEventListener('click', () => {
+  const from = $('#ebsPeriodFrom').value;
+  const to = $('#ebsPeriodTo').value;
+  const brand = $('#ebsPeriodBrand').value;
+
+  if (!from) return showToast('Укажите дату начала', true);
+  if (!to)   return showToast('Укажите дату окончания', true);
+  if (!brand) return showToast('Выберите бренд', true);
+
+  if (from > to) {
+    return showToast('Дата начала позже даты окончания', true);
+  }
+
+  // Проходим по дням и добавляем в dailyEntries
+  const start = new Date(from + 'T00:00:00');
+  const end = new Date(to + 'T00:00:00');
+  const dayCount = Math.round((end - start) / 86400000) + 1;
+
+  if (dayCount > 90) {
+    return showToast('Слишком длинный период (максимум 90 дней)', true);
+  }
+
+  // Проверяем «прошлые даты» — сегодня и позже
+  const today = todayISO();
+  if (to < today) {
+    return showToast('Нельзя изменять расписание на прошлые даты', true);
+  }
+
+  // Заменяем/добавляем в dailyEntries
+  for (let i = 0; i < dayCount; i++) {
+    const date = addDaysISO(from, i);
+
+    // Пропускаем прошлые (кроме сегодня)
+    if (date < today) continue;
+
+    // Ищем в dailyEntries
+    const existingIdx = ebsState.dailyEntries.findIndex(e => e.date === date);
+    if (existingIdx !== -1) {
+      ebsState.dailyEntries[existingIdx].brand = brand;
+    } else {
+      ebsState.dailyEntries.push({ date, brand });
+    }
+  }
+
+  // Сортируем
+  ebsState.dailyEntries.sort((a, b) => a.date.localeCompare(b.date));
+
+  // Переключаемся на режим «По дням», чтобы пользователь увидел результат
+  document.querySelectorAll('#ebsModeSwitch .ebs-mode-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === 'daily');
+  });
+  ebsState.mode = 'daily';
+  $('#ebsPeriodMode').style.display = 'none';
+  $('#ebsDailyMode').style.display  = 'block';
+
+  renderEbsDailyRows();
+  renderEbsPreview();
+
+  showToast(`Добавлено дней: ${dayCount}`);
+});
+
+// Режим «По дням» — раскатать на неделю
+$('#ebsDailyRollBtn')?.addEventListener('click', () => {
+  const brand = $('#ebsDailyRollBrand').value;
+  if (!brand) return showToast('Выберите бренд для раскатки', true);
+
+  // Находим первую дату в dailyEntries, которая >= сегодня. Если таких нет — берём сегодня
+  const today = todayISO();
+  const candidates = ebsState.dailyEntries
+    .filter(e => e.date >= today)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const startDate = candidates.length ? candidates[0].date : today;
+
+  // Проставляем на 7 дней
+  for (let i = 0; i < 7; i++) {
+    const date = addDaysISO(startDate, i);
+    const existingIdx = ebsState.dailyEntries.findIndex(e => e.date === date);
+    if (existingIdx !== -1) {
+      ebsState.dailyEntries[existingIdx].brand = brand;
+    } else {
+      ebsState.dailyEntries.push({ date, brand });
+    }
+  }
+
+  ebsState.dailyEntries.sort((a, b) => a.date.localeCompare(b.date));
+
+  renderEbsDailyRows();
+  renderEbsPreview();
+
+  showToast(`Бренд ${brand} раскатан на 7 дней с ${fmtISODate(startDate)}`);
+});
+
+// Режим «По дням» — добавить строку
+$('#ebsDailyAddRowBtn')?.addEventListener('click', () => {
+  // Берём последнюю дату из dailyEntries или сегодня
+  const last = ebsState.dailyEntries.length
+    ? ebsState.dailyEntries[ebsState.dailyEntries.length - 1].date
+    : todayISO();
+  const newDate = addDaysISO(last, 1);
+
+  ebsState.dailyEntries.push({ date: newDate, brand: '' });
+  renderEbsDailyRows();
+  renderEbsPreview();
+});
+
+// Очистить всё
+$('#ebsClearAllBtn')?.addEventListener('click', () => {
+  if (!confirm('Очистить всё расписание для линии ' + ebsState.line + '?')) return;
+
+  setElectronicBrandSchedule({
+    ...getElectronicBrandSchedule(),
+    [ebsState.line]: []
+  });
+
+  ebsState.dailyEntries = [];
+  ebsState.periodEntries = [];
+
+  renderEbsDailyRows();
+  renderEbsPreview();
+
+  showToast('Расписание очищено');
+});
+
+// Сохранить
+$('#electronicBrandScheduleSave')?.addEventListener('click', () => {
+  if (!ebsState.line) return;
+
+  const today = todayISO();
+
+  // Формируем финальный массив из dailyEntries: только даты >= сегодня с непустым брендом
+  const entries = ebsState.dailyEntries
+    .filter(e => e.date && e.date >= today && e.brand && e.brand.trim())
+    .map(e => ({ date: e.date, brand: e.brand.trim() }));
+
+  // Оставляем в расписании для линии:
+  //  - то, что уже было сохранено и НЕ касается дат из dailyEntries,
+  //  - плюс новые записи.
+  const existing = getElectronicBrandScheduleForLine(ebsState.line);
+  const touchedDates = new Set(ebsState.dailyEntries.map(e => e.date));
+
+  const keepOld = existing.filter(x => !touchedDates.has(x.date));
+  const finalArr = [...keepOld, ...entries];
+  finalArr.sort((a, b) => a.date.localeCompare(b.date));
+
+  setElectronicBrandSchedule({
+    ...getElectronicBrandSchedule(),
+    [ebsState.line]: finalArr
+  });
+
+  closeElectronicBrandSchedule();
+
+  // Перерисовываем редактор — обновятся счётчики дней
+  renderElectronicView();
+
+  showToast('Расписание сохранено');
+});
+
+/* Получить расписание для линии — массив { date, brand }, отсортированный по дате */
+function getElectronicBrandScheduleForLine(line) {
+  const all = getElectronicBrandSchedule();
+  const arr = Array.isArray(all[line]) ? all[line] : [];
+  return [...arr].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/* Получить бренд по конкретной дате для линии (или null) */
+function getElectronicBrandForDate(line, dateStr) {
+  const arr = getElectronicBrandScheduleForLine(line);
+  const found = arr.find(x => x.date === dateStr);
+  return found ? found.brand : null;
+}
+
+/* Установить запись расписания. Если brand пустой — удаляет запись. */
+function setElectronicBrandForDate(line, dateStr, brand) {
+  const all = getElectronicBrandSchedule();
+  if (!Array.isArray(all[line])) all[line] = [];
+
+  // Удаляем старую запись на эту дату
+  all[line] = all[line].filter(x => x.date !== dateStr);
+
+  // Добавляем новую, если бренд не пустой
+  if (brand && brand.trim()) {
+    all[line].push({ date: dateStr, brand: brand.trim() });
+  }
+
+  // Сортируем по дате
+  all[line].sort((a, b) => a.date.localeCompare(b.date));
+
+  setElectronicBrandSchedule(all);
+}
+
+/* Массово установить записи: массив { date, brand }. brand='' → удалить. */
+function setElectronicBrandScheduleBulk(line, entries) {
+  const all = getElectronicBrandSchedule();
+  if (!Array.isArray(all[line])) all[line] = [];
+
+  // Удаляем все даты, которые есть в entries
+  const datesToReplace = new Set(entries.map(e => e.date));
+  all[line] = all[line].filter(x => !datesToReplace.has(x.date));
+
+  // Добавляем новые
+  entries.forEach(e => {
+    if (e.brand && e.brand.trim()) {
+      all[line].push({ date: e.date, brand: e.brand.trim() });
+    }
+  });
+
+  all[line].sort((a, b) => a.date.localeCompare(b.date));
+  setElectronicBrandSchedule(all);
+}
+
+/* Утилита: сегодняшняя дата в формате 'YYYY-MM-DD' */
+function todayISO() {
+  const d = new Date();
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/* Утилита: прибавить N дней к дате 'YYYY-MM-DD' */
+function addDaysISO(dateStr, n) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/* Утилита: 7 дат текущей ISO-недели (Пн..Вс) в формате 'YYYY-MM-DD' */
+function getCurrentWeekDays() {
+  const now = new Date();
+  // JS: 0 = Вс, 1 = Пн, ... 6 = Сб. Переводим в ISO: Пн = 1, Вс = 7.
+  const jsDay = now.getDay();
+  const isoDay = jsDay === 0 ? 7 : jsDay;
+
+  // Находим понедельник
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - (isoDay - 1));
+
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    days.push(`${yyyy}-${mm}-${dd}`);
+  }
+  return days;
+}
+
+/* Утилита: человекочитаемая дата 'YYYY-MM-DD' → '28.09.2026' */
+function fmtISODate(dateStr) {
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr || '';
+  const [yyyy, mm, dd] = dateStr.split('-');
+  return `${dd}.${mm}.${yyyy}`;
+}
+/* ============================================================
+   CL ELECTRONIC — попадает ли параметр в конкретную дату/смену
+   ============================================================ */
+
+/* Проверяет: должен ли параметр проверяться в указанную дату
+   и указанную смену. Возвращает true/false. */
+function isElectronicParamDue(p, dateStr, shiftType) {
+  const freq = p.frequency;
+  if (!freq) return false;
+
+  // shiftType: 'day' | 'night' — смена по времени суток
+  // freq.shifts: массив, содержащий 'day' и/или 'night'
+  if (Array.isArray(freq.shifts) && freq.shifts.length) {
+    if (!freq.shifts.includes(shiftType)) return false;
+  }
+
+  switch (freq.type) {
+    case 'daily':
+      return true;
+
+    case 'weekly': {
+      const d = new Date(dateStr + 'T00:00:00');
+      return freq.daysOfWeek.includes(d.getDay());
+    }
+
+    case 'once':
+      return freq.dates.includes(dateStr);
+
+    default:
+      return false;
+  }
+}
+/* ============================================================
+   CL ELECTRONIC — вкладка оператора
+   ============================================================ */
+
+/* Состояние вкладки */
+const elecState = {
+  operator: '',
+  line: '',
+  date: '',        // 'YYYY-MM-DD'
+  shift: '',       // 'A' | 'B' | 'C' | 'D'
+  brand: '',       // бренд на сегодня (auto или override)
+  brandPlanned: '',// из расписания (может быть пустой)
+  brandReason: '', // причина ручного override
+  items: [],       // собранные параметры
+  weekExpanded: false
+};
+
+/* Заполнить вкладку при открытии */
+function fillElectronicTab() {
+  fillElectronicLines();
+  initElectronicOperatorAutocomplete();
+
+  // Сброс
+  const lineEl = $('#elecLine');
+  if (lineEl) lineEl.value = '';
+  $('#elecContextInfo').style.display = 'none';
+  $('#elecTodayCard').style.display = 'none';
+  $('#elecWeekCard').style.display = 'none';
+}
+
+/* Список линий, у которых есть хотя бы один электронный параметр */
+function fillElectronicLines() {
+  const el = $('#elecLine');
+  if (!el) return;
+
+  const allLines = getLines();
+  const linesWithParams = allLines.filter(l => getElectronicParamsForLine(l).length > 0);
+
+  if (!linesWithParams.length) {
+    el.innerHTML = '<option value="">— нет линий с параметрами —</option>';
+    el.value = '';
+    return;
+  }
+  el.innerHTML = '<option value="">— выберите —</option>' +
+    linesWithParams.map(l => `<option>${escapeHtml(l)}</option>`).join('');
+  el.value = '';
+}
+
+/* Автокомплит оператора — переиспользуем логику Top Losses,
+   но привязываем к #elecOperator / #elecOperatorAutocomplete */
+function initElectronicOperatorAutocomplete() {
+  const input = document.getElementById('elecOperator');
+  const dropdown = document.getElementById('elecOperatorAutocomplete');
+  if (!input || !dropdown) return;
+  if (input.dataset.acReady === '1') return;
+  input.dataset.acReady = '1';
+
+  let activeIndex = -1;
+  let currentMatches = [];
+
+  function highlight(fullText, query) {
+    const idx = fullText.toLowerCase().indexOf(query.toLowerCase());
+    if (idx === -1) return escapeHtml(fullText);
+    return escapeHtml(fullText.slice(0, idx)) +
+      '<strong>' + escapeHtml(fullText.slice(idx, idx + query.length)) + '</strong>' +
+      escapeHtml(fullText.slice(idx + query.length));
+  }
+
+  function render(matches, query) {
+    currentMatches = matches;
+    activeIndex = -1;
+    if (!matches.length) {
+      if (query.length >= 1) {
+        dropdown.innerHTML = '<div class="autocomplete-empty">Ничего не найдено</div>';
+        dropdown.style.display = 'block';
+      } else {
+        dropdown.style.display = 'none';
+      }
+      return;
+    }
+    dropdown.innerHTML = matches.map((n, i) =>
+      `<div class="autocomplete-item" data-index="${i}">${highlight(n, query)}</div>`
+    ).join('');
+    dropdown.style.display = 'block';
+    dropdown.querySelectorAll('.autocomplete-item').forEach(el => {
+      el.addEventListener('mousedown', e => {
+        e.preventDefault();
+        const idx = parseInt(el.dataset.index, 10);
+        if (idx >= 0 && idx < currentMatches.length) {
+          input.value = currentMatches[idx];
+          dropdown.style.display = 'none';
+        }
+      });
+    });
+  }
+
+  function filter(query) {
+    const q = query.toLowerCase();
+    const all = sortOperatorsRus(getOperators());
+    const starts = [], contains = [];
+    all.forEach(op => {
+      const low = op.toLowerCase();
+      if (low.startsWith(q)) starts.push(op);
+      else if (low.includes(q)) contains.push(op);
+    });
+    return [...starts, ...contains];
+  }
+
+  input.addEventListener('input', () => {
+    const query = input.value.trim();
+    if (!getOperators().length) return (dropdown.style.display = 'none');
+    if (!query) return render(sortOperatorsRus(getOperators()).slice(0, 7), '');
+    render(filter(query).slice(0, 15), query);
+  });
+
+  input.addEventListener('focus', () => {
+    if (!input.value.trim() && getOperators().length) {
+      render(sortOperatorsRus(getOperators()).slice(0, 7), '');
+    }
+  });
+
+  input.addEventListener('keydown', e => {
+    if (dropdown.style.display !== 'block') return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIndex = Math.min(activeIndex + 1, currentMatches.length - 1);
+      dropdown.querySelectorAll('.autocomplete-item').forEach((el, i) => el.classList.toggle('active', i === activeIndex));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIndex = Math.max(activeIndex - 1, 0);
+      dropdown.querySelectorAll('.autocomplete-item').forEach((el, i) => el.classList.toggle('active', i === activeIndex));
+    } else if (e.key === 'Enter' && activeIndex >= 0) {
+      e.preventDefault();
+      input.value = currentMatches[activeIndex];
+      dropdown.style.display = 'none';
+    } else if (e.key === 'Escape') {
+      dropdown.style.display = 'none';
+    }
+  });
+
+  input.addEventListener('blur', () => {
+    setTimeout(() => { dropdown.style.display = 'none'; }, 150);
+  });
+}
+
+/* Собрать параметры, актуальные на дату/смену/бренд для линии */
+function collectElectronicItemsForDate(line, dateStr, shiftType, brand) {
+  const params = getElectronicParamsForLine(line).filter(p => p.active !== false);
+  const result = [];
+
+  params.forEach(p => {
+    // 1. Периодичность
+    if (!isElectronicParamDue(p, dateStr, shiftType)) return;
+
+    // 2. Бренд: для value_input норма должна быть для этого бренда;
+    //    для ok_not_ok — просто наличие normText
+    let target = null;
+    let tolerance = null;
+    let normText = '';
+
+    if (p.controlType === 'ok_not_ok') {
+      if (!p.normText || !p.normText.trim()) return; // норма не задана → не показываем
+      normText = p.normText.trim();
+    } else {
+      const v = (p.valuesByBrand || []).find(v => v.brand === brand);
+      if (!v) return; // для этого бренда нормы нет → не показываем
+      if (v.target === '' || v.target == null) return;
+      if (v.tolerance === '' || v.tolerance == null) return;
+      target = Number(v.target);
+      tolerance = Number(v.tolerance);
+    }
+
+    result.push({
+      id: p.id,
+      machine: p.machine,
+      paramName: p.paramName,
+      work: p.work,
+      timeFrom: p.timeFrom,
+      timeTo: p.timeTo,
+      controlType: p.controlType,
+      target,
+      tolerance,
+      normText
+    });
+  });
+
+  // Сортировка: по времени проверки, потом по машине, потом по имени
+  result.sort((a, b) => {
+    if (a.timeFrom !== b.timeFrom) return (a.timeFrom || '').localeCompare(b.timeFrom || '');
+    if (a.machine !== b.machine)   return (a.machine || '').localeCompare(b.machine || '', 'ru');
+    return (a.paramName || '').localeCompare(b.paramName || '', 'ru');
+  });
+
+  return result;
+}
+
+/* Пересобрать контекст и отрисовать всё на вкладке */
+function refreshElectronicTab() {
+  const operator = ($('#elecOperator')?.value || '').trim();
+  const line = $('#elecLine')?.value || '';
+  
+  // Показываем подсказку только пока линия не выбрана
+  const hintEmpty = $('#elecHintEmpty');
+  if (hintEmpty) {
+    hintEmpty.style.display = line ? 'none' : 'flex';
+  }
+
+  elecState.operator = operator;
+  elecState.line = line;
+
+  if (!line) {
+    $('#elecContextInfo').style.display = 'none';
+    $('#elecTodayCard').style.display = 'none';
+    $('#elecWeekCard').style.display = 'none';
+    return;
+  }
+
+  // Дата = сегодня, смена = из графика (день/ночь)
+  const dateStr = todayISO();
+  const shifts = getShiftsForDate(dateStr);   // { day: 'D', night: 'C' }
+  const shiftType = getCurrentShiftType();    // 'day' | 'night' — по времени
+  elecState.date = dateStr;
+  elecState.shiftType = shiftType;
+  elecState.shift = shifts[shiftType];        // буква бригады
+
+  // Бренд: из расписания
+  const brandPlanned = getElectronicBrandForDate(line, dateStr) || '';
+  elecState.brandPlanned = brandPlanned;
+  elecState.brand = brandPlanned; // если оператор не переопределил
+
+  renderElectronicContextInfo();
+
+  // Если бренд не определён — показываем сообщение и не строим чек-лист
+  if (!elecState.brand) {
+    $('#elecTodayCard').style.display = 'block';
+    $('#elecChecklistContainer').innerHTML = `
+      <div class="empty-state" style="padding:32px 20px">
+        На <strong>${fmtISODate(dateStr)}</strong> бренд в расписании не задан.<br>
+        <span style="color:var(--text-dim);font-size:12px">
+          Обратитесь к техническому специалисту или выберите бренд вручную.
+        </span>
+        <div style="margin-top:14px">
+          <button class="btn btn-secondary" id="elecChooseBrandManuallyBtn" type="button">Выбрать бренд вручную</button>
+        </div>
+      </div>`;
+    $('#elecTodayCount').textContent = '';
+    $('#elecSaveCheckBtn').disabled = true;
+    $('#elecWeekCard').style.display = 'block';
+    $('#elecWeekMatrix').innerHTML = '';
+    return;
+  }
+
+  // Собираем параметры
+  const items = collectElectronicItemsForDate(line, dateStr, shiftType, elecState.brand);
+  elecState.items = items;
+
+  renderElectronicChecklist(items);
+  $('#elecTodayCard').style.display = 'block';  
+  $('#elecWeekCard').style.display = 'block';
+  if (elecState.weekExpanded) {
+    renderElectronicWeekMatrix();
+  }
+}
+
+/* Контекстная строка */
+function renderElectronicContextInfo() {
+  const box = $('#elecContextInfo');
+  if (!box) return;
+
+  const dateStr = elecState.date;
+  const shiftType = elecState.shiftType;
+  const shift = elecState.shift;   // буква бригады
+  const brand = elecState.brand;
+
+  const shiftLabel = shiftType === 'day' ? 'День' : 'Ночь';
+
+  const brandDisplay = elecState.brandPlanned
+    ? `<span>${escapeHtml(brand)}</span>
+       <button class="elec-edit-brand-btn" id="elecEditBrandBtn" type="button" title="Изменить бренд">
+         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+         </svg>
+       </button>`
+    : `<span>${escapeHtml(brand)}</span>
+       <span style="font-size:11px;color:var(--accent-amber);font-style:italic;margin-left:6px">— вручную</span>`;
+
+  box.innerHTML = `
+    <div class="elec-context-item">
+      <strong>Дата:</strong>
+      <span>${escapeHtml(fmtISODate(dateStr))}</span>
+    </div>
+    <div class="elec-context-item">
+      <strong>Смена:</strong>
+      <span>${shiftLabel} · бригада <span class="elec-shift-${shift}">${shift}</span></span>
+    </div>
+    <div class="elec-context-item">
+      <strong>Бренд:</strong>
+      ${brandDisplay}
+    </div>
+  `;
+
+  box.style.display = 'flex';
+
+  // Обработчик — изменить бренд
+  $('#elecEditBrandBtn')?.addEventListener('click', openElecBrandOverrideDialog);
+  $('#elecChooseBrandManuallyBtn')?.addEventListener('click', () => {
+    elecState.brandPlanned = '';
+    openElecBrandOverrideDialog();
+  });
+}
+
+/* ============================================================
+   Чек-лист CL Electronic на сегодня
+   ============================================================ */
+
+function renderElectronicChecklist(items) {
+  const container = $('#elecChecklistContainer');
+  const counter = $('#elecTodayCount');
+  const saveBtn = $('#elecSaveCheckBtn');
+
+  if (!container) return;
+
+  if (!items.length) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding:32px 20px">
+        На <strong>${fmtISODate(elecState.date)}</strong> для бренда
+        <strong>${escapeHtml(elecState.brand)}</strong> нет параметров к проверке.
+      </div>`;
+    if (counter) counter.textContent = '0 параметров';
+    if (saveBtn) saveBtn.disabled = true;
+    return;
+  }
+
+  if (counter) counter.textContent = `${items.length} ${pluralizeParams(items.length)}`;
+  if (saveBtn) saveBtn.disabled = false;
+
+  container.innerHTML = items.map(it => renderElectronicCheckItem(it)).join('');
+
+  // Обработчики
+  bindElectronicChecklistEvents(container);
+  updateElecProgress();
+}
+
+function renderElectronicCheckItem(it) {
+  // Мета: время · работа · машина
+  const metaParts = [];
+  if (it.timeFrom) {
+    metaParts.push(`<span class="elec-check-time">${escapeHtml(it.timeFrom)}–${escapeHtml(it.timeTo || '')}</span>`);
+  }
+  if (it.machine) metaParts.push(`<span><strong>Машина:</strong> ${escapeHtml(it.machine)}</span>`);
+  metaParts.push(`<span class="elec-check-work elec-check-work-${it.work.toLowerCase()}">${escapeHtml(it.work)}</span>`);
+
+  // Норма
+  let normHtml = '';
+  if (it.controlType === 'ok_not_ok') {
+    normHtml = `<div class="elec-check-norm"><strong>Норма:</strong> <span class="elec-norm-value">${escapeHtml(it.normText)}</span></div>`;
+  } else if (it.controlType === 'value_input') {
+    const min = (it.target - it.tolerance).toFixed(2).replace(/\.00$/, '');
+    const max = (it.target + it.tolerance).toFixed(2).replace(/\.00$/, '');
+    normHtml = `<div class="elec-check-norm">
+      <strong>Норма:</strong>
+      <span class="elec-norm-value">${it.target} ± ${it.tolerance}</span>
+      <span style="color:var(--text-dim);font-size:11px;margin-left:6px">→ [${min}, ${max}]</span>
+    </div>`;
+  }
+
+  // Поле ответа
+  let answerHtml = '';
+  if (it.controlType === 'ok_not_ok') {
+    answerHtml = `
+      <div class="answer-row">
+        <div class="radio-group">
+          <label><input type="radio" name="elec_ans_${escapeAttr(it.id)}" value="OK" data-elec-ans> ОК</label>
+          <label><input type="radio" name="elec_ans_${escapeAttr(it.id)}" value="FAIL" data-elec-ans> Не ОК</label>
+        </div>
+        <button type="button" class="comment-btn" data-elec-comment-btn title="Добавить комментарий">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <line x1="9" y1="10" x2="15" y2="10"/>
+            <line x1="9" y1="14" x2="13" y2="14"/>
+          </svg>
+        </button>
+      </div>`;
+  } else {
+    answerHtml = `
+      <div class="answer-row">
+        <div class="answer-field">
+          <input type="number" step="any" data-elec-value placeholder="0">
+        </div>
+        <span class="elec-answer-status" data-elec-status></span>
+        <button type="button" class="comment-btn" data-elec-comment-btn title="Добавить комментарий">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <line x1="9" y1="10" x2="15" y2="10"/>
+            <line x1="9" y1="14" x2="13" y2="14"/>
+          </svg>
+        </button>
+      </div>`;
+  }
+
+  return `
+    <div class="checklist-item elec-check-item" data-elec-id="${escapeAttr(it.id)}">
+      <div class="elec-check-meta">${metaParts.join('')}</div>
+      <div class="elec-check-name">${escapeHtml(it.paramName || '')}</div>
+      ${normHtml}
+      <div class="elec-check-answer">${answerHtml}</div>
+      <div class="comment-preview" style="display:none" data-elec-comment-preview></div>
+    </div>`;
+}
+
+function bindElectronicChecklistEvents(container) {
+  // Радио ОК/Не ОК
+  container.querySelectorAll('input[data-elec-ans]').forEach(r => {
+    r.addEventListener('change', e => {
+      const item = e.target.closest('.checklist-item');
+      const val = e.target.value;
+      item.classList.remove('answered-ok', 'answered-fail');
+      if (val === 'OK') item.classList.add('answered-ok');
+      if (val === 'FAIL') item.classList.add('answered-fail');
+      updateElecProgress();
+    });
+  });
+
+  // Поле значения
+  container.querySelectorAll('input[data-elec-value]').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const item = e.target.closest('.checklist-item');
+      const it = elecState.items.find(x => x.id === item.dataset.elecId);
+      const statusEl = item.querySelector('[data-elec-status]');
+
+      const v = parseFloat(inp.value);
+      if (isNaN(v) || inp.value === '') {
+        item.classList.remove('answered-ok', 'answered-fail');
+        if (statusEl) statusEl.textContent = '';
+      } else {
+        const min = it.target - it.tolerance;
+        const max = it.target + it.tolerance;
+        const inRange = v >= min && v <= max;
+        item.classList.remove('answered-ok', 'answered-fail');
+        item.classList.add(inRange ? 'answered-ok' : 'answered-fail');
+        if (statusEl) {
+          statusEl.textContent = inRange ? '✓ в допуске' : '✕ не в допуске';
+          statusEl.className = 'elec-answer-status ' + (inRange ? 'ok' : 'fail');
+        }
+      }
+      updateElecProgress();
+    });
+  });
+
+  // Комментарии
+  container.querySelectorAll('[data-elec-comment-btn]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const item = e.target.closest('.checklist-item');
+      openCommentModalElec(item);
+    });
+  });
+}
+
+/* Прогресс + активность кнопки сохранения */
+function updateElecProgress() {
+  const items = $$('#elecChecklistContainer .checklist-item');
+  const saveBtn = $('#elecSaveCheckBtn');
+
+  let filled = 0;
+  items.forEach(item => {
+    const it = elecState.items.find(x => x.id === item.dataset.elecId);
+    if (!it) return;
+    if (it.controlType === 'ok_not_ok') {
+      if (item.querySelector('input[data-elec-ans]:checked')) filled++;
+    } else {
+      const inp = item.querySelector('input[data-elec-value]');
+      if (inp && inp.value !== '') filled++;
+    }
+  });
+
+  if (saveBtn) saveBtn.disabled = filled === 0;
+}
+
+/* ============================================================
+   Сохранение проверки CL Electronic
+   ============================================================ */
+
+$('#elecSaveCheckBtn')?.addEventListener('click', () => {
+  const operator = ($('#elecOperator')?.value || '').trim();
+  const line = elecState.line;
+  const date = elecState.date;
+  const shift = elecState.shift;
+  const brand = elecState.brand;
+
+  if (!operator) return showToast('Укажите ФИО оператора', true);
+  if (!line)     return showToast('Выберите линию', true);
+  if (!brand)    return showToast('Бренд не определён', true);
+
+  const items = [];
+
+  $$('#elecChecklistContainer .checklist-item').forEach(item => {
+    const it = elecState.items.find(x => x.id === item.dataset.elecId);
+    if (!it) return;
+
+    let answer = '—';
+    let status = 'UNCHECKED';
+    let value = null;
+
+    if (it.controlType === 'ok_not_ok') {
+      const r = item.querySelector('input[data-elec-ans]:checked');
+      if (r) {
+        answer = r.value === 'OK' ? 'ОК' : 'Не ОК';
+        status = r.value;
+      }
+    } else {
+      const inp = item.querySelector('input[data-elec-value]');
+      if (inp && inp.value !== '') {
+        value = parseFloat(inp.value);
+        if (!isNaN(value)) {
+          const min = it.target - it.tolerance;
+          const max = it.target + it.tolerance;
+          const inRange = value >= min && value <= max;
+          answer = `${value}`;
+          status = inRange ? 'OK' : 'FAIL';
+        }
+      }
+    }
+
+    items.push({
+      standardId: it.id,
+      machine: it.machine,
+      paramName: it.paramName,
+      work: it.work,
+      timeFrom: it.timeFrom,
+      timeTo: it.timeTo,
+      controlType: it.controlType,
+      target: it.target,
+      tolerance: it.tolerance,
+      normText: it.normText,
+      answer,
+      value,
+      status,
+      comment: item.dataset.comment || ''
+    });
+  });
+
+  const checkedCount = items.filter(it => it.status !== 'UNCHECKED').length;
+
+  const record = {
+    id: uid(),
+    timestamp: new Date().toISOString(),
+    mode: 'electronic',
+    operator,
+    line,
+    shift,
+    date,
+    brandPlanned: elecState.brandPlanned || null,
+    brandActual: brand,
+    brandReason: elecState.brandReason || '',
+    items
+  };
+
+  const hist = getHistory();
+  hist.push(record);
+  setHistory(hist);
+  updateNavHistoryCounter();
+
+  showToast(checkedCount === 0 ? 'Проверка сохранена (все пункты — «Не проверено»)' : 'Проверка сохранена');
+
+  renderElectronicSummary(record);
+});
+
+/* Обновить кнопку «Обновить» */
+$('#elecReloadBtn')?.addEventListener('click', () => {
+  refreshElectronicTab();
+});
+
+/* Реакция на смену оператора/линии */
+$('#elecOperator')?.addEventListener('input', () => {
+  elecState.operator = $('#elecOperator').value.trim();
+});
+$('#elecLine')?.addEventListener('change', () => {
+  refreshElectronicTab();
+});
+
+/* ============================================================
+   Резюме проверки CL Electronic
+   ============================================================ */
+
+function renderElectronicSummary(record) {
+  const container = $('#elecSummaryView');
+  if (!container) return;
+
+  const total = record.items.length;
+  const oks = record.items.filter(x => x.status === 'OK').length;
+  const fails = record.items.filter(x => x.status === 'FAIL').length;
+  const unchecked = record.items.filter(x => x.status === 'UNCHECKED').length;
+  const checkedTotal = oks + fails;
+  const percentOk = checkedTotal > 0 ? Math.round((oks / checkedTotal) * 100) : 0;
+  const allOk = fails === 0 && unchecked === 0;
+
+  const shieldClass = allOk ? 'tl-shield-ok' : 'tl-shield-fail';
+  const shieldTitle = allOk ? 'Всё под контролем' : 'Требует внимания';
+
+  const shieldSubParts = [];
+  if (checkedTotal > 0) shieldSubParts.push(`Проверено: <strong>${checkedTotal}</strong> из ${total}`);
+  if (fails > 0)        shieldSubParts.push(`вне нормы: <strong>${fails}</strong>`);
+  if (unchecked > 0)    shieldSubParts.push(`<span class="tl-shield-sub-unchecked">не проверено: ${unchecked}</span>`);
+
+  // Чипы
+  const chipsHtml = record.items.slice(0, 20).map(it => {
+    let cls;
+    if (it.status === 'OK') cls = 'tl-shield-chip-ok';
+    else if (it.status === 'FAIL') cls = 'tl-shield-chip-fail';
+    else cls = 'tl-shield-chip-unchecked';
+
+    const label = it.machine ? `${it.machine} · ${it.paramName}` : it.paramName;
+    return `<span class="tl-shield-chip ${cls}" title="${escapeAttr(it.paramName || '')}">
+      <span class="tl-shield-chip-dot"></span>
+      ${escapeHtml(label)}
+    </span>`;
+  }).join('');
+  const chipMore = record.items.length > 20
+    ? `<span class="tl-shield-chip">+${record.items.length - 20}</span>` : '';
+
+  const html = `
+    <div class="card tl-summary-card">
+      <div class="tl-summary-head">
+        <div class="tl-summary-icon tl-summary-icon-ok">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </div>
+        <div>
+          <div class="tl-summary-title">Проверка сохранена</div>
+          <div class="tl-summary-sub">
+            Оператор: <strong>${escapeHtml(record.operator)}</strong> ·
+            Линия: <strong>${escapeHtml(record.line)}</strong> ·
+            Смена: <strong>${escapeHtml(record.shift)}</strong> ·
+            Дата: <strong>${escapeHtml(fmtISODate(record.date))}</strong>
+          </div>
+          <div class="tl-summary-sub" style="margin-top:4px">
+            Бренд: <strong>${escapeHtml(record.brandActual)}</strong>
+            ${record.brandPlanned && record.brandPlanned !== record.brandActual
+              ? `<span style="color:var(--accent-amber);font-size:12px;margin-left:8px">
+                   (по расписанию: ${escapeHtml(record.brandPlanned)}${record.brandReason ? ', причина: ' + escapeHtml(record.brandReason) : ''})
+                 </span>`
+              : ''}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-shield ${shieldClass}">
+      <div class="tl-shield-ring" style="--percent: ${percentOk}">
+        <div class="tl-shield-ring-hole">
+          <div class="tl-shield-ring-value">${percentOk}%</div>
+          <div class="tl-shield-ring-label">ОК</div>
+        </div>
+      </div>
+      <div class="tl-shield-info">
+        <div class="tl-shield-title">${shieldTitle}</div>
+        <div class="tl-shield-sub">${shieldSubParts.join(' · ')}</div>
+        ${fails > 0 ? `
+          <div class="tl-shield-journal-warning">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span>Есть отклонения. Зафиксируйте их в <strong>Journal Machines</strong>.</span>
+          </div>
+        ` : ''}
+        <div class="tl-shield-chips">
+          ${chipsHtml}
+          ${chipMore}
+        </div>
+      </div>
+    </div>
+
+    <!-- Матрица недели — чтобы оператор сразу видел, как его проверка легла в общую картину -->
+    <div class="card" id="elecSummaryWeekCard">
+      <div class="elec-week-header expanded" id="elecSummaryWeekHeader">
+        <span class="elec-week-toggle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </span>
+        <h2 style="margin:0;border:none;padding:0">Неделя целиком</h2>
+      </div>
+      <div id="elecSummaryWeekMatrix" style="display:block"></div>
+    </div>
+
+    <div class="tl-select-footer">
+      <button class="btn btn-secondary" id="elecSummaryBackBtn">← К проверке</button>
+      <button class="btn btn-primary btn-icon-text" id="elecSummaryNewBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+        <span>Новая проверка</span>
+      </button>
+    </div>
+  `;
+
+  container.innerHTML = html;
+
+  // Рисуем матрицу недели прямо в резюме
+  renderElectronicSummaryWeekMatrix();
+
+  // Экраны: показываем только резюме
+  $('#elecSelectView').style.display = 'none';
+  $('#elecTodayCard').style.display = 'none';
+  $('#elecWeekCard').style.display = 'none';
+  $('#elecSummaryView').style.display = 'block';
+
+  // Обработчики кнопок
+  $('#elecSummaryBackBtn')?.addEventListener('click', () => {
+    refreshElectronicTab();
+    $('#elecSelectView').style.display = 'block';
+    $('#elecSummaryView').style.display = 'none';
+    if (elecState.line) {
+      $('#elecTodayCard').style.display = 'block';
+      $('#elecWeekCard').style.display = 'block';
+    }
+  });
+
+  $('#elecSummaryNewBtn')?.addEventListener('click', () => {
+    // Сброс и возврат к выбору
+    $('#elecOperator').value = '';
+    $('#elecLine').value = '';
+    elecState.operator = '';
+    elecState.line = '';
+    elecState.brand = '';
+    elecState.brandPlanned = '';
+    elecState.items = [];
+
+    $('#elecContextInfo').style.display = 'none';
+    $('#elecTodayCard').style.display = 'none';
+    $('#elecWeekCard').style.display = 'none';
+    $('#elecChecklistContainer').innerHTML = '';
+
+    $('#elecSelectView').style.display = 'block';
+    $('#elecSummaryView').style.display = 'none';
+  });
+
+  $('#elecSummaryWeekHeader')?.addEventListener('click', () => {
+    const header = $('#elecSummaryWeekHeader');
+    const matrix = $('#elecSummaryWeekMatrix');
+    const expanded = header.classList.toggle('expanded');
+    matrix.style.display = expanded ? 'block' : 'none';
+  });
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ============================================================
+   Матрица недели
+   ============================================================ */
+
+$('#elecWeekHeader')?.addEventListener('click', () => {
+  elecState.weekExpanded = !elecState.weekExpanded;
+  $('#elecWeekHeader').classList.toggle('expanded', elecState.weekExpanded);
+  $('#elecWeekMatrix').style.display = elecState.weekExpanded ? 'block' : 'none';
+  if (elecState.weekExpanded) renderElectronicWeekMatrix();
+});
+
+function renderElectronicWeekMatrix() {
+  const wrap = $('#elecWeekMatrix');
+  if (!wrap) return;
+
+  if (!elecState.line) {
+    wrap.innerHTML = '<div class="empty-state">Выберите линию</div>';
+    return;
+  }
+
+  // Соберём строки: все активные параметры линии, которые в течение недели встречаются хотя бы раз
+  const allParams = getElectronicParamsForLine(elecState.line).filter(p => p.active !== false);
+
+  const today = todayISO();
+  const days = getCurrentWeekDays();  // ← 7 дат текущей ISO-недели (Пн..Вс)
+
+  const rows = [];
+
+  allParams.forEach(p => {
+    const cells = {}; // 'YYYY-MM-DD|day' => true/false
+
+    days.forEach(date => {
+      const brand = getElectronicBrandForDate(elecState.line, date) || '';
+      ['day', 'night'].forEach(shiftType => {
+        let due = false;
+        if (isElectronicParamDue(p, date, shiftType)) {
+          if (p.controlType === 'ok_not_ok') {
+            if (p.normText && p.normText.trim()) due = true;
+          } else {
+            if (brand) {
+              const v = (p.valuesByBrand || []).find(v => v.brand === brand);
+              if (v && v.target !== '' && v.tolerance !== '') due = true;
+            }
+          }
+        }
+        cells[`${date}|${shiftType}`] = due;
+      });
+    });
+
+    const hasAny = Object.values(cells).some(Boolean);
+    if (!hasAny) return;
+
+    rows.push({ param: p, cells });
+  });
+
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="empty-state" style="padding:24px">На текущую неделю нет запланированных проверок</div>';
+    return;
+  }
+
+  // Соберём уже сохранённые проверки в этом диапазоне
+  const history = getHistory().filter(h =>
+    h.mode === 'electronic' &&
+    h.line === elecState.line &&
+    days.includes(h.date)
+  );
+  const savedStatus = {};
+  history.forEach(h => {
+    h.items.forEach(it => {
+      if (it.status === 'OK' || it.status === 'FAIL' || it.status === 'UNCHECKED') {
+        savedStatus[`${h.date}|${h.shift}|${it.standardId}`] = it.status;
+      }
+    });
+  });
+
+  // --- Шапка ---
+  let headerHtml = `<tr>
+    <th class="elec-matrix-th-machine" rowspan="2">Машина</th>
+    <th class="elec-matrix-th-name" rowspan="2">Параметр</th>
+    <th class="elec-matrix-th-time" rowspan="2">Время</th>
+    <th class="elec-matrix-th-work" rowspan="2">Run/Stop</th>
+    <th class="elec-matrix-th-norm" rowspan="2">Норма</th>`;
+  days.forEach(date => {
+    headerHtml += `<th colspan="2" class="elec-matrix-th-date">${escapeHtml(fmtISODate(date))}</th>`;
+  });
+  headerHtml += `</tr><tr>`;
+  days.forEach(date => {
+    const shifts = getShiftsForDate(date);
+    headerHtml += `<th class="elec-matrix-th-shift">${shifts.day}</th>`;
+    headerHtml += `<th class="elec-matrix-th-shift elec-matrix-th-shift-night">${shifts.night}</th>`;
+  });
+  headerHtml += `</tr>`;
+
+  // --- Тело ---
+  const bodyHtml = rows.map(({ param, cells }) => {
+    // Норма
+    let normText = '';
+    let normTitle = '';
+    if (param.controlType === 'ok_not_ok') {
+      normText = param.normText
+        ? escapeHtml(param.normText)
+        : '<span style="color:var(--text-dim)">—</span>';
+      normTitle = param.normText || '';
+    } else {
+      const norms = (param.valuesByBrand || [])
+        .filter(v =>
+          v.brand &&
+          v.target !== '' && v.target != null &&
+          v.tolerance !== '' && v.tolerance != null
+        )
+        .map(v => `${v.brand}: ${v.target}±${v.tolerance}`);
+      if (norms.length) {
+        normText = escapeHtml(norms.join(' · '));
+        normTitle = norms.join('\n');
+      } else {
+        normText = '<span style="color:var(--text-dim)">—</span>';
+      }
+    }
+
+    // Время
+    const timeText = (param.timeFrom && param.timeTo)
+      ? `${escapeHtml(param.timeFrom)}–${escapeHtml(param.timeTo)}`
+      : '—';
+
+    // Run/Stop
+    const workCls = param.work === 'Run' ? 'elec-check-work-run' : 'elec-check-work-stop';
+    const workText = escapeHtml(param.work || '—');
+
+    // Ячейки по дням
+    let cellsHtml = '';
+    days.forEach(date => {
+      ['day', 'night'].forEach(shiftType => {
+        const due = cells[`${date}|${shiftType}`];
+        const shiftLetter = getShiftsForDate(date)[shiftType];
+        const isToday = (date === today && shiftType === elecState.shiftType);
+        const key = `${date}|${shiftLetter}|${param.id}`;
+        const saved = savedStatus[key];
+
+        let cls = 'elec-matrix-cell';
+        let text = '—';
+
+        if (!due) {
+          cls += ' elec-cell-na';
+        } else if (saved === 'OK') {
+          cls += ' elec-cell-ok';
+          text = '✓';
+        } else if (saved === 'FAIL') {
+          cls += ' elec-cell-fail';
+          text = '✕';
+        } else if (saved === 'UNCHECKED') {
+          cls += ' elec-cell-unchecked';
+          text = '?';
+        } else {
+          cls += ' elec-cell-due';
+        }
+        if (isToday) cls += ' elec-cell-today';
+
+        cellsHtml += `<td class="${cls}">${text}</td>`;
+      });
+    });
+
+    return `<tr>
+      <td class="elec-matrix-machine" title="${escapeAttr(param.machine || '')}">${escapeHtml(param.machine || '—')}</td>
+      <td class="elec-matrix-name" title="${escapeAttr(param.paramName || '')}">${escapeHtml(param.paramName || '—')}</td>
+      <td class="elec-matrix-time">${timeText}</td>
+      <td class="elec-matrix-work"><span class="elec-check-work ${workCls}">${workText}</span></td>
+      <td class="elec-matrix-norm" title="${escapeAttr(normTitle)}">${normText}</td>
+      ${cellsHtml}
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div class="elec-matrix-wrap">
+      <table class="elec-matrix">
+        <thead>${headerHtml}</thead>
+        <tbody>${bodyHtml}</tbody>
+      </table>
+    </div>
+    <div class="elec-matrix-legend">
+      <span><span class="elec-matrix-legend-swatch elec-matrix-legend-due"></span>Запланировано</span>
+      <span><span class="elec-matrix-legend-swatch elec-matrix-legend-ok"></span>ОК</span>
+      <span><span class="elec-matrix-legend-swatch elec-matrix-legend-fail"></span>Не ОК</span>
+      <span><span class="elec-matrix-legend-swatch elec-matrix-legend-unchecked"></span>Не проверено</span>
+    </div>
+  `;
+}
+
+/* Матрица недели внутри резюме — рендерится в отдельный контейнер */
+function renderElectronicSummaryWeekMatrix() {
+  const wrap = $('#elecSummaryWeekMatrix');
+  if (!wrap) return;
+
+  if (!elecState.line) {
+    wrap.innerHTML = '<div class="empty-state">Линия не выбрана</div>';
+    return;
+  }
+
+  // Переиспользуем логику: временно подменяем целевой контейнер
+  const originalWrap = $('#elecWeekMatrix');
+  if (!originalWrap) {
+    // Если контейнера нет — создаём временный
+    const temp = document.createElement('div');
+    temp.id = 'elecWeekMatrix';
+    temp.style.display = 'none';
+    document.body.appendChild(temp);
+  }
+
+  // Вызываем существующую функцию — она заполнит #elecWeekMatrix
+  renderElectronicWeekMatrix();
+
+  // Переносим HTML из #elecWeekMatrix в наш контейнер
+  const source = $('#elecWeekMatrix');
+  if (source) {
+    wrap.innerHTML = source.innerHTML;
+  }
+}
+
+/* Модалка комментария — переиспользуем существующую, но в неё надо передать dataset.comment */
+function openCommentModalElec(item) {
+  currentCommentItem = item;
+  const it = elecState.items.find(x => x.id === item.dataset.elecId);
+  $('#commentModalPoint').textContent = it
+    ? `${it.machine || ''} · ${it.paramName || ''}`
+    : '';
+  $('#commentText').value = item.dataset.comment || '';
+  $('#commentModal').classList.add('active');
+  setTimeout(() => $('#commentText').focus(), 100);
+}
+
+/* Модалка override бренда */
+window.openElecBrandOverrideDialog = function() {
+  const brands = getBrandsForLine(elecState.line);
+  if (!brands.length) return showToast('На линии нет брендов', true);
+
+  const brandList = brands.map(b => `${b}`).join(', ');
+  const current = elecState.brand || '';
+  const newBrand = prompt(`Бренд на ${fmtISODate(elecState.date)}\nДоступные: ${brandList}`, current);
+  if (newBrand === null) return;
+  const trimmed = newBrand.trim();
+  if (!trimmed) return;
+  if (!brands.includes(trimmed)) {
+    return showToast('Бренд не найден на линии', true);
+  }
+  if (trimmed === elecState.brand) return; // без изменений
+
+  const reason = prompt('Причина изменения (кратко):', '') || '';
+  elecState.brand = trimmed;
+  elecState.brandReason = reason.trim();
+
+  refreshElectronicTab();
+};
 
 function setTopLosses(v) {
   save(STORAGE_KEYS.topLosses, v);
@@ -2718,10 +5099,12 @@ function getFilteredHistory() {
 
   // Фильтр по режиму
   if (mode === 'changeover') {
-    // COCL = всё, где mode НЕ 'toploss'
-    hist = hist.filter(h => h.mode !== 'toploss');
+    // COCL = всё, где mode НЕ 'toploss' и НЕ 'electronic'
+    hist = hist.filter(h => h.mode !== 'toploss' && h.mode !== 'electronic');
   } else if (mode === 'toploss') {
     hist = hist.filter(h => h.mode === 'toploss');
+  } else if (mode === 'electronic') {
+    hist = hist.filter(h => h.mode === 'electronic');
   }
 
   return hist.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -2771,6 +5154,7 @@ function renderHistory() {
           const fails = h.items.filter(i => i.status === 'FAIL').length;
           const unchecked = h.items.filter(i => i.status === 'UNCHECKED').length;
           const isTopLoss = h.mode === 'toploss';
+          const isElec = h.mode === 'electronic';
 
           // --- Контекст ---
           let contextHtml = '—';
@@ -2782,6 +5166,12 @@ function renderHistory() {
             contextHtml = names.length
               ? `<span class="tl-history-losses">${names.map(escapeHtml).join(' · ')}</span>`
               : '—';
+          } else if (isElec) {
+            const brandBadge = `<span class="badge badge-mode-electronic">${escapeHtml(h.brandActual || '—')}</span>`;
+            const planNote = (h.brandPlanned && h.brandPlanned !== h.brandActual)
+              ? ` <span style="font-size:11px;color:var(--accent-amber);font-style:italic">(план: ${escapeHtml(h.brandPlanned)})</span>`
+              : '';
+            contextHtml = brandBadge + planNote;
           } else {
             const badgeCls = h.type === 'Minor' ? 'badge-minor' :
                             h.type === 'Intermediate' ? 'badge-intermediate' : 'badge-major';
@@ -2794,12 +5184,14 @@ function renderHistory() {
           // --- Бейдж режима ---
           const modeBadge = isTopLoss
             ? `<span class="badge badge-mode-toploss">TOP</span>`
-            : `<span class="badge badge-mode-cocl">COCL</span>`;
+            : (isElec
+                ? `<span class="badge badge-mode-electronic">E-PARAM</span>`
+                : `<span class="badge badge-mode-cocl">COCL</span>`);
 
           // --- Колонка «Не проверено» ---
           const uncheckedHtml = unchecked > 0
             ? `<span class="badge badge-unchecked">${unchecked}</span>`
-            : (isTopLoss ? '<span class="badge badge-ok">0</span>' : '—');
+            : ((isTopLoss || isElec) ? '<span class="badge badge-ok">0</span>' : '—');
 
           return `
             <tr>
@@ -2911,6 +5303,7 @@ window.viewRecord = function(id) {
   const fails = h.items.filter(i => i.status === 'FAIL').length;
   const oks = h.items.length - fails;
   const isTopLoss = h.mode === 'toploss';
+  const isElec = h.mode === 'electronic';
 
   // --- Собираем контекст в зависимости от режима ---
   let contextBlock = '';
@@ -2994,8 +5387,17 @@ window.viewRecord = function(id) {
               ? '<span class="status-badge status-ok">ОК</span>'
               : '<span class="status-badge status-fail">Не ОК</span>';
           } else if (ctype === 'value_input') {
-            // Ввод значения — бейдж ОК + значение
-            answerHtml = `<span class="status-badge status-ok">ОК</span>
+            // Ввод значения.
+            // Для COCL / TOP Losses — всегда «ОК» (оператор фиксирует факт).
+            // Для CL Electronic — по статусу (в допуске / не в допуске),
+            //   потому что там value_input — это измеренное значение.
+            let statusLabel = 'ОК';
+            let statusCls = 'status-ok';
+            if (isElec && it.status === 'FAIL') {
+              statusLabel = 'Не в допуске';
+              statusCls = 'status-fail';
+            }
+            answerHtml = `<span class="status-badge ${statusCls}">${statusLabel}</span>
               <span class="record-answer-value">${escapeHtml(it.answer || '—')}</span>`;
           } else if (ctype === 'tolerance') {
             // Допуск — бейдж + значение (без приписки «— в допуске»)
@@ -4786,8 +7188,8 @@ function renderTopLossSummary(record) {
       </div>
       <div class="tl-shield-info">
         <div class="tl-shield-title">${shieldTitle}</div>
-        <div class="tl-shield-sub">${shieldSub}</div>
-        ${totalFails > 0 ? `
+        <div class="tl-shield-sub">${shieldSubParts.join(' · ')}</div>
+        ${fails > 0 ? `
           <div class="tl-shield-journal-warning">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
@@ -4925,6 +7327,7 @@ $('#tlLine')?.addEventListener('change', () => {
 function renderSettings() {
   renderPhotoStorageSettings();
   renderBlocksSettings();
+  renderElectronicShiftSettings();
   renderLinesSettings();
   renderLineMachinesSettings();
   renderTopLossesSettings();
@@ -6497,6 +8900,154 @@ function renderBlocksSettings() {
   }).join('');
 }
 
+function sanitizeCycleArray(arr, def) {
+  if (!Array.isArray(arr)) return [...def];
+  const filtered = arr.filter(s => ['A','B','C','D'].includes(s));
+  return filtered.length ? filtered : [...def];
+}
+
+function getElectronicShiftConfig() {
+  const raw = load(STORAGE_KEYS.electronicShiftCfg, null);
+
+  // Миграция со старого формата (cycle/daysPerShift) → v2
+  if (raw && typeof raw === 'object' && Array.isArray(raw.cycle) && !raw.dayCycle) {
+    const legacyCycle = raw.cycle;
+    const legacyDays = Number(raw.daysPerShift) > 0 ? Number(raw.daysPerShift) : 2;
+    const legacyStart = /^\d{4}-\d{2}-\d{2}$/.test(raw.startDate || '')
+      ? raw.startDate
+      : DEFAULT_ELECTRONIC_SHIFT_CFG.startDate;
+
+    const dayCycle = [];
+    const nightCycle = [];
+    for (let i = 0; i < 8; i++) {
+      const pos = Math.floor(i / legacyDays) % legacyCycle.length;
+      const nextPos = Math.floor((i + 1) / legacyDays) % legacyCycle.length;
+      dayCycle.push(legacyCycle[pos]);
+      nightCycle.push(legacyCycle[nextPos]);
+    }
+
+    const migrated = { dayCycle, nightCycle, startDate: legacyStart };
+    save(STORAGE_KEYS.electronicShiftCfg, migrated);
+    return migrated;
+  }
+
+  if (!raw || typeof raw !== 'object') {
+    return {
+      dayCycle:   [...DEFAULT_ELECTRONIC_SHIFT_CFG.dayCycle],
+      nightCycle: [...DEFAULT_ELECTRONIC_SHIFT_CFG.nightCycle],
+      startDate:  DEFAULT_ELECTRONIC_SHIFT_CFG.startDate
+    };
+  }
+
+  const dayCycle   = sanitizeCycleArray(raw.dayCycle,   DEFAULT_ELECTRONIC_SHIFT_CFG.dayCycle);
+  const nightCycle = sanitizeCycleArray(raw.nightCycle, DEFAULT_ELECTRONIC_SHIFT_CFG.nightCycle);
+  const startDate  = /^\d{4}-\d{2}-\d{2}$/.test(raw.startDate || '')
+    ? raw.startDate
+    : DEFAULT_ELECTRONIC_SHIFT_CFG.startDate;
+
+  return { dayCycle, nightCycle, startDate };
+}
+
+function setElectronicShiftConfig(cfg) {
+  const normalized = {
+    dayCycle:   sanitizeCycleArray(cfg.dayCycle,   DEFAULT_ELECTRONIC_SHIFT_CFG.dayCycle),
+    nightCycle: sanitizeCycleArray(cfg.nightCycle, DEFAULT_ELECTRONIC_SHIFT_CFG.nightCycle),
+    startDate:  /^\d{4}-\d{2}-\d{2}$/.test(cfg.startDate || '')
+      ? cfg.startDate
+      : DEFAULT_ELECTRONIC_SHIFT_CFG.startDate
+  };
+  save(STORAGE_KEYS.electronicShiftCfg, normalized);
+}
+
+function daysSinceStart(date) {
+  const cfg = getElectronicShiftConfig();
+  const d = (date instanceof Date) ? date : new Date(date + 'T00:00:00');
+  const start = new Date(cfg.startDate + 'T00:00:00');
+  return Math.floor((d.getTime() - start.getTime()) / 86400000);
+}
+
+function getDayShiftForDate(date) {
+  const cfg = getElectronicShiftConfig();
+  const diff = daysSinceStart(date);
+  if (diff < 0) return cfg.dayCycle[0];
+  const pos = diff % cfg.dayCycle.length;
+  return cfg.dayCycle[pos];
+}
+
+function getNightShiftForDate(date) {
+  const cfg = getElectronicShiftConfig();
+  const diff = daysSinceStart(date);
+  if (diff < 0) return cfg.nightCycle[0];
+  const pos = diff % cfg.nightCycle.length;
+  return cfg.nightCycle[pos];
+}
+
+function getShiftsForDate(date) {
+  return {
+    day:   getDayShiftForDate(date),
+    night: getNightShiftForDate(date)
+  };
+}
+
+function getCurrentShiftType() {
+  const h = new Date().getHours();
+  return (h >= 9 && h < 21) ? 'day' : 'night';
+}
+
+/* Обёртка для совместимости со старым кодом */
+function getShiftForDate(date) {
+  return getDayShiftForDate(date);
+}
+
+/* ============================================================
+   CL ELECTRONIC — карточка «График смен»
+   ============================================================ */
+function renderElectronicShiftSettings() {
+  const cfg = getElectronicShiftConfig();
+
+  const dayEl   = $('#elecShiftDayCycle');
+  const nightEl = $('#elecShiftNightCycle');
+  const startEl = $('#elecShiftStart');
+
+  if (dayEl)   dayEl.value   = cfg.dayCycle.join(', ');
+  if (nightEl) nightEl.value = cfg.nightCycle.join(', ');
+  if (startEl) startEl.value = cfg.startDate;
+
+  renderElectronicShiftPreview();
+}
+
+/* Предпросмотр — 8 дней от даты старта, с обеими сменами */
+function renderElectronicShiftPreview() {
+  const box = $('#elecShiftPreview');
+  if (!box) return;
+
+  const cfg = getElectronicShiftConfig();
+  const start = new Date(cfg.startDate + 'T00:00:00');
+
+  let html = '';
+  for (let i = 0; i < 8; i++) {
+    const d = new Date(start.getTime() + i * 86400000);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+    const day   = getDayShiftForDate(dateStr);
+    const night = getNightShiftForDate(dateStr);
+
+    html += `
+      <div class="elec-shift-day">
+        <span class="elec-shift-day-date">${dd}.${mm}.${yyyy}</span>
+        <span style="font-size:10px;color:var(--text-dim)">день · ночь</span>
+        <span style="display:flex;gap:6px;align-items:baseline">
+          <span class="elec-shift-day-shift elec-shift-${day}" style="font-size:14px">${day}</span>
+          <span style="color:var(--text-dim);font-size:12px">/</span>
+          <span class="elec-shift-day-shift elec-shift-${night}" style="font-size:14px;opacity:0.75">${night}</span>
+        </span>
+      </div>
+    `;
+  }
+  box.innerHTML = html;
+}
 /* Склонение: 1 линия / 2 линии / 5 линий */
 function pluralizeLines(n) {
   const mod10 = n % 10;
@@ -6526,6 +9077,61 @@ $('#addBlockBtn')?.addEventListener('click', () => {
   // Сразу открываем модалку редактирования нового блока
   openBlockModal(newId);
 });
+
+/* --- CL Electronic: график смен (v2: день/ночь) --- */
+
+function parseCycleString(str) {
+  return String(str || '')
+    .split(/[\s,;]+/)
+    .map(s => s.trim().toUpperCase())
+    .filter(s => ['A','B','C','D'].includes(s));
+}
+
+$('#elecShiftSaveBtn')?.addEventListener('click', () => {
+  const dayCycle   = parseCycleString($('#elecShiftDayCycle')?.value);
+  const nightCycle = parseCycleString($('#elecShiftNightCycle')?.value);
+  const start      = ($('#elecShiftStart')?.value || '').trim();
+
+  if (!dayCycle.length) {
+    return showToast('Дневной цикл пуст или содержит недопустимые значения (A–D)', true);
+  }
+  if (!nightCycle.length) {
+    return showToast('Ночной цикл пуст или содержит недопустимые значения (A–D)', true);
+  }
+  if (!start) {
+    return showToast('Укажите дату старта цикла', true);
+  }
+
+  setElectronicShiftConfig({ dayCycle, nightCycle, startDate: start });
+
+  renderElectronicShiftPreview();
+  showToast('График смен сохранён');
+});
+
+$('#elecShiftResetBtn')?.addEventListener('click', () => {
+  if (!confirm('Сбросить график смен к стандартному (D D A A C C B B / C C B B D D A A, старт 01.01.2026)?')) return;
+
+  setElectronicShiftConfig({ ...DEFAULT_ELECTRONIC_SHIFT_CFG });
+  renderElectronicShiftSettings();
+  showToast('График смен сброшен');
+});
+
+function updateShiftPreviewTemporary() {
+  const dayCycle   = parseCycleString($('#elecShiftDayCycle')?.value);
+  const nightCycle = parseCycleString($('#elecShiftNightCycle')?.value);
+  const start      = ($('#elecShiftStart')?.value || '').trim() || DEFAULT_ELECTRONIC_SHIFT_CFG.startDate;
+
+  if (!dayCycle.length || !nightCycle.length) return;
+
+  const backup = getElectronicShiftConfig();
+  setElectronicShiftConfig({ dayCycle, nightCycle, startDate: start });
+  renderElectronicShiftPreview();
+  setElectronicShiftConfig(backup);
+}
+
+$('#elecShiftDayCycle')?.addEventListener('input', updateShiftPreviewTemporary);
+$('#elecShiftNightCycle')?.addEventListener('input', updateShiftPreviewTemporary);
+$('#elecShiftStart')?.addEventListener('input', updateShiftPreviewTemporary);
 
 /* Удалить блок */
 window.deleteBlock = function(id) {
@@ -6870,8 +9476,14 @@ window.openMachineModal = function(line, oldName) {
    ============================================================ */
 window.openQuickAddMachineModal = function() {
   const modal = $('#quickAddMachineModal');
-  const line = $('#sf_line')?.value;
-  if (!modal || !line) return;
+  if (!modal) return;
+
+  // Линия зависит от контекста
+  const line = (quickAddMachineContext === 'electronic')
+    ? currentElectronicLine
+    : ($('#sf_line')?.value);
+
+  if (!line) return;
 
   $('#quickAddMachineLineLabel').textContent = 'Линия: ' + line;
   $('#quickAddMachineName').value = '';
@@ -6907,8 +9519,13 @@ $('#quickAddMachineName')?.addEventListener('keydown', (e) => {
 });
 
 /* Сохранить */
+/* Сохранить */
 $('#quickAddMachineSaveBtn')?.addEventListener('click', () => {
-  const line = $('#sf_line')?.value;
+  // Линия зависит от контекста
+  const line = (quickAddMachineContext === 'electronic')
+    ? currentElectronicLine
+    : ($('#sf_line')?.value);
+
   const name = $('#quickAddMachineName')?.value.trim();
   if (!line) return;
   if (!name) return showToast('Введите название машины', true);
@@ -6924,8 +9541,12 @@ $('#quickAddMachineSaveBtn')?.addEventListener('click', () => {
   lm[line].push(name);
   setLineMachines(lm);
 
-  // Обновляем селект в форме стандарта и выбираем новую машину
-  fillStandardMachineSelect(line, name);
+  // Обновляем тот селект, который открыт в текущем контексте
+  if (quickAddMachineContext === 'electronic') {
+    fillElectronicMachineSelect(line, name);
+  } else {
+    fillStandardMachineSelect(line, name);
+  }
 
   // Обновляем настройки (если они сейчас открыты — пользователь увидит новую машину)
   if (typeof renderLineMachinesSettings === 'function') renderLineMachinesSettings();
@@ -6935,8 +9556,10 @@ $('#quickAddMachineSaveBtn')?.addEventListener('click', () => {
 });
 
 /* Кнопка «+» в форме стандарта */
-$('#sf_addMachineBtn')?.addEventListener('click', openQuickAddMachineModal);
-
+$('#sf_addMachineBtn')?.addEventListener('click', () => {
+  quickAddMachineContext = 'standard';
+  openQuickAddMachineModal();
+});
 function closeMachineModal() {
   const modal = $('#machineModal');
   if (modal) modal.classList.remove('active');
@@ -8167,7 +10790,8 @@ function init() {
   fillHistoryFilters();
   renderEditorBlocksView();
   renderSettings();
-  fillTopLossTab();         
+  fillTopLossTab();
+  fillElectronicTab();      
   initRouter();
   updateNavCounters();
 }

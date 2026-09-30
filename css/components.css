@@ -4816,3 +4816,1062 @@ header,
   transform: none;
   cursor: not-allowed;
 }
+/* ============================================================ */
+/* === CL Electronic: график смен ============================= */
+/* ============================================================ */
+
+.elec-shift-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  font-family: 'Courier New', Consolas, monospace;
+}
+.elec-shift-day {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  min-width: 72px;
+}
+.elec-shift-day-date {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.elec-shift-day-shift {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+.elec-shift-day-shift.elec-shift-A { color: var(--accent-cyan);   }
+.elec-shift-day-shift.elec-shift-B { color: var(--accent-purple); }
+.elec-shift-day-shift.elec-shift-C { color: var(--accent-amber);  }
+.elec-shift-day-shift.elec-shift-D { color: var(--accent-green);  }
+/* ============================================================ */
+/* === РЕДАКТОР: переключатель Механический/Электронный ======= */
+/* ============================================================ */
+
+.editor-mode-switch {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.editor-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 22px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  background: var(--bg-input);
+  color: var(--text-second);
+  border: 2px solid var(--border-hi);
+  transition: all 0.15s ease;
+  flex: 1;
+  min-width: 180px;
+  justify-content: center;
+}
+.editor-mode-btn:hover {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+.editor-mode-btn svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+.editor-mode-btn.active {
+  background: linear-gradient(135deg, var(--blue-mid), var(--blue-light));
+  color: #ffffff;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 16px rgba(0, 212, 255, 0.4);
+}
+.editor-mode-btn.active svg {
+  stroke: #ffffff;
+}
+
+/* ============================================================ */
+/* === CL ELECTRONIC: дерево в редакторе ====================== */
+/* ============================================================ */
+
+/* Плитки машин */
+.elec-machines-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.elec-machine-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent-cyan);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.elec-machine-tile:hover {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 4px 16px rgba(0, 212, 255, 0.15);
+  transform: translateY(-2px);
+}
+.elec-machine-tile-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+  font-family: 'Courier New', Consolas, monospace;
+  letter-spacing: 0.4px;
+}
+.elec-machine-tile-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+}
+
+/* Строка параметра в списке */
+.elec-param-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-amber);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  transition: border-color 0.15s ease;
+}
+.elec-param-row:hover {
+  border-color: var(--accent-cyan);
+  border-left-color: var(--accent-amber);
+}
+.elec-param-row.inactive {
+  opacity: 0.5;
+}
+.elec-param-row-info {
+  flex: 1;
+  min-width: 0;
+}
+.elec-param-row-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+.elec-param-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 11px;
+  color: var(--text-second);
+}
+.elec-param-row-meta strong {
+  color: var(--text-main);
+  font-weight: 600;
+}
+.elec-param-row-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Мини-таблица значений по брендам */
+.elec-brands-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-top: 6px;
+}
+.elec-brands-table th {
+  background: var(--bg-hover);
+  color: var(--text-second);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 6px 10px;
+  text-align: left;
+  border: 1px solid var(--border);
+}
+.elec-brands-table td {
+  padding: 6px;
+  border: 1px solid var(--border);
+  vertical-align: middle;
+}
+.elec-brands-table td input,
+.elec-brands-table td select {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 13px;
+}
+.elec-brands-table .elec-brands-remove {
+  background: none;
+  border: none;
+  color: var(--accent-red);
+  cursor: pointer;
+  padding: 6px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* Чипы Run/Stop */
+.elec-work-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.elec-work-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  background: var(--bg-input);
+  border: 2px solid var(--border-hi);
+  color: var(--text-second);
+  transition: all 0.15s ease;
+  text-transform: uppercase;
+}
+.elec-work-chip:hover {
+  transform: translateY(-1px);
+}
+.elec-work-chip-run.active {
+  background: linear-gradient(135deg, #00a865, #00c47a);
+  border-color: #00c47a;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(0, 196, 122, 0.5);
+}
+.elec-work-chip-stop.active {
+  background: linear-gradient(135deg, #e08a2e, #ffa94d);
+  border-color: #ffa94d;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(255, 169, 77, 0.5);
+}
+/* ============================================================ */
+/* === CL ELECTRONIC: расписание брендов ====================== */
+/* ============================================================ */
+
+.ebs-mode-switch {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.ebs-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--bg-input);
+  color: var(--text-second);
+  border: 2px solid var(--border-hi);
+  transition: all 0.15s ease;
+  flex: 1;
+  justify-content: center;
+}
+.ebs-mode-btn:hover {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+.ebs-mode-btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+.ebs-mode-btn.active {
+  background: linear-gradient(135deg, var(--blue-mid), var(--blue-light));
+  color: #ffffff;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 14px rgba(0, 212, 255, 0.35);
+}
+.ebs-mode-btn.active svg { stroke: #ffffff; }
+
+/* Режим «По дням» — строки */
+.ebs-day-row {
+  display: grid;
+  grid-template-columns: 180px 1fr 40px;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.ebs-day-row input[type="date"] {
+  width: 100%;
+}
+.ebs-day-row select {
+  width: 100%;
+}
+.ebs-day-row .ebs-remove {
+  background: none;
+  border: none;
+  color: var(--accent-red);
+  cursor: pointer;
+  padding: 6px;
+  font-size: 16px;
+  line-height: 1;
+  border-radius: 4px;
+}
+.ebs-day-row .ebs-remove:hover {
+  background: rgba(230, 36, 79, 0.1);
+}
+
+/* Превью итогового расписания */
+.ebs-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.ebs-preview-row {
+  display: grid;
+  grid-template-columns: 140px 100px 1fr;
+  gap: 10px;
+  font-size: 13px;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.ebs-preview-row:last-child { border-bottom: none; }
+.ebs-preview-date {
+  font-family: 'Courier New', Consolas, monospace;
+  color: var(--text-second);
+  font-variant-numeric: tabular-nums;
+}
+.ebs-preview-shift {
+  font-weight: 700;
+  text-align: center;
+  font-family: 'Courier New', Consolas, monospace;
+  padding: 1px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  background: var(--bg-hover);
+}
+.ebs-preview-shift-A { color: var(--accent-cyan); }
+.ebs-preview-shift-B { color: var(--accent-purple); }
+.ebs-preview-shift-C { color: var(--accent-amber); }
+.ebs-preview-shift-D { color: var(--accent-green); }
+.ebs-preview-brand {
+  font-weight: 700;
+  color: var(--text-main);
+}
+.ebs-preview-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-dim);
+  font-style: italic;
+  font-size: 13px;
+}
+/* ============================================================ */
+/* === CL ELECTRONIC: вкладка оператора ====================== */
+/* ============================================================ */
+
+/* Контекстная строка (смена, дата, бренд) */
+.elec-context-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: rgba(0, 212, 255, 0.05);
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  border-left: 3px solid var(--accent-cyan);
+  border-radius: 8px;
+  font-size: 13px;
+}
+.elec-context-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.elec-context-item strong {
+  color: var(--text-second);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.elec-context-item span {
+  color: var(--text-main);
+  font-weight: 700;
+  font-size: 15px;
+}
+.elec-context-item .elec-shift-A { color: var(--accent-cyan); }
+.elec-context-item .elec-shift-B { color: var(--accent-purple); }
+.elec-context-item .elec-shift-C { color: var(--accent-amber); }
+.elec-context-item .elec-shift-D { color: var(--accent-green); }
+
+/* Заголовок «Параметры на сегодня» */
+.elec-today-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.elec-today-icon {
+  display: inline-flex;
+  vertical-align: middle;
+  color: var(--accent-cyan);
+  margin-right: 4px;
+}
+.elec-today-icon svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+.elec-today-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-second);
+  padding: 4px 12px;
+  background: var(--bg-hover);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+/* Электронные пункты — как в TOP Losses / COCL: */
+#elecChecklistContainer .checklist-item.elec-check-item,
+.checklist-item.elec-check-item {
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+}
+
+/* Состояния — те же, что у COCL/TOP Losses, только чуть мягче фон */
+#elecChecklistContainer .checklist-item.elec-check-item.answered-ok,
+.checklist-item.elec-check-item.answered-ok {
+  border-left-color: var(--accent-green);
+  background: rgba(0, 196, 122, 0.08);
+}
+
+#elecChecklistContainer .checklist-item.elec-check-item.answered-fail,
+.checklist-item.elec-check-item.answered-fail {
+  border-left-color: var(--accent-red);
+  background: rgba(230, 36, 79, 0.08);
+}
+.elec-check-item:last-child {
+  border-bottom: none;
+}
+.elec-check-item:hover {
+  background: var(--bg-hover);
+}
+
+.elec-check-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 12px;
+  color: var(--text-second);
+  margin-bottom: 6px;
+}
+.elec-check-meta strong {
+  color: var(--text-main);
+  font-weight: 600;
+}
+.elec-check-time {
+  font-family: 'Courier New', Consolas, monospace;
+  color: var(--accent-cyan);
+  font-size: 12px;
+}
+.elec-check-work {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.elec-check-work-run  { background: rgba(0, 196, 122, 0.15); color: var(--accent-green); }
+.elec-check-work-stop { background: rgba(255, 169, 77, 0.15); color: var(--accent-amber); }
+
+.elec-check-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 6px;
+}
+
+.elec-check-norm {
+  font-size: 12px;
+  color: var(--text-second);
+  margin-bottom: 8px;
+}
+.elec-check-norm strong {
+  color: var(--text-main);
+  font-weight: 700;
+}
+.elec-check-norm .elec-norm-value {
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 13px;
+  color: var(--accent-cyan);
+  font-weight: 700;
+}
+
+/* Матрица недели */
+.elec-week-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.elec-week-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--text-second);
+  transition: transform 0.2s ease, color 0.15s;
+}
+.elec-week-toggle svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  pointer-events: none;
+}
+.elec-week-header.expanded .elec-week-toggle {
+  transform: rotate(90deg);
+  color: var(--accent-cyan);
+}
+.elec-week-hint {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+.elec-week-header.expanded .elec-week-hint {
+  display: none;
+}
+
+/* ============================================================ */
+/* === CL ELECTRONIC: матрица недели (Машина | Параметр | Норма) */
+/* ============================================================ */
+
+.elec-matrix-wrap {
+  overflow-x: auto;
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+}
+
+.elec-matrix {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+  min-width: 100%;
+}
+
+/* --- Заголовки --- */
+.elec-matrix thead th {
+  background: var(--bg-hover);
+  color: var(--text-second);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-weight: 700;
+  padding: 8px 10px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  white-space: nowrap;
+}
+.elec-matrix thead th:last-child {
+  border-right: none;
+}
+
+/* ============================================================ */
+/* === CL Electronic: заголовки колонок в матрице ============= */
+/* ============================================================ */
+
+.elec-matrix-th-machine,
+.elec-matrix-th-name,
+.elec-matrix-th-time,
+.elec-matrix-th-work,
+.elec-matrix-th-norm {
+  text-align: left !important;
+  background: var(--bg-hover);
+}
+
+.elec-matrix-th-machine {
+  color: var(--blue-mid);
+}
+
+.elec-matrix-th-date {
+  border-bottom: 1px dashed var(--border-hi) !important;
+}
+
+.elec-matrix-th-machine,
+.elec-matrix-th-name,
+.elec-matrix-th-norm {
+  text-align: left !important;
+  background: var(--bg-hover);
+}
+.elec-matrix-th-date {
+  border-bottom: 1px dashed var(--border-hi) !important;
+}
+.elec-matrix-th-shift {
+  font-size: 12px;
+  color: var(--accent-cyan);
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+.elec-matrix-th-shift-night {
+  opacity: 0.7;
+}
+
+/* --- Тело таблицы --- */
+.elec-matrix tbody td {
+  padding: 8px 10px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.elec-matrix tbody tr:last-child td {
+  border-bottom: none;
+}
+.elec-matrix tbody td:last-child {
+  border-right: none;
+}
+.elec-matrix tbody tr:hover td {
+  background: rgba(0, 212, 255, 0.03);
+}
+
+/* --- Колонки Машина / Параметр / Норма --- */
+.elec-matrix-machine {
+  text-align: left !important;
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--blue-mid);
+  background: var(--bg-card);
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 70px;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.elec-matrix-name {
+  text-align: left !important;
+  font-weight: 600;
+  color: var(--text-main);
+  background: var(--bg-card);
+  position: sticky;
+  left: 70px;    /* ширина машины */
+  z-index: 1;
+  min-width: 200px;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.elec-matrix-norm {
+  text-align: left !important;
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-amber);
+  background: var(--bg-card);
+  position: sticky;
+  left: 270px;   /* ширина машины + имени */
+  z-index: 1;
+  min-width: 140px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Подсветка sticky-колонок при hover */
+.elec-matrix tbody tr:hover .elec-matrix-machine,
+.elec-matrix tbody tr:hover .elec-matrix-name,
+.elec-matrix tbody tr:hover .elec-matrix-norm {
+  background: var(--bg-hover);
+}
+
+/* --- Ячейки дней --- */
+.elec-matrix td.elec-matrix-cell {
+  width: 40px;
+  min-width: 40px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: default;
+}
+
+.elec-matrix td.elec-matrix-cell.elec-cell-due {
+  background: rgba(0, 212, 255, 0.08);
+  cursor: pointer;
+}
+.elec-matrix td.elec-matrix-cell.elec-cell-due:hover {
+  background: rgba(0, 212, 255, 0.18);
+}
+
+.elec-matrix td.elec-matrix-cell.elec-cell-ok {
+  background: rgba(0, 196, 122, 0.15);
+  color: var(--accent-green);
+}
+
+.elec-matrix td.elec-matrix-cell.elec-cell-fail {
+  background: rgba(255, 45, 111, 0.15);
+  color: var(--accent-red);
+}
+
+.elec-matrix td.elec-matrix-cell.elec-cell-unchecked {
+  background: rgba(255, 184, 0, 0.12);
+  color: var(--accent-amber);
+}
+
+.elec-matrix td.elec-matrix-cell.elec-cell-na {
+  background: var(--bg-hover);
+  color: var(--text-dim);
+  font-size: 10px;
+}
+
+.elec-matrix td.elec-matrix-cell.elec-cell-today {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: -2px;
+}
+
+/* --- Легенда --- */
+.elec-matrix-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 12px;
+  font-size: 11px;
+  color: var(--text-second);
+}
+.elec-matrix-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.elec-matrix-legend-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+.elec-matrix-legend-due       { background: rgba(0, 212, 255, 0.15); }
+.elec-matrix-legend-ok        { background: rgba(0, 196, 122, 0.15); }
+.elec-matrix-legend-fail      { background: rgba(255, 45, 111, 0.15); }
+.elec-matrix-legend-unchecked { background: rgba(255, 184, 0, 0.12); }
+/* CL Electronic — бейдж режима (фиолетовый) */
+.badge-mode-electronic {
+  background: rgba(123, 92, 255, 0.12);
+  color: var(--accent-purple);
+  border: 1px solid rgba(123, 92, 255, 0.5);
+  box-shadow: 0 0 8px rgba(123, 92, 255, 0.2);
+}
+
+/* ============================================================ */
+/* === CL Electronic: строка ответа и статус ================== */
+/* ============================================================ */
+
+/* Строка ответа — единый flex-ряд */
+.elec-check-answer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+/* Внутренняя строка ответа */
+.elec-check-answer .answer-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+}
+
+/* Поле ввода значения */
+.elec-check-answer .answer-field {
+  flex: 0 0 140px;
+  min-width: 120px;
+}
+
+.elec-check-answer .answer-field input {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 14px;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Радио-группа ОК/Не ОК */
+.elec-check-answer .radio-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.elec-check-answer .radio-group label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 16px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-hi);
+  cursor: pointer;
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+  color: var(--text-main);
+  margin: 0;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.elec-check-answer .radio-group label:hover {
+  border-color: var(--accent-cyan);
+}
+
+.elec-check-answer .radio-group input {
+  accent-color: var(--accent-cyan);
+  cursor: pointer;
+  margin: 0;
+}
+
+/* Статус «в допуске» / «не в допуске» */
+.elec-answer-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.elec-answer-status:empty {
+  display: none;
+}
+
+.elec-answer-status.ok {
+  background: rgba(0, 196, 122, 0.15);
+  color: var(--accent-green);
+  border: 1px solid rgba(0, 196, 122, 0.5);
+}
+
+.elec-answer-status.fail {
+  background: rgba(255, 45, 111, 0.15);
+  color: var(--accent-red);
+  border: 1px solid rgba(255, 45, 111, 0.5);
+}
+
+/* Иконка комментария внутри строки ответа — не отрывается */
+.elec-check-answer .comment-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+/* ============================================================ */
+/* === CL Electronic: заголовок «Параметры на сегодня» ======== */
+/* ============================================================ */
+
+.elec-today-header h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--blue-mid);
+  letter-spacing: 0.3px;
+  line-height: 1.2;
+}
+
+.elec-today-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-cyan);
+  flex-shrink: 0;
+  margin-right: 0;
+}
+
+.elec-today-icon svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+/* ============================================================ */
+/* === CL Electronic: плашка «в допуске» — компактная ========= */
+/* ============================================================ */
+
+/* Если поле значения короткое и статус влезает рядом — 
+   всё в одну строку, статус не смещается влево */
+.elec-check-answer .answer-row {
+  justify-content: flex-start;
+}
+
+/* На узких экранах — переносим */
+@media (max-width: 640px) {
+  .elec-check-answer .answer-field {
+    flex: 0 0 100px;
+  }
+  .elec-answer-status {
+    font-size: 11px;
+    padding: 4px 10px;
+  }
+}
+
+/* ============================================================ */
+/* === CL Electronic: инфо-подсказка на пустом экране ========= */
+/* ============================================================ */
+
+.elec-hint {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  margin-top: 16px;
+  background: rgba(0, 212, 255, 0.05);
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  border-left: 3px solid var(--accent-cyan);
+  border-radius: 8px;
+}
+.elec-hint-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  color: var(--accent-cyan);
+  margin-top: 1px;
+}
+.elec-hint-icon svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+.elec-hint-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-main);
+}
+.elec-hint-text strong {
+  color: var(--text-main);
+  font-weight: 700;
+}
+/* ============================================================ */
+/* === CL Electronic: колонки Время и Run/Stop в матрице ====== */
+/* ============================================================ */
+
+.elec-matrix-th-time,
+.elec-matrix-th-work {
+  text-align: left !important;
+  background: var(--bg-hover);
+}
+
+.elec-matrix-time {
+  text-align: left !important;
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  white-space: nowrap;
+  background: var(--bg-card);
+  position: sticky;
+  left: 270px;   /* после машины + имени */
+  z-index: 1;
+  min-width: 100px;
+}
+
+.elec-matrix-work {
+  text-align: center !important;
+  background: var(--bg-card);
+  position: sticky;
+  left: 370px;   /* после машины + имени + времени */
+  z-index: 1;
+  min-width: 80px;
+}
+
+/* Сдвигаем Норму вправо — теперь она после 4 колонок */
+.elec-matrix-norm {
+  left: 450px;   /* машина + имя + время + work */
+}
+
+/* Hover — подсветить sticky-колонки */
+.elec-matrix tbody tr:hover .elec-matrix-time,
+.elec-matrix tbody tr:hover .elec-matrix-work {
+  background: var(--bg-hover);
+}
+
+/* Универсальный чип Run/Stop (для списка и матрицы) */
+.elec-check-work-run,
+.elec-check-work.work-run,
+.elec-check-work[data-work="Run"] {
+  background: rgba(0, 196, 122, 0.15);
+  color: var(--accent-green);
+  border: 1px solid rgba(0, 196, 122, 0.4);
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  display: inline-block;
+}
+.elec-check-work-stop,
+.elec-check-work.work-stop,
+.elec-check-work[data-work="Stop"] {
+  background: rgba(255, 169, 77, 0.15);
+  color: var(--accent-amber);
+  border: 1px solid rgba(255, 169, 77, 0.4);
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  display: inline-block;
+}
