@@ -453,7 +453,6 @@ window.openElectronicMachine = function(machine) {
 function renderElectronicParamRow(p) {
   const freqLabels = {
     daily:    'Каждый день',
-    rotation: 'Ротация',
     weekly:   'По дням недели',
     once:     'Разовые даты'
   };
@@ -713,12 +712,25 @@ function renderFreqShiftsCheckboxes(containerId, selectedShifts) {
 function renderFreqDaysCheckboxes(containerId, selectedDays) {
   const c = document.getElementById(containerId);
   if (!c) return;
-  const names = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
-  c.innerHTML = names.map((name, idx) => {
+
+  // Отображение — Пн..Вс (как в недельной матрице),
+  // но value остаётся совместим с getDay(): 0=Вс, 1=Пн, ..., 6=Сб.
+  const days = [
+    { idx: 1, name: 'Пн' },
+    { idx: 2, name: 'Вт' },
+    { idx: 3, name: 'Ср' },
+    { idx: 4, name: 'Чт' },
+    { idx: 5, name: 'Пт' },
+    { idx: 6, name: 'Сб' },
+    { idx: 0, name: 'Вс' }
+  ];
+
+  c.innerHTML = days.map(({ idx, name }) => {
     const checked = selectedDays.includes(idx) ? 'checked' : '';
     const cls = checked ? 'checked' : '';
     return `<label class="${cls}"><input type="checkbox" value="${idx}" ${checked}> ${name}</label>`;
   }).join('');
+
   c.querySelectorAll('input').forEach(cb => {
     cb.addEventListener('change', e => {
       e.target.closest('label').classList.toggle('checked', e.target.checked);
@@ -728,10 +740,9 @@ function renderFreqDaysCheckboxes(containerId, selectedDays) {
 
 function updateFreqBlocksVisibility() {
   const type = $('#ep_freqType').value;
-  $('#ep_freqDailyBlock').style.display    = (type === 'daily')    ? 'block' : 'none';
-  $('#ep_freqRotationBlock').style.display = (type === 'rotation') ? 'block' : 'none';
-  $('#ep_freqWeeklyBlock').style.display   = (type === 'weekly')   ? 'block' : 'none';
-  $('#ep_freqOnceBlock').style.display     = (type === 'once')     ? 'block' : 'none';
+  $('#ep_freqDailyBlock').style.display  = (type === 'daily')  ? 'block' : 'none';
+  $('#ep_freqWeeklyBlock').style.display = (type === 'weekly') ? 'block' : 'none';
+  $('#ep_freqOnceBlock').style.display   = (type === 'once')   ? 'block' : 'none';
 }
 
 /* Открыть линию */
@@ -2136,7 +2147,6 @@ $('#electronicParamSave')?.addEventListener('click', () => {
   if (freqType === 'daily') {
     frequency.shifts = [...($$('#ep_freqDailyShifts input:checked'))].map(cb => cb.value);
     if (!frequency.shifts.length) return showToast('Выберите хотя бы одну смену', true);
-  } else if (freqType === 'rotation') {
     // Ничего не нужно — ротация определяется графиком смен
   } else if (freqType === 'weekly') {
     frequency.daysOfWeek = [...($$('#ep_freqWeeklyDays input:checked'))].map(cb => Number(cb.value));
@@ -3015,7 +3025,6 @@ const elecState = {
   brandPlanned: '',// из расписания (может быть пустой)
   brandReason: '', // причина ручного override
   items: [],       // собранные параметры
-  weekExpanded: false
 };
 
 /* Заполнить вкладку при открытии */
@@ -3027,8 +3036,9 @@ function fillElectronicTab() {
   const lineEl = $('#elecLine');
   if (lineEl) lineEl.value = '';
   $('#elecContextInfo').style.display = 'none';
-  $('#elecTodayCard').style.display = 'none';
-  $('#elecWeekCard').style.display = 'none';
+  $('#elecSubtabs').style.display = 'none';
+  $('#elecSubtabToday').style.display = 'none';
+  $('#elecSubtabWeek').style.display = 'none';
 }
 
 /* Список линий, у которых есть хотя бы один электронный параметр */
@@ -3213,8 +3223,9 @@ function refreshElectronicTab() {
 
   if (!line) {
     $('#elecContextInfo').style.display = 'none';
-    $('#elecTodayCard').style.display = 'none';
-    $('#elecWeekCard').style.display = 'none';
+    $('#elecSubtabs').style.display = 'none';
+    $('#elecSubtabToday').style.display = 'none';
+    $('#elecSubtabWeek').style.display = 'none';
     return;
   }
 
@@ -3235,7 +3246,9 @@ function refreshElectronicTab() {
 
   // Если бренд не определён — показываем сообщение и не строим чек-лист
   if (!elecState.brand) {
-    $('#elecTodayCard').style.display = 'block';
+    $('#elecSubtabs').style.display = 'flex';
+    restoreElecSubtab();
+
     $('#elecChecklistContainer').innerHTML = `
       <div class="empty-state" style="padding:32px 20px">
         На <strong>${fmtISODate(dateStr)}</strong> бренд в расписании не задан.<br>
@@ -3248,8 +3261,6 @@ function refreshElectronicTab() {
       </div>`;
     $('#elecTodayCount').textContent = '';
     $('#elecSaveCheckBtn').disabled = true;
-    $('#elecWeekCard').style.display = 'block';
-    $('#elecWeekMatrix').innerHTML = '';
     return;
   }
 
@@ -3258,13 +3269,56 @@ function refreshElectronicTab() {
   elecState.items = items;
 
   renderElectronicChecklist(items);
-  $('#elecTodayCard').style.display = 'block';  
-  $('#elecWeekCard').style.display = 'block';
-  if (elecState.weekExpanded) {
+
+  // Показываем контекст и под-вкладки
+  $('#elecSubtabs').style.display = 'flex';
+
+  // Восстанавливаем активную под-вкладку
+  restoreElecSubtab();
+}
+/* ============================================================
+   CL ELECTRONIC: под-вкладки (Проверка на сегодня / Неделя)
+   ============================================================ */
+
+const ELEC_SUBTAB_KEY = 'cl_elec_subtab';   // 'today' | 'week'
+
+/* Переключить под-вкладку */
+function switchElecSubtab(name) {
+  if (name !== 'today' && name !== 'week') name = 'today';
+
+  // Кнопки
+  document.querySelectorAll('#elecSubtabs .elec-subtab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.subtab === name);
+  });
+
+  // Панели
+  const todayPanel = $('#elecSubtabToday');
+  const weekPanel = $('#elecSubtabWeek');
+  if (todayPanel) todayPanel.style.display = (name === 'today') ? 'block' : 'none';
+  if (weekPanel)  weekPanel.style.display  = (name === 'week')  ? 'block' : 'none';
+
+  // Если перешли на «Неделю» — перерисуем матрицу (свежие данные)
+  if (name === 'week' && typeof renderElectronicWeekMatrix === 'function') {
     renderElectronicWeekMatrix();
   }
+
+  // Сохраняем выбор
+  try { localStorage.setItem(ELEC_SUBTAB_KEY, name); } catch (e) {}
 }
 
+/* Обработчики кнопок под-вкладок */
+document.querySelectorAll('#elecSubtabs .elec-subtab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    switchElecSubtab(btn.dataset.subtab);
+  });
+});
+
+/* Восстановить сохранённую под-вкладку */
+function restoreElecSubtab() {
+  let saved = 'today';
+  try { saved = localStorage.getItem(ELEC_SUBTAB_KEY) || 'today'; } catch (e) {}
+  switchElecSubtab(saved);
+}
 /* Контекстная строка */
 function renderElectronicContextInfo() {
   const box = $('#elecContextInfo');
@@ -3709,20 +3763,14 @@ function renderElectronicSummary(record) {
   renderElectronicSummaryWeekMatrix();
 
   // Экраны: показываем только резюме
-  $('#elecSelectView').style.display = 'none';
-  $('#elecTodayCard').style.display = 'none';
-  $('#elecWeekCard').style.display = 'none';
-  $('#elecSummaryView').style.display = 'block';
+$('#elecSelectView').style.display = 'none';
+$('#elecSummaryView').style.display = 'block';
 
   // Обработчики кнопок
   $('#elecSummaryBackBtn')?.addEventListener('click', () => {
     refreshElectronicTab();
     $('#elecSelectView').style.display = 'block';
     $('#elecSummaryView').style.display = 'none';
-    if (elecState.line) {
-      $('#elecTodayCard').style.display = 'block';
-      $('#elecWeekCard').style.display = 'block';
-    }
   });
 
   $('#elecSummaryNewBtn')?.addEventListener('click', () => {
@@ -3736,9 +3784,11 @@ function renderElectronicSummary(record) {
     elecState.items = [];
 
     $('#elecContextInfo').style.display = 'none';
-    $('#elecTodayCard').style.display = 'none';
-    $('#elecWeekCard').style.display = 'none';
+    $('#elecSubtabs').style.display = 'none';
+    $('#elecSubtabToday').style.display = 'none';
+    $('#elecSubtabWeek').style.display = 'none';
     $('#elecChecklistContainer').innerHTML = '';
+    $('#elecWeekMatrix').innerHTML = '';
 
     $('#elecSelectView').style.display = 'block';
     $('#elecSummaryView').style.display = 'none';
@@ -3754,17 +3804,6 @@ function renderElectronicSummary(record) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-/* ============================================================
-   Матрица недели
-   ============================================================ */
-
-$('#elecWeekHeader')?.addEventListener('click', () => {
-  elecState.weekExpanded = !elecState.weekExpanded;
-  $('#elecWeekHeader').classList.toggle('expanded', elecState.weekExpanded);
-  $('#elecWeekMatrix').style.display = elecState.weekExpanded ? 'block' : 'none';
-  if (elecState.weekExpanded) renderElectronicWeekMatrix();
-});
-
 function renderElectronicWeekMatrix() {
   const wrap = $('#elecWeekMatrix');
   if (!wrap) return;
@@ -3774,11 +3813,10 @@ function renderElectronicWeekMatrix() {
     return;
   }
 
-  // Соберём строки: все активные параметры линии, которые в течение недели встречаются хотя бы раз
   const allParams = getElectronicParamsForLine(elecState.line).filter(p => p.active !== false);
 
   const today = todayISO();
-  const days = getCurrentWeekDays();  // ← 7 дат текущей ISO-недели (Пн..Вс)
+  const days = getCurrentWeekDays();  // 7 дат текущей ISO-недели
 
   const rows = [];
 
@@ -3830,53 +3868,60 @@ function renderElectronicWeekMatrix() {
   });
 
   // --- Шапка ---
+  // Верхняя строка: описательные колонки (rowspan=2) + 7 дат (colspan=2)
   let headerHtml = `<tr>
     <th class="elec-matrix-th-machine" rowspan="2">Машина</th>
     <th class="elec-matrix-th-name" rowspan="2">Параметр</th>
     <th class="elec-matrix-th-time" rowspan="2">Время</th>
     <th class="elec-matrix-th-work" rowspan="2">Run/Stop</th>
     <th class="elec-matrix-th-norm" rowspan="2">Норма</th>`;
+
   days.forEach(date => {
     headerHtml += `<th colspan="2" class="elec-matrix-th-date">${escapeHtml(fmtISODate(date))}</th>`;
   });
   headerHtml += `</tr><tr>`;
+
+  // Нижняя строка: буквы смен (день/ночь)
   days.forEach(date => {
     const shifts = getShiftsForDate(date);
-    headerHtml += `<th class="elec-matrix-th-shift">${shifts.day}</th>`;
+    headerHtml += `<th class="elec-matrix-th-shift elec-matrix-th-shift-day">${shifts.day}</th>`;
     headerHtml += `<th class="elec-matrix-th-shift elec-matrix-th-shift-night">${shifts.night}</th>`;
   });
   headerHtml += `</tr>`;
 
   // --- Тело ---
   const bodyHtml = rows.map(({ param, cells }) => {
-    // Норма
+
+    // Норма — только для бренда СЕГОДНЯ
     let normText = '';
     let normTitle = '';
+    const brandToday = getElectronicBrandForDate(elecState.line, today) || '';
+
     if (param.controlType === 'ok_not_ok') {
       normText = param.normText
         ? escapeHtml(param.normText)
-        : '<span style="color:var(--text-dim)">—</span>';
+        : '<span class="elec-matrix-empty">—</span>';
       normTitle = param.normText || '';
     } else {
-      const norms = (param.valuesByBrand || [])
-        .filter(v =>
-          v.brand &&
-          v.target !== '' && v.target != null &&
-          v.tolerance !== '' && v.tolerance != null
-        )
-        .map(v => `${v.brand}: ${v.target}±${v.tolerance}`);
-      if (norms.length) {
-        normText = escapeHtml(norms.join(' · '));
-        normTitle = norms.join('\n');
+      if (!brandToday) {
+        normText = '<span class="elec-matrix-empty">нет бренда</span>';
+        normTitle = 'На сегодня бренд не задан в расписании';
       } else {
-        normText = '<span style="color:var(--text-dim)">—</span>';
+        const v = (param.valuesByBrand || []).find(v => v.brand === brandToday);
+        if (v && v.target !== '' && v.target != null && v.tolerance !== '' && v.tolerance != null) {
+          normText = `<span class="elec-norm-brand">${escapeHtml(v.brand)}:</span> ${v.target}±${v.tolerance}`;
+          normTitle = `${v.brand}: ${v.target}±${v.tolerance}`;
+        } else {
+          normText = '<span class="elec-matrix-empty">—</span>';
+          normTitle = `Для бренда ${brandToday} норма не задана`;
+        }
       }
     }
 
     // Время
     const timeText = (param.timeFrom && param.timeTo)
-      ? `${escapeHtml(param.timeFrom)}–${escapeHtml(param.timeTo)}`
-      : '—';
+      ? `<span class="elec-time-from">${escapeHtml(param.timeFrom)}</span><span class="elec-time-sep">–</span><span class="elec-time-to">${escapeHtml(param.timeTo)}</span>`
+      : '<span class="elec-matrix-empty">—</span>';
 
     // Run/Stop
     const workCls = param.work === 'Run' ? 'elec-check-work-run' : 'elec-check-work-stop';
@@ -3911,7 +3956,20 @@ function renderElectronicWeekMatrix() {
         }
         if (isToday) cls += ' elec-cell-today';
 
+      // Запланировано и не проверено — кликабельно
+      // Уже проверено — тоже кликабельно (для просмотра)
+      // Не запланировано — не кликабельно
+      const isClickable = due; // due = true, если параметр запланирован на этот день/смену
+
+      if (isClickable) {
+        cellsHtml += `<td class="${cls} elec-cell-clickable"
+          data-param-id="${escapeAttr(param.id)}"
+          data-date="${escapeAttr(date)}"
+          data-shift-type="${escapeAttr(shiftType)}"
+          title="Нажмите, чтобы ${saved ? 'посмотреть / изменить' : 'проверить'}">${text}</td>`;
+      } else {
         cellsHtml += `<td class="${cls}">${text}</td>`;
+      }
       });
     });
 
@@ -3925,21 +3983,710 @@ function renderElectronicWeekMatrix() {
     </tr>`;
   }).join('');
 
+  // --- Считаем счётчики по неделе ---
+  let weekOk = 0;
+  let weekFail = 0;
+  let weekUnchecked = 0;
+  let weekDue = 0;     // всего "запланировано к проверке"
+  let weekNa = 0;      // ячеек "не запланировано"
+
+  days.forEach(date => {
+    ['day', 'night'].forEach(shiftType => {
+      const shiftLetter = getShiftsForDate(date)[shiftType];
+      rows.forEach(({ param, cells }) => {
+        const due = cells[`${date}|${shiftType}`];
+        if (!due) { weekNa++; return; }
+        weekDue++;
+        const key = `${date}|${shiftLetter}|${param.id}`;
+        const saved = savedStatus[key];
+        if (saved === 'OK') weekOk++;
+        else if (saved === 'FAIL') weekFail++;
+        else if (saved === 'UNCHECKED') weekUnchecked++;
+      });
+    });
+  });
+
   wrap.innerHTML = `
+    <div class="elec-matrix-toolbar">
+      <div class="elec-matrix-legend">
+        <span><span class="elec-matrix-legend-swatch elec-matrix-legend-due"></span>Запланировано</span>
+        <span><span class="elec-matrix-legend-swatch elec-matrix-legend-ok"></span>ОК</span>
+        <span><span class="elec-matrix-legend-swatch elec-matrix-legend-fail"></span>Не ОК</span>
+        <span><span class="elec-matrix-legend-swatch elec-matrix-legend-unchecked"></span>Не проверено</span>
+        <span><span class="elec-matrix-legend-swatch elec-matrix-legend-na"></span>Не запланировано</span>
+      </div>
+
+      <div class="elec-matrix-counters">
+        <span class="elec-counter-chip elec-counter-ok" title="Проверено с результатом ОК">
+          ✓ ОК: <strong>${weekOk}</strong>
+        </span>
+        <span class="elec-counter-chip elec-counter-fail" title="Проверено с отклонением">
+          ✕ Не ОК: <strong>${weekFail}</strong>
+        </span>
+        <span class="elec-counter-chip elec-counter-unchecked" title="Не проверено">
+          ? Не проверено: <strong>${weekUnchecked}</strong>
+        </span>
+        <span class="elec-counter-chip elec-counter-due" title="Всего запланировано за неделю">
+          Всего к проверке: <strong>${weekDue}</strong>
+        </span>
+      </div>
+
+      <button class="btn btn-secondary btn-icon-text elec-export-week-btn"
+              id="elecExportWeekBtn" type="button"
+              title="Скачать отчёт по неделе в Excel">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span>Экспорт недели</span>
+      </button>
+    </div>
+
     <div class="elec-matrix-wrap">
       <table class="elec-matrix">
+        <colgroup>
+          <col class="elec-col-machine">
+          <col class="elec-col-name">
+          <col class="elec-col-time">
+          <col class="elec-col-work">
+          <col class="elec-col-norm">
+          ${days.map(() => '<col class="elec-col-day"><col class="elec-col-day">').join('')}
+        </colgroup>
         <thead>${headerHtml}</thead>
         <tbody>${bodyHtml}</tbody>
       </table>
     </div>
-    <div class="elec-matrix-legend">
-      <span><span class="elec-matrix-legend-swatch elec-matrix-legend-due"></span>Запланировано</span>
-      <span><span class="elec-matrix-legend-swatch elec-matrix-legend-ok"></span>ОК</span>
-      <span><span class="elec-matrix-legend-swatch elec-matrix-legend-fail"></span>Не ОК</span>
-      <span><span class="elec-matrix-legend-swatch elec-matrix-legend-unchecked"></span>Не проверено</span>
-    </div>
   `;
+  wrap.querySelector('#elecExportWeekBtn')?.addEventListener('click', () => {
+    exportElectronicWeekToXlsx({
+      line: elecState.line,
+      days,
+      rows,
+      savedStatus
+    });
+  });
+  // Навешиваем клики на все кликабельные ячейки
+  wrap.querySelectorAll('.elec-cell-clickable').forEach(td => {
+    td.addEventListener('click', () => {
+      const paramId = td.dataset.paramId;
+      const date = td.dataset.date;
+      const shiftType = td.dataset.shiftType;
+      if (!paramId || !date || !shiftType) return;
+
+      // Находим параметр
+      const param = getElectronicParamsForLine(elecState.line)
+        .find(p => p.id === paramId);
+      if (!param) return;
+
+      openQuickCheckModal(param, date, shiftType);
+    });
+  });
 }
+/* ============================================================
+   CL ELECTRONIC: экспорт недели в XLSX
+   ============================================================ */
+async function exportElectronicWeekToXlsx({ line, days, rows, savedStatus }) {
+  if (typeof ExcelJS === 'undefined') {
+    return showToast('Библиотека ExcelJS не загружена', true);
+  }
+  if (!line || !days.length || !rows.length) {
+    return showToast('Нет данных для экспорта', true);
+  }
+
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Tools CL / SMD Cell2';
+  wb.created = new Date();
+
+  // ---------- Лист 1. Матрица недели ----------
+  const ws = wb.addWorksheet('Неделя', {
+    views: [{ state: 'frozen', xSplit: 5, ySplit: 2 }]
+  });
+
+  // Заголовки — 5 описательных + 14 сменных (7 дней × 2 смены)
+  const header1 = ['Машина', 'Параметр', 'Время', 'Run/Stop', 'Норма'];
+  const header2 = ['', '', '', '', ''];
+
+  days.forEach(date => {
+    // верхняя строка — дата (colspan 2)
+    header1.push(fmtISODate(date), '');
+    // нижняя строка — буквы смен
+    const shifts = getShiftsForDate(date);
+    header2.push(shifts.day, shifts.night);
+  });
+
+  // Добавляем строки заголовков
+  const row1 = ws.addRow(header1);
+  const row2 = ws.addRow(header2);
+
+  // Объединяем 5 описательных колонок вертикально (rowspan=2)
+  for (let col = 1; col <= 5; col++) {
+    ws.mergeCells(1, col, 2, col);
+  }
+  // Объединяем даты (каждая — colspan=2)
+  days.forEach((_, idx) => {
+    const col = 6 + idx * 2;
+    ws.mergeCells(1, col, 1, col + 1);
+  });
+
+  // Стилизация шапки
+  [row1, row2].forEach(r => {
+    r.height = 28;
+    r.eachCell({ includeEmpty: true }, (cell) => {
+      cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4FA8' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+      cell.border = {
+        top:    { style: 'thin', color: { argb: 'FF0A4FA8' } },
+        bottom: { style: 'thin', color: { argb: 'FF0A4FA8' } },
+        left:   { style: 'thin', color: { argb: 'FF0A4FA8' } },
+        right:  { style: 'thin', color: { argb: 'FF0A4FA8' } }
+      };
+    });
+  });
+
+  // Ширины колонок
+  ws.getColumn(1).width = 10;   // Машина
+  ws.getColumn(2).width = 28;   // Параметр
+  ws.getColumn(3).width = 13;   // Время
+  ws.getColumn(4).width = 10;   // Run/Stop
+  ws.getColumn(5).width = 18;   // Норма
+  days.forEach((_, idx) => {
+    ws.getColumn(6 + idx * 2).width = 7;      // смена «Д»
+    ws.getColumn(6 + idx * 2 + 1).width = 7;  // смена «Н»
+  });
+
+  // ---------- Данные ----------
+  const COLOR_OK_BG    = 'FFD4F5E0';  // светло-зелёный
+  const COLOR_FAIL_BG  = 'FFFDE0E3';  // светло-красный
+  const COLOR_UNCH_BG  = 'FFFFF3D6';  // светло-амбер
+  const COLOR_NA_BG    = 'FFEDEEF2';  // светло-серый
+  const COLOR_DUE_BG   = 'FFE1F7FF';  // светло-циан
+
+  const COLOR_OK_TX    = 'FF00A862';
+  const COLOR_FAIL_TX  = 'FFC0392B';
+  const COLOR_UNCH_TX  = 'FFE89A00';
+
+  const COLOR_BORDER   = 'FFCBD2D9';
+
+  rows.forEach(({ param, cells }) => {
+    // Норма для бренда сегодня (как в матрице)
+    const brandToday = getElectronicBrandForDate(line, todayISO()) || '';
+    let normText = '';
+    if (param.controlType === 'ok_not_ok') {
+      normText = param.normText || '';
+    } else if (brandToday) {
+      const v = (param.valuesByBrand || []).find(v => v.brand === brandToday);
+      if (v && v.target !== '' && v.target != null && v.tolerance !== '' && v.tolerance != null) {
+        normText = `${v.brand}: ${v.target}±${v.tolerance}`;
+      }
+    }
+
+    // Собираем строку
+    const timeText = (param.timeFrom && param.timeTo)
+      ? `${param.timeFrom}–${param.timeTo}`
+      : '';
+
+    const rowData = [
+      param.machine || '',
+      param.paramName || '',
+      timeText,
+      param.work || '',
+      normText
+    ];
+
+    days.forEach(date => {
+      ['day', 'night'].forEach(shiftType => {
+        const due = cells[`${date}|${shiftType}`];
+        const shiftLetter = getShiftsForDate(date)[shiftType];
+        const key = `${date}|${shiftLetter}|${param.id}`;
+        const saved = savedStatus[key];
+
+        let text = '—';
+        if (!due) text = '—';
+        else if (saved === 'OK') text = '✓';
+        else if (saved === 'FAIL') text = '✕';
+        else if (saved === 'UNCHECKED') text = '?';
+        else text = '';
+
+        rowData.push(text);
+      });
+    });
+
+    const row = ws.addRow(rowData);
+    row.height = 22;
+
+    // Стилизация ячеек данных
+    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      cell.font = { name: 'Calibri', size: 10 };
+      cell.alignment = { vertical: 'middle', horizontal: colNumber <= 5 ? 'left' : 'center' };
+      cell.border = {
+        top:    { style: 'thin', color: { argb: COLOR_BORDER } },
+        bottom: { style: 'thin', color: { argb: COLOR_BORDER } },
+        left:   { style: 'thin', color: { argb: COLOR_BORDER } },
+        right:  { style: 'thin', color: { argb: COLOR_BORDER } }
+      };
+    });
+
+    // Стилизация 5 описательных ячеек
+    row.getCell(1).font = { name: 'Courier New', size: 10, bold: true, color: { argb: 'FF2E5288' } };
+    row.getCell(2).font = { name: 'Calibri', size: 10, color: { argb: 'FF1A2643' } };
+    row.getCell(3).font = { name: 'Courier New', size: 10, color: { argb: 'FF00A8CC' } };
+    row.getCell(5).font = { name: 'Courier New', size: 10, bold: true, color: { argb: 'FF7B5CFF' } };
+
+    // Стилизация сменных ячеек
+    days.forEach((date, idx) => {
+      ['day', 'night'].forEach((shiftType, s) => {
+        const colNumber = 6 + idx * 2 + s;
+        const cell = row.getCell(colNumber);
+        const due = cells[`${date}|${shiftType}`];
+        const shiftLetter = getShiftsForDate(date)[shiftType];
+        const key = `${date}|${shiftLetter}|${param.id}`;
+        const saved = savedStatus[key];
+
+        if (!due) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_NA_BG } };
+          cell.font = { name: 'Calibri', size: 10, color: { argb: 'FF8896B0' } };
+        } else if (saved === 'OK') {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_OK_BG } };
+          cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: COLOR_OK_TX } };
+        } else if (saved === 'FAIL') {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_FAIL_BG } };
+          cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: COLOR_FAIL_TX } };
+        } else if (saved === 'UNCHECKED') {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_UNCH_BG } };
+          cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: COLOR_UNCH_TX } };
+        } else {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_DUE_BG } };
+          cell.font = { name: 'Calibri', size: 10, color: { argb: 'FF00A8CC' } };
+        }
+      });
+    });
+  });
+
+  // Автофильтр по шапке
+  ws.autoFilter = {
+    from: { row: 1, column: 1 },
+    to:   { row: 1, column: 5 + days.length * 2 }
+  };
+
+  // ---------- Лист 2. Детали (проверки за неделю) ----------
+  const ws2 = wb.addWorksheet('Детали');
+  ws2.columns = [
+    { header: 'Дата',        width: 12 },
+    { header: 'Смена',       width: 8  },
+    { header: 'Оператор',    width: 25 },
+    { header: 'Машина',      width: 10 },
+    { header: 'Параметр',    width: 30 },
+    { header: 'Время',       width: 13 },
+    { header: 'Норма',       width: 18 },
+    { header: 'Ответ',       width: 18 },
+    { header: 'Статус',      width: 12 },
+    { header: 'Комментарий', width: 40 }
+  ];
+
+  const headerRow2 = ws2.getRow(1);
+  headerRow2.height = 26;
+  headerRow2.eachCell((cell) => {
+    cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4FA8' } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    cell.border = {
+      top:    { style: 'thin', color: { argb: 'FF0A4FA8' } },
+      bottom: { style: 'thin', color: { argb: 'FF0A4FA8' } },
+      left:   { style: 'thin', color: { argb: 'FF0A4FA8' } },
+      right:  { style: 'thin', color: { argb: 'FF0A4FA8' } }
+    };
+  });
+
+  // Собираем записи за неделю
+  const history = getHistory().filter(h =>
+    h.mode === 'electronic' &&
+    h.line === line &&
+    days.includes(h.date)
+  );
+
+  const details = [];
+  history.forEach(h => {
+    h.items.forEach(it => {
+      if (it.status === 'UNCHECKED') return; // не показываем непроверенные в деталях
+      const param = getElectronicParamsForLine(line).find(p => p.id === it.standardId);
+      const normText = param ? (param.normText || '') : '';
+      details.push({
+        date: h.date,
+        shift: h.shift,
+        operator: h.operator || '',
+        machine: it.machine || '',
+        paramName: it.paramName || '',
+        time: (it.timeFrom && it.timeTo) ? `${it.timeFrom}–${it.timeTo}` : '',
+        norm: it.normText || normText,
+        answer: it.answer || '',
+        status: it.status,
+        comment: it.comment || ''
+      });
+    });
+  });
+
+  details.sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    if (a.shift !== b.shift) return a.shift.localeCompare(b.shift);
+    return a.machine.localeCompare(b.machine, 'ru');
+  });
+
+  details.forEach(d => {
+    const row = ws2.addRow([
+      fmtISODate(d.date),
+      d.shift,
+      d.operator,
+      d.machine,
+      d.paramName,
+      d.time,
+      d.norm,
+      d.answer,
+      d.status === 'OK' ? 'ОК' : 'Не ОК',
+      d.comment
+    ]);
+    row.height = 20;
+
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      cell.font = { name: 'Calibri', size: 10 };
+      cell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: false };
+      cell.border = {
+        top:    { style: 'thin', color: { argb: COLOR_BORDER } },
+        bottom: { style: 'thin', color: { argb: COLOR_BORDER } },
+        left:   { style: 'thin', color: { argb: COLOR_BORDER } },
+        right:  { style: 'thin', color: { argb: COLOR_BORDER } }
+      };
+    });
+
+    // Статус цветом
+    const statusCell = row.getCell(9);
+    if (d.status === 'OK') {
+      statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_OK_BG } };
+      statusCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: COLOR_OK_TX } };
+    } else {
+      statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_FAIL_BG } };
+      statusCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: COLOR_FAIL_TX } };
+    }
+    statusCell.alignment = { vertical: 'middle', horizontal: 'center' };
+
+    // Машина — моно
+    row.getCell(4).font = { name: 'Courier New', size: 10, bold: true, color: { argb: 'FF2E5288' } };
+  });
+
+  // Если нет деталей — добавим надпись
+  if (details.length === 0) {
+    const row = ws2.addRow(['—', '—', '—', '—', 'За эту неделю нет завершённых проверок', '—', '—', '—', '—', '—']);
+    row.height = 20;
+  }
+
+  // ---------- Скачивание ----------
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
+
+  const firstDay = days[0];
+  const fname = `eparam_week_${line}_${firstDay}.xlsx`;
+  downloadBlob(blob, fname);
+
+  showToast('Отчёт по неделе выгружен');
+}
+/* ============================================================
+   БЫСТРАЯ ПРОВЕРКА ИЗ МАТРИЦЫ НЕДЕЛИ
+   ============================================================ */
+
+// Состояние: что сейчас редактируем
+const quickCheckState = {
+  param: null,       // объект параметра
+  date: '',          // 'YYYY-MM-DD'
+  shiftType: '',     // 'day' | 'night'
+  shiftLetter: '',   // буква бригады 'A'..'D'
+  brand: '',         // бренд на этот день
+  existing: null     // существующая запись истории (если есть)
+};
+
+/**
+ * Открыть модалку быстрой проверки.
+ * @param {object} param — объект электронного параметра
+ * @param {string} date — 'YYYY-MM-DD'
+ * @param {string} shiftType — 'day' | 'night'
+ */
+window.openQuickCheckModal = function(param, date, shiftType) {
+  const modal = $('#quickCheckModal');
+  if (!modal || !param) return;
+
+  // Смена: буква бригады
+  const shifts = getShiftsForDate(date);
+  const shiftLetter = shifts[shiftType] || '—';
+
+  // Бренд на этот день
+  const brand = getElectronicBrandForDate(elecState.line, date) || '';
+
+  // Ищем существующую запись в Истории
+  let existing = null;
+  const history = getHistory().filter(h =>
+    h.mode === 'electronic' &&
+    h.line === elecState.line &&
+    h.date === date &&
+    h.shift === shiftLetter
+  );
+  for (const h of history) {
+    const found = h.items.find(it => it.standardId === param.id);
+    if (found) { existing = found; break; }
+  }
+
+  // Сохраняем состояние
+  quickCheckState.param = param;
+  quickCheckState.date = date;
+  quickCheckState.shiftType = shiftType;
+  quickCheckState.shiftLetter = shiftLetter;
+  quickCheckState.brand = brand;
+  quickCheckState.existing = existing;
+
+  // Заголовок
+  $('#quickCheckModalTitle').textContent =
+    existing ? 'Просмотр проверки' : 'Быстрая проверка';
+
+  // Контекст
+  $('#qcMachine').textContent = param.machine || '—';
+  $('#qcParamName').textContent = param.paramName || '—';
+  $('#qcTime').textContent = (param.timeFrom && param.timeTo)
+    ? `${param.timeFrom}–${param.timeTo}`
+    : '—';
+
+  const workEl = $('#qcWork');
+  workEl.textContent = param.work || '—';
+  workEl.className = 'qc-work-badge ' +
+    (param.work === 'Run' ? 'qc-work-run' : 'qc-work-stop');
+
+  const shiftLabel = shiftType === 'day' ? 'День' : 'Ночь';
+  $('#qcDateShift').textContent =
+    `${fmtISODate(date)} · ${shiftLabel} · бригада ${shiftLetter}`;
+
+  $('#qcBrand').textContent = brand || '— не задан —';
+
+  // Норма
+  let normText = '—';
+  if (param.controlType === 'ok_not_ok') {
+    normText = param.normText || '—';
+  } else if (brand) {
+    const v = (param.valuesByBrand || []).find(v => v.brand === brand);
+    if (v && v.target !== '' && v.target != null && v.tolerance !== '' && v.tolerance != null) {
+      const min = (Number(v.target) - Number(v.tolerance));
+      const max = (Number(v.target) + Number(v.tolerance));
+      normText = `${v.target} ± ${v.tolerance}  →  [${min}, ${max}]`;
+    } else {
+      normText = `Для бренда ${brand} норма не задана`;
+    }
+  } else {
+    normText = 'Бренд не задан — норма недоступна';
+  }
+  $('#qcNormValue').textContent = normText;
+
+  // Показать нужный блок ответа
+  const valueBlock = $('#qcAnswerValueInput');
+  const okNotOkBlock = $('#qcAnswerOkNotOk');
+
+  if (param.controlType === 'ok_not_ok') {
+    valueBlock.style.display = 'none';
+    okNotOkBlock.style.display = 'block';
+    $('#qcAnswerOk').checked = false;
+    $('#qcAnswerFail').checked = false;
+    if (existing) {
+      if (existing.status === 'OK') $('#qcAnswerOk').checked = true;
+      if (existing.status === 'FAIL') $('#qcAnswerFail').checked = true;
+    }
+  } else {
+    valueBlock.style.display = 'block';
+    okNotOkBlock.style.display = 'none';
+    $('#qcValueInput').value = existing && existing.value != null ? existing.value : '';
+    updateQcValueStatus();
+  }
+
+  // Комментарий
+  $('#qcComment').value = existing && existing.comment ? existing.comment : '';
+
+  // Инфо-плашка для существующих
+  const infoEl = $('#qcExistingInfo');
+  if (existing) {
+    infoEl.style.display = 'flex';
+    $('#qcExistingStatus').textContent =
+      existing.status === 'OK' ? 'ОК' :
+      existing.status === 'FAIL' ? 'Не ОК' : 'Не проверено';
+  } else {
+    infoEl.style.display = 'none';
+  }
+
+  modal.classList.add('active');
+};
+
+/* Обновить бейдж «в допуске / не в допуске» для поля значения */
+function updateQcValueStatus() {
+  const badge = $('#qcValueStatus');
+  const inp = $('#qcValueInput');
+  if (!badge || !inp) return;
+
+  const param = quickCheckState.param;
+  const brand = quickCheckState.brand;
+  if (!param || param.controlType === 'ok_not_ok') {
+    badge.textContent = '';
+    badge.className = 'qc-status-badge';
+    return;
+  }
+
+  const v = (param.valuesByBrand || []).find(v => v.brand === brand);
+  if (!v || v.target === '' || v.tolerance === '') {
+    badge.textContent = '';
+    badge.className = 'qc-status-badge';
+    return;
+  }
+
+  const val = parseFloat(inp.value);
+  if (isNaN(val) || inp.value === '') {
+    badge.textContent = '';
+    badge.className = 'qc-status-badge';
+    return;
+  }
+
+  const min = Number(v.target) - Number(v.tolerance);
+  const max = Number(v.target) + Number(v.tolerance);
+  const inRange = val >= min && val <= max;
+
+  badge.textContent = inRange ? '✓ в допуске' : '✕ не в допуске';
+  badge.className = 'qc-status-badge ' + (inRange ? 'qc-ok' : 'qc-fail');
+}
+
+/* Закрыть модалку */
+function closeQuickCheckModal() {
+  const modal = $('#quickCheckModal');
+  if (modal) modal.classList.remove('active');
+  quickCheckState.param = null;
+  quickCheckState.existing = null;
+}
+
+/* Сохранить быструю проверку */
+function saveQuickCheck() {
+  const param = quickCheckState.param;
+  if (!param) return;
+
+  const { date, shiftLetter, brand } = quickCheckState;
+
+  // Собираем ответ
+  let answer = '—';
+  let status = 'UNCHECKED';
+  let value = null;
+
+  if (param.controlType === 'ok_not_ok') {
+    const r = document.querySelector('input[name="qc_answer"]:checked');
+    if (r) {
+      answer = r.value === 'OK' ? 'ОК' : 'Не ОК';
+      status = r.value;
+    }
+  } else {
+    const inp = $('#qcValueInput');
+    const v = parseFloat(inp.value);
+    if (!isNaN(v) && inp.value !== '') {
+      value = v;
+      const norm = (param.valuesByBrand || []).find(x => x.brand === brand);
+      if (norm && norm.target !== '' && norm.tolerance !== '') {
+        const min = Number(norm.target) - Number(norm.tolerance);
+        const max = Number(norm.target) + Number(norm.tolerance);
+        status = (v >= min && v <= max) ? 'OK' : 'FAIL';
+      } else {
+        status = 'OK';
+      }
+      answer = String(v);
+    }
+  }
+
+  if (status === 'UNCHECKED') {
+    return showToast('Введите значение или отметьте ОК / Не ОК', true);
+  }
+
+  const comment = ($('#qcComment').value || '').trim();
+
+  // Формируем item
+  const newItem = {
+    standardId: param.id,
+    machine: param.machine,
+    paramName: param.paramName,
+    work: param.work,
+    timeFrom: param.timeFrom,
+    timeTo: param.timeTo,
+    controlType: param.controlType,
+    target: null,
+    tolerance: null,
+    normText: param.normText || '',
+    answer,
+    value,
+    status,
+    comment
+  };
+
+  // Ищем существующую запись истории — за эту дату+смену+линию
+  const allHist = getHistory();
+  let record = allHist.find(h =>
+    h.mode === 'electronic' &&
+    h.line === elecState.line &&
+    h.date === date &&
+    h.shift === shiftLetter
+  );
+
+  if (record) {
+    // Обновляем item или добавляем новый
+    const idx = record.items.findIndex(it => it.standardId === param.id);
+    if (idx !== -1) {
+      record.items[idx] = newItem;
+    } else {
+      record.items.push(newItem);
+    }
+  } else {
+    // Создаём новую запись истории
+    record = {
+      id: uid(),
+      timestamp: new Date().toISOString(),
+      mode: 'electronic',
+      operator: (elecState.operator || '—').trim() || '—',
+      line: elecState.line,
+      shift: shiftLetter,
+      date,
+      brandPlanned: brand || null,
+      brandActual: brand || '',
+      brandReason: '',
+      items: [newItem]
+    };
+    allHist.push(record);
+  }
+
+  setHistory(allHist);
+  updateNavHistoryCounter();
+
+  closeQuickCheckModal();
+
+  // Перерисовываем матрицу недели
+  renderElectronicWeekMatrix();
+
+  // Если матрица в резюме — перерисуем и её
+  if (typeof renderElectronicSummaryWeekMatrix === 'function') {
+    const summaryVisible = $('#elecSummaryView')?.style.display !== 'none';
+    if (summaryVisible) renderElectronicSummaryWeekMatrix();
+  }
+
+  showToast(quickCheckState.existing ? 'Проверка обновлена' : 'Проверка сохранена');
+}
+
+/* --- Обработчики модалки --- */
+$('#quickCheckModalClose')?.addEventListener('click', closeQuickCheckModal);
+$('#quickCheckCancelBtn')?.addEventListener('click', closeQuickCheckModal);
+$('#quickCheckModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'quickCheckModal') closeQuickCheckModal();
+});
+
+$('#quickCheckSaveBtn')?.addEventListener('click', saveQuickCheck);
+
+// Live-обновление статуса при вводе значения
+$('#qcValueInput')?.addEventListener('input', updateQcValueStatus);
 
 /* Матрица недели внутри резюме — рендерится в отдельный контейнер */
 function renderElectronicSummaryWeekMatrix() {

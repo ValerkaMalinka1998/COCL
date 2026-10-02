@@ -5373,9 +5373,95 @@ header,
 .elec-week-header.expanded .elec-week-hint {
   display: none;
 }
-
 /* ============================================================ */
-/* === CL ELECTRONIC: матрица недели (Машина | Параметр | Норма) */
+/* === CL ELECTRONIC: тулбар над матрицей недели ============== */
+/* ============================================================ */
+
+.elec-matrix-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  margin-bottom: 10px;
+  padding: 10px 14px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.elec-matrix-toolbar .elec-matrix-legend {
+  margin: 0;
+}
+
+/* --- Счётчики недели --- */
+.elec-matrix-counters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.elec-counter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
+  color: var(--text-second);
+  font-variant-numeric: tabular-nums;
+}
+
+.elec-counter-chip strong {
+  font-weight: 800;
+  margin-left: 2px;
+}
+
+.elec-counter-ok {
+  background: rgba(0, 196, 122, 0.1);
+  border-color: rgba(0, 196, 122, 0.4);
+  color: var(--accent-green);
+}
+.elec-counter-ok strong { color: var(--accent-green); }
+
+.elec-counter-fail {
+  background: rgba(255, 45, 111, 0.1);
+  border-color: rgba(255, 45, 111, 0.4);
+  color: var(--accent-red);
+}
+.elec-counter-fail strong { color: var(--accent-red); }
+
+.elec-counter-unchecked {
+  background: rgba(255, 184, 0, 0.1);
+  border-color: rgba(255, 184, 0, 0.4);
+  color: var(--accent-amber);
+}
+.elec-counter-unchecked strong { color: var(--accent-amber); }
+
+.elec-counter-due {
+  background: rgba(0, 212, 255, 0.08);
+  border-color: rgba(0, 212, 255, 0.35);
+  color: var(--accent-cyan);
+}
+.elec-counter-due strong { color: var(--accent-cyan); }
+
+/* Мобильный — вертикальная раскладка */
+@media (max-width: 800px) {
+  .elec-matrix-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .elec-matrix-counters {
+    justify-content: flex-start;
+  }
+}
+/* ============================================================ */
+/* === CL ELECTRONIC: матрица недели =========================== */
 /* ============================================================ */
 
 .elec-matrix-wrap {
@@ -5390,8 +5476,18 @@ header,
   border-collapse: separate;
   border-spacing: 0;
   font-size: 12px;
-  min-width: 100%;
+  table-layout: fixed;
+  width: 100%;
+  min-width: 1150px;
 }
+
+/* --- Ширины колонок --- */
+.elec-col-machine { width: 64px;  }   /* 60 → 64 (чуть шире для шрифта 12px) */
+.elec-col-name    { width: 220px; }   /* 200 → 220 (ещё шире) */
+.elec-col-time    { width: 104px; }   /* 130 → 104 (сжали) */
+.elec-col-work    { width: 76px;  }   /* 80 → 76 (сжали) */
+.elec-col-norm    { width: 118px; }   /* 150 → 118 (сжали) */
+.elec-col-day     { width: 54px;  }   /* 52 → 54 (дни чуть шире) */
 
 /* --- Заголовки --- */
 .elec-matrix thead th {
@@ -5401,7 +5497,7 @@ header,
   text-transform: uppercase;
   letter-spacing: 0.3px;
   font-weight: 700;
-  padding: 8px 10px;
+  padding: 8px 6px;
   text-align: center;
   border-bottom: 1px solid var(--border);
   border-right: 1px solid var(--border);
@@ -5409,14 +5505,10 @@ header,
   top: 0;
   z-index: 2;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.elec-matrix thead th:last-child {
-  border-right: none;
-}
-
-/* ============================================================ */
-/* === CL Electronic: заголовки колонок в матрице ============= */
-/* ============================================================ */
+.elec-matrix thead th:last-child { border-right: none; }
 
 .elec-matrix-th-machine,
 .elec-matrix-th-name,
@@ -5427,151 +5519,180 @@ header,
   background: var(--bg-hover);
 }
 
-.elec-matrix-th-machine {
-  color: var(--blue-mid);
-}
-
 .elec-matrix-th-date {
   border-bottom: 1px dashed var(--border-hi) !important;
+  color: var(--text-main);
+  font-size: 10px;
 }
 
-.elec-matrix-th-machine,
-.elec-matrix-th-name,
-.elec-matrix-th-norm {
-  text-align: left !important;
-  background: var(--bg-hover);
-}
-.elec-matrix-th-date {
-  border-bottom: 1px dashed var(--border-hi) !important;
-}
 .elec-matrix-th-shift {
-  font-size: 12px;
-  color: var(--accent-cyan);
+  font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
+  padding: 4px 2px !important;
 }
-.elec-matrix-th-shift-night {
-  opacity: 0.7;
-}
+.elec-matrix-th-shift-day   { color: var(--accent-cyan); }
+.elec-matrix-th-shift-night { color: var(--accent-purple); opacity: 0.85; }
 
 /* --- Тело таблицы --- */
 .elec-matrix tbody td {
-  padding: 8px 10px;
+  padding: 5px 6px;
   text-align: center;
   border-bottom: 1px solid var(--border);
   border-right: 1px solid var(--border);
   white-space: nowrap;
   vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.elec-matrix tbody tr:last-child td {
-  border-bottom: none;
-}
-.elec-matrix tbody td:last-child {
-  border-right: none;
-}
-.elec-matrix tbody tr:hover td {
-  background: rgba(0, 212, 255, 0.03);
-}
+.elec-matrix tbody tr:last-child td { border-bottom: none; }
+.elec-matrix tbody td:last-child    { border-right: none; }
+.elec-matrix tbody tr:hover td      { background: rgba(0, 212, 255, 0.03); }
 
-/* --- Колонки Машина / Параметр / Норма --- */
+/* --- Машина --- */
 .elec-matrix-machine {
   text-align: left !important;
   font-family: 'Courier New', Consolas, monospace;
   font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   color: var(--blue-mid);
   background: var(--bg-card);
   position: sticky;
   left: 0;
   z-index: 1;
-  min-width: 70px;
-  max-width: 90px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+/* --- Параметр (шире, обрезка по ellipsis) --- */
 .elec-matrix-name {
   text-align: left !important;
   font-weight: 600;
+  font-size: 13px;
   color: var(--text-main);
   background: var(--bg-card);
   position: sticky;
-  left: 70px;    /* ширина машины */
+  left: 64px;
   z-index: 1;
-  min-width: 200px;
-  max-width: 320px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+/* --- Время (в одну строку, компактно) --- */
+.elec-matrix-time {
+  text-align: center !important;
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  background: var(--bg-card);
+  position: sticky;
+  left: 284px;
+  z-index: 1;
+  white-space: nowrap;
+  letter-spacing: 0;
+}
+
+.elec-time-from,
+.elec-time-to {
+  color: var(--accent-cyan);
+}
+
+.elec-time-sep {
+  color: var(--text-dim);
+  margin: 0 2px;
+  font-weight: 500;
+}
+
+/* --- Run/Stop --- */
+.elec-matrix-work {
+  text-align: center !important;
+  background: var(--bg-card);
+  position: sticky;
+  left: 388px;
+  z-index: 1;
+  white-space: normal;
+}
+.elec-matrix-work .elec-check-work {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  line-height: 1.4;
+}
+.elec-matrix-work .elec-check-work-run {
+  background: rgba(0, 196, 122, 0.15);
+  color: var(--accent-green);
+  border: 1px solid rgba(0, 196, 122, 0.4);
+}
+.elec-matrix-work .elec-check-work-stop {
+  background: rgba(255, 169, 77, 0.15);
+  color: var(--accent-amber);
+  border: 1px solid rgba(255, 169, 77, 0.4);
+}
+
+/* --- Норма (фиолетовый, 2 строки) --- */
 .elec-matrix-norm {
   text-align: left !important;
   font-family: 'Courier New', Consolas, monospace;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--accent-amber);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-purple);
   background: var(--bg-card);
   position: sticky;
-  left: 270px;   /* ширина машины + имени */
+  left: 464px;
   z-index: 1;
-  min-width: 140px;
-  max-width: 220px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  line-height: 1.25;
+  word-break: break-word;
+}
+.elec-norm-brand {
+  color: var(--text-second);
+  font-weight: 700;
 }
 
-/* Подсветка sticky-колонок при hover */
+.elec-matrix-empty {
+  color: var(--text-dim);
+  opacity: 0.5;
+}
+
+/* Hover — подсветить sticky */
 .elec-matrix tbody tr:hover .elec-matrix-machine,
 .elec-matrix tbody tr:hover .elec-matrix-name,
+.elec-matrix tbody tr:hover .elec-matrix-time,
+.elec-matrix tbody tr:hover .elec-matrix-work,
 .elec-matrix tbody tr:hover .elec-matrix-norm {
   background: var(--bg-hover);
 }
 
 /* --- Ячейки дней --- */
 .elec-matrix td.elec-matrix-cell {
-  width: 40px;
-  min-width: 40px;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 18px;
+  height: 44px;
   cursor: default;
+  transition: background 0.15s ease;
+  padding: 4px;
 }
-
 .elec-matrix td.elec-matrix-cell.elec-cell-due {
   background: rgba(0, 212, 255, 0.08);
   cursor: pointer;
 }
 .elec-matrix td.elec-matrix-cell.elec-cell-due:hover {
   background: rgba(0, 212, 255, 0.18);
+  box-shadow: inset 0 0 0 2px rgba(0, 212, 255, 0.4);
 }
-
-.elec-matrix td.elec-matrix-cell.elec-cell-ok {
-  background: rgba(0, 196, 122, 0.15);
-  color: var(--accent-green);
-}
-
-.elec-matrix td.elec-matrix-cell.elec-cell-fail {
-  background: rgba(255, 45, 111, 0.15);
-  color: var(--accent-red);
-}
-
-.elec-matrix td.elec-matrix-cell.elec-cell-unchecked {
-  background: rgba(255, 184, 0, 0.12);
-  color: var(--accent-amber);
-}
-
-.elec-matrix td.elec-matrix-cell.elec-cell-na {
-  background: var(--bg-hover);
-  color: var(--text-dim);
-  font-size: 10px;
-}
-
-.elec-matrix td.elec-matrix-cell.elec-cell-today {
-  outline: 2px solid var(--accent-cyan);
-  outline-offset: -2px;
-}
+.elec-matrix td.elec-matrix-cell.elec-cell-ok        { background: rgba(0, 196, 122, 0.15); color: var(--accent-green); }
+.elec-matrix td.elec-matrix-cell.elec-cell-fail      { background: rgba(255, 45, 111, 0.15); color: var(--accent-red); }
+.elec-matrix td.elec-matrix-cell.elec-cell-unchecked { background: rgba(255, 184, 0, 0.12); color: var(--accent-amber); }
+.elec-matrix td.elec-matrix-cell.elec-cell-na        { background: var(--bg-hover); color: var(--text-dim); font-size: 12px; }
+.elec-matrix td.elec-matrix-cell.elec-cell-today     { outline: 2px solid var(--accent-cyan); outline-offset: -2px; }
 
 /* --- Легенда --- */
 .elec-matrix-legend {
@@ -5598,6 +5719,7 @@ header,
 .elec-matrix-legend-ok        { background: rgba(0, 196, 122, 0.15); }
 .elec-matrix-legend-fail      { background: rgba(255, 45, 111, 0.15); }
 .elec-matrix-legend-unchecked { background: rgba(255, 184, 0, 0.12); }
+.elec-matrix-legend-na        { background: var(--bg-hover); }
 /* CL Electronic — бейдж режима (фиолетовый) */
 .badge-mode-electronic {
   background: rgba(123, 92, 255, 0.12);
@@ -5803,75 +5925,282 @@ header,
   font-weight: 700;
 }
 /* ============================================================ */
-/* === CL Electronic: колонки Время и Run/Stop в матрице ====== */
+/* === CL Electronic: модалка быстрой проверки (из матрицы) ==== */
 /* ============================================================ */
 
-.elec-matrix-th-time,
-.elec-matrix-th-work {
-  text-align: left !important;
-  background: var(--bg-hover);
+.qc-context {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
-
-.elec-matrix-time {
-  text-align: left !important;
-  font-family: 'Courier New', Consolas, monospace;
-  font-size: 11px;
+.qc-context-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.qc-context-label {
+  color: var(--text-second);
   font-weight: 600;
-  color: var(--accent-cyan);
-  white-space: nowrap;
-  background: var(--bg-card);
-  position: sticky;
-  left: 270px;   /* после машины + имени */
-  z-index: 1;
   min-width: 100px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.3px;
 }
-
-.elec-matrix-work {
-  text-align: center !important;
-  background: var(--bg-card);
-  position: sticky;
-  left: 370px;   /* после машины + имени + времени */
-  z-index: 1;
-  min-width: 80px;
+.qc-context-value {
+  color: var(--text-main);
+  font-weight: 600;
 }
-
-/* Сдвигаем Норму вправо — теперь она после 4 колонок */
-.elec-matrix-norm {
-  left: 450px;   /* машина + имя + время + work */
+.qc-machine {
+  font-family: 'Courier New', Consolas, monospace;
+  color: var(--blue-mid);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
-
-/* Hover — подсветить sticky-колонки */
-.elec-matrix tbody tr:hover .elec-matrix-time,
-.elec-matrix tbody tr:hover .elec-matrix-work {
-  background: var(--bg-hover);
+.qc-time {
+  font-family: 'Courier New', Consolas, monospace;
+  color: var(--accent-cyan);
+  font-weight: 700;
 }
-
-/* Универсальный чип Run/Stop (для списка и матрицы) */
-.elec-check-work-run,
-.elec-check-work.work-run,
-.elec-check-work[data-work="Run"] {
+.qc-work-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.qc-work-badge.qc-work-run {
   background: rgba(0, 196, 122, 0.15);
   color: var(--accent-green);
   border: 1px solid rgba(0, 196, 122, 0.4);
-  padding: 2px 10px;
-  border-radius: 10px;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  display: inline-block;
 }
-.elec-check-work-stop,
-.elec-check-work.work-stop,
-.elec-check-work[data-work="Stop"] {
+.qc-work-badge.qc-work-stop {
   background: rgba(255, 169, 77, 0.15);
   color: var(--accent-amber);
   border: 1px solid rgba(255, 169, 77, 0.4);
-  padding: 2px 10px;
-  border-radius: 10px;
-  font-size: 10px;
+}
+
+.qc-norm-block {
+  background: rgba(123, 92, 255, 0.06);
+  border: 1px solid rgba(123, 92, 255, 0.3);
+  border-left: 3px solid var(--accent-purple);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+.qc-norm-label {
+  font-size: 11px;
+  color: var(--text-second);
   font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+.qc-norm-value {
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--accent-purple);
+}
+
+.qc-answer-block {
+  margin-bottom: 14px;
+}
+.qc-answer-block label {
+  font-size: 12px;
+  color: var(--text-second);
+  font-weight: 600;
+  text-transform: uppercase;
   letter-spacing: 0.3px;
+  margin-bottom: 6px;
+  display: block;
+}
+.qc-answer-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.qc-answer-row input[type="number"] {
+  flex: 0 0 160px;
+  padding: 10px 14px;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+  font-family: 'Courier New', Consolas, monospace;
+}
+.qc-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.qc-status-badge.qc-ok {
+  background: rgba(0, 196, 122, 0.15);
+  color: var(--accent-green);
+  border: 1px solid rgba(0, 196, 122, 0.5);
+}
+.qc-status-badge.qc-fail {
+  background: rgba(255, 45, 111, 0.15);
+  color: var(--accent-red);
+  border: 1px solid rgba(255, 45, 111, 0.5);
+}
+.qc-status-badge:empty {
+  display: none;
+}
+
+.qc-radio-group {
+  display: inline-flex;
+  gap: 12px;
+}
+.qc-radio-group label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  background: var(--bg-input);
+  border: 2px solid var(--border-hi);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+  text-transform: none;
+  letter-spacing: 0;
+  margin: 0;
+  transition: border-color 0.15s, background 0.15s;
+}
+.qc-radio-group label:hover {
+  border-color: var(--accent-cyan);
+}
+.qc-radio-group input {
+  accent-color: var(--accent-cyan);
+  cursor: pointer;
+  margin: 0;
+}
+
+.qc-existing-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(255, 184, 0, 0.08);
+  border: 1px solid rgba(255, 184, 0, 0.4);
+  border-left: 3px solid var(--accent-amber);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text-main);
+  line-height: 1.4;
+  margin-top: 8px;
+}
+.qc-existing-info svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--accent-amber);
+  margin-top: 1px;
+}
+.qc-existing-info strong {
+  color: var(--accent-amber);
+  font-weight: 700;
+}
+/* Кликабельные ячейки */
+.elec-matrix td.elec-matrix-cell.elec-cell-clickable {
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+.elec-matrix td.elec-matrix-cell.elec-cell-clickable:hover {
+  box-shadow: inset 0 0 0 2px var(--accent-cyan);
+  transform: scale(1.05);
+  z-index: 3;
+}
+/* Кнопка экспорта недели — компактная */
+.elec-export-week-btn {
+  padding: 6px 14px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.elec-export-week-btn svg {
+  width: 14px;
+  height: 14px;
+}
+/* ============================================================ */
+/* === CL ELECTRONIC: под-вкладки (Сегодня / Неделя) ========== */
+/* ============================================================ */
+
+.elec-subtabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.elec-subtab-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: transparent;
+  border: 2px solid var(--border-hi);      /* ← было: transparent */
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--text-second);
+  transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
+  min-height: 48px;
+  overflow: hidden;
+}
+
+.elec-subtab-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
+}
+
+/* Жёстко ограничиваем SVG — 18×18 */
+.elec-subtab-btn svg {
+  width: 18px !important;
+  height: 18px !important;
+  max-width: 18px;
+  max-height: 18px;
+  display: block;
+  flex: 0 0 18px;
+  pointer-events: none;
+}
+
+.elec-subtab-btn span {
   display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.elec-subtab-btn.active {
+  background: linear-gradient(135deg, var(--blue-mid), var(--blue-light));
+  color: #ffffff;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 16px rgba(0, 212, 255, 0.35);
+}
+
+.elec-subtab-btn.active svg {
+  stroke: #ffffff;
 }
