@@ -185,17 +185,17 @@
         <label class="required">Тип перехода</label>
         <input type="hidden" id="transitionType" value="">
         <div class="type-selector" id="typeSelector">
-          <button type="button" class="type-option type-option-minor" data-value="Minor">
-            <span class="type-option-title">Minor</span>
-            <span class="type-option-time">35 мин</span>
+          <button type="button" class="type-option type-option-changeover" data-value="ChangeOver">
+            <span class="type-option-title">Change Over</span>
+            <span class="type-option-time">Смена сорта</span>
           </button>
-          <button type="button" class="type-option type-option-intermediate" data-value="Intermediate">
-            <span class="type-option-title">Intermediate</span>
-            <span class="type-option-time">67 мин</span>
+          <button type="button" class="type-option type-option-clto" data-value="CL_TO">
+            <span class="type-option-title">CL в ТО</span>
+            <span class="type-option-time">Тех. обслуживание</span>
           </button>
-          <button type="button" class="type-option type-option-major" data-value="Major">
-            <span class="type-option-title">Major</span>
-            <span class="type-option-time">90 мин</span>
+          <button type="button" class="type-option type-option-clconv" data-value="CL_Conversion">
+            <span class="type-option-title">CL в Конвертацию</span>
+            <span class="type-option-time">Конвертация</span>
           </button>
         </div>
       </div>
@@ -230,8 +230,31 @@
     </div>
   </div>
 
+  <!-- Кнопка «Сформировать проверку» -->
+  <div class="card" id="buildChecklistCard" style="display:none">
+    <div class="build-checklist-row">
+      <div class="build-checklist-info">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 11l3 3L22 4"/>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
+        <span>Всё готово. Сформируйте чек-лист, чтобы приступить к проверке.</span>
+      </div>
+      <button class="btn btn-primary btn-icon-text" id="buildChecklistBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="5 3 19 12 5 21 5 3"/>
+        </svg>
+        <span>Сформировать проверку</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Чек-лист -->
   <div class="card" id="checklistCard" style="display:none">
-    <h2>6. Чек-лист <span id="progressBadge" class="progress-badge"></span></h2>
+    <div class="checklist-header-row">
+      <h2>6. Чек-лист <span id="progressBadge" class="progress-badge"></span></h2>
+      <button class="btn btn-secondary btn-sm" id="editConditionsBtn" type="button">← Изменить условия</button>
+    </div>
 
     <div class="progress-wrap" id="progressWrap" style="display:none">
       <div class="progress-bar-outer">
@@ -247,6 +270,10 @@
       <button class="btn btn-secondary" id="resetCheckBtn">Сбросить</button>
     </div>
   </div>
+
+  <!-- Экран резюме -->
+  <div id="coclSummaryView" style="display:none"></div>
+
 </div>
 <!-- ======================= ВКЛАДКА TOP LOSSES ======================= -->
 <div class="tab" id="tab-toploss">
@@ -591,10 +618,12 @@
       </div>
       <div class="field">
         <label>Тип перехода</label>
-        <select id="filterType">
-          <option value="">Все</option>
-          <option>Minor</option><option>Intermediate</option><option>Major</option>
-        </select>
+          <select id="filterType">
+            <option value="">Все</option>
+            <option>ChangeOver</option>
+            <option>CL_TO</option>
+            <option>CL_Conversion</option>
+          </select>
       </div>
       <div class="field">
         <label>Тип проверки</label>
@@ -696,48 +725,7 @@
     </div>
     <div id="blocksList"></div>
   </div>
-    <div class="card">
-    <h2>График смен CL Electronic</h2>
-    <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
-      Определяет автоматический расчёт смены по дате для вкладки «CL Electronic».
-      Порядок смен и количество дней на смену фиксированы, дата старта задаётся один раз.
-    </p>
 
-    <div class="row">
-      <div class="field">
-        <label>Порядок смен в цикле</label>
-        <input type="text" id="elecShiftCycle" placeholder="D, A, C, B" readonly
-               style="background:var(--bg-hover);font-family:'Courier New',Consolas,monospace;letter-spacing:1px">
-      </div>
-      <div class="field" style="max-width:180px">
-        <label class="required">Дней на одну смену</label>
-        <input type="number" id="elecShiftDays" min="1" max="14" value="2" placeholder="2">
-      </div>
-      <div class="field" style="max-width:220px">
-        <label class="required">Дата старта цикла</label>
-        <input type="date" id="elecShiftStart" value="2026-01-01">
-      </div>
-    </div>
-
-    <div class="photo-path-block" style="margin-top:14px">
-      <div class="photo-path-label">Предпросмотр — ближайшие 8 дней от выбранной даты старта:</div>
-      <div id="elecShiftPreview" class="elec-shift-preview"></div>
-    </div>
-
-    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px">
-      <button class="btn btn-primary btn-icon-text" id="elecShiftSaveBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-          <polyline points="17 21 17 13 7 13 7 21"/>
-          <polyline points="7 3 7 8 15 8"/>
-        </svg>
-        <span>Сохранить</span>
-      </button>
-      <button class="btn btn-secondary" id="elecShiftResetBtn" type="button">
-        Сбросить к стандартному
-      </button>
-    </div>
-  </div>
   <div class="card">
     <h2>Машины для линий</h2>
     <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
@@ -745,46 +733,40 @@
     </p>
     <div id="lineMachinesContainer"></div>
   </div>
-  <div class="card">
-    <h2>Категории Top Losses</h2>
-    <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
-      Потери, дефекты и выбросы, по которым контролируются стандарты.
-      Оператор на вкладке «TOP Losses» выбирает конкретные потери — и получает список стандартов для проверки.
-    </p>
-    <div id="topLossesContainer"></div>
-    <div class="card-actions-bar">
-      <button class="btn btn-primary btn-icon-text" id="openAddTopLossCategoryBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-        <span>Добавить категорию</span>
-      </button>
-      <button class="btn btn-secondary btn-icon-text" id="downloadTopLossesTemplateBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/>
-          <line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
-        <span>Скачать шаблон</span>
-      </button>
-      <button class="btn btn-success btn-icon-text" id="uploadTopLossesBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="17 8 12 3 7 8"/>
-          <line x1="12" y1="3" x2="12" y2="15"/>
-        </svg>
-        <span>Загрузить из Excel</span>
-      </button>
-      <input type="file" id="topLossesFileInput" accept=".xlsx,.xls" style="display:none">
-    </div>
+<div class="card">
+  <h2>Категории Top Losses</h2>
+  <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
+    Потери, дефекты и выбросы, по которым контролируются стандарты.
+    Оператор на вкладке «TOP Losses» выбирает конкретные потери — и получает список стандартов для проверки.
+  </p>
+  <div id="topLossesContainer"></div>
+  <div class="card-actions-bar">
+    <button class="btn btn-secondary btn-icon-text" id="downloadTopLossesTemplateBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      <span>Скачать шаблон</span>
+    </button>
+    <button class="btn btn-success btn-icon-text" id="uploadTopLossesBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <span>Загрузить из Excel</span>
+    </button>
+    <input type="file" id="topLossesFileInput" accept=".xlsx,.xls" style="display:none">
   </div>
+</div>
   <div class="card">
     <h2>Общий список брендов <span class="list-counter" id="brandsCount"></span></h2>
     <div class="list-toolbar">
       <input type="text" id="brandsSearch" placeholder="🔍 Поиск по названию...">
     </div>
-    <div class="scrollable-list" id="brandsList"></div>
+    <div class="brands-list" id="brandsList"></div>
+    <div class="pagination-bar" id="brandsPagination"></div>
     <div class="card-actions-bar">
       <button class="btn btn-primary btn-icon-text" id="openAddBrandModalBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -827,7 +809,8 @@
     <div class="list-toolbar">
       <input type="text" id="operatorsSearch" placeholder="🔍 Поиск по ФИО...">
     </div>
-    <div class="scrollable-list" id="operatorsList"></div>
+    <div class="operators-list" id="operatorsList"></div>
+    <div class="pagination-bar" id="operatorsPagination"></div>
     <div class="card-actions-bar">
       <button class="btn btn-primary btn-icon-text" id="openAddOperatorModalBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -853,6 +836,49 @@
         <span>Загрузить из Excel</span>
       </button>
       <input type="file" id="operatorsFileInput" accept=".xlsx,.xls" style="display:none">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>График смен CL Electronic</h2>
+    <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
+      Определяет автоматический расчёт смены по дате для вкладки «CL Electronic».
+      Порядок смен и количество дней на смену фиксированы, дата старта задаётся один раз.
+    </p>
+
+    <div class="row">
+      <div class="field">
+        <label>Порядок смен в цикле</label>
+        <input type="text" id="elecShiftCycle" placeholder="D, A, C, B" readonly
+               style="background:var(--bg-hover);font-family:'Courier New',Consolas,monospace;letter-spacing:1px">
+      </div>
+      <div class="field" style="max-width:180px">
+        <label class="required">Дней на одну смену</label>
+        <input type="number" id="elecShiftDays" min="1" max="14" value="2" placeholder="2">
+      </div>
+      <div class="field" style="max-width:220px">
+        <label class="required">Дата старта цикла</label>
+        <input type="date" id="elecShiftStart" value="2026-01-01">
+      </div>
+    </div>
+
+    <div class="photo-path-block" style="margin-top:14px">
+      <div class="photo-path-label">Предпросмотр — ближайшие 8 дней от выбранной даты старта:</div>
+      <div id="elecShiftPreview" class="elec-shift-preview"></div>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px">
+      <button class="btn btn-primary btn-icon-text" id="elecShiftSaveBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        <span>Сохранить</span>
+      </button>
+      <button class="btn btn-secondary" id="elecShiftResetBtn" type="button">
+        Сбросить к стандартному
+      </button>
     </div>
   </div>
 
@@ -1073,10 +1099,10 @@
       <div class="list-counter" id="lineBrandsCounter" style="margin-bottom:8px"></div>
       <div class="scrollable-list" id="lineBrandsChecklist" style="max-height:400px"></div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" id="lineBrandsClearBtn">Очистить</button>
-      <button class="btn btn-primary" id="lineBrandsDoneBtn">Готово</button>
-    </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-add-btn-left" id="lineBrandsClearBtn">Очистить</button>
+        <button class="btn btn-primary" id="lineBrandsDoneBtn">Готово</button>
+      </div>
   </div>
 </div>
 
@@ -1099,29 +1125,6 @@
     <div class="modal-footer">
       <button class="btn btn-secondary" id="addOperatorCancelBtn">Отмена</button>
       <button class="btn btn-primary" id="addOperatorBtn">Добавить</button>
-    </div>
-  </div>
-</div>
-<!-- ======================= МОДАЛЬНОЕ ОКНО: КАТЕГОРИЯ TOP LOSSES ======================= -->
-<div class="modal-overlay" id="topLossCategoryModal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 id="topLossCategoryModalTitle">Добавить категорию</h3>
-      <button class="modal-close" id="topLossCategoryModalClose">✕</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="topLossCategoryModalId">
-      <div class="field">
-        <label class="required">Название категории</label>
-        <input type="text" id="topLossCategoryModalName" placeholder="Увеличенные остановки">
-      </div>
-      <p style="color:var(--text-second);font-size:12px;margin-top:8px">
-        Например: <strong>Увеличенные остановки</strong>, <strong>Дефекты по качеству</strong>, <strong>Повышенные выбросы</strong>.
-      </p>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" id="topLossCategoryModalCancel">Отмена</button>
-      <button class="btn btn-primary" id="topLossCategoryModalSave">Добавить</button>
     </div>
   </div>
 </div>
@@ -1152,44 +1155,23 @@
   </div>
 </div>
 
-<!-- ======================= МОДАЛЬНОЕ ОКНО: ПОТЕРИ КАТЕГОРИИ ======================= -->
-<div class="modal-overlay" id="topLossCategoryItemsModal">
-  <div class="modal">
+<!-- ======================= МОДАЛЬНОЕ ОКНО: ВЫБОР ПОТЕРЬ ДЛЯ СТАНДАРТА ======================= -->
+<div class="modal-overlay" id="topLossPickerModal">
+  <div class="modal modal-wide">
     <div class="modal-header">
-      <h3 id="topLossCategoryItemsModalTitle">Категория</h3>
-      <button class="modal-close" id="topLossCategoryItemsModalClose">✕</button>
+      <h3>Выбор потерь для стандарта</h3>
+      <button class="modal-close" id="topLossPickerClose">✕</button>
     </div>
     <div class="modal-body">
-      <input type="hidden" id="topLossCategoryItemsModalCatId">
-      <div id="topLossCategoryItemsModalContent"></div>
-      <button class="btn btn-secondary btn-icon-text machines-add-btn" id="topLossCategoryItemsModalAddBtn" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-        <span>Добавить потерю</span>
-      </button>
+      <div class="field" style="margin-bottom:14px">
+        <input type="text" id="topLossPickerSearch" placeholder="🔍 Поиск по потерям..." autocomplete="off">
+      </div>
+      <div id="topLossPickerList" class="toploss-picker-list"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-primary" id="topLossCategoryItemsModalDoneBtn">Готово</button>
-    </div>
-  </div>
-</div>
-
-<!-- ======================= МОДАЛЬНОЕ ОКНО: ПОДТВЕРЖДЕНИЕ УДАЛЕНИЯ КАТЕГОРИИ ======================= -->
-<div class="modal-overlay" id="topLossDeleteModal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 id="topLossDeleteModalTitle">Удалить категорию?</h3>
-      <button class="modal-close" id="topLossDeleteModalClose">✕</button>
-    </div>
-    <div class="modal-body">
-      <p id="topLossDeleteModalText" style="font-size:13px;color:var(--text-main)"></p>
-      <p id="topLossDeleteModalWarning" style="font-size:12px;color:var(--accent-red);margin-top:10px;display:none"></p>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" id="topLossDeleteModalCancel">Отмена</button>
-      <button class="btn btn-danger" id="topLossDeleteModalConfirm">Удалить</button>
+      <div class="toploss-picker-counter" id="topLossPickerCounter">Выбрано: 0</div>
+      <button class="btn btn-secondary" id="topLossPickerCancel">Отмена</button>
+      <button class="btn btn-primary" id="topLossPickerApply">Применить</button>
     </div>
   </div>
 </div>
@@ -1295,7 +1277,7 @@
 
       <input type="hidden" id="sf_id">
 
-      <h4 class="form-section-title">Основные</h4>
+    <h4 class="form-section-title">Основные</h4>
       <div class="row">
         <div class="field" style="max-width:120px">
           <label class="required">№</label>
@@ -1363,73 +1345,83 @@
         <textarea id="sf_whyCreated" rows="2" placeholder="К чему приводит отсутствие контроля"></textarea>
       </div>
 
-      <h4 class="form-section-title">Точки замера</h4>
-      <table class="measurements-table">
-        <thead>
-          <tr>
-            <th style="width:60px">Точка</th>
-            <th>Значение</th>
-            <th style="width:180px">Сорта</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><input type="number" id="sf_point1" value="1" readonly style="background:var(--bg-hover)"></td>
-            <td><input type="text" id="sf_value1" placeholder="-65 kPa (±10 kPa)"></td>
-            <td><input type="text" id="sf_sorts1" placeholder="Все сорта"></td>
-          </tr>
-          <tr>
-            <td><input type="number" id="sf_point2" value="2" readonly style="background:var(--bg-hover)"></td>
-            <td><input type="text" id="sf_value2" placeholder=""></td>
-            <td><input type="text" id="sf_sorts2" placeholder=""></td>
-          </tr>
-          <tr>
-            <td><input type="number" id="sf_point3" value="3" readonly style="background:var(--bg-hover)"></td>
-            <td><input type="text" id="sf_value3" placeholder=""></td>
-            <td><input type="text" id="sf_sorts3" placeholder=""></td>
-          </tr>
-          <tr>
-            <td><input type="number" id="sf_point4" value="4" readonly style="background:var(--bg-hover)"></td>
-            <td><input type="text" id="sf_value4" placeholder=""></td>
-            <td><input type="text" id="sf_sorts4" placeholder=""></td>
-          </tr>
-        </tbody>
-      </table>
-
       <h4 class="form-section-title">Тип контроля</h4>
       <div class="field">
         <select id="sf_controlType">
           <option value="">— выберите —</option>
           <option value="ok_not_ok">ОК / Не ОК</option>
-          <option value="value_input">Ввод значения</option>
-          <option value="tolerance">В допуске / Не в допуске</option>
+          <option value="value_input">Число ± допуск</option>
+          <option value="range_input">Диапазон (от … до …)</option>
         </select>
       </div>
-      <h4 class="form-section-title">Top Losses (потери, которые контролирует стандарт)</h4>
+
+      <div id="sf_pointsSection">
+        <h4 class="form-section-title">Точки замера</h4>
         <p style="color:var(--text-second);font-size:12px;margin-bottom:10px">
-          Отметьте потери, которые этот стандарт помогает контролировать. Оператор увидит его
-          на вкладке «TOP Losses», когда выберет эти потери.
+          Для каждого бренда задайте свой набор точек замера. У всех брендов одинаковое число точек.
+          Добавление/удаление точки применяется ко всем брендам.
         </p>
-      <div id="sf_topLossesGroup"></div>
-      <h4 class="form-section-title">Применять к смене сорта</h4>
+        <div id="sf_brandBlocksContainer"></div>
+        <button type="button" class="btn btn-secondary btn-sm" id="sf_addBrandBlockBtn" style="margin-top:10px">
+          + Добавить бренд
+        </button>
+      </div>
+
+      <h4 class="form-section-title">Применять к</h4>
       <div class="checkbox-group type-checkbox-group" id="sf_appliesToGroup">
-        <label class="type-checkbox type-checkbox-minor">
-          <input type="checkbox" value="Minor"> <span>Minor</span>
+        <label class="type-checkbox type-checkbox-changeover">
+          <input type="checkbox" value="ChangeOver"> <span>Change Over</span>
         </label>
-        <label class="type-checkbox type-checkbox-intermediate">
-          <input type="checkbox" value="Intermediate"> <span>Intermediate</span>
+        <label class="type-checkbox type-checkbox-clto">
+          <input type="checkbox" value="CL_TO"> <span>CL в ТО</span>
         </label>
-        <label class="type-checkbox type-checkbox-major">
-          <input type="checkbox" value="Major"> <span>Major</span>
+        <label class="type-checkbox type-checkbox-clconv">
+          <input type="checkbox" value="CL_Conversion"> <span>CL в Конвертацию</span>
         </label>
       </div>
       <p style="color:var(--text-second);font-size:12px;margin-top:8px">
         Если ничего не выбрано — стандарт хранится в системе, но оператору не показывается.
       </p>
 
-      <h4 class="form-section-title">Триггеры (опционально)</h4>
-      <div id="sf_triggersGroup"></div>
-      
+      <div class="sf-collapsible" id="sf_triggersCollapsible">
+        <div class="sf-collapsible-header" data-sf-toggle="triggers">
+          <span class="sf-collapsible-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </span>
+          <span class="sf-collapsible-title">Триггеры Change Over (опционально)</span>
+          <span class="sf-collapsible-hint">Материалы и узлы, при которых показывать стандарт</span>
+        </div>
+        <div class="sf-collapsible-body">
+          <div id="sf_triggersGroup"></div>
+        </div>
+      </div>
+
+      <div class="sf-collapsible" id="sf_topLossesCollapsible">
+        <div class="sf-collapsible-header" data-sf-toggle="toplosses">
+          <span class="sf-collapsible-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </span>
+          <span class="sf-collapsible-title">Top Losses</span>
+          <span class="sf-collapsible-hint">
+            Применено: <strong id="sf_topLossesCount">0</strong>
+          </span>
+        </div>
+        <div class="sf-collapsible-body">
+          <p style="color:var(--text-second);font-size:12px;margin-bottom:10px">
+            Отметьте потери, которые этот стандарт помогает контролировать.
+            Оператор увидит его на вкладке «TOP Losses», когда выберет эти потери.
+          </p>
+          <div id="sf_topLossesSelected"></div>
+          <button type="button" class="btn btn-secondary btn-sm" id="sf_addTopLossBtn" style="margin-top:10px">
+            + Добавить потерю
+          </button>
+        </div>
+      </div>
+
       <h4 class="form-section-title">Фотографии</h4>
       <p style="color:var(--text-second);font-size:12px;margin-bottom:10px">
         Укажите имена файлов из папки
@@ -1522,16 +1514,16 @@
       <h4 class="form-section-title">Тип контроля</h4>
       <div class="field" style="flex-basis:100%">
         <input type="hidden" id="ep_controlType" value="value_input">
-        <div class="type-selector" id="ep_controlTypeSelector">
-          <button type="button" class="type-option type-option-minor active" data-value="value_input">
-            <span class="type-option-title">Числовой</span>
-            <span class="type-option-time">target ± tolerance</span>
-          </button>
-          <button type="button" class="type-option type-option-intermediate" data-value="ok_not_ok">
-            <span class="type-option-title">ОК / Не ОК</span>
-            <span class="type-option-time">текстовая норма</span>
-          </button>
-        </div>
+          <div class="type-selector" id="ep_controlTypeSelector">
+            <button type="button" class="type-option type-option-changeover active" data-value="value_input">
+              <span class="type-option-title">Числовой</span>
+              <span class="type-option-time">target ± tolerance</span>
+            </button>
+            <button type="button" class="type-option type-option-clto" data-value="ok_not_ok">
+              <span class="type-option-title">ОК / Не ОК</span>
+              <span class="type-option-time">текстовая норма</span>
+            </button>
+          </div>
       </div>
 
       <div id="ep_normTextBlock" style="display:none;margin-top:12px">
@@ -1577,23 +1569,18 @@
         <label>Смены</label>
         <div class="checkbox-group" id="ep_freqDailyShifts"></div>
       </div>
-      <div id="ep_freqWeeklyBlock" style="display:none;margin-top:10px">
-        <label>Дни недели</label>
-        <div class="checkbox-group" id="ep_freqWeeklyDays"></div>
-        <label style="margin-top:10px">Смены</label>
-        <div class="checkbox-group" id="ep_freqWeeklyShifts"></div>
-      </div>
-
-      <div id="ep_freqOnceBlock" style="display:none;margin-top:10px">
-        <div class="field">
-          <label>Даты (через запятую или с новой строки)</label>
-          <textarea id="ep_freqOnceDates" rows="3" placeholder="2026-09-28, 2026-09-30, 2026-10-02"></textarea>
+        <div id="ep_freqWeeklyBlock" style="display:none;margin-top:10px">
+          <label>Дни недели</label>
+          <div class="checkbox-group" id="ep_freqWeeklyDays"></div>
         </div>
-        <label style="margin-top:10px">Смены</label>
-        <div class="checkbox-group" id="ep_freqOnceShifts"></div>
-      </div>
 
-    </div>
+        <div id="ep_freqOnceBlock" style="display:none;margin-top:10px">
+          <div class="field">
+            <label>Даты (через запятую или с новой строки)</label>
+            <textarea id="ep_freqOnceDates" rows="3" placeholder="2026-09-28, 2026-09-30, 2026-10-02"></textarea>
+          </div>
+        </div>
+      </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" id="electronicParamCancel">Отмена</button>
       <button class="btn btn-primary" id="electronicParamSave">Сохранить</button>
@@ -1692,11 +1679,11 @@
       <div id="ebsPreview"></div>
 
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" id="ebsClearAllBtn" type="button" style="margin-right:auto">Очистить всё</button>
-      <button class="btn btn-secondary" id="electronicBrandScheduleCancel">Отмена</button>
-      <button class="btn btn-primary" id="electronicBrandScheduleSave">Сохранить</button>
-    </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-add-btn-left" id="ebsClearAllBtn" type="button">Очистить всё</button>
+        <button class="btn btn-secondary" id="electronicBrandScheduleCancel">Отмена</button>
+        <button class="btn btn-primary" id="electronicBrandScheduleSave">Сохранить</button>
+      </div>
   </div>
 </div>
 <!-- ======================= МОДАЛЬНОЕ ОКНО: БЛОК ЛИНИЙ ======================= -->
@@ -1845,15 +1832,15 @@
     <div class="modal-body">
       <input type="hidden" id="machinesListModalLine">
       <div id="machinesListContent"></div>
-      <button class="btn btn-secondary btn-icon-text machines-add-btn" id="machinesListAddBtn">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-icon-text modal-add-btn-left" id="machinesListAddBtn" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="12" y1="5" x2="12" y2="19"/>
           <line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
         <span>Добавить машину</span>
       </button>
-    </div>
-    <div class="modal-footer">
       <button class="btn btn-primary" id="machinesListDoneBtn">Готово</button>
     </div>
   </div>

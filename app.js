@@ -17,6 +17,8 @@ const STORAGE_KEYS = {
   electronicParams: 'cl_electronic_params_v1',
   electronicBrandSchedule: 'cl_electronic_brandschedule_v1'
 };
+
+
 /* ============================================================
    ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
    ============================================================ */
@@ -110,6 +112,170 @@ const DEFAULT_ELECTRONIC_SHIFT_CFG = {
   nightCycle: ['A','C','C','B','B','D','D','A','A','C','C','B','B','D','D','A'],
   startDate:  '2026-10-01'
 };
+
+/* ============================================================
+   СТЕК МОДАЛЬНЫХ ОКОН
+   ============================================================ */
+
+const modalStack = [];
+
+function openModal(modalOrId) {
+  const modal = typeof modalOrId === 'string'
+    ? (modalOrId.startsWith('#') ? document.querySelector(modalOrId) : document.getElementById(modalOrId))
+    : modalOrId;
+
+  if (!modal) {
+    console.warn('openModal: элемент не найден', modalOrId);
+    return;
+  }
+
+  // Если уже открыта — просто активируем
+  if (modalStack.includes(modal)) {
+    modal.classList.add('active');
+    modal.classList.remove('modal-suspended');
+    return;
+  }
+
+  // Приостанавливаем ВСЕ активные модалки, кроме открываемой.
+  // Это устойчиво к любой вложенности, даже если где-то
+  // модалка была открыта вручную через classList.add('active').
+  document.querySelectorAll('.modal-overlay.active').forEach(m => {
+    if (m !== modal) m.classList.add('modal-suspended');
+  });
+
+  // Считаем z-index поверх стека
+  const baseZ = parseInt(
+    getComputedStyle(document.documentElement)
+      .getPropertyValue('--modal-z-base')
+      .trim() || '2000',
+    10
+  );
+  const z = baseZ + modalStack.length * 10;
+
+  modal.style.zIndex = z;
+  modal.classList.add('active');
+  modal.classList.remove('modal-suspended');
+
+  modalStack.push(modal);
+}
+
+function closeModal(modalOrId) {
+  const modal = typeof modalOrId === 'string'
+    ? (modalOrId.startsWith('#') ? document.querySelector(modalOrId) : document.getElementById(modalOrId))
+    : modalOrId;
+
+  if (!modal) return;
+
+  // Скрываем закрываемую
+  modal.classList.remove('active');
+  modal.classList.remove('modal-suspended');
+  modal.style.zIndex = '';
+
+  // Убираем из стека
+  const idx = modalStack.indexOf(modal);
+  if (idx !== -1) {
+    modalStack.splice(idx, 1);
+  }
+
+  // --- Снимаем suspend со всех модалок, которые должны быть видны ---
+  // Логика: если модалка в стеке — она должна быть видима
+  // (кроме тех, что выше верхушки — их не бывает)
+  document.querySelectorAll('.modal-overlay.modal-suspended').forEach(m => {
+    if (modalStack.includes(m)) {
+      // Модалка в стеке — значит она должна быть видима
+      m.classList.remove('modal-suspended');
+      m.classList.add('active');
+    } else {
+      // Модалка не в стеке — не должна быть видима вообще
+      m.classList.remove('modal-suspended');
+      m.classList.remove('active');
+    }
+  });
+
+  // Пересчитываем z-index оставшихся в стеке
+  const baseZ = parseInt(
+    getComputedStyle(document.documentElement)
+      .getPropertyValue('--modal-z-base')
+      .trim() || '2000',
+    10
+  );
+  modalStack.forEach((m, i) => {
+    m.style.zIndex = baseZ + i * 10;
+  });
+}
+
+function bindModalBackdropClose(modalId) {
+  const modal = typeof modalId === 'string'
+    ? (modalId.startsWith('#') ? document.querySelector(modalId) : document.getElementById(modalId))
+    : modalId;
+  if (!modal) return;
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal(modal);
+  });
+}
+
+/**
+ * Закрыть модалку: убрать из стека + пересчитать z-index оставшихся.
+ * @param {HTMLElement|string} modalOrId
+ */
+function closeModal(modalOrId) {
+  const modal = typeof modalOrId === 'string'
+    ? (modalOrId.startsWith('#') ? document.querySelector(modalOrId) : document.getElementById(modalOrId))
+    : modalOrId;
+
+  if (!modal) return;
+
+  // Скрываем закрываемую
+  modal.classList.remove('active');
+  modal.classList.remove('modal-suspended');
+  modal.style.zIndex = '';
+
+  // Убираем из стека
+  const idx = modalStack.indexOf(modal);
+  if (idx !== -1) {
+    modalStack.splice(idx, 1);
+  }
+
+  // --- Снимаем suspend со всех модалок, которые должны быть видны ---
+  // Логика: если модалка в стеке — она должна быть видима.
+  // Если модалка не в стеке — она не должна быть видима вообще.
+  document.querySelectorAll('.modal-overlay.modal-suspended').forEach(m => {
+    if (modalStack.includes(m)) {
+      m.classList.remove('modal-suspended');
+      m.classList.add('active');
+    } else {
+      m.classList.remove('modal-suspended');
+      m.classList.remove('active');
+    }
+  });
+
+  // Пересчитываем z-index оставшихся в стеке
+  const baseZ = parseInt(
+    getComputedStyle(document.documentElement)
+      .getPropertyValue('--modal-z-base')
+      .trim() || '2000',
+    10
+  );
+  modalStack.forEach((m, i) => {
+    m.style.zIndex = baseZ + i * 10;
+  });
+}
+/**
+ * Утилита: навесить на модалку закрытие по клику вне её.
+ * Требует, чтобы у модалки был собственный id, и весь контент —
+ * внутри вложенного .modal.
+ */
+function bindModalBackdropClose(modalId) {
+  const modal = typeof modalId === 'string'
+    ? (modalId.startsWith('#') ? document.querySelector(modalId) : document.getElementById(modalId))
+    : modalId;
+  if (!modal) return;
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal(modal);
+  });
+}
 
 /* ============================================================
    ЭКРАН 1: БЛОКИ
@@ -602,20 +768,17 @@ function openElectronicParamForm(id) {
   // Периодичность
   $('#ep_freqType').value = p.frequency.type;
   renderFreqShiftsCheckboxes('ep_freqDailyShifts',  p.frequency.shifts || ['A','B','C','D']);
-  renderFreqShiftsCheckboxes('ep_freqWeeklyShifts', p.frequency.shifts || ['A','B','C','D']);
-  renderFreqShiftsCheckboxes('ep_freqOnceShifts',   p.frequency.shifts || ['A','B','C','D']);
   renderFreqDaysCheckboxes('ep_freqWeeklyDays',     p.frequency.daysOfWeek || []);
   $('#ep_freqOnceDates').value = (p.frequency.dates || []).join(', ');
 
   updateFreqBlocksVisibility();
 
-  modal.classList.add('active');
+  openModal(modal);
 }
 window.openElectronicParamForm = openElectronicParamForm;
 
 function closeElectronicParamForm() {
-  const modal = $('#electronicParamModal');
-  if (modal) modal.classList.remove('active');
+  closeModal('#electronicParamModal');
 }
 
 /* Заполнить выпадающий список машин для линии */
@@ -1009,7 +1172,7 @@ let html = `
         <th data-sort="machine">Машина ${getSortIcon('machine')}</th>
         <th data-sort="node">Узел ${getSortIcon('node')}</th>
         <th data-sort="title">Название ${getSortIcon('title')}</th>
-        <th>Подходит под смену сорта</th>
+        <th>Применять к</th>
         <th>Действия</th>
       </tr>
     </thead>
@@ -1019,9 +1182,19 @@ let html = `
   // Тело таблицы
   html += pageItems.map(st => {
     const typesHtml = (st.appliesTo && st.appliesTo.length)
-      ? st.appliesTo.map(t =>
-          `<span class="type-chip type-chip-${t.toLowerCase()} type-chip-xs">${escapeHtml(t)}</span>`
-        ).join('')
+      ? st.appliesTo.map(t => {
+          // Класс по названию типа
+          const cls = t === 'ChangeOver' ? 'type-chip-changeover'
+                    : t === 'CL_TO' ? 'type-chip-clto'
+                    : t === 'CL_Conversion' ? 'type-chip-clconv'
+                    : '';
+          // Отображаемая метка
+          const label = t === 'ChangeOver' ? 'Change Over'
+                      : t === 'CL_TO' ? 'CL в ТО'
+                      : t === 'CL_Conversion' ? 'CL в Конвертацию'
+                      : t;
+          return `<span class="type-chip ${cls} type-chip-xs">${escapeHtml(label)}</span>`;
+        }).join('')
       : '<span class="type-chip-empty">без привязки</span>';
 
     const isActive = st.active !== false;
@@ -1302,7 +1475,7 @@ window.openDeactivationCommentModal = function(stdId) {
     clearBtn.style.display = (st.deactivationComment && st.deactivationComment.trim()) ? '' : 'none';
   }
 
-  modal.classList.add('active');
+  openModal(modal);
   setTimeout(() => {
     const ta = $('#deactivationCommentText');
     if (ta) ta.focus();
@@ -1310,8 +1483,7 @@ window.openDeactivationCommentModal = function(stdId) {
 };
 
 function closeDeactivationCommentModal() {
-  const modal = $('#deactivationCommentModal');
-  if (modal) modal.classList.remove('active');
+  closeModal('#deactivationCommentModal');
   currentDeactivationStdId = null;
 }
 
@@ -1430,6 +1602,18 @@ function fillStandardMachineSelect(line, currentValue) {
   }
 }
 
+function updateStandardPointsVisibility() {
+  const ct = $('#sf_controlType')?.value || '';
+  const section = $('#sf_pointsSection');
+  if (!section) return;
+
+  if (ct === 'ok_not_ok') {
+    section.style.display = 'none';
+  } else {
+    section.style.display = 'block';
+  }
+}
+
 function openStandardForm(id) {
   if (!currentEditorLine) return showToast('Сначала откройте линию', true);
 
@@ -1466,13 +1650,11 @@ function openStandardForm(id) {
   $('#sf_whyCreated').value = st.whyCreated || '';
   $('#sf_controlType').value = st.controlType || '';
 
+  // Показ/скрытие блока точек в зависимости от типа контроля
+  updateStandardPointsVisibility();
+
   // Точки замера
-  const ms = st.measurements || [];
-  for (let i = 1; i <= 4; i++) {
-    const m = ms[i - 1] || { point: i, value: '', sorts: '' };
-    $('#sf_value' + i).value = m.value || '';
-    $('#sf_sorts' + i).value = m.sorts || '';
-  }
+  renderBrandBlocks(st.measurements || []);
 
   // Применять к
   $$('#sf_appliesToGroup input').forEach(cb => {
@@ -1498,14 +1680,13 @@ function openStandardForm(id) {
 
   // Инициализация автокомплита узлов
   initNodeAutocomplete();
-   
-  modal.classList.add('active');
+
+  openModal(modal);
 }
 window.openStandardForm = openStandardForm;
 
 function closeStandardForm() {
-  const modal = $('#standardFormModal');
-  if (modal) modal.classList.remove('active');
+  closeModal('#standardFormModal');
 }
 /* ============================================================
    ФОТОГРАФИИ В ФОРМЕ СТАНДАРТА
@@ -1778,52 +1959,412 @@ function fillStandardTriggersGroup(selected = []) {
 }
 
 /* ============================================================
-   TOP LOSSES — блок в форме стандарта
+   ТОЧКИ ЗАМЕРА — динамический список
    ============================================================ */
+/**
+ * Отрисовать одну строку точки в форме стандарта.
+ * @param {object} point — объект точки { value, brand }
+ * @param {number} index — индекс (для data-атрибутов)
+ * Отрисовать ВСЕ точки замера в форме.
+ * @param {Array} points — массив объектов точек
+*/
+
+
+function renderBrandBlocks(measurements) {
+  const container = $('#sf_brandBlocksContainer');
+  if (!container) return;
+
+  const brands = getBrands();
+
+  // Нормализуем: число точек = максимум по всем брендам
+  const state = (measurements || []).map(b => ({
+    brand: b.brand || '',
+    points: Array.isArray(b.points) ? b.points.map(p => ({ value: p.value || '' })) : []
+  }));
+  const maxPoints = state.reduce((m, b) => Math.max(m, b.points.length), 0);
+  state.forEach(b => {
+    while (b.points.length < maxPoints) b.points.push({ value: '' });
+  });
+
+  // Шапка
+  let headerHtml = `<tr>
+    <th class="bt-th-brand">Бренд</th>`;
+
+  for (let i = 0; i < maxPoints; i++) {
+    headerHtml += `<th class="bt-th-point">
+      <span>Точка ${i + 1}</span>
+      <button type="button" class="bt-remove-point" data-remove-point-col="${i}" title="Удалить точку у всех брендов">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </th>`;
+  }
+
+  headerHtml += `<th class="bt-th-actions">
+    <button type="button" class="bt-add-point-btn" data-add-point-col title="Добавить точку ко всем брендам">+ Точка</button>
+  </th></tr>`;
+
+  // Тело
+  let bodyHtml = '';
+  if (!state.length) {
+    bodyHtml = `<tr><td colspan="${maxPoints + 2}" class="bt-empty">
+      Нет брендов. Нажмите «+ Добавить бренд».
+    </td></tr>`;
+  } else {
+    bodyHtml = state.map((block, rowIndex) => {
+      let cells = '';
+      for (let i = 0; i < maxPoints; i++) {
+        const val = block.points[i]?.value || '';
+        cells += `<td class="bt-td-value">
+          <input type="text" class="bt-point-input"
+                 data-row="${rowIndex}" data-col="${i}"
+                 value="${escapeAttr(val)}" placeholder="0">
+        </td>`;
+      }
+
+      const brandOptions = ['<option value="">Все бренды</option>']
+        .concat(brands.map(b => {
+          const selected = (b === block.brand) ? ' selected' : '';
+          return `<option value="${escapeHtml(b)}"${selected}>${escapeHtml(b)}</option>`;
+        })).join('');
+
+      return `<tr class="bt-row" data-row="${rowIndex}">
+        <td class="bt-td-brand">
+          <select class="bt-brand-select" data-row="${rowIndex}">${brandOptions}</select>
+          <button type="button" class="bt-remove-brand" data-remove-brand="${rowIndex}" title="Удалить бренд">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <path d="M10 11v6"/><path d="M14 11v6"/>
+            </svg>
+          </button>
+        </td>
+        ${cells}
+        <td class="bt-td-actions"></td>
+      </tr>`;
+    }).join('');
+  }
+
+  container.innerHTML = `
+    <div class="brands-table-wrap">
+      <table class="brands-table">
+        <thead>${headerHtml}</thead>
+        <tbody>${bodyHtml}</tbody>
+      </table>
+    </div>
+  `;
+
+  bindBrandsTableEvents();
+}
+
+function bindBrandsTableEvents() {
+  const container = $('#sf_brandBlocksContainer');
+  if (!container) return;
+
+  // --- Смена бренда ---
+  container.querySelectorAll('.bt-brand-select').forEach(sel => {
+    sel.addEventListener('change', () => {
+      // Изменение сохраняется при следующем сборе через collectMeasurements
+    });
+  });
+
+  // --- Удаление бренда ---
+  container.querySelectorAll('[data-remove-brand]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const rowIndex = parseInt(btn.dataset.removeBrand, 10);
+      const state = getTableState();
+      if (!confirm('Удалить бренд со всеми его точками?')) return;
+      state.splice(rowIndex, 1);
+      renderBrandsTableFromState(state);
+    });
+  });
+
+  // --- Удаление колонки точки (у всех брендов) ---
+  container.querySelectorAll('[data-remove-point-col]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const colIndex = parseInt(btn.dataset.removePointCol, 10);
+      const state = getTableState();
+      if (!confirm(`Удалить точку ${colIndex + 1} у всех брендов?`)) return;
+      state.forEach(b => {
+        b.points.splice(colIndex, 1);
+      });
+      renderBrandsTableFromState(state);
+    });
+  });
+
+  // --- Добавление колонки точки (у всех брендов) ---
+  container.querySelectorAll('[data-add-point-col]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const state = getTableState();
+      if (!state.length) {
+        // Нет брендов — создаём универсальный "Все бренды" с одной точкой
+        state.push({ brand: '', points: [{ value: '' }] });
+      } else {
+        state.forEach(b => b.points.push({ value: '' }));
+      }
+      renderBrandsTableFromState(state);
+    });
+  });
+}
+
+/**
+ * Прочитать текущее состояние таблицы из DOM и вернуть как массив блоков.
+ */
+function getTableState() {
+  const container = $('#sf_brandBlocksContainer');
+  if (!container) return [];
+  const state = [];
+
+  container.querySelectorAll('.bt-row').forEach(row => {
+    const brand = row.querySelector('.bt-brand-select')?.value || '';
+    const points = [];
+    row.querySelectorAll('.bt-point-input').forEach(inp => {
+      points.push({ value: inp.value || '' });
+    });
+    state.push({ brand, points });
+  });
+
+  return state;
+}
+
+/** Отрисовать таблицу из state (массива блоков) */
+function renderBrandsTableFromState(state) {
+  // Нормализуем: выравниваем число точек по максимуму
+  const maxPoints = state.reduce((m, b) => Math.max(m, (b.points || []).length), 0);
+  state.forEach(b => {
+    while (b.points.length < maxPoints) b.points.push({ value: '' });
+  });
+
+  renderBrandBlocks(state);
+}
+
+function collectMeasurements() {
+  const container = $('#sf_brandBlocksContainer');
+  if (!container) return [];
+
+  const result = [];
+  container.querySelectorAll('.bt-row').forEach(row => {
+    const brand = row.querySelector('.bt-brand-select')?.value || '';
+    const points = [];
+    row.querySelectorAll('.bt-point-input').forEach(inp => {
+      points.push({ value: (inp.value || '').trim() });
+    });
+    // Обрезаем пустые точки в конце
+    while (points.length && points[points.length - 1].value === '') {
+      points.pop();
+    }
+    // Сохраняем бренд, только если есть хотя бы одна заполненная точка
+    if (points.some(p => p.value !== '')) {
+      result.push({ brand, points });
+    }
+  });
+
+  return result;
+}
+
+/* ============================================================
+   TOP LOSSES в форме стандарта — только выбранные + кнопка
+   ============================================================ */
+
+// Текущий набор выбранных потерь (для формы)
+let sfTopLossesSelected = [];
+
 function fillStandardTopLossesGroup(selected = []) {
-  const g = $('#sf_topLossesGroup');
-  if (!g) return;
+  // Запоминаем состояние
+  sfTopLossesSelected = Array.isArray(selected) ? [...selected] : [];
+  renderSfTopLossesSelected();
+}
+
+/** Отрисовать список выбранных потерь в форме */
+function renderSfTopLossesSelected() {
+  const container = $('#sf_topLossesSelected');
+  const counter = $('#sf_topLossesCount');
+  if (!container) return;
+
+  if (counter) counter.textContent = sfTopLossesSelected.length;
+
+  if (!sfTopLossesSelected.length) {
+    container.innerHTML = '<div class="empty-state" style="padding:12px;font-size:13px">Потери не применены</div>';
+    return;
+  }
+
+  container.innerHTML = sfTopLossesSelected.map(id => {
+    const l = findLossById(id);
+    if (!l) return '';
+    return `
+      <div class="sf-toploss-item" data-toploss-id="${escapeAttr(id)}" title="${escapeAttr(l.categoryName + ': ' + l.name)}">
+        <span class="sf-toploss-name">${escapeHtml(l.name)}</span>
+        <button type="button" class="sf-toploss-remove" data-remove-toploss="${escapeAttr(id)}" title="Убрать">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  // Обработчики удаления
+  container.querySelectorAll('[data-remove-toploss]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const id = btn.dataset.removeToploss;
+      sfTopLossesSelected = sfTopLossesSelected.filter(x => x !== id);
+      renderSfTopLossesSelected();
+    });
+  });
+}
+
+/* ============================================================
+   Модалка выбора потерь
+   ============================================================ */
+
+// Временный набор (до применения)
+let topLossPickerTemp = new Set();
+
+window.openTopLossPickerModal = function() {
+  const modal = $('#topLossPickerModal');
+  if (!modal) return;
+
+  // Копируем текущие выбранные во временное хранилище
+  topLossPickerTemp = new Set(sfTopLossesSelected);
+
+  // Сбрасываем поиск
+  const search = $('#topLossPickerSearch');
+  if (search) search.value = '';
+
+  // Рисуем список
+  renderTopLossPickerList('');
+  updateTopLossPickerCounter();
+
+  openModal(modal);
+
+  setTimeout(() => search?.focus(), 100);
+};
+
+function closeTopLossPickerModal() {
+  closeModal('#topLossPickerModal');
+  topLossPickerTemp = new Set();
+}
+
+/** Отрисовать список категорий и потерь в модалке */
+function renderTopLossPickerList(query) {
+  const list = $('#topLossPickerList');
+  if (!list) return;
 
   const cats = getTopLosses();
-  const selectedSet = new Set(Array.isArray(selected) ? selected : []);
+  const q = (query || '').trim().toLowerCase();
 
   if (!cats.length) {
-    g.innerHTML = '<div class="empty-state" style="padding:14px">Справочник Top Losses пуст. Заполните его в Настройках.</div>';
+    list.innerHTML = '<div class="empty-state" style="padding:20px">Справочник Top Losses пуст</div>';
     return;
   }
 
   let html = '';
+
   cats.forEach(cat => {
     const items = Array.isArray(cat.items) ? cat.items : [];
-    if (!items.length) return;
 
-    html += `<div class="toploss-group">
-      <div class="toploss-group-title">${escapeHtml(cat.name)}</div>
-      <div class="checkbox-group">`;
+    // Фильтрация
+    let visible = items;
+    if (q) {
+      visible = items.filter(it =>
+        it.name.toLowerCase().includes(q) ||
+        cat.name.toLowerCase().includes(q)
+      );
+    }
 
-    items.forEach(it => {
-      const checked = selectedSet.has(it.id);
-      html += `<label class="${checked ? 'checked' : ''}">
-        <input type="checkbox" value="${escapeAttr(it.id)}" ${checked ? 'checked' : ''}>
-        ${escapeHtml(it.name)}
-      </label>`;
-    });
+    // Если в категории нет видимых и запрос не совпал с названием — скрываем
+    if (!visible.length) return;
 
-    html += '</div></div>';
+    html += `
+      <div class="toploss-picker-group" data-cat-id="${escapeAttr(cat.id)}">
+        <div class="toploss-picker-group-head">
+          <span class="toploss-picker-group-name">${escapeHtml(cat.name)}</span>
+          <span class="toploss-picker-group-count">${visible.length}</span>
+        </div>
+        <div class="toploss-picker-group-body">
+          ${visible.map(it => {
+            const checked = topLossPickerTemp.has(it.id);
+            return `
+              <label class="toploss-picker-item ${checked ? 'checked' : ''}" data-loss-id="${escapeAttr(it.id)}">
+                <input type="checkbox" value="${escapeAttr(it.id)}" ${checked ? 'checked' : ''}>
+                <span>${escapeHtml(it.name)}</span>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
   });
 
-  g.innerHTML = html;
+  list.innerHTML = html || '<div class="empty-state" style="padding:20px">Ничего не найдено</div>';
 
-  g.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-    cb.addEventListener('change', e => {
-      e.target.closest('label').classList.toggle('checked', e.target.checked);
+  // Обработчики
+  list.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      const id = e.target.value;
+      if (e.target.checked) {
+        topLossPickerTemp.add(id);
+      } else {
+        topLossPickerTemp.delete(id);
+      }
+      e.target.closest('.toploss-picker-item').classList.toggle('checked', e.target.checked);
+      updateTopLossPickerCounter();
     });
   });
 }
+
+function updateTopLossPickerCounter() {
+  const el = $('#topLossPickerCounter');
+  if (el) el.textContent = 'Выбрано: ' + topLossPickerTemp.size;
+}
+
+/** Применить выбор из модалки */
+function applyTopLossPicker() {
+  sfTopLossesSelected = [...topLossPickerTemp];
+  renderSfTopLossesSelected();
+  closeTopLossPickerModal();
+}
+
+/* --- Обработчики модалки --- */
+$('#sf_addTopLossBtn')?.addEventListener('click', openTopLossPickerModal);
+$('#topLossPickerClose')?.addEventListener('click', closeTopLossPickerModal);
+$('#topLossPickerCancel')?.addEventListener('click', closeTopLossPickerModal);
+$('#topLossPickerApply')?.addEventListener('click', applyTopLossPicker);
+$('#topLossPickerModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'topLossPickerModal') closeTopLossPickerModal();
+});
+$('#topLossPickerSearch')?.addEventListener('input', (e) => {
+  renderTopLossPickerList(e.target.value);
+});
+
 $('#standardFormClose')?.addEventListener('click', closeStandardForm);
 $('#standardFormCancel')?.addEventListener('click', closeStandardForm);
 /* --- Обработчики блока «Фотографии» --- */
 $('#sf_addPhotoBtn')?.addEventListener('click', addPhotoFromInput);
+/* --- Кнопка «+ Добавить блок бренда» --- */
+$('#sf_addBrandBlockBtn')?.addEventListener('click', () => {
+  const state = getTableState();
+
+  // Определяем число точек в текущей таблице
+  const maxPoints = state.reduce((m, b) => Math.max(m, (b.points || []).length), 0);
+  const pointsCount = Math.max(maxPoints, 1); // минимум 1 точка
+
+  // Новый бренд с пустыми значениями для всех точек
+  const newPoints = [];
+  for (let i = 0; i < pointsCount; i++) newPoints.push({ value: '' });
+
+  state.push({ brand: '', points: newPoints });
+  renderBrandsTableFromState(state);
+}); 
+
+  /* --- Смена типа контроля: показ/скрытие блока точек --- */
+  $('#sf_controlType')?.addEventListener('change', () => {
+    updateStandardPointsVisibility();
+  }); 
 
 $('#sf_newPhotoName')?.addEventListener('keydown', (e) => {
   // Ctrl+Enter или Enter без Shift → добавить
@@ -1894,19 +2435,15 @@ if (!controlType) return showToast('Выберите тип контроля', t
   }
 
   // Точки замера
-  const measurements = [1, 2, 3, 4].map(i => ({
-    point: i,
-    value: $('#sf_value' + i).value.trim(),
-    sorts: $('#sf_sorts' + i).value.trim()
-  }));
+  const measurements = collectMeasurements();
 
   // Применять к (типы переходов)
   const appliesTo = [...$$('#sf_appliesToGroup input:checked')].map(c => c.value);
 
   // Триггеры
   const triggers = [...$$('#sf_triggersGroup input:checked')].map(c => c.value);
-  // Top Losses
-  const topLosses = [...$$('#sf_topLossesGroup input:checked')].map(c => c.value);
+  // Top Losses — берём из глобального состояния
+  const topLosses = [...sfTopLossesSelected];
 
   const obj = {
     id: id || uid(),
@@ -2147,18 +2684,15 @@ $('#electronicParamSave')?.addEventListener('click', () => {
   if (freqType === 'daily') {
     frequency.shifts = [...($$('#ep_freqDailyShifts input:checked'))].map(cb => cb.value);
     if (!frequency.shifts.length) return showToast('Выберите хотя бы одну смену', true);
-    // Ничего не нужно — ротация определяется графиком смен
   } else if (freqType === 'weekly') {
     frequency.daysOfWeek = [...($$('#ep_freqWeeklyDays input:checked'))].map(cb => Number(cb.value));
-    frequency.shifts = [...($$('#ep_freqWeeklyShifts input:checked'))].map(cb => cb.value);
+    frequency.shifts = ['day', 'night'];  // показывается в обе смены
     if (!frequency.daysOfWeek.length) return showToast('Выберите дни недели', true);
-    if (!frequency.shifts.length) return showToast('Выберите хотя бы одну смену', true);
   } else if (freqType === 'once') {
     const raw = ($('#ep_freqOnceDates')?.value || '').trim();
     frequency.dates = raw.split(/[\s,]+/).map(s => s.trim()).filter(s => /^\d{4}-\d{2}-\d{2}$/.test(s));
-    frequency.shifts = [...($$('#ep_freqOnceShifts input:checked'))].map(cb => cb.value);
+    frequency.shifts = ['day', 'night'];  // показывается в обе смены
     if (!frequency.dates.length) return showToast('Укажите хотя бы одну дату в формате YYYY-MM-DD', true);
-    if (!frequency.shifts.length) return showToast('Выберите хотя бы одну смену', true);
   }
 
   // Проверка дубликата (line + machine + paramName)
@@ -2291,12 +2825,7 @@ function createEmptyStandard() {
     purpose: '',
     whyCreated: '',
 
-    measurements: [
-      { point: 1, value: '', sorts: '' },
-      { point: 2, value: '', sorts: '' },
-      { point: 3, value: '', sorts: '' },
-      { point: 4, value: '', sorts: '' }
-    ],
+    measurements: [],
 
     appliesTo: [],
     triggers: [],
@@ -2314,6 +2843,103 @@ function createEmptyStandard() {
   };
 }
 
+/**
+ * Оставляет только валидные значения appliesTo.
+ */
+function normalizeAppliesTo(arr) {
+  if (!Array.isArray(arr)) return [];
+  const VALID = ['ChangeOver', 'CL_TO', 'CL_Conversion'];
+  return arr.filter(v => VALID.includes(v));
+}
+
+function normalizeMeasurements(measurements) {
+  if (!Array.isArray(measurements)) return [];
+
+  // Новый формат — уже блоки
+  if (measurements.length && measurements[0] && 'points' in measurements[0]) {
+    return measurements.map(b => ({
+      brand: b.brand || '',
+      points: Array.isArray(b.points)
+        ? b.points.map(p => ({ value: p.value || '' }))
+        : []
+    })).filter(b => b.points.length > 0);
+  }
+
+  // Миграция со старого плоского формата
+  const byBrand = {};
+  measurements.forEach(m => {
+    if (!m) return;
+    const brand = m.brand || '';
+    if (!byBrand[brand]) byBrand[brand] = [];
+    if (m.value) byBrand[brand].push({ value: m.value });
+  });
+
+  return Object.keys(byBrand)
+    .filter(brand => byBrand[brand].length > 0)
+    .map(brand => ({ brand, points: byBrand[brand] }));
+}
+
+/**
+ * Парсит строку нормы и возвращает { min, max } или null.
+ *
+ * Поддерживаемые форматы:
+ *   value_input:  "92 ± 5",  "92+-5",  "92 ±5"   → { min: 87, max: 97 }
+ *   range_input:  "5.5 - 8.5", "5.5-8.5", "5.5 до 8.5", "5.5…8.5"
+ *                 "-65 до -55", "-65 - -55"     → { min: 5.5, max: 8.5 }
+ *
+ * Если не удалось распарсить — null.
+ */
+function parseNorm(normStr) {
+  if (normStr == null) return null;
+  const s = String(normStr).trim();
+  if (!s) return null;
+
+  // --- 1. Пробуем "число ± число" ---
+  const plusMinus = s.split(/\s*(?:±|\+-)\s*/);
+  if (plusMinus.length === 2) {
+    const center = parseFloat(plusMinus[0].replace(',', '.'));
+    const tol = parseFloat(plusMinus[1].replace(',', '.'));
+    if (!isNaN(center) && !isNaN(tol)) {
+      return { min: center - tol, max: center + tol };
+    }
+  }
+
+  // --- 2. Пробуем диапазон (до / … / – / -) ---
+  let rangeStr = s
+    .replace(/\s+до\s+/gi, ' | ')
+    .replace(/\s*…\s*/g, ' | ')
+    .replace(/\s*–\s*/g, ' | ');
+
+  if (!rangeStr.includes('|')) {
+    rangeStr = rangeStr.replace(/\s+-\s+/, ' | ');
+  }
+
+  let parts = rangeStr.split('|').map(x => x.trim()).filter(Boolean);
+
+  if (parts.length === 1) {
+    const dashSplit = s.split(/(?<=[0-9.])-(?=-?[0-9.])/);
+    if (dashSplit.length === 2) parts = dashSplit.map(x => x.trim());
+  }
+
+  if (parts.length === 2) {
+    const a = parseFloat(parts[0].replace(',', '.').replace(/[^\d.\-+]/g, ''));
+    const b = parseFloat(parts[1].replace(',', '.').replace(/[^\d.\-+]/g, ''));
+    if (!isNaN(a) && !isNaN(b)) {
+      return { min: Math.min(a, b), max: Math.max(a, b) };
+    }
+  }
+
+  // --- 3. НОВОЕ: одиночное число → точная норма (min = max = value) ---
+  // Отрезаем всё, что не цифра/точка/минус — на случай "0 бар", "-65 kPa"
+  const cleanNum = s.replace(/[^\d.\-+]/g, '').replace(',', '.');
+  const single = parseFloat(cleanNum);
+  if (!isNaN(single) && cleanNum !== '' && cleanNum !== '-' && cleanNum !== '+') {
+    return { min: single, max: single };
+  }
+
+  return null;
+}
+
 function normalizeStandard(st) {
   const empty = createEmptyStandard();
   return {
@@ -2321,10 +2947,8 @@ function normalizeStandard(st) {
     ...st,
     id: st.id || empty.id,
     active: st.active !== undefined ? st.active : true,
-    measurements: Array.isArray(st.measurements) && st.measurements.length
-      ? st.measurements
-      : empty.measurements,
-    appliesTo: Array.isArray(st.appliesTo) ? st.appliesTo : [],
+    measurements: normalizeMeasurements(st.measurements),
+    appliesTo: normalizeAppliesTo(st.appliesTo),
     triggers: Array.isArray(st.triggers) ? st.triggers : [],
     photos: Array.isArray(st.photos)
       ? st.photos.filter(p => typeof p === 'string' && p.trim() !== '')
@@ -2571,13 +3195,12 @@ window.openElectronicBrandSchedule = function(line) {
   renderEbsDailyRows();
   renderEbsPreview();
 
-  modal.classList.add('active');
+  openModal(modal);
 };
 
 /* Закрыть */
 function closeElectronicBrandSchedule() {
-  const modal = $('#electronicBrandScheduleModal');
-  if (modal) modal.classList.remove('active');
+  closeModal('#electronicBrandScheduleModal');
   ebsState.line = null;
 }
 
@@ -3392,13 +4015,178 @@ function renderElectronicChecklist(items) {
   if (counter) counter.textContent = `${items.length} ${pluralizeParams(items.length)}`;
   if (saveBtn) saveBtn.disabled = false;
 
-  container.innerHTML = items.map(it => renderElectronicCheckItem(it)).join('');
+  // --- Первый непроверенный раскроем автоматически ---
+  const firstUncheckedId = items[0]?.id || null;
 
-  // Обработчики
-  bindElectronicChecklistEvents(container);
+  container.innerHTML = items.map(it => renderElectronicAccItem(it)).join('');
+
+  // Раскрываем первый
+  if (firstUncheckedId) {
+    const firstItem = container.querySelector(`.elec-acc-item[data-elec-id="${firstUncheckedId}"]`);
+    if (firstItem) expandCoclItem(firstItem, true);
+  }
+
+  bindElectronicAccordionEvents(container);
   updateElecProgress();
 }
 
+/** Отрисовать один пункт как аккордеон */
+function renderElectronicAccItem(it) {
+  // Мета свёрнутой строки
+  const metaParts = [];
+  if (it.timeFrom) {
+    metaParts.push(`<span class="elec-check-time">${escapeHtml(it.timeFrom)}–${escapeHtml(it.timeTo || '')}</span>`);
+  }
+  if (it.machine) metaParts.push(`<span><strong>Машина:</strong> ${escapeHtml(it.machine)}</span>`);
+  metaParts.push(`<span class="elec-check-work elec-check-work-${it.work.toLowerCase()}">${escapeHtml(it.work)}</span>`);
+
+  const compactMeta = metaParts.join(' · ');
+
+  // Норма
+  let normHtml = '';
+  if (it.controlType === 'ok_not_ok') {
+    normHtml = `<div class="elec-check-norm"><strong>Норма:</strong> <span class="elec-norm-value">${escapeHtml(it.normText)}</span></div>`;
+  } else if (it.controlType === 'value_input') {
+    const min = (it.target - it.tolerance).toFixed(2).replace(/\.00$/, '');
+    const max = (it.target + it.tolerance).toFixed(2).replace(/\.00$/, '');
+    normHtml = `<div class="elec-check-norm">
+      <strong>Норма:</strong>
+      <span class="elec-norm-value">${it.target} ± ${it.tolerance}</span>
+      <span style="color:var(--text-dim);font-size:11px;margin-left:6px">→ [${min}, ${max}]</span>
+    </div>`;
+  }
+
+  // Ответ
+  let answerHtml = '';
+  if (it.controlType === 'ok_not_ok') {
+    answerHtml = `
+      <div class="answer-row">
+        <div class="radio-group">
+          <label><input type="radio" name="elec_ans_${escapeAttr(it.id)}" value="OK" data-elec-ans> ОК</label>
+          <label><input type="radio" name="elec_ans_${escapeAttr(it.id)}" value="FAIL" data-elec-ans> Не ОК</label>
+        </div>
+      </div>`;
+  } else {
+    answerHtml = `
+      <div class="answer-row">
+        <div class="answer-field">
+          <input type="number" step="any" data-elec-value placeholder="0">
+        </div>
+        <span class="elec-answer-status" data-elec-status></span>
+      </div>`;
+  }
+
+  return `
+    <div class="cocl-acc-item elec-acc-item" data-elec-id="${escapeAttr(it.id)}" data-expanded="false">
+      <div class="cocl-acc-header" data-acc-toggle>
+        <span class="cocl-status-dot" data-acc-status="unchecked"></span>
+        <div class="cocl-acc-title-wrap">
+          <div class="cocl-acc-title">${escapeHtml(it.paramName || '')}</div>
+          <div class="cocl-acc-meta">${compactMeta}</div>
+        </div>
+
+        <button type="button" class="cocl-acc-comment-btn" data-comment-btn title="Добавить комментарий">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <line x1="9" y1="10" x2="15" y2="10"/>
+            <line x1="9" y1="14" x2="13" y2="14"/>
+          </svg>
+        </button>
+
+        <span class="cocl-acc-caret">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </span>
+      </div>
+
+      <div class="cocl-acc-body">
+        ${normHtml}
+        <div class="elec-check-answer">${answerHtml}</div>
+        <div class="comment-preview" style="display:none" data-comment-preview></div>
+      </div>
+    </div>
+  `;
+}
+
+/** Обработчики аккордеона E-Param */
+function bindElectronicAccordionEvents(container) {
+  if (!container) return;
+
+  // Клик по шапке — раскрыть/свернуть
+  container.querySelectorAll('[data-acc-toggle]').forEach(head => {
+    head.addEventListener('click', (e) => {
+      if (e.target.closest('[data-comment-btn]')) return;
+      const item = head.closest('.elec-acc-item');
+      if (!item) return;
+      const isExpanded = item.dataset.expanded === 'true';
+      if (isExpanded) {
+        collapseCoclItem(item);
+      } else {
+        expandCoclItem(item);
+      }
+    });
+  });
+
+  // Радио ОК / Не ОК
+  container.querySelectorAll('input[data-elec-ans]').forEach(r => {
+    r.addEventListener('change', (e) => {
+      const item = e.target.closest('.elec-acc-item');
+      const val = e.target.value;
+      updateElecItemStatus(item, val === 'OK' ? 'ok' : 'fail');
+      item.classList.remove('answered-ok', 'answered-fail');
+      item.classList.add(val === 'OK' ? 'answered-ok' : 'answered-fail');
+      updateElecProgress();
+    });
+  });
+
+  // Поля ввода значений
+  container.querySelectorAll('input[data-elec-value]').forEach(inp => {
+    inp.addEventListener('input', (e) => {
+      const item = e.target.closest('.elec-acc-item');
+      const it = elecState.items.find(x => x.id === item.dataset.elecId);
+      const statusEl = item.querySelector('[data-elec-status]');
+
+      const v = parseFloat(inp.value);
+      if (isNaN(v) || inp.value === '') {
+        updateElecItemStatus(item, 'unchecked');
+        item.classList.remove('answered-ok', 'answered-fail');
+        if (statusEl) statusEl.textContent = '';
+      } else {
+        const min = it.target - it.tolerance;
+        const max = it.target + it.tolerance;
+        const inRange = v >= min && v <= max;
+        updateElecItemStatus(item, inRange ? 'ok' : 'fail');
+        item.classList.remove('answered-ok', 'answered-fail');
+        item.classList.add(inRange ? 'answered-ok' : 'answered-fail');
+        if (statusEl) {
+          statusEl.textContent = inRange ? '✓ в допуске' : '✕ не в допуске';
+          statusEl.className = 'elec-answer-status ' + (inRange ? 'ok' : 'fail');
+        }
+      }
+      updateElecProgress();
+    });
+  });
+
+  // Комментарии
+  container.querySelectorAll('[data-comment-btn]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const item = e.target.closest('.elec-acc-item');
+      openCommentModalElec(item);
+    });
+  });
+}
+
+/** Обновить статусный кружок в шапке E-Param */
+function updateElecItemStatus(item, status) {
+  item.dataset.status = status;
+  const dot = item.querySelector('[data-acc-status]');
+  if (dot) {
+    dot.classList.remove('cocl-status-unchecked', 'cocl-status-ok', 'cocl-status-fail');
+    dot.classList.add('cocl-status-' + status);
+  }
+}
 function renderElectronicCheckItem(it) {
   // Мета: время · работа · машина
   const metaParts = [];
@@ -3516,19 +4304,13 @@ function bindElectronicChecklistEvents(container) {
 
 /* Прогресс + активность кнопки сохранения */
 function updateElecProgress() {
-  const items = $$('#elecChecklistContainer .checklist-item');
+  const items = $$('#elecChecklistContainer .elec-acc-item');
   const saveBtn = $('#elecSaveCheckBtn');
 
   let filled = 0;
   items.forEach(item => {
-    const it = elecState.items.find(x => x.id === item.dataset.elecId);
-    if (!it) return;
-    if (it.controlType === 'ok_not_ok') {
-      if (item.querySelector('input[data-elec-ans]:checked')) filled++;
-    } else {
-      const inp = item.querySelector('input[data-elec-value]');
-      if (inp && inp.value !== '') filled++;
-    }
+    const status = item.dataset.status;
+    if (status === 'ok' || status === 'fail') filled++;
   });
 
   if (saveBtn) saveBtn.disabled = filled === 0;
@@ -3538,7 +4320,7 @@ function updateElecProgress() {
    Сохранение проверки CL Electronic
    ============================================================ */
 
-$('#elecSaveCheckBtn')?.addEventListener('click', () => {
+$$('#elecChecklistContainer .elec-acc-item').forEach(item => {
   const operator = ($('#elecOperator')?.value || '').trim();
   const line = elecState.line;
   const date = elecState.date;
@@ -3804,6 +4586,145 @@ $('#elecSummaryView').style.display = 'block';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+/* ============================================================
+   COCL: экран резюме после сохранения проверки
+   ============================================================ */
+
+function renderCoclSummary(record) {
+  const container = $('#coclSummaryView');
+  if (!container) return;
+
+  // Статистика
+  const total = record.items.length;
+  const oks = record.items.filter(x => x.status === 'OK').length;
+  const fails = record.items.filter(x => x.status === 'FAIL').length;
+  const unchecked = record.items.filter(x => x.status === 'UNCHECKED').length;
+  const checkedTotal = oks + fails;
+  const percentOk = checkedTotal > 0 ? Math.round((oks / checkedTotal) * 100) : 0;
+  const allOk = fails === 0 && unchecked === 0;
+
+  const shieldClass = allOk ? 'tl-shield-ok' : 'tl-shield-fail';
+  const shieldTitle = allOk ? 'Всё под контролем' : 'Требует внимания';
+
+  const shieldSubParts = [];
+  if (checkedTotal > 0) shieldSubParts.push(`Проверено: <strong>${checkedTotal}</strong> из ${total}`);
+  if (fails > 0)        shieldSubParts.push(`вне нормы: <strong>${fails}</strong>`);
+  if (unchecked > 0)    shieldSubParts.push(`<span class="tl-shield-sub-unchecked">не проверено: ${unchecked}</span>`);
+
+  // Чипы стандартов
+  const chipsHtml = record.items.slice(0, 20).map(it => {
+    let cls;
+    if (it.status === 'OK') cls = 'tl-shield-chip-ok';
+    else if (it.status === 'FAIL') cls = 'tl-shield-chip-fail';
+    else cls = 'tl-shield-chip-unchecked';
+
+    const label = it.machine ? `${it.machine} · ${it.oplNumber || ''}` : (it.oplNumber || it.title || '—');
+    return `<span class="tl-shield-chip ${cls}" title="${escapeAttr(it.title || '')}">
+      <span class="tl-shield-chip-dot"></span>
+      ${escapeHtml(label)}
+    </span>`;
+  }).join('');
+
+  const chipMore = record.items.length > 20
+    ? `<span class="tl-shield-chip">+${record.items.length - 20}</span>`
+    : '';
+
+  // Контекст
+  let contextLine = '';
+  if (record.type === 'ChangeOver') {
+    contextLine = `Бренд: <strong>${escapeHtml(record.brandFrom)}</strong> → <strong>${escapeHtml(record.brandTo)}</strong>`;
+  } else if (record.type === 'CL_TO') {
+    contextLine = `Тип: <strong>CL в ТО</strong>`;
+  } else if (record.type === 'CL_Conversion') {
+    contextLine = `Тип: <strong>CL в Конвертацию</strong>`;
+  }
+
+  const html = `
+    <div class="card tl-summary-card">
+      <div class="tl-summary-head">
+        <div class="tl-summary-icon tl-summary-icon-ok">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </div>
+        <div>
+          <div class="tl-summary-title">Проверка сохранена</div>
+          <div class="tl-summary-sub">
+            Оператор: <strong>${escapeHtml(record.operator)}</strong> ·
+            Линия: <strong>${escapeHtml(record.line)}</strong> ·
+            Часть: <strong>${escapeHtml(record.part)}</strong> ·
+            Смена: <strong>${escapeHtml(record.shift)}</strong>
+          </div>
+          <div class="tl-summary-sub" style="margin-top:4px">
+            ${contextLine}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-shield ${shieldClass}">
+      <div class="tl-shield-ring" style="--percent: ${percentOk}">
+        <div class="tl-shield-ring-hole">
+          <div class="tl-shield-ring-value">${percentOk}%</div>
+          <div class="tl-shield-ring-label">ОК</div>
+        </div>
+      </div>
+      <div class="tl-shield-info">
+        <div class="tl-shield-title">${shieldTitle}</div>
+        <div class="tl-shield-sub">${shieldSubParts.join(' · ')}</div>
+        ${fails > 0 ? `
+          <div class="tl-shield-journal-warning">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span>Есть отклонения. Зафиксируйте их в <strong>Journal Machines</strong>.</span>
+          </div>
+        ` : ''}
+        <div class="tl-shield-chips">
+          ${chipsHtml}
+          ${chipMore}
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-select-footer">
+      <button class="btn btn-secondary" id="coclSummaryBackBtn">← К истории</button>
+      <button class="btn btn-primary btn-icon-text" id="coclSummaryNewBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+        <span>Новая проверка</span>
+      </button>
+    </div>
+  `;
+
+  container.innerHTML = html;
+
+  // Прячем чек-лист, показываем резюме
+  $('#checklistCard').style.display = 'none';
+  $('#coclSummaryView').style.display = 'block';
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // Обработчики
+  $('#coclSummaryBackBtn')?.addEventListener('click', () => {
+    // Сначала сброс, потом переключение
+    resetCheckForm();
+    if (typeof switchTab === 'function') switchTab('history');
+  });
+
+  $('#coclSummaryNewBtn')?.addEventListener('click', () => {
+    // Сначала сброс, потом переключение на «Проверку»
+    resetCheckForm();
+    if (typeof switchTab === 'function') switchTab('check');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+}
+
 function renderElectronicWeekMatrix() {
   const wrap = $('#elecWeekMatrix');
   if (!wrap) return;
@@ -3820,23 +4741,58 @@ function renderElectronicWeekMatrix() {
 
   const rows = [];
 
+  // Собираем уже сохранённые проверки в этом диапазоне
+  const history = getHistory().filter(h =>
+    h.mode === 'electronic' &&
+    h.line === elecState.line &&
+    days.includes(h.date)
+  );
+  const savedStatus = {};
+  history.forEach(h => {
+    h.items.forEach(it => {
+      if (it.status === 'OK' || it.status === 'FAIL' || it.status === 'UNCHECKED') {
+        savedStatus[`${h.date}|${h.shift}|${it.standardId}`] = it.status;
+      }
+    });
+  });
+
   allParams.forEach(p => {
     const cells = {}; // 'YYYY-MM-DD|day' => true/false
 
+    // Дата создания параметра — раньше неё проверок нет
+    const createdDate = p.createdAt ? p.createdAt.slice(0, 10) : today;
+
     days.forEach(date => {
-      const brand = getElectronicBrandForDate(elecState.line, date) || '';
       ['day', 'night'].forEach(shiftType => {
+        const shiftLetter = getShiftsForDate(date)[shiftType];
+        const key = `${date}|${shiftLetter}|${p.id}`;
+        const saved = savedStatus[key];
+
         let due = false;
-        if (isElectronicParamDue(p, date, shiftType)) {
-          if (p.controlType === 'ok_not_ok') {
-            if (p.normText && p.normText.trim()) due = true;
-          } else {
-            if (brand) {
-              const v = (p.valuesByBrand || []).find(v => v.brand === brand);
-              if (v && v.target !== '' && v.tolerance !== '') due = true;
-            }
-          }
+
+        // 1. Если есть сохранённая проверка — показываем всегда
+        if (saved) {
+          cells[`${date}|${shiftType}`] = true;
+          return;
         }
+
+        // 2. Если день раньше today — не показываем
+        if (date < today) {
+          cells[`${date}|${shiftType}`] = false;
+          return;
+        }
+
+        // 3. Если день раньше даты создания — не показываем
+        if (date < createdDate) {
+          cells[`${date}|${shiftType}`] = false;
+          return;
+        }
+
+        // 4. Проверяем периодичность
+        if (isElectronicParamDue(p, date, shiftType)) {
+          due = true;
+        }
+
         cells[`${date}|${shiftType}`] = due;
       });
     });
@@ -3851,21 +4807,6 @@ function renderElectronicWeekMatrix() {
     wrap.innerHTML = '<div class="empty-state" style="padding:24px">На текущую неделю нет запланированных проверок</div>';
     return;
   }
-
-  // Соберём уже сохранённые проверки в этом диапазоне
-  const history = getHistory().filter(h =>
-    h.mode === 'electronic' &&
-    h.line === elecState.line &&
-    days.includes(h.date)
-  );
-  const savedStatus = {};
-  history.forEach(h => {
-    h.items.forEach(it => {
-      if (it.status === 'OK' || it.status === 'FAIL' || it.status === 'UNCHECKED') {
-        savedStatus[`${h.date}|${h.shift}|${it.standardId}`] = it.status;
-      }
-    });
-  });
 
   // --- Шапка ---
   // Верхняя строка: описательные колонки (rowspan=2) + 7 дат (colspan=2)
@@ -3940,9 +4881,7 @@ function renderElectronicWeekMatrix() {
         let cls = 'elec-matrix-cell';
         let text = '—';
 
-        if (!due) {
-          cls += ' elec-cell-na';
-        } else if (saved === 'OK') {
+        if (saved === 'OK') {
           cls += ' elec-cell-ok';
           text = '✓';
         } else if (saved === 'FAIL') {
@@ -3951,25 +4890,24 @@ function renderElectronicWeekMatrix() {
         } else if (saved === 'UNCHECKED') {
           cls += ' elec-cell-unchecked';
           text = '?';
-        } else {
+        } else if (due) {
           cls += ' elec-cell-due';
+        } else {
+          cls += ' elec-cell-na';
         }
         if (isToday) cls += ' elec-cell-today';
 
-      // Запланировано и не проверено — кликабельно
-      // Уже проверено — тоже кликабельно (для просмотра)
-      // Не запланировано — не кликабельно
-      const isClickable = due; // due = true, если параметр запланирован на этот день/смену
+        const isClickable = saved || due;
 
-      if (isClickable) {
-        cellsHtml += `<td class="${cls} elec-cell-clickable"
-          data-param-id="${escapeAttr(param.id)}"
-          data-date="${escapeAttr(date)}"
-          data-shift-type="${escapeAttr(shiftType)}"
-          title="Нажмите, чтобы ${saved ? 'посмотреть / изменить' : 'проверить'}">${text}</td>`;
-      } else {
-        cellsHtml += `<td class="${cls}">${text}</td>`;
-      }
+        if (isClickable) {
+          cellsHtml += `<td class="${cls} elec-cell-clickable"
+            data-param-id="${escapeAttr(param.id)}"
+            data-date="${escapeAttr(date)}"
+            data-shift-type="${escapeAttr(shiftType)}"
+            title="Нажмите, чтобы ${saved ? 'посмотреть / изменить' : 'проверить'}">${text}</td>`;
+        } else {
+          cellsHtml += `<td class="${cls}">${text}</td>`;
+        }
       });
     });
 
@@ -4518,7 +5456,7 @@ window.openQuickCheckModal = function(param, date, shiftType) {
     infoEl.style.display = 'none';
   }
 
-  modal.classList.add('active');
+  openModal(modal);
 };
 
 /* Обновить бейдж «в допуске / не в допуске» для поля значения */
@@ -4559,8 +5497,7 @@ function updateQcValueStatus() {
 
 /* Закрыть модалку */
 function closeQuickCheckModal() {
-  const modal = $('#quickCheckModal');
-  if (modal) modal.classList.remove('active');
+  closeModal('#quickCheckModal');
   quickCheckState.param = null;
   quickCheckState.existing = null;
 }
@@ -4726,7 +5663,7 @@ function openCommentModalElec(item) {
     ? `${it.machine || ''} · ${it.paramName || ''}`
     : '';
   $('#commentText').value = item.dataset.comment || '';
-  $('#commentModal').classList.add('active');
+  openModal('#commentModal');
   setTimeout(() => $('#commentText').focus(), 100);
 }
 
@@ -4935,6 +5872,14 @@ $('#lineSelect').addEventListener('change', () => {
   updateChecklist();
 });
 
+/* --- Обновление чек-листа при изменении оператора/смены --- */
+$('#operatorName')?.addEventListener('input', () => {
+  if (typeof updateChecklist === 'function') updateChecklist();
+});
+$('#shift')?.addEventListener('change', () => {
+  if (typeof updateChecklist === 'function') updateChecklist();
+});
+
 $('#partSelect').addEventListener('change', () => {
   const type = $('#transitionType').value;
 
@@ -4966,7 +5911,8 @@ $('#transitionType').addEventListener('change', onTransitionTypeChange);
 
 function onTransitionTypeChange() {
   const type = $('#transitionType').value;
-  updateBrandToOptions();  
+  updateBrandToOptions();
+
   if (!type) {
     $('#brandsCard').style.display = 'none';
     $('#changesCard').style.display = 'none';
@@ -4974,21 +5920,20 @@ function onTransitionTypeChange() {
     $('#checklistCard').style.display = 'none';
     return;
   }
-  $('#brandsCard').style.display = 'block';
 
-  if (type === 'Minor') {
+  // Бренды и триггеры — ТОЛЬКО для Change Over
+  if (type === 'ChangeOver') {
+    $('#brandsCard').style.display = 'block';
     $('#changesCard').style.display = 'block';
     $('#changesTitle').textContent = '5. Что меняется';
     renderMaterialChanges();
     $('#nodesCard').style.display = 'none';
   } else {
+    $('#brandsCard').style.display = 'none';
     $('#changesCard').style.display = 'none';
-    $('#nodesCard').style.display = 'block';
-    $('#nodesTitle').textContent = (type === 'Intermediate')
-      ? '5. Замена узлов (до 3)'
-      : '5. Замена узлов (более 3)';
-    renderNodes();
+    $('#nodesCard').style.display = 'none';
   }
+
   updateChecklist();
 }
 
@@ -5059,59 +6004,87 @@ function getSelectedTriggers() {
   const type = $('#transitionType').value;
   const triggers = [];
 
-  if (type === 'Minor') {
+  // Триггеры «Что меняется» — только для Change Over
+  if (type === 'ChangeOver') {
     $$('#changesContainer input[data-change]:checked').forEach(cb => {
       const val = cb.value;
 
-      // «Табак + Материалы» = активирует И «Табак», И «Материалы»
       if (val === 'tobacco_materials') {
         triggers.push('tobacco');
         triggers.push('materials');
-      }
-      // «Материалы» — общий триггер, добавляем как есть
-      else {
+      } else {
         triggers.push(val);
       }
     });
-  } else {
-    $$('#nodesContainer input[data-node]:checked').forEach(cb => {
-      triggers.push('node:' + cb.value);
-    });
   }
-
   return triggers;
 }
 
 function updateChecklist() {
+  const operator = ($('#operatorName')?.value || '').trim();
+  const shift = $('#shift')?.value || '';
   const type = $('#transitionType').value;
   const line = $('#lineSelect').value;
   const part = $('#partSelect').value;
 
-  if (!type || !line || !part) {
-    $('#checklistCard').style.display = 'none';
+  const buildCard = $('#buildChecklistCard');
+  const checklistCard = $('#checklistCard');
+
+  // --- Если не заполнены основные поля — ничего не показываем ---
+  if (!operator || !shift || !type || !line || !part) {
+    if (buildCard) buildCard.style.display = 'none';
+    if (checklistCard) checklistCard.style.display = 'none';
     return;
   }
 
   const triggers = getSelectedTriggers();
   const all = getStandards();
 
+  // Для Change Over нужен выбранный бренд «На бренд»
+  let brandTo = '';
+  if (type === 'ChangeOver') {
+    brandTo = $('#brandTo').value;
+    if (!brandTo) {
+      if (buildCard) buildCard.style.display = 'none';
+      if (checklistCard) checklistCard.style.display = 'none';
+      return;
+    }
+  }
+
   const relevant = all.filter(st => {
-    // 0. Активность — неактивные не показываем оператору
     if (st.active === false) return false;
-
-    // 1. Тип перехода — стандарт должен подходить под текущий тип
     if (!st.appliesTo || !st.appliesTo.includes(type)) return false;
-
-    // 2. Линия — одна линия, не массив
     if (st.line !== line) return false;
-
-    // 3. Часть линии — nodePart (Maker / Packer), поле nodePart
     if (st.nodePart && st.nodePart !== part) return false;
 
-    // 4. Триггеры — если у стандарта они есть, должен совпасть хотя бы один
-    if (!st.triggers || st.triggers.length === 0) return true;
-    return st.triggers.some(t => triggers.includes(t));
+    // --- Change Over: только стандарты с блоком выбранного бренда ---
+    if (type === 'ChangeOver') {
+      const blocks = Array.isArray(st.measurements) ? st.measurements : [];
+      if (!blocks.length) return false;
+
+      const hasBrandBlock = blocks.some(b =>
+        b.brand === brandTo && Array.isArray(b.points) && b.points.length > 0
+      );
+      if (!hasBrandBlock) return false;
+
+      if (st.triggers && st.triggers.length > 0) {
+        return st.triggers.some(t => triggers.includes(t));
+      }
+      return true;
+    }
+
+    // --- CL_TO / CL_Conversion: триггеры не проверяем ---
+    return true;
   });
+
+  // --- Показываем «Сформировать проверку», скрываем чек-лист ---
+  if (relevant.length > 0) {
+    if (buildCard) buildCard.style.display = 'block';
+    if (checklistCard) checklistCard.style.display = 'none';
+  } else {
+    if (buildCard) buildCard.style.display = 'none';
+    if (checklistCard) checklistCard.style.display = 'none';
+  }
 
   renderChecklist(relevant);
 }
@@ -5120,16 +6093,71 @@ function renderChecklist(items) {
   const c = $('#checklistContainer');
   if (!items.length) {
     c.innerHTML = '<div class="empty-state">Нет стандартов для выбранных условий.<br>Добавьте их во вкладке «Редактор стандартов».</div>';
-    $('#checklistCard').style.display = 'block';
     updateProgress();
     return;
   }
 
-  c.innerHTML = items.map(st => {
-    // Главное значение — из measurements[0].value (первая точка)
-    const mainValue = (st.measurements && st.measurements[0] && st.measurements[0].value) || '';
-    const mainSorts = (st.measurements && st.measurements[0] && st.measurements[0].sorts) || '';
+  const type = $('#transitionType').value;
+  const brandTo = (type === 'ChangeOver') ? $('#brandTo').value : '';
 
+  // Найдём первый непроверенный — его раскроем автоматически
+  let firstUncheckedId = null;
+
+  // Собираем HTML
+  const html = items.map(st => {
+    const isFirstUnchecked = (firstUncheckedId === null);
+    if (isFirstUnchecked) firstUncheckedId = st.id;
+
+    // --- Выбираем блок точек для отображения ---
+    const blocks = Array.isArray(st.measurements) ? st.measurements : [];
+    let selectedBlock = null;
+
+    if (type === 'ChangeOver' && brandTo) {
+      selectedBlock = blocks.find(b => b.brand === brandTo) || null;
+    } else {
+      selectedBlock = blocks[0] || null;
+    }
+
+    const visiblePoints = selectedBlock ? selectedBlock.points : [];
+
+    // Сетка точек (для value_input / range_input)
+    let pointsHtml = '';
+    if (selectedBlock && visiblePoints.length &&
+        (st.controlType === 'value_input' || st.controlType === 'range_input')) {
+      const cells = visiblePoints.map((m, i) => {
+        const norm = parseNorm(m.value);
+        const normData = norm ? JSON.stringify(norm).replace(/"/g, '&quot;') : '';
+        return `
+          <div class="checklist-point-cell"
+               data-point-index="${i}"
+               data-norm='${normData}'>
+            <div class="checklist-point-cell-head">
+              <span class="checklist-point-status" data-point-status="${i}"></span>
+              <span class="checklist-point-num">${i + 1}</span>
+              <span class="checklist-point-norm" title="${escapeAttr(m.value || '')}">${escapeHtml(m.value || '—')}</span>
+            </div>
+            <div class="checklist-point-cell-body">
+              <input type="number" step="any" class="checklist-point-input"
+                     data-point-input="${i}" placeholder="0">
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      pointsHtml = `
+        <div class="checklist-points">
+          <div class="checklist-points-header">
+            <span class="checklist-point-brand-badge">
+              ${escapeHtml(selectedBlock.brand || 'Все бренды')}
+            </span>
+            <span class="checklist-points-hint">Все точки должны быть в норме</span>
+          </div>
+          <div class="checklist-points-grid">${cells}</div>
+        </div>
+      `;
+    }
+
+    // Ответ (для ok_not_ok)
     let answerHtml = '';
     if (st.controlType === 'ok_not_ok') {
       answerHtml = `
@@ -5137,93 +6165,241 @@ function renderChecklist(items) {
           <label><input type="radio" name="ans_${st.id}" value="OK" data-ans> ОК</label>
           <label><input type="radio" name="ans_${st.id}" value="FAIL" data-ans> Не ОК</label>
         </div>`;
-    } else if (st.controlType === 'value_input') {
-      answerHtml = `
-        <div class="answer-field">
-          <input type="number" step="any" data-ans-value placeholder="0">
-        </div>`;
-    } else if (st.controlType === 'tolerance') {
-      answerHtml = `
-        <div class="answer-field">
-          <input type="number" step="any" data-ans-value placeholder="0">
-        </div>
-        <div class="radio-group">
-          <label><input type="radio" name="tol_${st.id}" value="OK" data-tol> В допуске</label>
-          <label><input type="radio" name="tol_${st.id}" value="FAIL" data-tol> Не в допуске</label>
-        </div>`;
     }
+
+    // Компактная строка в свёрнутом виде
+    const compactMeta = [
+      st.oplNumber ? `OPL: ${escapeHtml(st.oplNumber)}` : '',
+      st.machine ? `Машина: ${escapeHtml(st.machine)}` : '',
+      st.nodePart ? escapeHtml(st.nodePart) : ''
+    ].filter(Boolean).join(' · ');
+
+    // Если пользователь оставил комментарий — нарисуем иконку 💬
+    // (проверим по data-comment, при перерисовке может быть уже установлен)
+    const hasComment = false; // пока нет — установится после ручного комментария
+
     return `
-      <div class="checklist-item" data-std-id="${st.id}">
-        <div class="meta">
-          <span><strong>Часть:</strong> ${escapeHtml(st.nodePart || '—')}</span>
-          ${st.machine ? `<span><strong>Машина:</strong> ${escapeHtml(st.machine)}</span>` : ''}
-          <span><strong>OPL:</strong> ${escapeHtml(st.oplNumber || '—')}</span>
-          <span><strong>Узел:</strong> ${escapeHtml(st.node || '—')}</span>
-        </div>
-        <div class="title">${escapeHtml(st.title || '')}</div>
-        <div class="answer">
-          ${answerHtml}
-          <div class="answer-actions">
-            <button type="button" class="view-btn" data-view-btn data-std-id="${st.id}" title="Посмотреть стандарт">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                <circle cx="12" cy="12" r="3"/>
-              </svg>
-            </button>
-            <button type="button" class="comment-btn" data-comment-btn title="Добавить комментарий">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                <line x1="9" y1="10" x2="15" y2="10"/>
-                <line x1="9" y1="14" x2="13" y2="14"/>
-              </svg>
-            </button>
+      <div class="cocl-acc-item" data-std-id="${st.id}" data-expanded="false">
+        <div class="cocl-acc-header" data-acc-toggle>
+          <span class="cocl-status-dot" data-acc-status="unchecked"></span>
+          <div class="cocl-acc-title-wrap">
+            <div class="cocl-acc-title">${escapeHtml(st.title || '—')}</div>
+            <div class="cocl-acc-meta">${compactMeta}</div>
           </div>
+
+          <button type="button" class="cocl-acc-comment-btn" data-comment-btn title="Добавить комментарий">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              <line x1="9" y1="10" x2="15" y2="10"/>
+              <line x1="9" y1="14" x2="13" y2="14"/>
+            </svg>
+          </button>
+
+          <button type="button" class="cocl-acc-view-btn" data-view-btn data-std-id="${escapeAttr(st.id)}" title="Посмотреть стандарт">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+
+          <span class="cocl-acc-caret">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </span>
         </div>
-        <div class="comment-preview" style="display:none" data-comment-preview></div>
-      </div>`;
+
+        <div class="cocl-acc-body">
+          ${pointsHtml}
+          ${answerHtml ? `<div class="cocl-acc-answer">${answerHtml}</div>` : ''}
+
+          <div class="comment-preview" style="display:none" data-comment-preview></div>
+        </div>
+      </div>
+    `;
   }).join('');
 
-  c.querySelectorAll('input[data-ans], input[data-tol]').forEach(r => {
+  c.innerHTML = html;
+
+  // Раскрываем первый непроверенный
+  if (firstUncheckedId) {
+    const firstItem = c.querySelector(`.cocl-acc-item[data-std-id="${firstUncheckedId}"]`);
+    if (firstItem) expandCoclItem(firstItem, true);
+  }
+
+  // Привязываем обработчики
+  bindCoclAccordionEvents();
+  updateProgress();
+}
+
+/* ============================================================
+   COCL: аккордеон — обработчики
+   ============================================================ */
+
+function expandCoclItem(item, silent) {
+  item.dataset.expanded = 'true';
+  item.classList.add('expanded');
+  const caret = item.querySelector('.cocl-acc-caret');
+  if (caret) caret.style.transform = 'rotate(90deg)';
+}
+
+function collapseCoclItem(item) {
+  item.dataset.expanded = 'false';
+  item.classList.remove('expanded');
+  const caret = item.querySelector('.cocl-acc-caret');
+  if (caret) caret.style.transform = 'rotate(0deg)';
+}
+
+function bindCoclAccordionEvents() {
+  const c = $('#checklistContainer');
+  if (!c) return;
+
+  // --- Клик по шапке — раскрыть/свернуть ---
+  c.querySelectorAll('[data-acc-toggle]').forEach(head => {
+    head.addEventListener('click', (e) => {
+      // Игнорируем клики по кнопкам внутри шапки
+      if (e.target.closest('[data-view-btn]')) return;
+      if (e.target.closest('.cocl-acc-comment-icon')) return;
+
+      const item = head.closest('.cocl-acc-item');
+      if (!item) return;
+
+      const isExpanded = item.dataset.expanded === 'true';
+      if (isExpanded) {
+        collapseCoclItem(item);
+      } else {
+        expandCoclItem(item);
+      }
+    });
+  });
+
+  // --- Глазик — просмотр стандарта ---
+  c.querySelectorAll('[data-view-btn]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const stdId = btn.dataset.stdId;
+      if (stdId && typeof openStandardView === 'function') openStandardView(stdId);
+    });
+  });
+
+  // --- Radio ОК / Не ОК ---
+  c.querySelectorAll('input[data-ans]').forEach(r => {
     r.addEventListener('change', (e) => {
-      const item = e.target.closest('.checklist-item');
+      const item = e.target.closest('.cocl-acc-item');
       const val = e.target.value;
-      item.classList.remove('answered-ok','answered-fail');
-      if (val === 'OK') item.classList.add('answered-ok');
-      if (val === 'FAIL') item.classList.add('answered-fail');
-      updateCommentUrgency(item);
+      updateCoclItemStatus(item, val === 'OK' ? 'ok' : 'fail');
       updateProgress();
     });
   });
-  c.querySelectorAll('input[data-ans-value]').forEach(inp => {
-    inp.addEventListener('input', updateProgress);
+
+  // --- Поля ввода значений (для value_input / range_input) ---
+  c.querySelectorAll('.checklist-point-input').forEach(inp => {
+    inp.addEventListener('input', (e) => {
+      const cell = e.target.closest('.checklist-point-cell');
+      const statusEl = cell.querySelector('[data-point-status]');
+      const normStr = cell.dataset.norm;
+      const item = cell.closest('.cocl-acc-item');
+
+      // Сброс
+      cell.classList.remove('point-ok', 'point-fail');
+      if (statusEl) {
+        statusEl.textContent = '';
+        statusEl.className = 'checklist-point-status';
+      }
+
+      if (e.target.value === '') {
+        updateCoclItemStatusFromPoints(item);
+        updateProgress();
+        return;
+      }
+
+      const val = parseFloat(e.target.value);
+      if (isNaN(val)) {
+        updateCoclItemStatusFromPoints(item);
+        updateProgress();
+        return;
+      }
+
+      // Проверка по норме
+      if (normStr) {
+        let norm = null;
+        try { norm = JSON.parse(normStr); } catch(_) {}
+
+        if (norm && typeof norm.min === 'number' && typeof norm.max === 'number') {
+          const inRange = val >= norm.min && val <= norm.max;
+          cell.classList.add(inRange ? 'point-ok' : 'point-fail');
+          if (statusEl) {
+            statusEl.textContent = inRange ? '✓' : '✕';
+            statusEl.className = 'checklist-point-status ' + (inRange ? 'ok' : 'fail');
+          }
+        }
+      }
+
+      updateCoclItemStatusFromPoints(item);
+      updateProgress();
+    });
   });
 
+  // --- Кнопка комментария ---
   c.querySelectorAll('[data-comment-btn]').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const item = e.target.closest('.checklist-item');
+      e.stopPropagation();
+      const item = btn.closest('.cocl-acc-item');
       openCommentModal(item);
     });
   });
-    /* --- НОВОЕ: кнопка «Просмотр стандарта» --- */
-  c.querySelectorAll('[data-view-btn]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const stdId = btn.dataset.stdId;
-      if (stdId) openStandardView(stdId);
-    });
+}
+
+/** Обновить статус свёрнутой строки по явному ответу (radio ОК/Не ОК) */
+function updateCoclItemStatus(item, status) {
+  item.dataset.status = status;
+
+  const dot = item.querySelector('[data-acc-status]');
+  if (dot) {
+    dot.classList.remove('cocl-status-unchecked', 'cocl-status-ok', 'cocl-status-fail');
+    dot.classList.add(status === 'ok' ? 'cocl-status-ok' : 'cocl-status-fail');
+    dot.dataset.accStatus = status;
+  }
+}
+
+/** Обновить статус свёрнутой строки по точкам (value_input / range_input) */
+function updateCoclItemStatusFromPoints(item) {
+  const cells = item.querySelectorAll('.checklist-point-cell');
+  if (!cells.length) return;
+
+  let allFilled = true;
+  let anyFail = false;
+
+  cells.forEach(cell => {
+    const inp = cell.querySelector('.checklist-point-input');
+    if (!inp || inp.value === '') { allFilled = false; return; }
+    if (cell.classList.contains('point-fail')) anyFail = true;
   });
 
-  $('#checklistCard').style.display = 'block';
-  updateProgress();
+  if (!allFilled) {
+    // Пока не всё заполнено — оставляем "не проверено"
+    item.dataset.status = 'unchecked';
+    const dot = item.querySelector('[data-acc-status]');
+    if (dot) {
+      dot.classList.remove('cocl-status-ok', 'cocl-status-fail');
+      dot.classList.add('cocl-status-unchecked');
+      dot.dataset.accStatus = 'unchecked';
+    }
+    return;
+  }
+
+  // Все заполнены — итог
+  updateCoclItemStatus(item, anyFail ? 'fail' : 'ok');
 }
+
 function updateProgress() {
-  const items = $$('#checklistContainer .checklist-item');
+  const items = $$('#checklistContainer .cocl-acc-item');
   const wrap = $('#progressWrap');
   const bar = $('#progressBarInner');
   const percent = $('#progressPercent');
   const text = $('#progressText');
   const badge = $('#progressBadge');
 
-  // Нет стандартов вообще — скрываем шкалу, бейдж очищаем
   if (!items.length) {
     badge.textContent = '';
     badge.className = 'progress-badge';
@@ -5232,32 +6408,22 @@ function updateProgress() {
     return;
   }
 
-  // Считаем заполненные
   let filled = 0;
+  let oks = 0;
+  let fails = 0;
+
   items.forEach(item => {
-    const valueFilled = (() => {
-      const inp = item.querySelector('input[data-ans-value]');
-      return inp && inp.value !== '';
-    })();
-    const std = getStandards().find(s => s.id === item.dataset.stdId);
-    if (!std) return;
-    if (std.controlType === 'ok_not_ok') {
-      if (item.querySelector('input[data-ans]:checked')) filled++;
-    } else if (std.controlType === 'value_input') {
-      if (valueFilled) filled++;
-    } else if (std.controlType === 'tolerance') {
-      if (valueFilled && item.querySelector('input[data-tol]:checked')) filled++;
-    }
+    const status = item.dataset.status;
+    if (status === 'ok') { filled++; oks++; }
+    else if (status === 'fail') { filled++; fails++; }
   });
 
   const total = items.length;
   const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
 
-  // Показываем шкалу
   wrap.style.display = 'flex';
   text.style.display = 'block';
 
-  // Обновляем полосу и цвет
   bar.style.width = pct + '%';
   bar.classList.remove('low', 'mid', 'high', 'done');
   if (pct === 100)      bar.classList.add('done');
@@ -5265,14 +6431,15 @@ function updateProgress() {
   else if (pct >= 34)   bar.classList.add('mid');
   else                  bar.classList.add('low');
 
-  // Проценты
   percent.textContent = pct + '%';
 
-  // Текст под шкалой
-  text.textContent = `Заполнено ${filled} из ${total} пунктов`;
+  // Текст с деталями
+  const parts = [`Проверено ${filled} из ${total}`];
+  if (oks > 0) parts.push(`ОК: ${oks}`);
+  if (fails > 0) parts.push(`Не ОК: ${fails}`);
+  text.textContent = parts.join(' · ');
 
-  // Бейдж в заголовке (как было)
-  badge.textContent = `Заполнено ${filled} из ${total}`;
+  badge.textContent = `Проверено ${filled} из ${total}`;
   badge.className = 'progress-badge' + (filled === total ? ' complete' : '');
 }
 
@@ -5302,7 +6469,7 @@ function openCommentModal(item) {
     : '';
   const existing = item.dataset.comment || '';
   $('#commentText').value = existing;
-  $('#commentModal').classList.add('active');
+  openModal('#commentModal');
   setTimeout(() => $('#commentText').focus(), 100);
 }
 /* ============================================================
@@ -5372,10 +6539,10 @@ window.openStandardView = function(stdId) {
     });
   });
 
-  modal.classList.add('active');
+  openModal(modal);
 };
 
-/* Отрисовать чипы для шапки модалки */
+/* Отрисовать чипы для шапки модалки просмотра стандарта */
 function renderStandardViewHeaderChips(st) {
   const blockName = getBlockNameForLine(st.line) || '';
   const ceh = 'SMD';
@@ -5407,29 +6574,32 @@ function renderStandardViewContent(st) {
     `;
   };
 
-  // Точки замера — показываем только заполненные
-  const filledPoints = (st.measurements || []).filter(m => (m.value && m.value.trim()) || (m.sorts && m.sorts.trim()));
-  const pointsHtml = filledPoints.length ? `
+  // Точки замера — по брендам
+  const blocks = Array.isArray(st.measurements) ? st.measurements : [];
+  const pointsHtml = blocks.length ? `
     <div class="sv-section">
-      <div class="sv-section-title">Точки замера</div>
-      <table class="sv-points">
-        <thead>
-          <tr>
-            <th>Точка</th>
-            <th>Значение</th>
-            <th>Сорта</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${filledPoints.map(m => `
-            <tr>
-              <td>${escapeHtml(String(m.point || '—'))}</td>
-              <td>${escapeHtml(m.value || '—')}</td>
-              <td>${escapeHtml(m.sorts || '—')}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
+      <div class="sv-section-title">Точки замера по брендам</div>
+      <div class="sv-brand-blocks">
+        ${blocks.map(block => {
+          const points = Array.isArray(block.points) ? block.points : [];
+          if (!points.length) return '';
+          return `
+            <div class="sv-brand-block">
+              <div class="sv-brand-block-head">
+                <span class="sv-brand-badge">${escapeHtml(block.brand || 'Все бренды')}</span>
+              </div>
+              <div class="sv-points-grid">
+                ${points.map((p, i) => `
+                  <div class="sv-point-cell">
+                    <span class="sv-point-num">${i + 1}</span>
+                    <span class="sv-point-value">${escapeHtml(p.value || '—')}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
     </div>
   ` : '';
 
@@ -5536,8 +6706,7 @@ function renderStandardViewContent(st) {
 
 /* Закрыть модалку просмотра */
 function closeStandardView() {
-  const modal = $('#standardViewModal');
-  if (modal) modal.classList.remove('active');
+  closeModal('#standardViewModal');
 }
 
 /* --- Обработчики модалки просмотра --- */
@@ -5569,7 +6738,8 @@ window.openLightbox = function(standard, startIndex) {
   if (!modal) return;
 
   updateLightbox();
-  modal.classList.add('active');
+  openModal(modal);
+  modal.style.zIndex = '9999';   // поверх любых модалок
   document.addEventListener('keydown', lightboxKeyHandler);
 };
 
@@ -5612,10 +6782,8 @@ function lightboxNext() {
 }
 
 function closeLightbox() {
-  const modal = $('#lightboxModal');
-  if (modal) modal.classList.remove('active');
+  closeModal('#lightboxModal');
   document.removeEventListener('keydown', lightboxKeyHandler);
-  // Сбрасываем src, чтобы браузер не «держал» картинку
   const img = $('#lightboxImage');
   if (img) img.src = '';
 }
@@ -5636,7 +6804,7 @@ $('#lightboxModal')?.addEventListener('click', (e) => {
 });
 
 function closeCommentModal() {
-  $('#commentModal').classList.remove('active');
+  closeModal('#commentModal');
   currentCommentItem = null;
 }
 
@@ -5652,6 +6820,7 @@ $('#commentSaveBtn').addEventListener('click', () => {
   currentCommentItem.dataset.comment = text;
   const preview = currentCommentItem.querySelector('[data-comment-preview]');
   const btn = currentCommentItem.querySelector('[data-comment-btn]');
+
   if (text) {
     preview.textContent = '💬 ' + text;
     preview.style.display = 'block';
@@ -5677,48 +6846,76 @@ $('#saveCheckBtn').addEventListener('click', () => {
   const brandTo = $('#brandTo').value;
   const customNode = $('#customNode').value.trim();
 
+  
 if (!operator) return showToast('Укажите ФИО оператора', true);
 if (!shift) return showToast('Укажите смену', true);
 if (!line) return showToast('Укажите линию', true);
 if (!part) return showToast('Укажите часть линии', true);
 if (!type) return showToast('Укажите тип перехода', true);
-if (!brandFrom || !brandTo) return showToast('Укажите бренды', true);
 
-/* Для Intermediate и Major смена бренда обязательна: A → A запрещено */
-if ((type === 'Intermediate' || type === 'Major') && brandFrom === brandTo) {
-  return showToast(`Для ${type} бренд должен измениться: нельзя ${brandFrom} → ${brandTo}`, true);
+/* Бренды обязательны ТОЛЬКО для Change Over */
+if (type === 'ChangeOver') {
+  if (!brandFrom || !brandTo) return showToast('Укажите бренды', true);
+  if (brandFrom === brandTo) {
+    return showToast(`Бренд должен измениться: нельзя ${brandFrom} → ${brandTo}`, true);
+  }
 }
 
   const items = [];
   let hasEmpty = false;
-  $$('#checklistContainer .checklist-item').forEach(item => {
+
+  $$('#checklistContainer .cocl-acc-item').forEach(item => {
     const id = item.dataset.stdId;
     const st = getStandards().find(s => s.id === id);
     if (!st) return;
 
-    let answer = null;
-    let status = null;
+    let answer = '—';
+    let status = 'UNCHECKED';
 
     if (st.controlType === 'ok_not_ok') {
       const r = item.querySelector('input[data-ans]:checked');
       if (!r) { hasEmpty = true; return; }
       answer = r.value === 'OK' ? 'ОК' : 'Не ОК';
       status = r.value;
-    } else if (st.controlType === 'value_input') {
-      const v = item.querySelector('input[data-ans-value]').value;
-      if (v === '') { hasEmpty = true; return; }
-      answer = v + (st.unit ? ' ' + st.unit : '');
-      status = 'OK';
-    } else if (st.controlType === 'tolerance') {
-      const v = item.querySelector('input[data-ans-value]').value;
-      const r = item.querySelector('input[data-tol]:checked');
-      if (v === '' || !r) { hasEmpty = true; return; }
-      answer = v + (st.unit ? ' ' + st.unit : '') + ' — ' + (r.value === 'OK' ? 'в допуске' : 'не в допуске');
-      status = r.value;
+
+    } else if (st.controlType === 'value_input' || st.controlType === 'range_input') {
+      const cells = item.querySelectorAll('.checklist-point-cell');
+      if (!cells.length) { hasEmpty = true; return; }
+
+      const pointsData = [];
+      let allFilled = true;
+      let anyFail = false;
+
+      cells.forEach(cell => {
+        const inp = cell.querySelector('.checklist-point-input');
+        const val = inp?.value.trim() || '';
+        if (val === '') { allFilled = false; return; }
+
+        const num = parseFloat(val);
+        const normStr = cell.dataset.norm;
+        let inRange = null;
+        let norm = null;
+        try { norm = normStr ? JSON.parse(normStr) : null; } catch(_) {}
+
+        if (norm && !isNaN(num)) {
+          inRange = num >= norm.min && num <= norm.max;
+          if (!inRange) anyFail = true;
+        }
+
+        pointsData.push({ value: num, norm, inRange });
+      });
+
+      if (!allFilled) { hasEmpty = true; return; }
+
+      status = anyFail ? 'FAIL' : 'OK';
+      answer = pointsData.map(p => p.value).join(', ');
     }
 
-    // Главное значение из measurements[0]
-    const mainValue = (st.measurements && st.measurements[0] && st.measurements[0].value) || '';
+    // Главное значение — первая точка первого блока
+    const firstBlock = Array.isArray(st.measurements) && st.measurements[0];
+    const mainValue = firstBlock && Array.isArray(firstBlock.points) && firstBlock.points[0]
+      ? firstBlock.points[0].value || ''
+      : '';
 
     items.push({
       standardId: st.id,
@@ -5756,12 +6953,13 @@ if ((type === 'Intermediate' || type === 'Major') && brandFrom === brandTo) {
   updateNavHistoryCounter();
 
   showToast('Проверка сохранена');
-  resetCheckForm();
+  renderCoclSummary(record);
 });
 
 $('#resetCheckBtn').addEventListener('click', resetCheckForm);
 
 function resetCheckForm() {
+  // Сброс полей
   $('#operatorName').value = '';
   $('#shift').value = '';
   $('#lineSelect').value = '';
@@ -5771,18 +6969,37 @@ function resetCheckForm() {
   $('#brandFrom').value = '';
   $('#brandTo').value = '';
   $('#customNode').value = '';
-  $('#brandsCard').style.display = 'none';
-  $('#changesCard').style.display = 'none';
-  $('#nodesCard').style.display = 'none';
-  $('#checklistCard').style.display = 'none';
+
+  // Сброс внутренностей
   $('#checklistContainer').innerHTML = '';
   $('#changesContainer').innerHTML = '';
   $('#nodesContainer').innerHTML = '';
+
+  // Сброс прогресса
   $('#progressBadge').textContent = '';
   $('#progressWrap').style.display = 'none';
   $('#progressText').style.display = 'none';
   $('#progressBarInner').style.width = '0%';
   $('#progressPercent').textContent = '0%';
+
+  // Скрыть экран резюме
+  const summary = $('#coclSummaryView');
+  if (summary) summary.style.display = 'none';
+
+  // ⚠ ГЛАВНОЕ: восстановить все карточки настройки в #tab-check
+  document.querySelectorAll('#tab-check > .card').forEach(card => {
+    const id = card.id;
+    // Показываем все основные карточки (1. Оператор, 2. Линия, 3. Тип)
+    if (!id) {
+      card.style.display = '';
+    } else if (id === 'brandsCard' || id === 'changesCard' || id === 'nodesCard' ||
+               id === 'buildChecklistCard' || id === 'checklistCard') {
+      // Эти скрыты, пока не выбран тип/бренды
+      card.style.display = 'none';
+    } else {
+      card.style.display = '';
+    }
+  });
 }
 
 /* ============================================================
@@ -5929,11 +7146,24 @@ function renderHistory() {
           }
 
           // --- Бейдж режима ---
-          const modeBadge = isTopLoss
-            ? `<span class="badge badge-mode-toploss">TOP</span>`
-            : (isElec
-                ? `<span class="badge badge-mode-electronic">E-PARAM</span>`
-                : `<span class="badge badge-mode-cocl">COCL</span>`);
+          let modeBadge;
+          if (isTopLoss) {
+            modeBadge = `<span class="badge badge-mode-toploss">TOP</span>`;
+          } else if (isElec) {
+            modeBadge = `<span class="badge badge-mode-electronic">E-PARAM</span>`;
+          } else {
+            // COCL — зависит от типа
+            const type = h.type || '';
+            if (type === 'ChangeOver') {
+              modeBadge = `<span class="badge badge-changeover">CHANGE OVER</span>`;
+            } else if (type === 'CL_TO') {
+              modeBadge = `<span class="badge badge-clto">CL В ТО</span>`;
+            } else if (type === 'CL_Conversion') {
+              modeBadge = `<span class="badge badge-clconv">CL В КОНВЕРТ.</span>`;
+            } else {
+              modeBadge = `<span class="badge badge-mode-cocl">COCL</span>`;
+            }
+          }
 
           // --- Колонка «Не проверено» ---
           const uncheckedHtml = unchecked > 0
@@ -6086,7 +7316,16 @@ window.viewRecord = function(id) {
         <strong>Режим:</strong>
         ${isTopLoss
           ? '<span class="badge badge-mode-toploss">TOP Losses</span>'
-          : '<span class="badge badge-mode-cocl">COCL</span>'}
+          : isElec
+            ? '<span class="badge badge-mode-electronic">CL Electronic</span>'
+            : (() => {
+                const type = h.type || '';
+                if (type === 'ChangeOver') return '<span class="badge badge-changeover">Change Over</span>';
+                if (type === 'CL_TO') return '<span class="badge badge-clto">CL в ТО</span>';
+                if (type === 'CL_Conversion') return '<span class="badge badge-clconv">CL в Конвертацию</span>';
+                return '<span class="badge badge-mode-cocl">COCL</span>';
+              })()
+        }
       </div>
       <div><strong>Дата:</strong> ${fmtDate(h.timestamp)}</div>
       <div><strong>Оператор:</strong> ${escapeHtml(h.operator)}</div>
@@ -6166,8 +7405,8 @@ window.viewRecord = function(id) {
               <td>${escapeHtml(it.machine || '—')}</td>
               <td>${escapeHtml(it.node || '—')}</td>
               <td>${escapeHtml(it.title || '—')}</td>
-              <td>${escapeHtml(it.norm || '—')}</td>
-              <td>${answerHtml}</td>
+              <td>${renderRecordNorm(it, isElec)}</td>
+              <td>${renderRecordAnswer(it, isElec)}</td>
               <td>${it.comment ? escapeHtml(it.comment) : '—'}</td>
             </tr>
           `;
@@ -6176,11 +7415,174 @@ window.viewRecord = function(id) {
     </table>
   `;
   $('#recordModalBody').innerHTML = html;
-  $('#recordModal').classList.add('active');
+  openModal('#recordModal');
 };
 
+/* ============================================================
+   CL Electronic: сохранение проверки (кнопка «Зафиксировать»)
+   ============================================================ */
+$('#elecSaveCheckBtn')?.addEventListener('click', () => {
+  const operator = ($('#elecOperator')?.value || '').trim();
+  const line = elecState.line;
+  const date = elecState.date;
+  const shift = elecState.shift;
+  const brand = elecState.brand;
+
+  if (!operator) return showToast('Укажите ФИО оператора', true);
+  if (!line)     return showToast('Выберите линию', true);
+  if (!brand)    return showToast('Бренд не определён', true);
+
+  const items = [];
+
+  $$('#elecChecklistContainer .elec-acc-item').forEach(item => {
+    const it = elecState.items.find(x => x.id === item.dataset.elecId);
+    if (!it) return;
+
+    let answer = '—';
+    let status = 'UNCHECKED';
+    let value = null;
+
+    if (it.controlType === 'ok_not_ok') {
+      const r = item.querySelector('input[data-elec-ans]:checked');
+      if (r) {
+        answer = r.value === 'OK' ? 'ОК' : 'Не ОК';
+        status = r.value;
+      }
+    } else {
+      const inp = item.querySelector('input[data-elec-value]');
+      if (inp && inp.value !== '') {
+        value = parseFloat(inp.value);
+        if (!isNaN(value)) {
+          const min = it.target - it.tolerance;
+          const max = it.target + it.tolerance;
+          const inRange = value >= min && value <= max;
+          answer = `${value}`;
+          status = inRange ? 'OK' : 'FAIL';
+        }
+      }
+    }
+
+    items.push({
+      standardId: it.id,
+      machine: it.machine,
+      paramName: it.paramName,
+      work: it.work,
+      timeFrom: it.timeFrom,
+      timeTo: it.timeTo,
+      controlType: it.controlType,
+      target: it.target,
+      tolerance: it.tolerance,
+      normText: it.normText,
+      answer,
+      value,
+      status,
+      comment: item.dataset.comment || ''
+    });
+  });
+
+  const checkedCount = items.filter(it => it.status !== 'UNCHECKED').length;
+
+  const record = {
+    id: uid(),
+    timestamp: new Date().toISOString(),
+    mode: 'electronic',
+    operator,
+    line,
+    shift,
+    date,
+    brandPlanned: elecState.brandPlanned || null,
+    brandActual: brand,
+    brandReason: elecState.brandReason || '',
+    items
+  };
+
+  const hist = getHistory();
+  hist.push(record);
+  setHistory(hist);
+  updateNavHistoryCounter();
+
+  showToast(checkedCount === 0 ? 'Проверка сохранена (все пункты — «Не проверено»)' : 'Проверка сохранена');
+
+  renderElectronicSummary(record);
+});
+
+/**
+ * Норма для отображения в модалке просмотра записи.
+ * Для CL Electronic — из norm или normText.
+ * Для COCL — из блока точек (по бренду или все).
+ */
+function renderRecordNorm(it, isElec) {
+  if (isElec) {
+    return escapeHtml(it.norm || '—');
+  }
+
+  // COCL: собираем нормы всех точек
+  const st = getStandards().find(s => s.id === it.standardId);
+  if (!st) return escapeHtml(it.norm || '—');
+
+  const blocks = Array.isArray(st.measurements) ? st.measurements : [];
+  if (!blocks.length) return '—';
+
+  // Выбираем блок: если запись содержит brandTo — ищем по нему, иначе первый
+  const brandTo = it.brandTo || it.brandActual || '';
+  let block = null;
+  if (brandTo) {
+    block = blocks.find(b => b.brand === brandTo);
+  }
+  if (!block) block = blocks[0];
+
+  const points = Array.isArray(block.points) ? block.points : [];
+  if (!points.length) return '—';
+
+  return points.map(p => escapeHtml(p.value || '—')).join(' · ');
+}
+
+/**
+ * Ответ для отображения в модалке просмотра записи.
+ */
+function renderRecordAnswer(it, isElec) {
+  // Для CL Electronic — текущая логика
+  if (isElec) {
+    if (it.status === 'UNCHECKED') {
+      return '<span class="status-badge status-unchecked">Не проверено</span>';
+    }
+    if (it.controlType === 'ok_not_ok') {
+      return it.status === 'OK'
+        ? '<span class="status-badge status-ok">ОК</span>'
+        : '<span class="status-badge status-fail">Не ОК</span>';
+    }
+    let statusLabel = 'ОК';
+    let statusCls = 'status-ok';
+    if (it.status === 'FAIL') {
+      statusLabel = 'Не в допуске';
+      statusCls = 'status-fail';
+    }
+    return `<span class="status-badge ${statusCls}">${statusLabel}</span>
+      <span class="record-answer-value">${escapeHtml(it.answer || '—')}</span>`;
+  }
+
+  // COCL / TOP Losses
+  if (it.status === 'UNCHECKED') {
+    return '<span class="status-badge status-unchecked">Не проверено</span>';
+  }
+
+  if (it.controlType === 'ok_not_ok') {
+    return it.status === 'OK'
+      ? '<span class="status-badge status-ok">ОК</span>'
+      : '<span class="status-badge status-fail">Не ОК</span>';
+  }
+
+  // value_input / range_input — ответ = список значений
+  const values = String(it.answer || '').split(',').map(v => v.trim()).filter(Boolean);
+  const statusCls = it.status === 'FAIL' ? 'status-fail' : 'status-ok';
+  const statusLabel = it.status === 'FAIL' ? 'Есть отклонения' : 'В норме';
+
+  return `<span class="status-badge ${statusCls}">${statusLabel}</span>
+    <span class="record-answer-value">${values.map(v => escapeHtml(v)).join(' · ')}</span>`;
+}
+
 function closeRecordModal() {
-  $('#recordModal').classList.remove('active');
+  closeModal('#recordModal');
   currentRecord = null;
 }
 
@@ -7201,9 +8603,10 @@ function collectStandardsForLosses(lossIds, line) {
   return { items, lossMap, standardToLosses };
 }
 
-/* ----------------------------------------
-   Отрисовка чек-листа TOP Losses
-   ---------------------------------------- */
+/* ============================================================
+   TOP LOSSES: рендер чек-листа — аккордеон
+   ============================================================ */
+
 function renderTopLossChecklist(items, standardToLosses, lossIds) {
   const container = $('#tlChecklistView');
   if (!container) return;
@@ -7213,7 +8616,7 @@ function renderTopLossChecklist(items, standardToLosses, lossIds) {
   tlState.currentStandardToLosses = standardToLosses;
   tlState.currentLossIds = lossIds;
 
-  // Формируем чипы потерь (адаптивно — первые 3 + «+N»)
+  // Все потери
   const allLossObjects = lossIds
     .map(id => findLossById(id))
     .filter(Boolean);
@@ -7228,11 +8631,9 @@ function renderTopLossChecklist(items, standardToLosses, lossIds) {
   } else {
     const visible = allLossObjects.slice(0, MAX_VISIBLE_LOSSES);
     const hidden = allLossObjects.length - MAX_VISIBLE_LOSSES;
-
     lossChipsHtml = visible
       .map(l => `<span class="tl-summary-chip">${escapeHtml(l.name)}</span>`)
       .join('');
-
     lossChipsHtml += `<button type="button" class="tl-summary-chip tl-summary-chip-more"
                               id="tlShowAllLossesBtn"
                               title="Показать все потери">
@@ -7246,7 +8647,84 @@ function renderTopLossChecklist(items, standardToLosses, lossIds) {
     по <strong>${lossIds.length}</strong> ${pluralizeLosses(lossIds.length)}
   </div>`;
 
-  let html = `
+  // Первый непроверенный — раскроем автоматически
+  let firstUncheckedId = null;
+
+  // Рендер карточек — аккордеон
+  const itemsHtml = items.map(st => {
+    const stdLosses = standardToLosses[st.id] || [];
+    const isFirstUnchecked = (firstUncheckedId === null);
+    if (isFirstUnchecked) firstUncheckedId = st.id;
+
+    // Мета свёрнутой строки
+    const compactMeta = [
+      st.oplNumber ? `OPL: ${escapeHtml(st.oplNumber)}` : '',
+      st.machine ? `Машина: ${escapeHtml(st.machine)}` : '',
+      st.nodePart ? escapeHtml(st.nodePart) : ''
+    ].filter(Boolean).join(' · ');
+
+    // Потери
+    const lossNames = stdLosses
+      .map(id => findLossById(id))
+      .filter(Boolean)
+      .map(l => l.name);
+
+    const lossesText = lossNames.length
+      ? `<div class="tl-item-losses">Относится к: ${lossNames.map(escapeHtml).join(' · ')}</div>`
+      : '';
+
+    // Тело: ответ — всегда ОК / Не ОК, независимо от controlType
+    const answerBodyHtml = `
+      <div class="answer-row">
+        <div class="radio-group">
+          <label><input type="radio" name="tl_ans_${st.id}" value="OK" data-ans> ОК</label>
+          <label><input type="radio" name="tl_ans_${st.id}" value="FAIL" data-ans> Не ОК</label>
+        </div>
+      </div>`;
+
+    return `
+      <div class="cocl-acc-item tl-acc-item" data-std-id="${escapeAttr(st.id)}" data-expanded="false">
+        <div class="cocl-acc-header" data-acc-toggle>
+          <span class="cocl-status-dot" data-acc-status="unchecked"></span>
+          <div class="cocl-acc-title-wrap">
+            <div class="cocl-acc-title">${escapeHtml(st.title || '—')}</div>
+            <div class="cocl-acc-meta">${compactMeta}</div>
+          </div>
+
+          <button type="button" class="cocl-acc-comment-btn" data-comment-btn title="Добавить комментарий">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              <line x1="9" y1="10" x2="15" y2="10"/>
+              <line x1="9" y1="14" x2="13" y2="14"/>
+            </svg>
+          </button>
+
+          <button type="button" class="cocl-acc-view-btn" data-view-btn data-std-id="${escapeAttr(st.id)}" title="Посмотреть стандарт">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+
+          <span class="cocl-acc-caret">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </span>
+        </div>
+
+        <div class="cocl-acc-body">
+          ${lossesText}
+          <div class="tl-answer-block">
+            ${answerBodyHtml}
+          </div>
+          <div class="comment-preview" style="display:none" data-comment-preview></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = `
     <div class="card tl-header-card">
       <div class="tl-title-row">
         <span class="tl-title-icon">
@@ -7275,17 +8753,14 @@ function renderTopLossChecklist(items, standardToLosses, lossIds) {
           </svg>
         </span>
         <div class="tl-hint-text">
-          Это <strong>помощник проверки</strong>. Изучите стандарты, которые влияют
-          на выбранные потери. Можете просто посмотреть — или отметить, <em>хотя бы 1 стандарт ОК / Не ОК</em>,
+          Раскройте стандарт, чтобы оценить его. Отметьте <em>хотя бы 1 стандарт ОК / Не ОК</em>,
           чтобы сохранить результат в Историю.
         </div>
       </div>
     </div>
 
     <div class="card">
-      <div id="tlChecklistContainer">
-        ${items.map(st => renderTopLossChecklistItem(st, standardToLosses[st.id] || [])).join('')}
-      </div>
+      <div id="tlChecklistContainer">${itemsHtml}</div>
     </div>
 
     <div class="tl-select-footer" id="tlFooter">
@@ -7303,89 +8778,90 @@ function renderTopLossChecklist(items, standardToLosses, lossIds) {
     </div>
   `;
 
-  container.innerHTML = html;
+  // Раскрываем первый непроверенный
+  if (firstUncheckedId) {
+    const firstItem = container.querySelector(`.tl-acc-item[data-std-id="${firstUncheckedId}"]`);
+    if (firstItem) expandCoclItem(firstItem, true);
+  }
 
-  // Делегированные обработчики
-  bindTopLossChecklistEvents();
-
-  // Обновляем прогресс и активность кнопки
+  // Привязка обработчиков
+  bindTopLossAccordionEvents();
   updateTlProgressFooter();
 }
 
 /* Привязка всех обработчиков внутри списка */
-function bindTopLossChecklistEvents() {
+function bindTopLossAccordionEvents() {
   const container = $('#tlChecklistContainer');
   if (!container) return;
 
-  // Кнопка «Оценить» — раскрыть блок ответа
-  container.querySelectorAll('[data-evaluate-btn]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const stdId = btn.dataset.evaluateBtn;
-      toggleAnswerBlock(stdId, true);
+  // --- Клик по шапке — раскрыть/свернуть ---
+  container.querySelectorAll('[data-acc-toggle]').forEach(head => {
+    head.addEventListener('click', (e) => {
+      if (e.target.closest('[data-view-btn]')) return;
+      if (e.target.closest('[data-comment-btn]')) return;
+      const item = head.closest('.tl-acc-item');
+      if (!item) return;
+      const isExpanded = item.dataset.expanded === 'true';
+      if (isExpanded) {
+        collapseCoclItem(item);
+      } else {
+        expandCoclItem(item);
+      }
     });
   });
 
-  // Кнопка «Свернуть» — скрыть блок ответа
-  container.querySelectorAll('[data-collapse-btn]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const stdId = btn.dataset.collapseBtn;
-      toggleAnswerBlock(stdId, false);
+  // --- Глазик ---
+  container.querySelectorAll('[data-view-btn]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const stdId = btn.dataset.stdId;
+      if (stdId && typeof openStandardView === 'function') openStandardView(stdId);
     });
   });
 
-  // Радио ОК / Не ОК, tolerance
-  container.querySelectorAll('input[data-ans], input[data-tol]').forEach(r => {
-    r.addEventListener('change', (e) => {
-      const item = e.target.closest('.checklist-item');
-      const val = e.target.value;
-      item.classList.remove('answered-ok', 'answered-fail');
-      if (val === 'OK') item.classList.add('answered-ok');
-      if (val === 'FAIL') item.classList.add('answered-fail');
-      updateCommentUrgency(item);
-      updateItemAnsweredBadge(item);
-      updateTlProgressFooter();
-    });
-  });
-
-  // Поля ввода значения
-  container.querySelectorAll('input[data-ans-value]').forEach(inp => {
-    inp.addEventListener('input', (e) => {
-      const item = e.target.closest('.checklist-item');
-      updateItemAnsweredBadge(item);
-      updateTlProgressFooter();
-    });
-  });
-
-  // Иконка комментария
+  // --- Комментарий ---
   container.querySelectorAll('[data-comment-btn]').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const item = e.target.closest('.checklist-item');
+      e.stopPropagation();
+      const item = btn.closest('.tl-acc-item');
       openCommentModal(item);
     });
   });
 
-  // Иконка глаза
-  container.querySelectorAll('[data-view-btn]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const stdId = btn.dataset.stdId;
-      if (stdId) openStandardView(stdId);
+  // --- Radio ОК / Не ОК ---
+  container.querySelectorAll('input[data-ans]').forEach(r => {
+    r.addEventListener('change', (e) => {
+      const item = e.target.closest('.tl-acc-item');
+      const val = e.target.value;
+      updateTlItemStatus(item, val === 'OK' ? 'ok' : 'fail');
+      updateTlProgressFooter();
     });
   });
 
-  // Кнопки футера
+  // --- Кнопки футера ---
   $('#tlBackToSelectBtn')?.addEventListener('click', backToTopLossSelect);
   $('#tlSaveChecklistBtn')?.addEventListener('click', saveTopLossCheck);
-    // Кнопка «+N» — показать все потери
+
+  // --- Кнопка «+N потерь» ---
   $('#tlShowAllLossesBtn')?.addEventListener('click', () => {
     const allLossObjects = tlState.currentLossIds
       .map(id => findLossById(id))
       .filter(Boolean);
-
     const names = allLossObjects.map(l => l.name).join('\n');
     alert('Все потери:\n\n' + names);
   });
 }
 
+/** Обновить статус свёрнутой строки в TOP Losses */
+function updateTlItemStatus(item, status) {
+  item.dataset.status = status;
+  const dot = item.querySelector('[data-acc-status]');
+  if (dot) {
+    dot.classList.remove('cocl-status-unchecked', 'cocl-status-ok', 'cocl-status-fail');
+    dot.classList.add('cocl-status-' + status);
+    dot.dataset.accStatus = status;
+  }
+}
 /* Раскрыть / свернуть блок ответа */
 function toggleAnswerBlock(stdId, open) {
   const item = document.querySelector(`.checklist-item[data-std-id="${stdId}"]`);
@@ -7459,25 +8935,16 @@ function updateTlProgressFooter() {
   const saveBtn = $('#tlSaveChecklistBtn');
   if (!footer || !saveBtn) return;
 
-  const items = $$('#tlChecklistContainer .checklist-item');
+  const items = $$('#tlChecklistContainer .tl-acc-item');
 
   let filled = 0;
+  let oks = 0;
+  let fails = 0;
+
   items.forEach(item => {
-    const std = getStandards().find(s => s.id === item.dataset.stdId);
-    if (!std) return;
-
-    const valueFilled = (() => {
-      const inp = item.querySelector('input[data-ans-value]');
-      return inp && inp.value !== '';
-    })();
-
-    if (std.controlType === 'ok_not_ok') {
-      if (item.querySelector('input[data-ans]:checked')) filled++;
-    } else if (std.controlType === 'value_input') {
-      if (valueFilled) filled++;
-    } else if (std.controlType === 'tolerance') {
-      if (valueFilled && item.querySelector('input[data-tol]:checked')) filled++;
-    }
+    const status = item.dataset.status;
+    if (status === 'ok') { filled++; oks++; }
+    else if (status === 'fail') { filled++; fails++; }
   });
 
   const total = items.length;
@@ -7487,14 +8954,17 @@ function updateTlProgressFooter() {
 
   if (filled > 0 && total > 0) {
     const unchecked = total - filled;
+    const parts = [`Отмечено: ${filled} / ${total}`];
+    if (oks > 0) parts.push(`ОК: ${oks}`);
+    if (fails > 0) parts.push(`Не ОК: ${fails}`);
+    if (unchecked > 0) parts.push(`не проверено: ${unchecked}`);
+
     const progressHtml = `
       <div class="tl-footer-progress">
         <div class="progress-bar-outer">
           <div class="progress-bar-inner" style="width:${pct}%"></div>
         </div>
-        <div class="progress-text">
-          Отмечено: ${filled} / ${total}${unchecked > 0 ? ` · не проверено: ${unchecked}` : ''}
-        </div>
+        <div class="progress-text">${parts.join(' · ')}</div>
       </div>
     `;
     footer.insertAdjacentHTML('afterbegin', progressHtml);
@@ -7530,111 +9000,6 @@ function cancelTopLossCheck() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-/* ----------------------------------------
-   Отрисовка одного пункта чек-листа TOP Losses
-   ---------------------------------------- */
-function renderTopLossChecklistItem(st, lossIds) {
-  // Строка «Относится к: …»
-  const lossNames = lossIds
-    .map(id => findLossById(id))
-    .filter(Boolean)
-    .map(l => l.name);
-
-  const lossesText = lossNames.length
-    ? `<div class="tl-item-losses">Относится к: ${lossNames.map(escapeHtml).join(' · ')}</div>`
-    : '';
-
-  // Содержимое блока ответа — в зависимости от типа контроля
-  let answerBodyHtml = '';
-  if (st.controlType === 'ok_not_ok') {
-    answerBodyHtml = `
-      <div class="answer-row">
-        <div class="radio-group">
-          <label><input type="radio" name="tl_ans_${st.id}" value="OK" data-ans> ОК</label>
-          <label><input type="radio" name="tl_ans_${st.id}" value="FAIL" data-ans> Не ОК</label>
-        </div>
-        <button type="button" class="comment-btn" data-comment-btn title="Добавить комментарий">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            <line x1="9" y1="10" x2="15" y2="10"/>
-            <line x1="9" y1="14" x2="13" y2="14"/>
-          </svg>
-        </button>
-      </div>`;
-  } else if (st.controlType === 'value_input') {
-    answerBodyHtml = `
-      <div class="answer-row">
-        <div class="answer-field">
-          <input type="number" step="any" data-ans-value placeholder="0">
-        </div>
-        <button type="button" class="comment-btn" data-comment-btn title="Добавить комментарий">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            <line x1="9" y1="10" x2="15" y2="10"/>
-            <line x1="9" y1="14" x2="13" y2="14"/>
-          </svg>
-        </button>
-      </div>`;
-  } else if (st.controlType === 'tolerance') {
-    answerBodyHtml = `
-      <div class="answer-row">
-        <div class="answer-field">
-          <input type="number" step="any" data-ans-value placeholder="0">
-        </div>
-        <div class="radio-group">
-          <label><input type="radio" name="tl_tol_${st.id}" value="OK" data-tol> В допуске</label>
-          <label><input type="radio" name="tl_tol_${st.id}" value="FAIL" data-tol> Не в допуске</label>
-        </div>
-        <button type="button" class="comment-btn" data-comment-btn title="Добавить комментарий">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            <line x1="9" y1="10" x2="15" y2="10"/>
-            <line x1="9" y1="14" x2="13" y2="14"/>
-          </svg>
-        </button>
-      </div>`;
-  }
-
-  return `
-    <div class="checklist-item" data-std-id="${escapeAttr(st.id)}">
-      <div class="meta">
-        <span><strong>Часть:</strong> ${escapeHtml(st.nodePart || '—')}</span>
-        ${st.machine ? `<span><strong>Машина:</strong> ${escapeHtml(st.machine)}</span>` : ''}
-        <span><strong>OPL:</strong> ${escapeHtml(st.oplNumber || '—')}</span>
-        <span><strong>Узел:</strong> ${escapeHtml(st.node || '—')}</span>
-      </div>
-      <div class="title">${escapeHtml(st.title || '')}</div>
-      ${lossesText}
-
-      <div class="tl-item-actions-row">
-        <button type="button" class="view-btn" data-view-btn data-std-id="${escapeAttr(st.id)}" title="Посмотреть стандарт">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-            <circle cx="12" cy="12" r="3"/>
-          </svg>
-        </button>
-        <button type="button" class="tl-evaluate-btn" data-evaluate-btn="${escapeAttr(st.id)}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="9 11 12 14 22 4"/>
-            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-          </svg>
-          <span>Оценить</span>
-        </button>
-        <button type="button" class="tl-collapse-btn" data-collapse-btn="${escapeAttr(st.id)}" style="display:none">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="18 15 12 9 6 15"/>
-          </svg>
-          <span>Свернуть</span>
-        </button>
-      </div>
-
-      <div class="tl-answer-block">
-        ${answerBodyHtml}
-      </div>
-
-      <div class="comment-preview" style="display:none" data-comment-preview></div>
-    </div>`;
-}
 /* ----------------------------------------
    Прогресс для чек-листа TOP Losses
    ---------------------------------------- */
@@ -7704,7 +9069,7 @@ function saveTopLossCheck() {
   // Собираем ответы
   const items = [];
 
-  $$('#tlChecklistContainer .checklist-item').forEach(item => {
+  $$('#tlChecklistContainer .tl-acc-item').forEach(item => {
     const stdId = item.dataset.stdId;
     const st = getStandards().find(s => s.id === stdId);
     if (!st) return;
@@ -7712,28 +9077,17 @@ function saveTopLossCheck() {
     let answer = '—';
     let status = 'UNCHECKED';
 
-    if (st.controlType === 'ok_not_ok') {
-      const r = item.querySelector('input[data-ans]:checked');
-      if (r) {
-        answer = r.value === 'OK' ? 'ОК' : 'Не ОК';
-        status = r.value;
-      }
-    } else if (st.controlType === 'value_input') {
-      const v = item.querySelector('input[data-ans-value]').value;
-      if (v !== '') {
-        answer = v;
-        status = 'OK';
-      }
-    } else if (st.controlType === 'tolerance') {
-      const v = item.querySelector('input[data-ans-value]').value;
-      const r = item.querySelector('input[data-tol]:checked');
-      if (v !== '' && r) {
-        answer = v + ' — ' + (r.value === 'OK' ? 'в допуске' : 'не в допуске');
-        status = r.value;
-      }
+    // В TOP Losses всегда radio ОК / Не ОК
+    const r = item.querySelector('input[data-ans]:checked');
+    if (r) {
+      answer = r.value === 'OK' ? 'ОК' : 'Не ОК';
+      status = r.value;
     }
 
-    const mainValue = (st.measurements && st.measurements[0] && st.measurements[0].value) || '';
+    const firstBlock = Array.isArray(st.measurements) && st.measurements[0];
+    const mainValue = firstBlock && Array.isArray(firstBlock.points) && firstBlock.points[0]
+      ? firstBlock.points[0].value || ''
+      : '';
 
     items.push({
       standardId: st.id,
@@ -7743,13 +9097,13 @@ function saveTopLossCheck() {
       node: st.node,
       nodePart: st.nodePart,
       title: st.title,
-      controlType: st.controlType,
+      controlType: 'ok_not_ok',   // фиксируем тип для истории
       norm: mainValue,
       answer: answer,
       status: status,
       comment: item.dataset.comment || ''
     });
-  });
+  }); 
 
   // Сохраняем, только если есть хотя бы один отмеченный ответ
   const checkedCount = items.filter(it => it.status !== 'UNCHECKED').length;
@@ -7936,7 +9290,7 @@ function renderTopLossSummary(record) {
       <div class="tl-shield-info">
         <div class="tl-shield-title">${shieldTitle}</div>
         <div class="tl-shield-sub">${shieldSubParts.join(' · ')}</div>
-        ${fails > 0 ? `
+        ${totalFails > 0 ? `
           <div class="tl-shield-journal-warning">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
@@ -9569,9 +10923,8 @@ $('#checkPhotosBtn')?.addEventListener('click', async () => {
   const body = $('#checkPhotosModalBody');
   if (!modal || !body) return;
 
-  // Показываем модалку с индикатором загрузки
   body.innerHTML = '<div class="cp-empty">Проверка…</div>';
-  modal.classList.add('active');
+  openModal(modal);
 
   try {
     const result = await runPhotosCheck();
@@ -9589,8 +10942,7 @@ $('#checkPhotosBtn')?.addEventListener('click', async () => {
 });
 
 function closePhotosCheckModal() {
-  const modal = $('#checkPhotosModal');
-  if (modal) modal.classList.remove('active');
+  closeModal('#checkPhotosModal');
 }
 
 $('#checkPhotosModalClose')?.addEventListener('click', closePhotosCheckModal);
@@ -9797,10 +11149,10 @@ function renderElectronicShiftPreview() {
 }
 /* Склонение: 1 линия / 2 линии / 5 линий */
 function pluralizeLines(n) {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return 'линия';
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'линии';
+  const m10 = n % 10;
+  const m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'линия';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'линии';
   return 'линий';
 }
 /* Добавить блок */
@@ -9937,13 +11289,12 @@ window.openBlockModal = function(blockId) {
     });
   }
 
-  modal.classList.add('active');
+  openModal(modal);
   setTimeout(() => $('#blockModalName').focus(), 100);
 };
 
 function closeBlockModal() {
-  const modal = $('#blockModal');
-  if (modal) modal.classList.remove('active');
+  closeModal('#blockModal');
 }
 
 /* --- Обработчики модалки --- */
@@ -9989,45 +11340,329 @@ $('#blockModalSaveBtn')?.addEventListener('click', () => {
   showToast('Блок обновлён');
 });
 /* ============================================================
-   МАШИНЫ ДЛЯ ЛИНИЙ — плитки
+   МАШИНЫ ДЛЯ ЛИНИЙ — компактные строки + аккордеон по блокам
    ============================================================ */
+
+const LM_OPEN_BLOCKS_KEY = 'cl_lm_open_blocks';
+
+/* Получить сохранённые открытые блоки */
+function getLmOpenBlocks() {
+  try {
+    const raw = localStorage.getItem(LM_OPEN_BLOCKS_KEY);
+    const arr = raw ? JSON.parse(raw) : null;
+    return Array.isArray(arr) ? arr : null;   // null = все по умолчанию
+  } catch (e) { return null; }
+}
+
+function setLmOpenBlocks(arr) {
+  try { localStorage.setItem(LM_OPEN_BLOCKS_KEY, JSON.stringify(arr)); } catch (e) {}
+}
+
 function renderLineMachinesSettings() {
-  const lines = getLines();
-  const lm = getLineMachines();
   const container = $('#lineMachinesContainer');
   if (!container) return;
+
+  const lines = getLines();
+  const lm = getLineMachines();
 
   if (!lines.length) {
     container.innerHTML = '<div class="empty-state">Сначала добавьте линии</div>';
     return;
   }
 
-  container.innerHTML = '<div class="lm-tiles-grid">' + lines.map(line => {
-    const machines = Array.isArray(lm[line]) ? lm[line] : [];
-    const count = machines.length;
-    const countText = count === 0
-      ? 'Нет машин'
-      : `${count} ${pluralizeMachines(count)}`;
+  // Открытые блоки
+  let openBlocks = getLmOpenBlocks();
 
-    // Превью — список машин
-    const preview = count === 0
-      ? 'Нажмите, чтобы добавить'
-      : machines.slice(0, 4).join(', ') + (count > 4 ? ` …+${count - 4}` : '');
+  // Если не заданы — раскрываем первый блок по умолчанию
+  const blocks = getBlocks();
+  if (openBlocks === null) {
+    openBlocks = blocks.length ? [blocks[0].id] : [];
+    setLmOpenBlocks(openBlocks);
+  }
 
-    const safeLine = escapeAttr(line);
+  // Дополнительно: линии, которых нет ни в одном блоке
+  const linesInBlocks = new Set();
+  blocks.forEach(b => (b.lines || []).forEach(l => linesInBlocks.add(l)));
+  const orphanLines = lines.filter(l => !linesInBlocks.has(l));
 
-    return `
-      <div class="lm-tile" onclick="openMachinesListModal('${safeLine}')" title="${safeLine}">
-        <div class="lm-tile-name">${escapeHtml(line)}</div>
-        <div class="lm-tile-count">${countText}</div>
-        <div class="lm-tile-preview">${escapeHtml(preview)}</div>
+  // Собираем все группы для рендера:
+  //   [{ id, name, lines }, ..., { id: '__orphan', name: 'Без блока', lines: orphanLines }]
+  const groups = blocks.map(b => ({
+    id: b.id,
+    name: b.name || 'Без названия',
+    lines: (b.lines || []).filter(l => lines.includes(l))
+  })).filter(g => g.lines.length > 0);
+
+  if (orphanLines.length) {
+    groups.push({
+      id: '__orphan',
+      name: 'Без блока',
+      lines: orphanLines
+    });
+  }
+
+  // Общий счётчик
+  const totalLineCount = lines.length;
+
+  // --- Верхняя панель: заголовок + счётчик + поиск ---
+  let html = `
+    <div class="lm-toolbar">
+      <div class="lm-search-wrap">
+        <svg class="lm-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="lmSearchInput" placeholder="Поиск по линии или машине..." autocomplete="off">
+        <button type="button" class="lm-search-clear" id="lmSearchClear" title="Очистить" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <button type="button" class="btn btn-secondary btn-sm lm-toggle-all-btn" id="lmToggleAllBtn" title="Развернуть или свернуть все блоки">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="lmToggleAllIcon">
+          <polyline points="7 13 12 18 17 13"/>
+          <polyline points="7 6 12 11 17 6"/>
+        </svg>
+        <span id="lmToggleAllLabel">Развернуть всё</span>
+      </button>
+
+      <span class="lm-counter">Всего линий: <strong>${totalLineCount}</strong></span>
+    </div>
+  `;
+
+  // --- Группы ---
+  html += '<div class="lm-groups">';
+  groups.forEach(group => {
+    const isOpen = openBlocks.includes(group.id);
+    const groupLinesHtml = group.lines.map(line => {
+      const machines = Array.isArray(lm[line]) ? lm[line] : [];
+      const count = machines.length;
+
+      const machinesText = count === 0
+        ? '<span class="lm-row-empty">Нет машин — нажмите, чтобы добавить</span>'
+        : `<span class="lm-row-machines" title="${escapeAttr(machines.join(', '))}">${escapeHtml(machines.join(', '))}</span>`;
+
+      const countBadge = count === 0
+        ? '<span class="lm-row-count lm-row-count-empty">0</span>'
+        : `<span class="lm-row-count">${count}</span>`;
+
+      return `
+        <div class="lm-row" data-line="${escapeAttr(line)}" data-machines="${escapeAttr(machines.join(' ').toLowerCase())}">
+          <div class="lm-row-line">${escapeHtml(line)}</div>
+          <div class="lm-row-count-wrap">${countBadge}</div>
+          <div class="lm-row-machines-wrap">${machinesText}</div>
+          <button class="btn btn-primary btn-sm lm-row-btn" type="button">
+            Настроить →
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    // Считаем общее число машин в блоке
+    const groupMachineCount = group.lines.reduce((sum, line) => {
+      const machines = Array.isArray(lm[line]) ? lm[line] : [];
+      return sum + machines.length;
+    }, 0);
+
+    html += `
+      <div class="lm-group ${isOpen ? 'expanded' : ''}" data-group-id="${escapeAttr(group.id)}">
+        <div class="lm-group-head" data-group-toggle="${escapeAttr(group.id)}">
+          <span class="lm-group-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </span>
+          <span class="lm-group-name">${escapeHtml(group.name)}</span>
+          <span class="lm-group-count">
+            ${group.lines.length} ${pluralizeLines(group.lines.length)}
+            · ${groupMachineCount} ${pluralizeMachines(groupMachineCount)}
+          </span>
+        </div>
+        <div class="lm-group-body">${groupLinesHtml}</div>
       </div>
     `;
-  }).join('') + '</div>';
+  });
+  html += '</div>';
+
+  container.innerHTML = html;
+
+  // --- Обработчики: клик по заголовку блока ---
+  container.querySelectorAll('[data-group-toggle]').forEach(head => {
+    head.addEventListener('click', () => {
+      const groupId = head.dataset.groupToggle;
+      let open = getLmOpenBlocks() || [];
+      if (open.includes(groupId)) {
+        open = open.filter(id => id !== groupId);
+      } else {
+        open.push(groupId);
+      }
+      setLmOpenBlocks(open);
+      renderLineMachinesSettings();
+    });
+  });
+
+  // --- Обработчики: клик по строке → открыть модалку машин ---
+  container.querySelectorAll('.lm-row').forEach(row => {
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('.lm-row-btn')) return;   // кнопка обрабатывается отдельно
+      const line = row.dataset.line;
+      if (line) openMachinesListModal(line);
+    });
+  });
+
+  // Кнопка «Настроить →»
+  container.querySelectorAll('.lm-row-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const row = btn.closest('.lm-row');
+      if (!row) return;
+      const line = row.dataset.line;
+      if (line) openMachinesListModal(line);
+    });
+  });
+
+  // --- Поиск ---
+  const searchInput = $('#lmSearchInput');
+  const searchClear = $('#lmSearchClear');
+  if (searchInput) {
+    // Восстанавливаем значение поиска (если было)
+    const savedQuery = sessionStorage.getItem('lm_search_query') || '';
+    if (savedQuery) {
+      searchInput.value = savedQuery;
+      if (searchClear) searchClear.style.display = 'inline-flex';
+      applyLmSearch(savedQuery);
+    }
+
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim();
+      sessionStorage.setItem('lm_search_query', q);
+      if (searchClear) searchClear.style.display = q ? 'inline-flex' : 'none';
+      applyLmSearch(q);
+    });
+  }
+
+  if (searchClear) {
+    searchClear.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      sessionStorage.removeItem('lm_search_query');
+      searchClear.style.display = 'none';
+      applyLmSearch('');
+      if (searchInput) searchInput.focus();
+    });
+  }
+
+  // --- Кнопки «Развернуть всё / Свернуть всё» ---
+  // --- Кнопка «Развернуть всё / Свернуть всё» ---
+  updateLmToggleAllBtn(groups);
+
+  const toggleAllBtn = $('#lmToggleAllBtn');
+  if (toggleAllBtn) {
+    toggleAllBtn.addEventListener('click', () => {
+      const open = getLmOpenBlocks() || [];
+      const allIds = groups.map(g => g.id);
+      const allExpanded = allIds.length > 0 && allIds.every(id => open.includes(id));
+
+      if (allExpanded) {
+        // Сворачиваем всё
+        setLmOpenBlocks([]);
+      } else {
+        // Разворачиваем всё
+        setLmOpenBlocks(allIds);
+      }
+      renderLineMachinesSettings();
+    });
+  }
 }
+
+/* Применить поиск: показать только совпавшие строки,
+   при активном поиске — раскрыть все блоки. */
+function applyLmSearch(query) {
+  const container = $('#lineMachinesContainer');
+  if (!container) return;
+
+  const q = (query || '').trim().toLowerCase();
+  const groups = container.querySelectorAll('.lm-group');
+
+  if (!q) {
+    // Показываем всё, восстанавливаем состояние accordion
+    const openBlocks = getLmOpenBlocks() || [];
+    groups.forEach(g => {
+      const gid = g.dataset.groupId;
+      g.style.display = '';                                          // ← сброс
+      g.classList.toggle('expanded', openBlocks.includes(gid));
+    });
+    container.querySelectorAll('.lm-row').forEach(r => {
+      r.style.display = '';                                          // ← сброс
+    });
+    return;
+  }
+
+  // При активном поиске — все блоки раскрыты, показываем только совпадения
+  groups.forEach(g => {
+    g.classList.add('expanded');
+
+    let visibleInGroup = 0;
+    g.querySelectorAll('.lm-row').forEach(row => {
+      const line = (row.dataset.line || '').toLowerCase();
+      const machines = (row.dataset.machines || '').toLowerCase();
+      const match = line.includes(q) || machines.includes(q);
+      row.style.display = match ? '' : 'none';
+      if (match) visibleInGroup++;
+    });
+
+    // Если в блоке ничего не найдено — скрываем группу
+    g.style.display = visibleInGroup > 0 ? '' : 'none';
+  });
+}
+
+/* Обновить вид кнопки «Развернуть всё / Свернуть всё» */
+function updateLmToggleAllBtn(groups) {
+  const btn = $('#lmToggleAllBtn');
+  const label = $('#lmToggleAllLabel');
+  const icon = $('#lmToggleAllIcon');
+  if (!btn || !label || !icon) return;
+
+  const open = getLmOpenBlocks() || [];
+  const allIds = groups.map(g => g.id);
+  const allExpanded = allIds.length > 0 && allIds.every(id => open.includes(id));
+
+  if (allExpanded) {
+    label.textContent = 'Свернуть всё';
+    btn.title = 'Свернуть все блоки';
+    icon.innerHTML = `
+      <polyline points="17 11 12 6 7 11"/>
+      <polyline points="17 18 12 13 7 18"/>
+    `;
+  } else {
+    label.textContent = 'Развернуть всё';
+    btn.title = 'Развернуть все блоки';
+    icon.innerHTML = `
+      <polyline points="7 13 12 18 17 13"/>
+      <polyline points="7 6 12 11 17 6"/>
+    `;
+  }
+  }
 /* ============================================================
-   TOP LOSSES — плитки в настройках
+   TOP LOSSES — категории (аккордеон + inline-потери)
    ============================================================ */
+
+const TL_OPEN_CATS_KEY = 'cl_tl_open_cats';
+
+/* Открытые категории */
+function getTlOpenCats() {
+  try {
+    const raw = localStorage.getItem(TL_OPEN_CATS_KEY);
+    const arr = raw ? JSON.parse(raw) : null;
+    return Array.isArray(arr) ? arr : null;
+  } catch (e) { return null; }
+}
+
+function setTlOpenCats(arr) {
+  try { localStorage.setItem(TL_OPEN_CATS_KEY, JSON.stringify(arr)); } catch (e) {}
+}
 
 function renderTopLossesSettings() {
   const container = $('#topLossesContainer');
@@ -10036,36 +11671,278 @@ function renderTopLossesSettings() {
   const cats = getTopLosses();
 
   if (!cats.length) {
-    container.innerHTML = '<div class="empty-state">Категорий нет. Нажмите «Добавить категорию».</div>';
+    container.innerHTML = '<div class="empty-state">Категорий нет</div>';
     return;
   }
 
-  container.innerHTML = '<div class="tl-tiles-grid">' + cats.map(cat => {
+  // Открытые категории
+  let openCats = getTlOpenCats();
+  if (openCats === null) {
+    openCats = cats.map(c => c.id);   // все раскрыты по умолчанию
+    setTlOpenCats(openCats);
+  }
+
+  // --- Тулбар ---
+  let html = `
+    <div class="tl-cat-toolbar">
+      <div class="tl-cat-search-wrap">
+        <svg class="tl-cat-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="tlCatSearchInput" placeholder="Поиск по категории или потере..." autocomplete="off">
+        <button type="button" class="tl-cat-search-clear" id="tlCatSearchClear" title="Очистить" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <button type="button" class="btn btn-secondary btn-sm tl-cat-toggle-all-btn" id="tlCatToggleAllBtn" title="Развернуть или свернуть все категории">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="tlCatToggleAllIcon">
+          <polyline points="7 13 12 18 17 13"/>
+          <polyline points="7 6 12 11 17 6"/>
+        </svg>
+        <span id="tlCatToggleAllLabel">Развернуть всё</span>
+      </button>
+    </div>
+  `;
+
+  // --- Категории ---
+  html += '<div class="tl-cat-groups">';
+  cats.forEach(cat => {
     const items = Array.isArray(cat.items) ? cat.items : [];
-    const count = items.length;
-    const countText = count === 0
-      ? 'Нет потерь'
-      : `${count} ${pluralizeLosses(count)}`;
+    const isOpen = openCats.includes(cat.id);
+    const catId = cat.id;
 
-    // Превью — первые 3 потери
-    const preview = count === 0
-      ? 'Нажмите, чтобы добавить потери'
-      : items.slice(0, 3).map(it => it.name).join(', ') + (count > 3 ? ` …+${count - 3}` : '');
+    // Потери
+    const itemsHtml = items.length
+      ? items.map(it => `
+          <div class="tl-loss-inline-row" data-loss-id="${escapeAttr(it.id)}" data-cat-id="${escapeAttr(catId)}">
+            <span class="tl-loss-inline-name">${escapeHtml(it.name)}</span>
+            <div class="tl-loss-inline-actions">
+              <button type="button" class="tl-row-action-btn tl-row-edit-btn" data-tl-edit="${escapeAttr(it.id)}" title="Изменить">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+              <button type="button" class="tl-row-action-btn tl-row-delete-btn" data-tl-delete="${escapeAttr(it.id)}" title="Удалить">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        `).join('')
+      : '<div class="tl-cat-empty">В категории нет потерь</div>';
 
-    return `
-      <div class="tl-tile" onclick="openTopLossCategoryItemsModal('${escapeAttr(cat.id)}')">
-        <div class="tl-tile-name">${escapeHtml(cat.name)}</div>
-        <div class="tl-tile-count">${countText}</div>
-        <div class="tl-tile-preview">${escapeHtml(preview)}</div>
-        <div class="tl-tile-footer">
-          <button class="btn btn-primary btn-sm"
-                  onclick="event.stopPropagation();openTopLossCategoryItemsModal('${escapeAttr(cat.id)}')">
-            Открыть →
-          </button>
+    // Счётчик: сколько стандартов использует потери категории
+    const allStandards = getStandards();
+    const lossIdsSet = new Set(items.map(it => it.id));
+    const stdCount = allStandards.filter(st =>
+      Array.isArray(st.topLosses) && st.topLosses.some(id => lossIdsSet.has(id))
+    ).length;
+
+    html += `
+      <div class="tl-cat-group ${isOpen ? 'expanded' : ''}" data-cat-id="${escapeAttr(catId)}">
+        <div class="tl-cat-group-head" data-cat-toggle="${escapeAttr(catId)}">
+          <span class="tl-cat-group-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </span>
+          <span class="tl-cat-group-name">${escapeHtml(cat.name)}</span>
+          <span class="tl-cat-group-count">
+            ${items.length} ${pluralizeLosses(items.length)}
+            ${stdCount > 0 ? ` · ${stdCount} ${pluralizeStandards(stdCount)}` : ''}
+          </span>
+        </div>
+        <div class="tl-cat-group-body">
+          <div class="tl-cat-losses">${itemsHtml}</div>
+          <div class="tl-cat-group-footer">
+            <button type="button" class="btn btn-secondary btn-icon-text tl-cat-add-loss-btn" data-tl-add-loss="${escapeAttr(catId)}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              <span>Добавить потерю</span>
+            </button>
+          </div>
         </div>
       </div>
     `;
-  }).join('') + '</div>';
+  });
+  html += '</div>';
+
+  container.innerHTML = html;
+
+  // --- Обработчики: аккордеон ---
+  container.querySelectorAll('[data-cat-toggle]').forEach(head => {
+    head.addEventListener('click', () => {
+      const catId = head.dataset.catToggle;
+      let open = getTlOpenCats() || [];
+      if (open.includes(catId)) {
+        open = open.filter(id => id !== catId);
+      } else {
+        open.push(catId);
+      }
+      setTlOpenCats(open);
+      renderTopLossesSettings();
+    });
+  });
+
+  // --- Обработчики: добавить потерю ---
+  container.querySelectorAll('[data-tl-add-loss]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const catId = btn.dataset.tlAddLoss;
+      openTopLossItemModal(catId, null);
+    });
+  });
+
+  // --- Обработчики: редактировать потерю ---
+  container.querySelectorAll('[data-tl-edit]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const itemId = btn.dataset.tlEdit;
+      const row = btn.closest('.tl-loss-inline-row');
+      const catId = row ? row.dataset.catId : null;
+      if (catId) openTopLossItemModal(catId, itemId);
+    });
+  });
+
+  // --- Обработчики: удалить потерю ---
+  container.querySelectorAll('[data-tl-delete]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const itemId = btn.dataset.tlDelete;
+      const row = btn.closest('.tl-loss-inline-row');
+      const catId = row ? row.dataset.catId : null;
+      if (catId) deleteTopLossItem(catId, itemId);
+    });
+  });
+
+  // --- Кнопка «Развернуть / Свернуть всё» ---
+  updateTlCatToggleAllBtn(cats);
+
+  const toggleAllBtn = $('#tlCatToggleAllBtn');
+  if (toggleAllBtn) {
+    toggleAllBtn.addEventListener('click', () => {
+      const open = getTlOpenCats() || [];
+      const allIds = cats.map(c => c.id);
+      const allExpanded = allIds.length > 0 && allIds.every(id => open.includes(id));
+
+      if (allExpanded) {
+        setTlOpenCats([]);
+      } else {
+        setTlOpenCats(allIds);
+      }
+      renderTopLossesSettings();
+    });
+  }
+
+  // --- Поиск ---
+  const searchInput = $('#tlCatSearchInput');
+  const searchClear = $('#tlCatSearchClear');
+  if (searchInput) {
+    const savedQuery = sessionStorage.getItem('tl_search_query') || '';
+    if (savedQuery) {
+      searchInput.value = savedQuery;
+      if (searchClear) searchClear.style.display = 'inline-flex';
+      applyTlCatSearch(savedQuery);
+    }
+
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim();
+      sessionStorage.setItem('tl_search_query', q);
+      if (searchClear) searchClear.style.display = q ? 'inline-flex' : 'none';
+      applyTlCatSearch(q);
+    });
+  }
+
+  if (searchClear) {
+    searchClear.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      sessionStorage.removeItem('tl_search_query');
+      searchClear.style.display = 'none';
+      applyTlCatSearch('');
+      if (searchInput) searchInput.focus();
+    });
+  }
+}
+
+/* Обновить вид кнопки «Развернуть / Свернуть всё» */
+function updateTlCatToggleAllBtn(cats) {
+  const btn = $('#tlCatToggleAllBtn');
+  const label = $('#tlCatToggleAllLabel');
+  const icon = $('#tlCatToggleAllIcon');
+  if (!btn || !label || !icon) return;
+
+  const open = getTlOpenCats() || [];
+  const allIds = cats.map(c => c.id);
+  const allExpanded = allIds.length > 0 && allIds.every(id => open.includes(id));
+
+  if (allExpanded) {
+    label.textContent = 'Свернуть всё';
+    btn.title = 'Свернуть все категории';
+    icon.innerHTML = `
+      <polyline points="17 11 12 6 7 11"/>
+      <polyline points="17 18 12 13 7 18"/>
+    `;
+  } else {
+    label.textContent = 'Развернуть всё';
+    btn.title = 'Развернуть все категории';
+    icon.innerHTML = `
+      <polyline points="7 13 12 18 17 13"/>
+      <polyline points="7 6 12 11 17 6"/>
+    `;
+  }
+}
+
+/* Поиск по категориям и потерям */
+function applyTlCatSearch(query) {
+  const container = $('#topLossesContainer');
+  if (!container) return;
+
+  const q = (query || '').trim().toLowerCase();
+  const groups = container.querySelectorAll('.tl-cat-group');
+
+  if (!q) {
+    const openCats = getTlOpenCats() || [];
+    groups.forEach(g => {
+      g.style.display = '';
+      g.classList.toggle('expanded', openCats.includes(g.dataset.catId));
+    });
+    container.querySelectorAll('.tl-loss-inline-row').forEach(r => r.style.display = '');
+    return;
+  }
+
+  // При активном поиске — все категории раскрыты
+  groups.forEach(g => {
+    g.classList.add('expanded');
+
+    const catName = g.querySelector('.tl-cat-group-name')?.textContent.toLowerCase() || '';
+    let visibleInCat = 0;
+
+    g.querySelectorAll('.tl-loss-inline-row').forEach(row => {
+      const lossName = row.querySelector('.tl-loss-inline-name')?.textContent.toLowerCase() || '';
+      const match = lossName.includes(q) || catName.includes(q);
+      row.style.display = match ? '' : 'none';
+      if (match) visibleInCat++;
+    });
+
+    // Если в категории ничего не найдено — скрываем категорию
+    const catMatch = catName.includes(q);
+    g.style.display = (visibleInCat > 0 || catMatch) ? '' : 'none';
+
+    // Если название категории совпало — показываем все её потери
+    if (catMatch) {
+      g.querySelectorAll('.tl-loss-inline-row').forEach(row => row.style.display = '');
+    }
+  });
 }
 
 /* Склонение: 1 потеря / 2 потери / 5 потерь */
@@ -10115,16 +11992,17 @@ window.openMachinesListModal = function(line) {
   const modal = $('#machinesListModal');
   if (!modal) return;
 
-  // На всякий случай сбрасываем inline-style (если остался с прошлого раза)
-  modal.style.display = '';
-
   $('#machinesListModalLine').value = line;
   $('#machinesListModalTitle').textContent = 'Машины линии ' + line;
 
   renderMachinesListContent(line);
 
-  modal.classList.add('active');
+  openModal(modal);
 };
+
+function closeMachinesListModal() {
+  closeModal('#machinesListModal');
+}
 
 function closeMachinesListModal() {
   const modal = $('#machinesListModal');
@@ -10193,25 +12071,10 @@ window.openMachineModal = function(line, oldName) {
   const saveBtn = $('#machineModalSaveBtn');
   if (!modal) return;
 
-  // Скрываем родительскую модалку списка машин, пока открыта форма
-  const parentModal = document.getElementById('machinesListModal');
-  if (parentModal) parentModal.style.display = 'none';
-
   $('#machineModalLine').value = line;
-  $('#machineModalOldName').value = oldName || '';
-  $('#machineModalLineLabel').textContent = 'Линия: ' + line;
-
-  if (oldName) {
-    title.textContent = 'Изменить машину';
-    saveBtn.textContent = 'Сохранить';
-    $('#machineModalName').value = oldName;
-  } else {
-    title.textContent = 'Добавить машину';
-    saveBtn.textContent = 'Добавить';
-    $('#machineModalName').value = '';
-  }
-
-  modal.classList.add('active');
+  // ... (остальное содержимое функции — без изменений)
+  
+  openModal(modal);
   setTimeout(() => {
     const input = $('#machineModalName');
     input.focus();
@@ -10235,7 +12098,7 @@ window.openQuickAddMachineModal = function() {
   $('#quickAddMachineLineLabel').textContent = 'Линия: ' + line;
   $('#quickAddMachineName').value = '';
 
-  modal.classList.add('active');
+  openModal(modal);
   setTimeout(() => {
     const input = $('#quickAddMachineName');
     if (input) {
@@ -10246,8 +12109,7 @@ window.openQuickAddMachineModal = function() {
 };
 
 function closeQuickAddMachineModal() {
-  const modal = $('#quickAddMachineModal');
-  if (modal) modal.classList.remove('active');
+  closeModal('#quickAddMachineModal');
 }
 
 /* --- Обработчики модалки --- */
@@ -10308,15 +12170,7 @@ $('#sf_addMachineBtn')?.addEventListener('click', () => {
   openQuickAddMachineModal();
 });
 function closeMachineModal() {
-  const modal = $('#machineModal');
-  if (modal) modal.classList.remove('active');
-
-  // Возвращаем родительскую модалку списка машин (если она была открыта)
-  const parentModal = document.getElementById('machinesListModal');
-  if (parentModal) {
-    parentModal.classList.add('active');
-    parentModal.style.display = '';   // сбрасываем inline-style
-  }
+  closeModal('#machineModal');
 }
 
 /* --- Обработчики модалки --- */
@@ -10463,21 +12317,31 @@ window.deleteLine = function(name) {
 };
 
 /* ============================================================
-   БРЕНДЫ — список + модалка + импорт/экспорт
+   ОБЩИЙ СПИСОК БРЕНДОВ — строки + inline + пагинация
    ============================================================ */
+
+const BRANDS_PAGE_SIZE = 7;
+let brandsCurrentPage = 1;
+
 function renderBrandsSettings() {
+  const list = $('#brandsList');
+  if (!list) return;
+
   const allBrands = getBrands().slice().sort((a, b) => a.localeCompare(b, 'ru'));
   const query = ($('#brandsSearch')?.value || '').trim().toLowerCase();
 
   // Счётчик
   const counter = $('#brandsCount');
-  if (counter) counter.textContent = `(${allBrands.length})`;
+  if (counter) {
+    counter.textContent = query
+      ? `(${allBrands.filter(b => b.toLowerCase().includes(query)).length} из ${allBrands.length})`
+      : `(${allBrands.length})`;
+  }
 
-  const list = $('#brandsList');
-  if (!list) return;
-
+  // Пустое состояние
   if (!allBrands.length) {
     list.innerHTML = '<div class="empty-state">Брендов пока нет. Нажмите «Добавить бренд».</div>';
+    renderBrandsPagination(0);
     return;
   }
 
@@ -10488,35 +12352,125 @@ function renderBrandsSettings() {
   }
 
   if (!filtered.length) {
-    list.innerHTML = '<div class="empty-state">Ничего не найдено по запросу «' + escapeHtml(query) + '»</div>';
+    list.innerHTML = `<div class="empty-state">Ничего не найдено по запросу «${escapeHtml(query)}»</div>`;
+    renderBrandsPagination(0);
     return;
   }
 
-list.innerHTML = filtered.map(b => `
-  <div class="settings-item">
-    <span>${escapeHtml(b)}</span>
-    <div style="display:flex;gap:6px;flex-shrink:0">
-      <button class="btn btn-secondary btn-sm btn-icon-text" onclick="openEditBrandModal('${escapeHtml(b).replace(/'/g,"\\'")}')" title="Изменить">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-        </svg>
-        <span>Изменить</span>
-      </button>
-      <button class="btn btn-danger btn-sm btn-icon-text" onclick="deleteBrand('${escapeHtml(b).replace(/'/g,"\\'")}')" title="Удалить">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="3 6 5 6 21 6"/>
-          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-          <path d="M10 11v6"/>
-          <path d="M14 11v6"/>
-          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-        </svg>
-        <span>Удалить</span>
-      </button>
+  // Пагинация
+  const total = filtered.length;
+  const totalPages = Math.ceil(total / BRANDS_PAGE_SIZE);
+  if (brandsCurrentPage > totalPages) brandsCurrentPage = totalPages;
+  if (brandsCurrentPage < 1) brandsCurrentPage = 1;
+
+  const startIdx = (brandsCurrentPage - 1) * BRANDS_PAGE_SIZE;
+  const endIdx = Math.min(startIdx + BRANDS_PAGE_SIZE, total);
+  const pageItems = filtered.slice(startIdx, endIdx);
+
+  // Рендер строк
+  list.innerHTML = pageItems.map(b => `
+    <div class="brands-row" data-brand="${escapeAttr(b)}">
+      <span class="brands-row-name">${highlightBrandName(b, query)}</span>
+      <div class="brands-row-actions">
+        <button type="button" class="brands-row-action-btn brands-row-edit-btn"
+                data-brands-edit="${escapeAttr(b)}" title="Изменить">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+        </button>
+        <button type="button" class="brands-row-action-btn brands-row-delete-btn"
+                data-brands-delete="${escapeAttr(b)}" title="Удалить">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
     </div>
-  </div>
-`).join('');
+  `).join('');
+
+  // Обработчики: изменить
+  list.querySelectorAll('[data-brands-edit]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openEditBrandModal(btn.dataset.brandsEdit);
+    });
+  });
+
+  // Обработчики: удалить
+  list.querySelectorAll('[data-brands-delete]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteBrand(btn.dataset.brandsDelete);
+    });
+  });
+
+  // Пагинация
+  renderBrandsPagination(totalPages, startIdx, endIdx, total);
 }
+
+/* Подсветка совпадений в имени бренда */
+function highlightBrandName(name, query) {
+  if (!query) return escapeHtml(name);
+  const lower = name.toLowerCase();
+  const idx = lower.indexOf(query);
+  if (idx === -1) return escapeHtml(name);
+  return escapeHtml(name.slice(0, idx)) +
+    '<strong class="hl-match">' + escapeHtml(name.slice(idx, idx + query.length)) + '</strong>' +
+    escapeHtml(name.slice(idx + query.length));
+}
+
+/* Пагинация для брендов */
+function renderBrandsPagination(totalPages, startIdx, endIdx, total) {
+  const bar = $('#brandsPagination');
+  if (!bar) return;
+
+  if (!total || totalPages <= 1) {
+    bar.innerHTML = total
+      ? `<span class="pagination-info">Показано ${startIdx + 1}–${endIdx} из ${total}</span>`
+      : '';
+    return;
+  }
+
+  let html = `<span class="pagination-info">Показано ${startIdx + 1}–${endIdx} из ${total}</span>`;
+  html += '<div class="pagination-controls">';
+
+  // Назад
+  html += `<button class="pagination-btn" ${brandsCurrentPage === 1 ? 'disabled' : ''}
+           onclick="changeBrandsPage(${brandsCurrentPage - 1})">←</button>`;
+
+  // Страницы
+  const pages = [];
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || Math.abs(i - brandsCurrentPage) <= 2) {
+      pages.push(i);
+    } else if (pages[pages.length - 1] !== '...') {
+      pages.push('...');
+    }
+  }
+  pages.forEach(p => {
+    if (p === '...') {
+      html += `<span class="pagination-dots">…</span>`;
+    } else {
+      html += `<button class="pagination-btn ${p === brandsCurrentPage ? 'active' : ''}"
+               onclick="changeBrandsPage(${p})">${p}</button>`;
+    }
+  });
+
+  // Вперёд
+  html += `<button class="pagination-btn" ${brandsCurrentPage === totalPages ? 'disabled' : ''}
+           onclick="changeBrandsPage(${brandsCurrentPage + 1})">→</button>`;
+
+  html += '</div>';
+  bar.innerHTML = html;
+}
+
+/* Смена страницы брендов */
+window.changeBrandsPage = function(page) {
+  brandsCurrentPage = page;
+  renderBrandsSettings();
+};
 /* ============================================================
    РЕДАКТИРОВАНИЕ БРЕНДА
    ============================================================ */
@@ -10536,7 +12490,7 @@ function openEditBrandModal(oldName) {
   );
   renderLinesCheckboxesGroup('editBrandLinesGroup', assignedLines);
 
-  modal.classList.add('active');
+  openModal(modal);
   setTimeout(() => {
     input.focus();
     input.select();
@@ -10544,8 +12498,7 @@ function openEditBrandModal(oldName) {
 }
 
 function closeEditBrandModal() {
-  const modal = $('#editBrandModal');
-  if (modal) modal.classList.remove('active');
+  closeModal('#editBrandModal');
   currentEditingBrand = null;
 }
 
@@ -10631,8 +12584,10 @@ $('#editBrandSaveBtn')?.addEventListener('click', () => {
 });
 
 $('#brandsSearch')?.addEventListener('input', () => {
+  brandsCurrentPage = 1;    // ← сброс на 1-ю страницу
   renderBrandsSettings();
 });
+
 /* Отрисовка чекбоксов линий в модалках бренда */
 function renderLinesCheckboxesGroup(containerId, selectedLines = []) {
   const container = document.getElementById(containerId);
@@ -10672,16 +12627,14 @@ function openAddBrandModal() {
   const input = $('#newBrandInput');
   if (input) input.value = '';
 
-  // Отрисовать чекбоксы линий (пустые — ничего не выбрано)
   renderLinesCheckboxesGroup('addBrandLinesGroup', []);
 
-  modal.classList.add('active');
+  openModal(modal);
   setTimeout(() => { if (input) input.focus(); }, 100);
 }
 
 function closeAddBrandModal() {
-  const modal = $('#addBrandModal');
-  if (modal) modal.classList.remove('active');
+  closeModal('#addBrandModal');
 }
 
 $('#openAddBrandModalBtn')?.addEventListener('click', openAddBrandModal);
@@ -10740,54 +12693,146 @@ $('#addBrandBtn')?.addEventListener('click', () => {
 });
 
 /* ============================================================
-   ОПЕРАТОРЫ
+   ОПЕРАТОРЫ — строки + inline + пагинация
    ============================================================ */
+
+const OPERATORS_PAGE_SIZE = 7;
+let operatorsCurrentPage = 1;
+
 function renderOperatorsSettings() {
+  const list = $('#operatorsList');
+  if (!list) return;
+
   const allOperators = sortOperatorsRus(getOperators());
   const query = ($('#operatorsSearch')?.value || '').trim().toLowerCase();
 
   // Счётчик
   const counter = $('#operatorsCount');
-  if (counter) counter.textContent = `(${allOperators.length})`;
+  if (counter) {
+    counter.textContent = query
+      ? `(${allOperators.filter(o => o.toLowerCase().includes(query)).length} из ${allOperators.length})`
+      : `(${allOperators.length})`;
+  }
 
-  const list = $('#operatorsList');
-  if (!list) return;
-
+  // Пустое состояние
   if (!allOperators.length) {
     list.innerHTML = '<div class="empty-state">Операторов пока нет. Нажмите «Добавить оператора».</div>';
+    renderOperatorsPagination(0);
     return;
   }
 
   // Фильтрация
   let filtered = allOperators;
   if (query) {
-    filtered = allOperators.filter(op => op.toLowerCase().includes(query));
+    filtered = allOperators.filter(o => o.toLowerCase().includes(query));
   }
 
   if (!filtered.length) {
-    list.innerHTML = '<div class="empty-state">Ничего не найдено по запросу «' + escapeHtml(query) + '»</div>';
+    list.innerHTML = `<div class="empty-state">Ничего не найдено по запросу «${escapeHtml(query)}»</div>`;
+    renderOperatorsPagination(0);
     return;
   }
 
-  list.innerHTML = filtered.map(op => `
-    <div class="settings-item">
-      <span>${escapeHtml(op)}</span>
-      <button class="btn btn-danger btn-sm btn-icon-text" onclick="deleteOperator('${escapeHtml(op).replace(/'/g,"\\'")}')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="3 6 5 6 21 6"/>
-          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-          <path d="M10 11v6"/>
-          <path d="M14 11v6"/>
-          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-        </svg>
-        <span>Удалить</span>
-      </button>
+  // Пагинация
+  const total = filtered.length;
+  const totalPages = Math.ceil(total / OPERATORS_PAGE_SIZE);
+  if (operatorsCurrentPage > totalPages) operatorsCurrentPage = totalPages;
+  if (operatorsCurrentPage < 1) operatorsCurrentPage = 1;
+
+  const startIdx = (operatorsCurrentPage - 1) * OPERATORS_PAGE_SIZE;
+  const endIdx = Math.min(startIdx + OPERATORS_PAGE_SIZE, total);
+  const pageItems = filtered.slice(startIdx, endIdx);
+
+  // Рендер строк
+  list.innerHTML = pageItems.map(op => `
+    <div class="operators-row" data-operator="${escapeAttr(op)}">
+      <span class="operators-row-name">${highlightOperatorName(op, query)}</span>
+      <div class="operators-row-actions">
+        <button type="button" class="operators-row-action-btn operators-row-delete-btn"
+                data-operators-delete="${escapeAttr(op)}" title="Удалить">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
     </div>
   `).join('');
+
+  // Обработчики: удалить
+  list.querySelectorAll('[data-operators-delete]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteOperator(btn.dataset.operatorsDelete);
+    });
+  });
+
+  // Пагинация
+  renderOperatorsPagination(totalPages, startIdx, endIdx, total);
 }
+
+/* Подсветка совпадений в ФИО */
+function highlightOperatorName(name, query) {
+  if (!query) return escapeHtml(name);
+  const lower = name.toLowerCase();
+  const idx = lower.indexOf(query);
+  if (idx === -1) return escapeHtml(name);
+  return escapeHtml(name.slice(0, idx)) +
+    '<strong class="hl-match">' + escapeHtml(name.slice(idx, idx + query.length)) + '</strong>' +
+    escapeHtml(name.slice(idx + query.length));
+}
+
+/* Пагинация для операторов */
+function renderOperatorsPagination(totalPages, startIdx, endIdx, total) {
+  const bar = $('#operatorsPagination');
+  if (!bar) return;
+
+  if (!total || totalPages <= 1) {
+    bar.innerHTML = total
+      ? `<span class="pagination-info">Показано ${startIdx + 1}–${endIdx} из ${total}</span>`
+      : '';
+    return;
+  }
+
+  let html = `<span class="pagination-info">Показано ${startIdx + 1}–${endIdx} из ${total}</span>`;
+  html += '<div class="pagination-controls">';
+
+  html += `<button class="pagination-btn" ${operatorsCurrentPage === 1 ? 'disabled' : ''}
+           onclick="changeOperatorsPage(${operatorsCurrentPage - 1})">←</button>`;
+
+  const pages = [];
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || Math.abs(i - operatorsCurrentPage) <= 2) {
+      pages.push(i);
+    } else if (pages[pages.length - 1] !== '...') {
+      pages.push('...');
+    }
+  }
+  pages.forEach(p => {
+    if (p === '...') {
+      html += `<span class="pagination-dots">…</span>`;
+    } else {
+      html += `<button class="pagination-btn ${p === operatorsCurrentPage ? 'active' : ''}"
+               onclick="changeOperatorsPage(${p})">${p}</button>`;
+    }
+  });
+
+  html += `<button class="pagination-btn" ${operatorsCurrentPage === totalPages ? 'disabled' : ''}
+           onclick="changeOperatorsPage(${operatorsCurrentPage + 1})">→</button>`;
+
+  html += '</div>';
+  bar.innerHTML = html;
+}
+
+/* Смена страницы операторов */
+window.changeOperatorsPage = function(page) {
+  operatorsCurrentPage = page;
+  renderOperatorsSettings();
+};
 
 /* Поиск по операторам */
 $('#operatorsSearch')?.addEventListener('input', () => {
+  operatorsCurrentPage = 1;
   renderOperatorsSettings();
 });
 
@@ -10804,13 +12849,12 @@ function openAddOperatorModal() {
   if (!modal) return;
   const input = $('#newOperatorInput');
   if (input) input.value = '';
-  modal.classList.add('active');
+  openModal(modal);
   setTimeout(() => { if (input) input.focus(); }, 100);
 }
 
 function closeAddOperatorModal() {
-  const modal = $('#addOperatorModal');
-  if (modal) modal.classList.remove('active');
+  closeModal('#addOperatorModal');
 }
 
 $('#openAddOperatorModalBtn')?.addEventListener('click', openAddOperatorModal);
@@ -10849,149 +12893,9 @@ $('#addOperatorBtn')?.addEventListener('click', () => {
   closeAddOperatorModal();
   showToast('Оператор добавлен');
 });
-/* ============================================================
-   TOP LOSSES — модалки: категория
-   ============================================================ */
-
-function openTopLossCategoryModal(catId) {
-  const modal = $('#topLossCategoryModal');
-  const title = $('#topLossCategoryModalTitle');
-  const saveBtn = $('#topLossCategoryModalSave');
-  if (!modal) return;
-
-  const cats = getTopLosses();
-
-  if (catId) {
-    const cat = cats.find(c => c.id === catId);
-    if (!cat) return;
-    title.textContent = 'Изменить категорию';
-    saveBtn.textContent = 'Сохранить';
-    $('#topLossCategoryModalId').value = catId;
-    $('#topLossCategoryModalName').value = cat.name || '';
-  } else {
-    title.textContent = 'Добавить категорию';
-    saveBtn.textContent = 'Добавить';
-    $('#topLossCategoryModalId').value = '';
-    $('#topLossCategoryModalName').value = '';
-  }
-
-  modal.classList.add('active');
-  setTimeout(() => $('#topLossCategoryModalName').focus(), 100);
-}
-window.openTopLossCategoryModal = openTopLossCategoryModal;
-
-/* ============================================================
-   TOP LOSSES — модалка содержимого категории
-   ============================================================ */
-
-function openTopLossCategoryItemsModal(catId) {
-  const modal = $('#topLossCategoryItemsModal');
-  if (!modal) return;
-
-  const cats = getTopLosses();
-  const cat = cats.find(c => c.id === catId);
-  if (!cat) return;
-
-  $('#topLossCategoryItemsModalCatId').value = catId;
-  $('#topLossCategoryItemsModalTitle').textContent = 'Категория: ' + (cat.name || '—');
-
-  renderTopLossCategoryItemsModalContent(catId);
-
-  modal.classList.add('active');
-}
-window.openTopLossCategoryItemsModal = openTopLossCategoryItemsModal;
-
-function renderTopLossCategoryItemsModalContent(catId) {
-  const content = $('#topLossCategoryItemsModalContent');
-  if (!content) return;
-
-  const cats = getTopLosses();
-  const cat = cats.find(c => c.id === catId);
-  if (!cat) return;
-
-  const items = Array.isArray(cat.items) ? cat.items : [];
-
-  if (!items.length) {
-    content.innerHTML = '<div class="tl-modal-empty">В этой категории пока нет потерь</div>';
-    return;
-  }
-
-  content.innerHTML = items.map(it => `
-    <div class="tl-modal-item">
-      <span class="tl-modal-item-name">${escapeHtml(it.name)}</span>
-      <div class="tl-modal-item-actions">
-        <button class="btn btn-secondary btn-sm btn-icon"
-                onclick="openTopLossItemModal('${escapeAttr(catId)}', '${escapeAttr(it.id)}')"
-                title="Изменить">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-          </svg>
-        </button>
-        <button class="btn btn-danger btn-sm btn-icon"
-                onclick="deleteTopLossItemFromModal('${escapeAttr(catId)}', '${escapeAttr(it.id)}')"
-                title="Удалить">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
-    </div>
-  `).join('');
-}
-
-/* Удаление потери из модалки — с обновлением содержимого модалки */
-window.deleteTopLossItemFromModal = function(catId, itemId) {
-  const cats = getTopLosses();
-  const cat = cats.find(c => c.id === catId);
-  if (!cat) return;
-  const item = (cat.items || []).find(i => i.id === itemId);
-  if (!item) return;
-
-  if (!confirm(`Удалить потерю "${item.name}"?`)) return;
-
-  cat.items = cat.items.filter(i => i.id !== itemId);
-  setTopLosses(cats);
-
-  // Обновляем и модалку, и плитки в настройках
-  renderTopLossCategoryItemsModalContent(catId);
-  renderTopLossesSettings();
-  showToast('Потеря удалена');
-};
-
-/* Кнопка «Добавить потерю» в модалке */
-$('#topLossCategoryItemsModalAddBtn')?.addEventListener('click', () => {
-  const catId = $('#topLossCategoryItemsModalCatId').value;
-  if (!catId) return;
-  openTopLossItemModal(catId, null);
-});
 
 /* Обёртка openTopLossItemModal, чтобы после сохранения обновить содержимое модалки */
 const _origOpenTopLossItemModal = window.openTopLossItemModal;
-
-/* Закрыть модалку */
-function closeTopLossCategoryItemsModal() {
-  const modal = $('#topLossCategoryItemsModal');
-  if (modal) modal.classList.remove('active');
-}
-
-$('#topLossCategoryItemsModalClose')?.addEventListener('click', closeTopLossCategoryItemsModal);
-$('#topLossCategoryItemsModalDoneBtn')?.addEventListener('click', closeTopLossCategoryItemsModal);
-$('#topLossCategoryItemsModal')?.addEventListener('click', (e) => {
-  if (e.target.id === 'topLossCategoryItemsModal') closeTopLossCategoryItemsModal();
-});
-
-function closeTopLossCategoryModal() {
-  const modal = $('#topLossCategoryModal');
-  if (modal) modal.classList.remove('active');
-}
-
-$('#topLossCategoryModalClose')?.addEventListener('click', closeTopLossCategoryModal);
-$('#topLossCategoryModalCancel')?.addEventListener('click', closeTopLossCategoryModal);
-$('#topLossCategoryModal')?.addEventListener('click', (e) => {
-  if (e.target.id === 'topLossCategoryModal') closeTopLossCategoryModal();
-});
 
 $('#topLossCategoryModalName')?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
@@ -11000,92 +12904,45 @@ $('#topLossCategoryModalName')?.addEventListener('keydown', (e) => {
   }
 });
 
-$('#topLossCategoryModalSave')?.addEventListener('click', () => {
-  const id = $('#topLossCategoryModalId').value;
-  const name = ($('#topLossCategoryModalName').value || '').trim();
-  if (!name) return showToast('Введите название категории', true);
-
-  const cats = getTopLosses();
-
-  // Проверка дубликата (по имени, без учёта регистра)
-  const dup = cats.find(c => c.id !== id && c.name.toLowerCase() === name.toLowerCase());
-  if (dup) return showToast('Категория с таким названием уже есть', true);
-
-  if (id) {
-    const cat = cats.find(c => c.id === id);
-    if (!cat) return;
-    cat.name = name;
-  } else {
-    cats.push({
-      id: makeCategoryId(name),
-      name,
-      items: []
-    });
-  }
-
-  setTopLosses(cats);
-  renderTopLossesSettings();
-
-  // Обновляем заголовок модалки содержимого, если она открыта
-  const catItemsModal = $('#topLossCategoryItemsModal');
-  if (catItemsModal && catItemsModal.classList.contains('active') && id) {
-    const openCatId = $('#topLossCategoryItemsModalCatId').value;
-    if (openCatId === id) {
-      const updatedCat = getTopLosses().find(c => c.id === id);
-      if (updatedCat) {
-        $('#topLossCategoryItemsModalTitle').textContent = 'Категория: ' + updatedCat.name;
-      }
-    }
-  }
-
-  closeTopLossCategoryModal();
-  showToast(id ? 'Категория обновлена' : 'Категория добавлена');
-});
-
-/* Кнопка «Добавить категорию» в карточке */
-$('#openAddTopLossCategoryBtn')?.addEventListener('click', () => {
-  openTopLossCategoryModal(null);
-});
 
 /* ============================================================
    TOP LOSSES — модалки: потеря
    ============================================================ */
 
-function openTopLossItemModal(catId, itemId) {
-  const modal = $('#topLossItemModal');
-  const title = $('#topLossItemModalTitle');
-  const saveBtn = $('#topLossItemModalSave');
-  if (!modal) return;
+  function openTopLossItemModal(catId, itemId) {
+    const modal = $('#topLossItemModal');
+    const title = $('#topLossItemModalTitle');
+    const saveBtn = $('#topLossItemModalSave');
+    if (!modal) return;
 
-  const cats = getTopLosses();
-  const cat = cats.find(c => c.id === catId);
-  if (!cat) return;
+    const cats = getTopLosses();
+    const cat = cats.find(c => c.id === catId);
+    if (!cat) return;
 
-  $('#topLossItemModalCategoryId').value = catId;
-  $('#topLossItemModalCategoryLabel').textContent = 'Категория: ' + (cat.name || '—');
+    $('#topLossItemModalCategoryId').value = catId;
+    $('#topLossItemModalCategoryLabel').textContent = 'Категория: ' + (cat.name || '—');
 
-  if (itemId) {
-    const item = (cat.items || []).find(i => i.id === itemId);
-    if (!item) return;
-    title.textContent = 'Изменить потерю';
-    saveBtn.textContent = 'Сохранить';
-    $('#topLossItemModalId').value = itemId;
-    $('#topLossItemModalName').value = item.name || '';
-  } else {
-    title.textContent = 'Добавить потерю';
-    saveBtn.textContent = 'Добавить';
-    $('#topLossItemModalId').value = '';
-    $('#topLossItemModalName').value = '';
+    if (itemId) {
+      const item = (cat.items || []).find(i => i.id === itemId);
+      if (!item) return;
+      title.textContent = 'Изменить потерю';
+      saveBtn.textContent = 'Сохранить';
+      $('#topLossItemModalId').value = itemId;
+      $('#topLossItemModalName').value = item.name || '';
+    } else {
+      title.textContent = 'Добавить потерю';
+      saveBtn.textContent = 'Добавить';
+      $('#topLossItemModalId').value = '';
+      $('#topLossItemModalName').value = '';
+    }
+
+    openModal(modal);
+    setTimeout(() => $('#topLossItemModalName').focus(), 100);
   }
-
-  modal.classList.add('active');
-  setTimeout(() => $('#topLossItemModalName').focus(), 100);
-}
 window.openTopLossItemModal = openTopLossItemModal;
 
 function closeTopLossItemModal() {
-  const modal = $('#topLossItemModal');
-  if (modal) modal.classList.remove('active');
+  closeModal('#topLossItemModal');
 }
 
 $('#topLossItemModalClose')?.addEventListener('click', closeTopLossItemModal);
@@ -11122,7 +12979,7 @@ $('#topLossItemModalSave')?.addEventListener('click', () => {
     if (!item) return;
     item.name = name;
   } else {
-    cat.items.push({
+    cat.items.push({  
       id: makeLossId(name),
       name
     });
@@ -11131,18 +12988,10 @@ $('#topLossItemModalSave')?.addEventListener('click', () => {
   setTopLosses(cats);
   renderTopLossesSettings();
 
-  // Обновляем содержимое модалки категории, если она открыта
-  const catItemsModal = $('#topLossCategoryItemsModal');
-  if (catItemsModal && catItemsModal.classList.contains('active')) {
-    const openCatId = $('#topLossCategoryItemsModalCatId').value;
-    if (openCatId === catId) {
-      renderTopLossCategoryItemsModalContent(catId);
-    }
-  }
-
   closeTopLossItemModal();
   showToast(itemId ? 'Потеря обновлена' : 'Потеря добавлена');
 });
+
 /* Удалить потерю */
 window.deleteTopLossItem = function(catId, itemId) {
   const cats = getTopLosses();
@@ -11155,81 +13004,12 @@ window.deleteTopLossItem = function(catId, itemId) {
 
   cat.items = cat.items.filter(i => i.id !== itemId);
   setTopLosses(cats);
+
+  // Перерисовываем список категорий
   renderTopLossesSettings();
-
-  // Обновляем модалку категории, если она открыта
-  const catItemsModal = $('#topLossCategoryItemsModal');
-  if (catItemsModal && catItemsModal.classList.contains('active')) {
-    const openCatId = $('#topLossCategoryItemsModalCatId').value;
-    if (openCatId === catId) {
-      renderTopLossCategoryItemsModalContent(catId);
-    }
-  }
-
   showToast('Потеря удалена');
 };
 
-/* ============================================================
-   TOP LOSSES — модалка удаления категории
-   ============================================================ */
-
-function openTopLossDeleteModal(catId) {
-  const modal = $('#topLossDeleteModal');
-  if (!modal) return;
-
-  const cats = getTopLosses();
-  const cat = cats.find(c => c.id === catId);
-  if (!cat) return;
-
-  const itemCount = (cat.items || []).length;
-
-  // Проверяем, используется ли категория в стандартах
-  const usedInStandards = getStandards().filter(s =>
-    Array.isArray(s.topLosses) && s.topLosses.some(lossId =>
-      (cat.items || []).some(it => it.id === lossId)
-    )
-  ).length;
-
-  $('#topLossDeleteModalTitle').textContent = `Удалить категорию "${cat.name}"?`;
-  $('#topLossDeleteModalText').textContent =
-    itemCount > 0
-      ? `В категории ${itemCount} ${pluralizeLosses(itemCount)}. Они также будут удалены.`
-      : 'В категории нет потерь.';
-
-  const warn = $('#topLossDeleteModalWarning');
-  if (usedInStandards > 0) {
-    warn.textContent = `⚠ Внимание: потери этой категории используются в ${usedInStandards} стандарт(ах). Привязка будет потеряна.`;
-    warn.style.display = 'block';
-  } else {
-    warn.style.display = 'none';
-  }
-
-  $('#topLossDeleteModal').dataset.catId = catId;
-  modal.classList.add('active');
-}
-window.openTopLossDeleteModal = openTopLossDeleteModal;
-
-function closeTopLossDeleteModal() {
-  const modal = $('#topLossDeleteModal');
-  if (modal) modal.classList.remove('active');
-}
-
-$('#topLossDeleteModalClose')?.addEventListener('click', closeTopLossDeleteModal);
-$('#topLossDeleteModalCancel')?.addEventListener('click', closeTopLossDeleteModal);
-$('#topLossDeleteModal')?.addEventListener('click', (e) => {
-  if (e.target.id === 'topLossDeleteModal') closeTopLossDeleteModal();
-});
-
-$('#topLossDeleteModalConfirm')?.addEventListener('click', () => {
-  const catId = $('#topLossDeleteModal').dataset.catId;
-  if (!catId) return;
-
-  const cats = getTopLosses();
-  setTopLosses(cats.filter(c => c.id !== catId));
-  renderTopLossesSettings();
-  closeTopLossDeleteModal();
-  showToast('Категория удалена');
-});
 window.deleteOperator = function(name) {
   if (!confirm('Удалить оператора "' + name + '"?')) return;
   setOperators(getOperators().filter(o => o !== name));
@@ -11266,13 +13046,32 @@ window.deleteBrand = function(name) {
    ============================================================ */
 let currentEditingLine = null;
 
+/* ============================================================
+   БРЕНДЫ ДЛЯ ЛИНИЙ — аккордеон по блокам + строки + поиск
+   ============================================================ */
+
+const LB_OPEN_BLOCKS_KEY = 'cl_lb_open_blocks';
+
+/* Открытые блоки */
+function getLbOpenBlocks() {
+  try {
+    const raw = localStorage.getItem(LB_OPEN_BLOCKS_KEY);
+    const arr = raw ? JSON.parse(raw) : null;
+    return Array.isArray(arr) ? arr : null;
+  } catch (e) { return null; }
+}
+
+function setLbOpenBlocks(arr) {
+  try { localStorage.setItem(LB_OPEN_BLOCKS_KEY, JSON.stringify(arr)); } catch (e) {}
+}
+
 function renderLineBrandsSettings() {
+  const container = $('#lineBrandsContainer');
+  if (!container) return;
+
   const lines = getLines();
   const brands = getBrands();
   const lb = getLineBrands();
-  const container = $('#lineBrandsContainer');
-
-  if (!container) return;
 
   if (!lines.length) {
     container.innerHTML = '<div class="empty-state">Сначала добавьте линии</div>';
@@ -11283,35 +13082,271 @@ function renderLineBrandsSettings() {
     return;
   }
 
-  container.innerHTML = lines.map(line => {
-    const assigned = Array.isArray(lb[line]) ? lb[line] : [];
-    const count = assigned.length;
-    const total = brands.length;
+  // Открытые блоки
+  let openBlocks = getLbOpenBlocks();
+  const blocks = getBlocks();
+  if (openBlocks === null) {
+    openBlocks = blocks.length ? [blocks[0].id] : [];
+    setLbOpenBlocks(openBlocks);
+  }
 
-    // Превью: до 5 чипов + «+N»
-    let previewHtml = '';
-    if (count === 0) {
-      previewHtml = '<span class="no-brands-label">— нет брендов, линия скрыта у оператора</span>';
-    } else {
-      const shown = assigned.slice(0, 5);
-      const rest = count - shown.length;
-      previewHtml = shown.map(b => `<span class="line-brand-chip">${escapeHtml(b)}</span>`).join('');
-      if (rest > 0) {
-        previewHtml += `<span class="line-brand-chip more">+${rest}</span>`;
-      }
-    }
+  // Линии без блока
+  const linesInBlocks = new Set();
+  blocks.forEach(b => (b.lines || []).forEach(l => linesInBlocks.add(l)));
+  const orphanLines = lines.filter(l => !linesInBlocks.has(l));
 
-    return `
-      <div class="line-row">
-        <div class="line-name">${escapeHtml(line)}</div>
-        <div class="line-brands-preview">${previewHtml}</div>
-        <div class="line-counter">${count} / ${total}</div>
-        <button class="btn btn-primary btn-sm" onclick="openLineBrandsModal('${escapeHtml(line).replace(/'/g,"\\'")}')">
-          Настроить
+  // Группы
+  const groups = blocks.map(b => ({
+    id: b.id,
+    name: b.name || 'Без названия',
+    lines: (b.lines || []).filter(l => lines.includes(l))
+  })).filter(g => g.lines.length > 0);
+
+  if (orphanLines.length) {
+    groups.push({ id: '__orphan', name: 'Без блока', lines: orphanLines });
+  }
+
+  // Тулбар
+  let html = `
+    <div class="lb-toolbar">
+      <div class="lb-search-wrap">
+        <svg class="lb-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="lbSearchInput" placeholder="Поиск по линии или бренду..." autocomplete="off">
+        <button type="button" class="lb-search-clear" id="lbSearchClear" title="Очистить" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
         </button>
       </div>
+
+      <button type="button" class="btn btn-secondary btn-sm lb-toggle-all-btn" id="lbToggleAllBtn" title="Развернуть или свернуть все блоки">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="lbToggleAllIcon">
+          <polyline points="7 13 12 18 17 13"/>
+          <polyline points="7 6 12 11 17 6"/>
+        </svg>
+        <span id="lbToggleAllLabel">Развернуть всё</span>
+      </button>
+
+      <span class="lb-counter">Всего линий: <strong>${lines.length}</strong></span>
+    </div>
+  `;
+
+  // Группы
+  html += '<div class="lb-groups">';
+  groups.forEach(group => {
+    const isOpen = openBlocks.includes(group.id);
+
+    // Общее число брендов в блоке (уникальных)
+    const blockBrandsSet = new Set();
+    group.lines.forEach(line => {
+      (Array.isArray(lb[line]) ? lb[line] : []).forEach(b => blockBrandsSet.add(b));
+    });
+    const blockBrandsCount = blockBrandsSet.size;
+
+    const groupLinesHtml = group.lines.map(line => {
+      const assigned = Array.isArray(lb[line]) ? lb[line] : [];
+      const count = assigned.length;
+
+      const brandsText = count === 0
+        ? '<span class="lb-row-empty">нет брендов — нажмите, чтобы задать</span>'
+        : `<span class="lb-row-brands" title="${escapeAttr(assigned.join(', '))}">${escapeHtml(assigned.join(', '))}</span>`;
+
+      const countBadge = count === 0
+        ? '<span class="lb-row-count lb-row-count-empty">0</span>'
+        : `<span class="lb-row-count">${count}</span>`;
+
+      return `
+        <div class="lb-row" data-line="${escapeAttr(line)}" data-brands="${escapeAttr(assigned.join(' ').toLowerCase())}">
+          <div class="lb-row-line">${escapeHtml(line)}</div>
+          <div class="lb-row-count-wrap">${countBadge}</div>
+          <div class="lb-row-brands-wrap">${brandsText}</div>
+          <button class="btn btn-primary btn-sm lb-row-btn" type="button">
+            Настроить →
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    html += `
+      <div class="lb-group ${isOpen ? 'expanded' : ''}" data-group-id="${escapeAttr(group.id)}">
+        <div class="lb-group-head" data-group-toggle="${escapeAttr(group.id)}">
+          <span class="lb-group-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </span>
+          <span class="lb-group-name">${escapeHtml(group.name)}</span>
+          <span class="lb-group-count">
+            ${group.lines.length} ${pluralizeLines(group.lines.length)}
+            · ${blockBrandsCount} ${pluralizeBrandsShort(blockBrandsCount)}
+          </span>
+        </div>
+        <div class="lb-group-body">${groupLinesHtml}</div>
+      </div>
     `;
-  }).join('');
+  });
+  html += '</div>';
+
+  container.innerHTML = html;
+
+  // --- Обработчики: аккордеон ---
+  container.querySelectorAll('[data-group-toggle]').forEach(head => {
+    head.addEventListener('click', () => {
+      const groupId = head.dataset.groupToggle;
+      let open = getLbOpenBlocks() || [];
+      if (open.includes(groupId)) {
+        open = open.filter(id => id !== groupId);
+      } else {
+        open.push(groupId);
+      }
+      setLbOpenBlocks(open);
+      renderLineBrandsSettings();
+    });
+  });
+
+  // --- Обработчики: клик по строке → модалка брендов ---
+  container.querySelectorAll('.lb-row').forEach(row => {
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('.lb-row-btn')) return;
+      const line = row.dataset.line;
+      if (line) openLineBrandsModal(line);
+    });
+  });
+
+  // Кнопка «Настроить →»
+  container.querySelectorAll('.lb-row-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const row = btn.closest('.lb-row');
+      if (!row) return;
+      const line = row.dataset.line;
+      if (line) openLineBrandsModal(line);
+    });
+  });
+
+  // --- Кнопка «Развернуть / Свернуть всё» ---
+  updateLbToggleAllBtn(groups);
+
+  const toggleAllBtn = $('#lbToggleAllBtn');
+  if (toggleAllBtn) {
+    toggleAllBtn.addEventListener('click', () => {
+      const open = getLbOpenBlocks() || [];
+      const allIds = groups.map(g => g.id);
+      const allExpanded = allIds.length > 0 && allIds.every(id => open.includes(id));
+
+      if (allExpanded) {
+        setLbOpenBlocks([]);
+      } else {
+        setLbOpenBlocks(allIds);
+      }
+      renderLineBrandsSettings();
+    });
+  }
+
+  // --- Поиск ---
+  const searchInput = $('#lbSearchInput');
+  const searchClear = $('#lbSearchClear');
+  if (searchInput) {
+    const savedQuery = sessionStorage.getItem('lb_search_query') || '';
+    if (savedQuery) {
+      searchInput.value = savedQuery;
+      if (searchClear) searchClear.style.display = 'inline-flex';
+      applyLbSearch(savedQuery);
+    }
+
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim();
+      sessionStorage.setItem('lb_search_query', q);
+      if (searchClear) searchClear.style.display = q ? 'inline-flex' : 'none';
+      applyLbSearch(q);
+    });
+  }
+
+  if (searchClear) {
+    searchClear.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      sessionStorage.removeItem('lb_search_query');
+      searchClear.style.display = 'none';
+      applyLbSearch('');
+      if (searchInput) searchInput.focus();
+    });
+  }
+}
+
+/* Обновить вид кнопки «Развернуть / Свернуть всё» */
+function updateLbToggleAllBtn(groups) {
+  const btn = $('#lbToggleAllBtn');
+  const label = $('#lbToggleAllLabel');
+  const icon = $('#lbToggleAllIcon');
+  if (!btn || !label || !icon) return;
+
+  const open = getLbOpenBlocks() || [];
+  const allIds = groups.map(g => g.id);
+  const allExpanded = allIds.length > 0 && allIds.every(id => open.includes(id));
+
+  if (allExpanded) {
+    label.textContent = 'Свернуть всё';
+    btn.title = 'Свернуть все блоки';
+    icon.innerHTML = `
+      <polyline points="17 11 12 6 7 11"/>
+      <polyline points="17 18 12 13 7 18"/>
+    `;
+  } else {
+    label.textContent = 'Развернуть всё';
+    btn.title = 'Развернуть все блоки';
+    icon.innerHTML = `
+      <polyline points="7 13 12 18 17 13"/>
+      <polyline points="7 6 12 11 17 6"/>
+    `;
+  }
+}
+
+/* Поиск по линиям и брендам */
+function applyLbSearch(query) {
+  const container = $('#lineBrandsContainer');
+  if (!container) return;
+
+  const q = (query || '').trim().toLowerCase();
+  const groups = container.querySelectorAll('.lb-group');
+
+  if (!q) {
+    const openBlocks = getLbOpenBlocks() || [];
+    groups.forEach(g => {
+      g.style.display = '';
+      g.classList.toggle('expanded', openBlocks.includes(g.dataset.groupId));
+    });
+    container.querySelectorAll('.lb-row').forEach(r => r.style.display = '');
+    return;
+  }
+
+  // При активном поиске — все блоки раскрыты
+  groups.forEach(g => {
+    g.classList.add('expanded');
+
+    let visibleInGroup = 0;
+    g.querySelectorAll('.lb-row').forEach(row => {
+      const line = (row.dataset.line || '').toLowerCase();
+      const brands = (row.dataset.brands || '').toLowerCase();
+      const match = line.includes(q) || brands.includes(q);
+      row.style.display = match ? '' : 'none';
+      if (match) visibleInGroup++;
+    });
+
+    g.style.display = visibleInGroup > 0 ? '' : 'none';
+  });
+}
+
+/* Склонение: 1 бренд / 2 бренда / 5 брендов */
+function pluralizeBrandsShort(n) {
+  const m10 = n % 10;
+  const m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'бренд';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'бренда';
+  return 'брендов';
 }
 /* --- Открыть модалку для линии --- */
 window.openLineBrandsModal = function(line) {
@@ -11324,19 +13359,15 @@ window.openLineBrandsModal = function(line) {
 
   renderLineBrandsChecklist();
 
-  const modal = $('#lineBrandsModal');
-  if (modal) modal.classList.add('active');
+  openModal('#lineBrandsModal');
 
-  // Автофокус на поиске
   setTimeout(() => { if (search) search.focus(); }, 100);
 };
 
-/* --- Закрыть модалку --- */
 function closeLineBrandsModal() {
-  const modal = $('#lineBrandsModal');
-  if (modal) modal.classList.remove('active');
+  closeModal('#lineBrandsModal');
   currentEditingLine = null;
-  renderLineBrandsSettings();   // обновляем превью в списке линий
+  renderLineBrandsSettings();
 }
 
 /* --- Отрисовка списка брендов внутри модалки --- */
@@ -11965,6 +13996,7 @@ async function parseOperatorsExcel(file) {
 
   return result;
 }
+
 function showImportReport(result, containerId) {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -11980,6 +14012,7 @@ function showImportReport(result, containerId) {
 
   let html = '<h4>📋 Отчёт импорта</h4><ul>';
   if (result.added > 0)   html += `<li>✅ Добавлено стандартов: <strong>${result.added}</strong></li>`;
+  if (result.pointsImported > 0) html += `<li>✅ Загружено точек: <strong>${result.pointsImported}</strong></li>`;
   if (result.skipped > 0) html += `<li>⚠️ Пропущено (дубликаты OPL №): <strong>${result.skipped}</strong></li>`;
   if (result.empty > 0)   html += `<li>⚪ Пустых строк: ${result.empty}</li>`;
   if (result.errors.length > 0) {
@@ -11987,7 +14020,7 @@ function showImportReport(result, containerId) {
   }
   html += '</ul>';
 
-  // --- НОВОЕ: отдельный блок про автодобавленные машины ---
+  // Автодобавленные машины
   if (hasAddedMachines) {
     html += '<div style="margin-top:8px"><strong>🔧 Автоматически добавлены машины:</strong> ';
     html += result.addedMachines
@@ -12015,11 +14048,11 @@ function showImportReport(result, containerId) {
   report.innerHTML = html;
   container.prepend(report);
 
-  // Автоскрытие через 30 сек, если без ошибок и без автодобавлений
   if (!hasErrors && !hasAddedMachines) {
     setTimeout(() => { if (report.parentNode) report.remove(); }, 30000);
   }
 }
+
 /* ============================================================
    ИМПОРТ/ЭКСПОРТ БРЕНДОВ
    ============================================================ */
@@ -12158,57 +14191,59 @@ $('#editorDownloadTemplateBtn')?.addEventListener('click', async () => {
   }
 
   const wb = new ExcelJS.Workbook();
+  const exampleLine = currentEditorLine || 'SD08';
+
+  // ======================= ЛИСТ 1: «Стандарты» =======================
   const ws = wb.addWorksheet('Стандарты');
 
   const headers = [
-    '№', 'OPL №', 'Машина', 'Узел', 'Часть линии', 'Название', 'Линия', 'Тип контроля',
-    'Описание проблемы', 'Описание контроля', 'Цель', 'Почему создан',
-    'Точка 1', 'Значение 1', 'Сорта 1',
-    'Точка 2', 'Значение 2', 'Сорта 2',
-    'Точка 3', 'Значение 3', 'Сорта 3',
-    'Точка 4', 'Значение 4', 'Сорта 4',
-    'Применять к', 'Триггеры', 'Top Losses', 'Фото'
+    'Часть линии',
+    'Машина',
+    'OPL №',
+    'Узел',
+    'Название',
+    'Линия',
+    'Тип контроля',
+    'Применять к',
+    'Активен',
+    'Описание проблемы',
+    'Описание контроля',
+    'Цель',
+    'Почему создан',
+    'Триггеры',
+    'Top Losses',
+    'Фото'
   ];
 
   ws.addRow(headers);
 
-  // Пример строки — подставляем текущую линию
-  const exampleLine = currentEditorLine || 'SD01';
+  // Пример-строка
   ws.addRow([
-    13,
-    'OPL-4.2.1',
-    'SE',
-    'Узел передачи табачных палочек',
-    'Maker',
-    'Давление на передающем устройстве (Паук)',
-    exampleLine,
-    'value_input',
+    'Maker',                           // Часть линии
+    'SE',                              // Машина
+    'OPL-4.2.1',                       // OPL №
+    'Узел передачи табачных палочек',  // Узел
+    'Давление на передающем устройстве (Паук)', // Название
+    exampleLine,                       // Линия
+    'value_input',                     // Тип контроля
+    'ChangeOver',                      // Применять к
+    'Да',                              // Активен
     'Отклонение от OPL может приводить к падению табачных палочек',
     'Показания манометра должны соответствовать значению в т.1',
     'Предотвращение падения табачных палочек',
     'Отсутствие контроля приводит к обрывам штранга B1M',
-    1, '-65 kPa (±10 kPa)', 'Все сорта',
-    2, '', '',
-    3, '', '',
-    4, '', '',
-    'Minor, Intermediate',
-    'Табак',
-    'Обрыв штранга, Заторы на MAX',
-    'max-1.jpg, max-2.jpg'
+    'Табак, Материалы',                // Триггеры (для ChangeOver)
+    'Обрыв штранга, Заторы на MAX',    // Top Losses (по названиям)
+    'max-1.jpg, drum.jpg'              // Фото
   ]);
 
-  // Ширины колонок
-  const widths = [
-    6, 14, 10, 26, 12, 32, 10, 14,
-    34, 34, 30, 30,
-    8, 22, 14, 8, 22, 14, 8, 22, 14, 8, 22, 14,
-    22, 30, 38, 40
-  ];
+  // Ширины (под новый порядок)
+  const widths = [12, 10, 14, 30, 34, 10, 14, 18, 10, 34, 34, 30, 30, 22, 30, 30];
   ws.columns.forEach((col, i) => { col.width = widths[i] || 14; });
 
-  // Шапка
+  // Стилизация шапки
   const headerRow = ws.getRow(1);
-  headerRow.height = 36;
+  headerRow.height = 40;
   headerRow.eachCell((cell) => {
     cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4FA8' } };
@@ -12221,9 +14256,9 @@ $('#editorDownloadTemplateBtn')?.addEventListener('click', async () => {
     };
   });
 
-  // Пример-строка
+  // Стилизация примера
   const exampleRow = ws.getRow(2);
-  exampleRow.height = 80;
+  exampleRow.height = 60;
   exampleRow.eachCell((cell) => {
     cell.font = { name: 'Calibri', size: 11 };
     cell.alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
@@ -12235,49 +14270,163 @@ $('#editorDownloadTemplateBtn')?.addEventListener('click', async () => {
     };
   });
 
-  // Лист-инструкция
+  // Примечания к заголовкам
+  const notes = {
+    1: 'Maker или Packer',
+    2: 'Машина из справочника линии. Если машины нет — добавится автоматически.',
+    3: 'Номер OPL. Уникален в пределах линии + машины. Пример: OPL-4.2.1',
+    4: 'Узел (свободный текст)',
+    5: 'Название стандарта',
+    6: 'Линия, к которой относится стандарт',
+    7: 'ok_not_ok / value_input / range_input',
+    8: 'ChangeOver, CL_TO, CL_Conversion (через запятую)',
+    9: 'Да / Нет. По умолчанию — Да',
+    14: 'Триггеры (для ChangeOver): Табак, Материалы, Фольга / Бумага, Полипропилен, node:Узел',
+    15: 'Названия потерь через запятую (из справочника Top Losses)',
+    16: 'Имена файлов из photos/<line>/<part>/, через запятую'
+  };
+  Object.entries(notes).forEach(([col, text]) => {
+    const cell = ws.getRow(1).getCell(parseInt(col, 10));
+    cell.note = text;
+  });
+
+  // ======================= ЛИСТ 2: «Точки» =======================
+  const ws2 = wb.addWorksheet('Точки');
+
+  const headers2 = [
+    'OPL №',
+    'Машина',
+    'Бренд',
+    '№ точки',
+    'Значение'
+  ];
+
+  ws2.addRow(headers2);
+
+  // Примеры
+  ws2.addRow(['OPL-4.2.1', 'SE', '', 1, '-65 kPa (±10 kPa)']);
+  ws2.addRow(['OPL-4.2.1', 'SE', '', 2, '']);
+  ws2.addRow(['OPL-4.2.1', 'SE', 'Kent', 1, '-60 kPa (±5 kPa)']);
+  ws2.addRow(['OPL-4.2.1', 'SE', 'Kent', 2, '']);
+
+  // Ширины
+  const widths2 = [14, 12, 20, 10, 26];
+  ws2.columns.forEach((col, i) => { col.width = widths2[i] || 14; });
+
+  // Шапка
+  const headerRow2 = ws2.getRow(1);
+  headerRow2.height = 30;
+  headerRow2.eachCell((cell) => {
+    cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4FA8' } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    cell.border = {
+      top:    { style: 'thin', color: { argb: 'FF0A4FA8' } },
+      bottom: { style: 'thin', color: { argb: 'FF0A4FA8' } },
+      left:   { style: 'thin', color: { argb: 'FF0A4FA8' } },
+      right:  { style: 'thin', color: { argb: 'FF0A4FA8' } }
+    };
+  });
+
+  // Примечания
+  const notes2 = {
+    1: 'OPL № — должен совпадать со стандартом из листа «Стандарты»',
+    2: 'Машина — должна совпадать со стандартом',
+    3: 'Пусто = «Все бренды». Если указан — стандарт появится у оператора при выборе этого бренда.',
+    4: 'Номер точки: 1, 2, 3, …',
+    5: 'Формат для value_input: «92 ± 5» или «92+-5». Для range_input: «5 до 8» или «5.5 - 8.5». Единицы можно писать рядом: «-65 kPa (±10 kPa)».'
+  };
+  Object.entries(notes2).forEach(([col, text]) => {
+    const cell = ws2.getRow(1).getCell(parseInt(col, 10));
+    cell.note = text;
+  });
+
+  // Стилизация примеров
+  for (let i = 2; i <= 5; i++) {
+    const row = ws2.getRow(i);
+    row.eachCell((cell) => {
+      cell.font = { name: 'Calibri', size: 11 };
+      cell.alignment = { vertical: 'middle', horizontal: 'left' };
+      cell.border = {
+        top:    { style: 'thin', color: { argb: 'FFCBD2D9' } },
+        bottom: { style: 'thin', color: { argb: 'FFCBD2D9' } },
+        left:   { style: 'thin', color: { argb: 'FFCBD2D9' } },
+        right:  { style: 'thin', color: { argb: 'FFCBD2D9' } }
+      };
+    });
+  }
+
+  // ======================= ЛИСТ 3: «Инструкция» =======================
   const wsInfo = wb.addWorksheet('Инструкция');
-  wsInfo.columns = [{ width: 90 }];
+  wsInfo.columns = [{ width: 100 }];
+
   const info = [
-    ['📋 Шаблон импорта OPL'],
+    ['📋 Шаблон импорта OPL (v2)'],
     [''],
     ['КАК ПОЛЬЗОВАТЬСЯ:'],
-    ['1. Заполните строки на листе «Стандарты». Один стандарт = одна строка.'],
-    ['2. Пример во 2-й строке можно удалить или заменить своими данными.'],
-    ['3. Сохраните файл в формате .xlsx'],
-    ['4. В приложении: Редактор → открыть линию → «📤 Импорт из Excel»'],
+    ['1. Заполните лист «Стандарты» — по одной строке на стандарт.'],
+    ['2. Лист «Точки» — НЕОБЯЗАТЕЛЬНЫЙ.'],
+    ['   • Если вы не хотите заполнять точки в Excel — просто удалите лист «Точки».'],
+    ['     Стандарты создадутся без точек, а точки вы заполните в редакторе.'],
+    ['   • Если заполняете — по одной строке на каждую точку.'],
+    ['3. Лист «Инструкция» можно удалить перед загрузкой.'],
+    ['4. Сохраните файл в .xlsx.'],
+    ['5. В приложении: Редактор → открыть линию → «Импорт из Excel».'],
     [''],
-    ['ОБЯЗАТЕЛЬНЫЕ ПОЛЯ (8):'],
-    ['  • № — порядковый номер'],
+    ['============================================================'],
+    ['ЛИСТ «СТАНДАРТЫ» — ОБЯЗАТЕЛЬНЫЕ ПОЛЯ:'],
+    ['============================================================'],
     ['  • OPL № — номер вида OPL-4.2.1.'],
-    ['      Уникален в пределах линии + машины (на разных машинах могут быть одинаковые номера).'],
-    ['  • Машина — обозначение (SE, M1, …).'],
-    ['      Если машины нет в списке линии — она будет добавлена автоматически.'],
-    ['  • Узел'],
-    ['  • Часть линии — Maker / Packer'],
-    ['  • Название'],
-    ['  • Линия — код линии, должен совпадать с открытой линией'],
-    ['  • Тип контроля — ok_not_ok / value_input / tolerance'],
+    ['      Уникален в пределах линии + машины.'],
+    ['  • Часть линии — Maker или Packer.'],
+    ['  • Машина — обозначение (SE, M1, …). Если её нет в списке линии — добавится автоматически.'],
+    ['  • Узел — свободный текст.'],
+    ['  • Название — краткое описание стандарта.'],
+    ['  • Линия — код линии (например, SD08).'],
+    ['  • Тип контроля — один из: ok_not_ok / value_input / range_input.'],
+    ['      ok_not_ok — проверка «ОК / Не ОК» (без точек).'],
+    ['      value_input — число ± допуск (92 ± 5).'],
+    ['      range_input — диапазон (5 до 8).'],
+    ['  • Применять к — через запятую: ChangeOver, CL_TO, CL_Conversion.'],
+    ['  • Активен — Да или Нет. По умолчанию Да.'],
     [''],
-    ['TOP LOSSES (опционально):'],
-    ['  • Top Losses — названия потерь через запятую, например: Обрыв штранга, Заторы на MAX.'],
-    ['      Имена должны точно совпадать с названиями в справочнике Top Losses (Настройки → Категории Top Losses).'],
-    ['      Если потеря не найдена — она игнорируется.'],
+    ['============================================================'],
+    ['ЛИСТ «СТАНДАРТЫ» — ОПЦИОНАЛЬНЫЕ ПОЛЯ:'],
+    ['============================================================'],
+    ['  • Описание проблемы / Описание контроля / Цель / Почему создан — свободный текст.'],
+    ['  • Триггеры — через запятую. Для ChangeOver.'],
+    ['      Пример: Табак, Материалы, node:Узел передачи'],
+    ['  • Top Losses — названия потерь через запятую.'],
+    ['      Пример: Обрыв штранга, Заторы на MAX'],
+    ['  • Фото — имена файлов из photos/<Линия>/<Часть>/, через запятую.'],
     [''],
-    ['ФОТОГРАФИИ (опционально):'],
-    ['  • Фото — имена файлов должны быть записаны в следующем формате: Имя.jpg, опционально можно добавить несколько фото для стандарта через запятую (например: max-1.jpg, drum.jpg).'],
-    ['      Файлы должны лежать в папке: photos/<Линия>/<Maker или Packer>/'],
+    ['============================================================'],
+    ['ЛИСТ «ТОЧКИ» (необязательный):'],
+    ['============================================================'],
+    ['  Строки связываются со стандартами по ключу OPL № + Машина.'],
     [''],
-    ['ПРОЧИЕ ОПЦИОНАЛЬНЫЕ ПОЛЯ:'],
-    ['  • Описания — свободный текст (проблема, контроль, цель, почему создан).'],
-    ['  • Точки 1–4 — номер, значение, сорта.'],
-    ['  • Применять к — через запятую: Minor, Intermediate, Major.'],
-    ['  • Триггеры — через запятую: Табак, Материалы, Фольга / Бумага, Полипропилен, node:Узел.'],
+    ['  • OPL № — должен совпадать с листом «Стандарты».'],
+    ['  • Машина — должна совпадать.'],
+    ['  • Бренд — пусто = «Все бренды». Иначе — конкретный бренд из справочника.'],
+    ['  • № точки — 1, 2, 3, …'],
+    ['  • Значение — норма для этой точки:'],
+    ['      Для value_input: «92 ± 5», «92+-5».'],
+    ['      Для range_input: «5 до 8», «5.5 - 8.5».'],
+    ['      Можно писать с единицами: «-65 kPa (±10 kPa)».'],
+    [''],
+    ['ПРАВИЛА ИМПОРТА:'],
+    ['  • Если машины нет в списке линии — она добавится автоматически.'],
+    ['  • Если потеря (Top Losses) не найдена по названию — она пропускается.'],
+    ['  • Если триггер не распознан — он пропускается.'],
+    ['  • Дубликаты по OPL № + Машина — пропускаются.'],
+    ['  • Пустые строки игнорируются.'],
     ['']
   ];
+
   info.forEach(([text]) => wsInfo.addRow([text]));
   wsInfo.getRow(1).font = { bold: true, size: 16, color: { argb: 'FF0A4FA8' } };
 
+  // ======================= Скачивание =======================
   const buf = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   downloadBlob(blob, 'template_opl_' + (currentEditorLine || 'line') + '.xlsx');
@@ -12294,7 +14443,6 @@ $('#editorExportBtn')?.addEventListener('click', async () => {
     return showToast('Сначала откройте линию', true);
   }
 
-  // Берём ВСЕ стандарты линии (без учёта фильтров и пагинации)
   const standards = getStandards().filter(s => s.line === currentEditorLine);
 
   if (!standards.length) {
@@ -12302,42 +14450,40 @@ $('#editorExportBtn')?.addEventListener('click', async () => {
   }
 
   const wb = new ExcelJS.Workbook();
+
+  // ======================= ЛИСТ 1: «Стандарты» =======================
   const ws = wb.addWorksheet('Стандарты');
 
-  // ---- Заголовки (те же, что в шаблоне) ----
   const headers = [
-    '№', 'OPL №', 'Машина', 'Узел', 'Часть линии', 'Название', 'Линия', 'Тип контроля',
-    'Описание проблемы', 'Описание контроля', 'Цель', 'Почему создан',
-    'Точка 1', 'Значение 1', 'Сорта 1',
-    'Точка 2', 'Значение 2', 'Сорта 2',
-    'Точка 3', 'Значение 3', 'Сорта 3',
-    'Точка 4', 'Значение 4', 'Сорта 4',
-    'Применять к', 'Триггеры', 'Top Losses', 'Фото'
+    'Часть линии',
+    'Машина',
+    'OPL №',
+    'Узел',
+    'Название',
+    'Линия',
+    'Тип контроля',
+    'Применять к',
+    'Активен',
+    'Описание проблемы',
+    'Описание контроля',
+    'Цель',
+    'Почему создан',
+    'Триггеры',
+    'Top Losses',
+    'Фото'
   ];
+
   ws.addRow(headers);
 
-  // ---- Данные ----
+  // Данные
   standards.forEach(st => {
-    // Точки замеров: 1..4
-    const points = st.measurements || [];
-    const p1 = points[0] || { point: 1, value: '', sorts: '' };
-    const p2 = points[1] || { point: 2, value: '', sorts: '' };
-    const p3 = points[2] || { point: 3, value: '', sorts: '' };
-    const p4 = points[3] || { point: 4, value: '', sorts: '' };
-
-    // Применять к: массив → строка через запятую
-    const appliesTo = Array.isArray(st.appliesTo) ? st.appliesTo.join(', ') : '';
-
-    // Триггеры: node:X → X (для читаемости)
-    const triggers = Array.isArray(st.triggers)
+    // Триггеры: node:X → X
+    const triggersText = Array.isArray(st.triggers)
       ? st.triggers.map(t => t.replace(/^node:/, '')).join(', ')
       : '';
 
-    // Фото: массив → строка через запятую
-    const photos = Array.isArray(st.photos) ? st.photos.join(', ') : '';
-
-    // Top Losses: массив ID → строка имён через запятую
-    const topLossesNames = Array.isArray(st.topLosses)
+    // Top Losses: массив ID → названия через запятую
+    const topLossesText = Array.isArray(st.topLosses)
       ? st.topLosses
           .map(id => {
             const l = findLossById(id);
@@ -12347,40 +14493,37 @@ $('#editorExportBtn')?.addEventListener('click', async () => {
           .join(', ')
       : '';
 
+    // Фото
+    const photosText = Array.isArray(st.photos) ? st.photos.join(', ') : '';
+
+    // Применять к
+    const appliesToText = Array.isArray(st.appliesTo) ? st.appliesTo.join(', ') : '';
+
     ws.addRow([
-      st.number || '',
-      st.oplNumber || '',
-      st.machine || '',
-      st.node || '',
       st.nodePart || '',
+      st.machine || '',
+      st.oplNumber || '',
+      st.node || '',
       st.title || '',
       st.line || currentEditorLine,
       st.controlType || '',
+      appliesToText,
+      st.active !== false ? 'Да' : 'Нет',
       st.problemDescription || '',
       st.controlDescription || '',
       st.purpose || '',
       st.whyCreated || '',
-      p1.point, p1.value, p1.sorts,
-      p2.point, p2.value, p2.sorts,
-      p3.point, p3.value, p3.sorts,
-      p4.point, p4.value, p4.sorts,
-      appliesTo,
-      triggers,
-      topLossesNames,
-      photos
+      triggersText,
+      topLossesText,
+      photosText
     ]);
   });
 
-  // ---- Ширины колонок ----
-  const widths = [
-    6, 14, 10, 26, 12, 32, 10, 14,
-    34, 34, 30, 30,
-    8, 22, 14, 8, 22, 14, 8, 22, 14, 8, 22, 14,
-    22, 30, 38, 40
-  ];
+  // Ширины
+  const widths = [12, 10, 14, 30, 34, 10, 14, 18, 10, 34, 34, 30, 30, 22, 30, 30];
   ws.columns.forEach((col, i) => { col.width = widths[i] || 14; });
 
-  // ---- Стилизация шапки ----
+  // Стилизация шапки
   const headerRow = ws.getRow(1);
   headerRow.height = 36;
   headerRow.eachCell((cell) => {
@@ -12395,15 +14538,16 @@ $('#editorExportBtn')?.addEventListener('click', async () => {
     };
   });
 
-  // ---- Автофильтр по шапке ----
+  // Автофильтр
   ws.autoFilter = {
     from: { row: 1, column: 1 },
     to:   { row: 1, column: headers.length }
   };
 
-  // ---- Данные: общий стиль ----
+  // Стилизация данных
   for (let i = 2; i <= ws.rowCount; i++) {
     const row = ws.getRow(i);
+    row.height = 30;
     row.eachCell({ includeEmpty: true }, (cell) => {
       cell.font = { name: 'Calibri', size: 11 };
       cell.alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
@@ -12416,7 +14560,139 @@ $('#editorExportBtn')?.addEventListener('click', async () => {
     });
   }
 
-  // ---- Скачивание ----
+  // ======================= ЛИСТ 2: «Точки» =======================
+  const ws2 = wb.addWorksheet('Точки');
+
+  const headers2 = [
+    'OPL №',
+    'Машина',
+    'Бренд',
+    '№ точки',
+    'Значение'
+  ];
+
+  ws2.addRow(headers2);
+
+  // Собираем точки со всех стандартов
+  standards.forEach(st => {
+    const blocks = Array.isArray(st.measurements) ? st.measurements : [];
+    blocks.forEach(block => {
+      const points = Array.isArray(block.points) ? block.points : [];
+      points.forEach((p, i) => {
+        ws2.addRow([
+          st.oplNumber || '',
+          st.machine || '',
+          block.brand || '',
+          i + 1,
+          p.value || ''
+        ]);
+      });
+    });
+  });
+
+  // Ширины
+  const widths2 = [14, 12, 20, 10, 26];
+  ws2.columns.forEach((col, i) => { col.width = widths2[i] || 14; });
+
+  // Шапка
+  const headerRow2 = ws2.getRow(1);
+  headerRow2.height = 30;
+  headerRow2.eachCell((cell) => {
+    cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4FA8' } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    cell.border = {
+      top:    { style: 'thin', color: { argb: 'FF0A4FA8' } },
+      bottom: { style: 'thin', color: { argb: 'FF0A4FA8' } },
+      left:   { style: 'thin', color: { argb: 'FF0A4FA8' } },
+      right:  { style: 'thin', color: { argb: 'FF0A4FA8' } }
+    };
+  });
+
+  ws2.autoFilter = {
+    from: { row: 1, column: 1 },
+    to:   { row: 1, column: headers2.length }
+  };
+
+  for (let i = 2; i <= ws2.rowCount; i++) {
+    const row = ws2.getRow(i);
+    row.height = 22;
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      cell.font = { name: 'Calibri', size: 11 };
+      cell.alignment = { vertical: 'middle', horizontal: 'left' };
+      cell.border = {
+        top:    { style: 'thin', color: { argb: 'FFCBD2D9' } },
+        bottom: { style: 'thin', color: { argb: 'FFCBD2D9' } },
+        left:   { style: 'thin', color: { argb: 'FFCBD2D9' } },
+        right:  { style: 'thin', color: { argb: 'FFCBD2D9' } }
+      };
+    });
+  }
+
+  // ======================= ЛИСТ 3: «Инструкция» =======================
+  const wsInfo = wb.addWorksheet('Инструкция');
+  wsInfo.columns = [{ width: 100 }];
+
+  const info = [
+    ['📋 Экспорт OPL — ' + currentEditorLine],
+    [''],
+    ['Дата экспорта: ' + new Date().toLocaleString('ru-RU')],
+    ['Стандартов выгружено: ' + standards.length],
+    [''],
+    ['ЧТО В ФАЙЛЕ:'],
+    ['  • Лист «Стандарты» — по одной строке на стандарт.'],
+    ['  • Лист «Точки» — по одной строке на каждую точку.'],
+    ['      Связь со стандартом — по ключу OPL № + Машина.'],
+    [''],
+    ['ФАЙЛ ГОТОВ К РЕДАКТИРОВАНИЮ И ОБРАТНОЙ ЗАГРУЗКЕ:'],
+    ['  1. Измените нужные данные (можно править всё, кроме структуры колонок).'],
+    ['  2. Сохраните файл в .xlsx.'],
+    ['  3. В приложении: Редактор → открыть линию → «Импорт из Excel».'],
+    [''],
+    ['============================================================'],
+    ['ЛИСТ «СТАНДАРТЫ» — ОБЯЗАТЕЛЬНЫЕ ПОЛЯ:'],
+    ['============================================================'],
+    ['  • OPL № — уникален в пределах линии + машины.'],
+    ['  • Часть линии — Maker или Packer.'],
+    ['  • Машина — обозначение (SE, M1, …).'],
+    ['  • Узел — свободный текст.'],
+    ['  • Название — краткое описание.'],
+    ['  • Линия — код линии.'],
+    ['  • Тип контроля — ok_not_ok / value_input / range_input.'],
+    ['  • Применять к — ChangeOver, CL_TO, CL_Conversion (через запятую).'],
+    ['  • Активен — Да или Нет.'],
+    [''],
+    ['============================================================'],
+    ['ЛИСТ «СТАНДАРТЫ» — ОПЦИОНАЛЬНЫЕ ПОЛЯ:'],
+    ['============================================================'],
+    ['  • Описания (проблема, контроль, цель, почему создан).'],
+    ['  • Триггеры — через запятую (для ChangeOver).'],
+    ['  • Top Losses — названия потерь через запятую.'],
+    ['  • Фото — имена файлов через запятую.'],
+    [''],
+    ['============================================================'],
+    ['ЛИСТ «ТОЧКИ» (необязательный):'],
+    ['============================================================'],
+    ['  • OPL № + Машина — должны совпадать со стандартом.'],
+    ['  • Бренд — пусто = «Все бренды». Иначе — конкретный бренд.'],
+    ['  • № точки — 1, 2, 3, …'],
+    ['  • Значение — норма для точки:'],
+    ['      value_input: «92 ± 5», «92+-5».'],
+    ['      range_input: «5 до 8», «5.5 - 8.5».'],
+    ['      Можно писать с единицами: «-65 kPa (±10 kPa)».'],
+    [''],
+    ['ПРАВИЛА ИМПОРТА:'],
+    ['  • Если машины нет в списке линии — она добавится автоматически.'],
+    ['  • Потери (Top Losses), не найденные по названию, — пропускаются.'],
+    ['  • Дубликаты по OPL № + Машина — пропускаются.'],
+    ['  • Пустые строки игнорируются.'],
+    ['']
+  ];
+
+  info.forEach(([text]) => wsInfo.addRow([text]));
+  wsInfo.getRow(1).font = { bold: true, size: 16, color: { argb: 'FF0A4FA8' } };
+
+  // ======================= Скачивание =======================
   const buf = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const ts = new Date().toISOString().slice(0, 10);
@@ -12458,23 +14734,83 @@ $('#editorUploadInput')?.addEventListener('change', async (e) => {
     showToast('Ошибка чтения файла: ' + err.message, true);
   }
 });
+/* ============================================================
+   COCL: Сворачивание верхней части и показ чек-листа
+   ============================================================ */
+
+/** Скрыть настройки, показать чек-лист */
+function buildChecklistView() {
+  // Прячем все карточки настройки
+  ['#brandsCard', '#changesCard', '#nodesCard', '#buildChecklistCard'].forEach(sel => {
+    const el = $(sel);
+    if (el) el.style.display = 'none';
+  });
+
+  // Карточки с оператором/сменой/линией/типом — тоже скрываем
+  const topCards = document.querySelectorAll('#tab-check .card');
+  topCards.forEach((card, idx) => {
+    if (card.id === 'checklistCard') return;
+    // Скрываем всё, что до чек-листа
+    card.style.display = 'none';
+  });
+
+  // Показываем чек-лист
+  $('#checklistCard').style.display = 'block';
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/** Показать настройки, скрыть чек-лист */
+function editChecklistConditions() {
+  // Показываем все карточки настройки обратно
+  const topCards = document.querySelectorAll('#tab-check .card');
+  topCards.forEach(card => {
+    if (card.id === 'checklistCard') {
+      card.style.display = 'none';
+    } else {
+      // Восстанавливаем отображение — но только тех, что были видны
+      // Проще: показываем всё, что должно быть видно по текущему состоянию
+      card.style.display = '';
+    }
+  });
+
+  // Применяем видимость через onTransitionTypeChange
+  if (typeof onTransitionTypeChange === 'function') {
+    // Сначала скрыть всё ненужное
+    ['#brandsCard', '#changesCard', '#nodesCard', '#buildChecklistCard'].forEach(sel => {
+      const el = $(sel);
+      if (el) el.style.display = 'none';
+    });
+    // Затем вызвать логику для актуального типа
+    onTransitionTypeChange();
+  }
+
+  // Скрываем чек-лист
+  $('#checklistCard').style.display = 'none';
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Обработчики
+$('#buildChecklistBtn')?.addEventListener('click', buildChecklistView);
+$('#editConditionsBtn')?.addEventListener('click', editChecklistConditions);
 
 /* ============================================================
-   ПАРСЕР EXCEL — ШАБЛОН OPL (v2: проверка и автодобавление машин)
+   ПАРСЕР EXCEL — ШАБЛОН OPL (v3: два листа, точки отдельно)
    ============================================================ */
 async function parseStandardsExcelV3(file, targetLine) {
   const wb = new ExcelJS.Workbook();
   const buf = await file.arrayBuffer();
   await wb.xlsx.load(buf);
 
+  // --- Лист «Стандарты» — обязательный ---
   const ws = wb.getWorksheet('Стандарты') || wb.worksheets[0];
   if (!ws) throw new Error('Не найден лист «Стандарты»');
 
   const VALID_PARTS = ['Maker', 'Packer'];
-  const VALID_CONTROL = ['ok_not_ok', 'value_input', 'tolerance'];
-  const VALID_TYPES = ['Minor', 'Intermediate', 'Major'];
+  const VALID_CONTROL = ['ok_not_ok', 'value_input', 'range_input'];
+  const VALID_APPLIES = ['ChangeOver', 'CL_TO', 'CL_Conversion'];
 
-  // Маппинг русских названий триггеров → технические значения
   const TRIGGER_MAP = {
     'табак': 'tobacco',
     'материалы': 'materials',
@@ -12487,6 +14823,7 @@ async function parseStandardsExcelV3(file, targetLine) {
   };
 
   const existing = getStandards();
+
   // Ключ: line|machine|oplNumber (lowercase)
   const existingOplKeys = new Set(
     existing
@@ -12494,7 +14831,7 @@ async function parseStandardsExcelV3(file, targetLine) {
       .map(s => `${s.line}|${s.machine || ''}|${(s.oplNumber || '').toLowerCase()}`)
   );
 
-  // --- НОВОЕ: получаем актуальный список машин для линии ---
+  // Машины линии
   const lineMachines = getLineMachines();
   if (!Array.isArray(lineMachines[targetLine])) {
     lineMachines[targetLine] = [];
@@ -12507,13 +14844,22 @@ async function parseStandardsExcelV3(file, targetLine) {
     duplicates: [],
     empty: 0,
     errors: [],
-    addedMachines: []   
+    addedMachines: []
   };
 
   function splitList(str) {
     if (str == null) return [];
     return String(str).split(',').map(s => s.trim()).filter(Boolean);
   }
+
+  // --- Читаем строки листа «Стандарты» ---
+  // Новый порядок колонок:
+  // A: Часть линии | B: Машина | C: OPL № | D: Узел | E: Название | F: Линия
+  // G: Тип контроля | H: Применять к | I: Активен | J: Описание проблемы
+  // K: Описание контроля | L: Цель | M: Почему создан
+  // N: Триггеры | O: Top Losses | P: Фото
+  const importedStandards = [];    // временный буфер — потом соединим с точками
+  const importIndex = {};          // OPL № + Машина → объект стандарта
 
   for (let i = 2; i <= ws.rowCount; i++) {
     const row = ws.getRow(i);
@@ -12528,57 +14874,49 @@ async function parseStandardsExcelV3(file, targetLine) {
       return String(v).trim();
     };
 
-    const number         = get(1);
-    const oplNumber      = get(2);
-    const machine        = get(3);
-    const node           = get(4);   
-    const nodePart       = get(5);   
-    const title          = get(6);   
-    const lineFromExcel  = get(7);   
-    const controlType    = get(8);
-    const problemDesc    = get(9);
-    const controlDesc    = get(10);
-    const purpose        = get(11);
-    const whyCreated     = get(12);
+    const nodePart      = get(1);   // Часть линии
+    const machine       = get(2);   // Машина
+    const oplNumber     = get(3);   // OPL №
+    const node          = get(4);   // Узел
+    const title         = get(5);   // Название
+    const lineFromExcel = get(6);   // Линия
+    const controlType   = get(7);   // Тип контроля
+    const appliesToRaw  = get(8);   // Применять к
+    const activeRaw     = get(9);   // Активен
+    const problemDesc   = get(10);
+    const controlDesc   = get(11);
+    const purpose       = get(12);
+    const whyCreated    = get(13);
+    const triggersRaw   = get(14);
+    const topLossesRaw  = get(15);
+    const photosRaw     = get(16);
 
-    const point1 = { point: 1, value: get(14), sorts: get(15) };
-    const point2 = { point: 2, value: get(17), sorts: get(18) };
-    const point3 = { point: 3, value: get(20), sorts: get(21) };
-    const point4 = { point: 4, value: get(23), sorts: get(24) };
-
-    const appliesToRaw  = get(25);
-    const triggersRaw   = get(26);
-    const topLossesRaw  = get(27);
-    const photosRaw     = get(28);
-
-    // Пустая строка — пропускаем
-    if (!number && !oplNumber && !title && !node) {
+    // Пустая строка
+    if (!oplNumber && !machine && !title && !node) {
       result.empty++;
       continue;
     }
 
     // Валидация
     const rowErrors = [];
-    if (!number)      rowErrors.push('пустой №');
     if (!oplNumber)   rowErrors.push('пустой OPL №');
     if (!machine)     rowErrors.push('пустая машина');
-    if (!title)       rowErrors.push('пустое название');
-    if (!node)        rowErrors.push('пустой узел');
     if (!nodePart)    rowErrors.push('не указана часть линии');
+    if (!node)        rowErrors.push('пустой узел');
+    if (!title)       rowErrors.push('пустое название');
     if (!controlType) rowErrors.push('не указан тип контроля');
 
     if (nodePart && !VALID_PARTS.includes(nodePart)) {
       rowErrors.push(`часть линии «${nodePart}» — допустимо Maker / Packer`);
     }
     if (controlType && !VALID_CONTROL.includes(controlType)) {
-      rowErrors.push(`тип контроля «${controlType}» — допустимо ok_not_ok / value_input / tolerance`);
+      rowErrors.push(`тип контроля «${controlType}» — допустимо ok_not_ok / value_input / range_input`);
     }
-
     if (lineFromExcel && lineFromExcel !== targetLine) {
       rowErrors.push(`линия в файле «${lineFromExcel}», а импорт идёт в «${targetLine}»`);
     }
 
-    // Дубликат по OPL № на этой линии + машине
+    // Дубликат
     const oplKey = `${targetLine}|${machine || ''}|${oplNumber.toLowerCase()}`;
     if (oplNumber && existingOplKeys.has(oplKey)) {
       result.duplicates.push(`${oplNumber} (${machine})`);
@@ -12591,27 +14929,19 @@ async function parseStandardsExcelV3(file, targetLine) {
       continue;
     }
 
-    // --- НОВОЕ: проверяем машину и добавляем её при необходимости ---
+    // Автодобавление машины
     if (machine && !machinesForThisLine.includes(machine)) {
       machinesForThisLine.push(machine);
       result.addedMachines.push(machine);
     }
 
-    // Парсим типы переходов
-    const appliesTo = splitList(appliesToRaw).filter(t => {
-      if (!VALID_TYPES.includes(t)) {
-        rowErrors.push(`тип перехода «${t}» — допустимо Minor / Intermediate / Major`);
-        return false;
-      }
-      return true;
-    });
+    // appliesTo
+    const appliesTo = splitList(appliesToRaw).filter(v => VALID_APPLIES.includes(v));
 
-    if (rowErrors.length) {
-      result.errors.push({ row: i, message: rowErrors.join('; ') });
-      continue;
-    }
+    // Активен
+    const active = !(activeRaw && activeRaw.toLowerCase() === 'нет');
 
-    // Парсим триггеры
+    // Триггеры
     const triggers = [];
     splitList(triggersRaw).forEach(t => {
       const tLow = t.toLowerCase();
@@ -12629,30 +14959,23 @@ async function parseStandardsExcelV3(file, targetLine) {
       }
     });
 
-    // --- Парсим Top Losses ---
-    // Значения — названия потерь через запятую. Ищем ID в справочнике
-    // по точному имени (без регистра). Если не нашли — игнорируем.
+    // Top Losses — по названиям
     const allLossesFlat = getAllLossItems();
     const topLosses = [];
-
     splitList(topLossesRaw).forEach(name => {
       const found = allLossesFlat.find(l =>
         l.name.toLowerCase() === name.toLowerCase()
       );
-      if (found) {
-        topLosses.push(found.id);
-      }
-      // если не нашли — молча игнорируем (в отличие от машин)
+      if (found) topLosses.push(found.id);
     });
 
-    // --- Парсим фотографии (список имён файлов через запятую) ---
+    // Фото
     const photos = splitList(photosRaw);
 
-    // Формируем стандарт
     const newStandard = {
       id: uid(),
-      active: true,
-      number,
+      active,
+      number: '',           // убрали поле № — считаем автоматически при отображении
       oplNumber,
       machine,
       title,
@@ -12664,7 +14987,7 @@ async function parseStandardsExcelV3(file, targetLine) {
       controlDescription: controlDesc,
       purpose: purpose,
       whyCreated: whyCreated,
-      measurements: [point1, point2, point3, point4],
+      measurements: [],     // пока пусто — заполним из листа «Точки»
       appliesTo,
       triggers,
       topLosses,
@@ -12673,23 +14996,111 @@ async function parseStandardsExcelV3(file, targetLine) {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
+
+    importedStandards.push(newStandard);
+    importIndex[`${oplNumber.toLowerCase()}|${machine}`] = newStandard;
     existing.push(newStandard);
     existingOplKeys.add(oplKey);
     result.added++;
   }
 
+  // --- Лист «Точки» — опциональный ---
+  const ws2 = wb.getWorksheet('Точки');
+  let pointsImported = 0;
+
+  if (ws2 && ws2.rowCount > 1) {
+    // Ключ: OPL № + Машина → { brand → { pointNum → value } }
+    const tempPoints = {};
+
+    for (let i = 2; i <= ws2.rowCount; i++) {
+      const row = ws2.getRow(i);
+      const get = (col) => {
+        const v = row.getCell(col).value;
+        if (v == null) return '';
+        if (typeof v === 'object') {
+          if (v.text) return String(v.text).trim();
+          if (v.result != null) return String(v.result).trim();
+          return '';
+        }
+        return String(v).trim();
+      };
+
+      const oplNumber = get(1);
+      const machine   = get(2);
+      const brand     = get(3);
+      const pointNum  = parseInt(get(4), 10);
+      const value     = get(5);
+
+      if (!oplNumber || !machine || !pointNum) continue;
+
+      const stdKey = `${oplNumber.toLowerCase()}|${machine}`;
+      if (!importIndex[stdKey]) {
+        // Нет стандарта для этой точки — ошибка
+        result.errors.push({
+          row: i,
+          message: `нет стандарта для точки: ${oplNumber} (${machine})`
+        });
+        continue;
+      }
+
+      if (!tempPoints[stdKey]) tempPoints[stdKey] = {};
+      const brandKey = brand || '';   // пусто = Все бренды
+      if (!tempPoints[stdKey][brandKey]) tempPoints[stdKey][brandKey] = {};
+      tempPoints[stdKey][brandKey][pointNum] = value;
+    }
+
+    // Собираем точки в структуру measurements
+    Object.entries(tempPoints).forEach(([stdKey, brandMap]) => {
+      const std = importIndex[stdKey];
+      if (!std) return;
+
+      const blocks = [];
+      Object.entries(brandMap).forEach(([brand, pointMap]) => {
+        // Сортируем по номеру точки
+        const sortedNums = Object.keys(pointMap).map(Number).sort((a, b) => a - b);
+        // Проверяем, что нумерация непрерывная от 1
+        const points = [];
+        let expected = 1;
+        for (const num of sortedNums) {
+          if (num !== expected) break;   // или можно вставить пустые — но мы не хотим
+          points.push({ value: pointMap[num] });
+          expected++;
+        }
+        if (points.length) {
+          blocks.push({ brand, points });
+        }
+      });
+
+      std.measurements = blocks;
+      pointsImported += blocks.reduce((sum, b) => sum + b.points.length, 0);
+    });
+  }
+
+  // --- Сохранение ---
   if (result.added > 0) {
     setStandards(existing);
   }
 
-  // --- НОВОЕ: сохраняем машины, если были автодобавления ---
   if (result.addedMachines.length > 0) {
     setLineMachines(lineMachines);
-    // Обновляем UI настроек и фильтр в редакторе
     if (typeof renderLineMachinesSettings === 'function') renderLineMachinesSettings();
     if (typeof fillEditorMachineFilter === 'function') fillEditorMachineFilter(targetLine);
   }
 
+  result.pointsImported = pointsImported;
+
   return result;
 }
+
+/* ============================================================
+   Форма стандарта: сворачиваемые блоки Триггеры / Top Losses
+   ============================================================ */
+document.addEventListener('click', (e) => {
+  const head = e.target.closest('.sf-collapsible-header');
+  if (!head) return;
+  const parent = head.closest('.sf-collapsible');
+  if (!parent) return;
+  parent.classList.toggle('expanded');
+});
+
 init(); 

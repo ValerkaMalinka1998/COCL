@@ -54,6 +54,8 @@
   --scroll-track: #eef3fb;
   --scroll-thumb: #c4d2e8;
   --scroll-thumb-hover: #2e5288;
+
+  --modal-z-base: 2000;
 }
 
 /* ============ ТЕМА: Ночная (dark) ============ */
@@ -107,6 +109,8 @@
   --scroll-track: #0a0e1a;
   --scroll-thumb: #2d3d5c;
   --scroll-thumb-hover: #00d4ff;
+
+  --modal-z-base: 2000;
 }
 
 /* ============ Сброс ============ */

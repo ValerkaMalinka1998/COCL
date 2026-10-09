@@ -1,0 +1,3783 @@
+{
+  "version": 3,
+  "exportedAt": "2026-10-09T09:58:19.583Z",
+  "standards": [
+    {
+      "id": "id_1791388063560_e20gj",
+      "active": true,
+      "number": "1",
+      "oplNumber": "OPL-1",
+      "machine": "550",
+      "title": "Регулировка подвижной крышки хопера",
+      "line": "SD12",
+      "node": "Хопер",
+      "nodePart": "Packer",
+      "controlType": "range_input",
+      "problemDescription": "Остановки по \"Фильтр\", \"Сигаретная шахта пуста\".",
+      "controlDescription": "1. Проверить визуально совпадение меток с \"0\" в  точках 1 и 2. \n2. Приложить линейку к плоскости крышки и проверить точки 3 и 4, как указано на рисунке. Линейка должна перпендикулярно упираться в \"0\".",
+      "purpose": "Несоответствие может приводить к остановкам по хопперу, износу пластин хоппера, повышению уровня отходов.",
+      "whyCreated": "Причина создания, Предотвращение зависания, равномерное распредление сигарет в ручьях",
+      "measurements": [
+        {
+          "brand": "A",
+          "points": [
+            {
+              "value": "5 до 8"
+            },
+            {
+              "value": "6 до 9"
+            },
+            {
+              "value": "3 до 5"
+            },
+            {
+              "value": "0"
+            },
+            {
+              "value": "5"
+            }
+          ]
+        },
+        {
+          "brand": "B",
+          "points": [
+            {
+              "value": "1+-2"
+            },
+            {
+              "value": "2+-3"
+            },
+            {
+              "value": "3"
+            },
+            {
+              "value": "4"
+            },
+            {
+              "value": "5"
+            }
+          ]
+        }
+      ],
+      "appliesTo": [
+        "ChangeOver",
+        "CL_TO",
+        "CL_Conversion"
+      ],
+      "triggers": [],
+      "author": "—",
+      "createdAt": "2026-10-07T15:47:43.560Z",
+      "updatedAt": "2026-10-08T00:05:15.909Z",
+      "photos": [
+        "550-1.jpg"
+      ],
+      "deactivationComment": "",
+      "deactivationHistory": [],
+      "topLosses": [
+        "loss_cig_crush",
+        "loss_крышка_канала_пачек",
+        "loss_выдача_заполнена",
+        "loss_max_jam",
+        "loss_вылетает_внутренняя_рамка",
+        "loss_strand",
+        "loss_загрязнение_узлов",
+        "loss_магазин_бланка_пуст",
+        "loss_foil_break",
+        "loss_no_label",
+        "loss_сигаретная_шахта_пуста"
+      ]
+    },
+    {
+      "id": "id_1791388063562_94u5e",
+      "active": true,
+      "number": "2",
+      "oplNumber": "OPL-2",
+      "machine": "550",
+      "title": "Направляющие верхних роликов внутренней рамки на входе",
+      "line": "SD12",
+      "node": "Внутренняя рамка",
+      "nodePart": "Packer",
+      "controlType": "value_input",
+      "problemDescription": "Перекос рамки в пачке, стопы по \"Внутренняя рамка\".",
+      "controlDescription": "Измерить расстояние в точках замера 1-4. Замеры проводить согласно изображениям справа.",
+      "purpose": "Для центрирования подачи внутренней рамки. Неотцентрованный вырез внутренней рамки влияет на прохождение заготовки по направляющим.",
+      "whyCreated": "Не отцентрованная подача материала приводила к дополнительным стопам и неоднозначному положению внутренней рамки в пачке.",
+      "measurements": [
+        {
+          "brand": "",
+          "points": [
+            {
+              "value": "145.8"
+            },
+            {
+              "value": "74.5"
+            },
+            {
+              "value": "146"
+            },
+            {
+              "value": "75.5"
+            }
+          ]
+        }
+      ],
+      "appliesTo": [],
+      "triggers": [],
+      "author": "—",
+      "createdAt": "2026-10-07T15:47:43.562Z",
+      "updatedAt": "2026-10-07T15:47:43.562Z",
+      "photos": [
+        "550-2.jpg"
+      ],
+      "deactivationComment": "",
+      "deactivationHistory": [],
+      "topLosses": []
+    },
+    {
+      "id": "id_1791388063562_dge1n",
+      "active": true,
+      "number": "3",
+      "oplNumber": "OPL-3",
+      "machine": "550",
+      "title": "Направляющие нижнего ролика внутренней рамки на входе",
+      "line": "SD12",
+      "node": "Внутренняя рамка",
+      "nodePart": "Packer",
+      "controlType": "value_input",
+      "problemDescription": "Перекос рамки в пачке, стопы по \"Внутренняя рамка\".",
+      "controlDescription": "Измерить расстояние в точках замера 1(линейкой) и 2(штангенциркулем).",
+      "purpose": "Для центрирования подачи внутренней рамки. Неотцентрованный вырез внутренней рамки влияет на прохождение заготовки по направляющим.",
+      "whyCreated": "Не отцентрованная подача материала приводила к дополнительным стопам и неоднозначному положению внутренней рамки в пачке.",
+      "measurements": [
+        {
+          "brand": "",
+          "points": [
+            {
+              "value": "144.5"
+            },
+            {
+              "value": "74.8"
+            }
+          ]
+        }
+      ],
+      "appliesTo": [],
+      "triggers": [],
+      "author": "—",
+      "createdAt": "2026-10-07T15:47:43.562Z",
+      "updatedAt": "2026-10-07T15:47:43.562Z",
+      "photos": [
+        "550-3.jpg"
+      ],
+      "deactivationComment": "",
+      "deactivationHistory": [],
+      "topLosses": []
+    },
+    {
+      "id": "id_1791388063562_nxx6x",
+      "active": true,
+      "number": "4",
+      "oplNumber": "OPL-5",
+      "machine": "550",
+      "title": "Положение лагов ремня поперечной выдачи",
+      "line": "SD12",
+      "node": "Внутренняя рамка",
+      "nodePart": "Packer",
+      "controlType": "ok_not_ok",
+      "problemDescription": "Перекос рамки в пачке, стопы по \"Внутренняя рамка\".",
+      "controlDescription": "Выставить машину в 240 градусов. Откинуть ремень поперечной выдачи до упора. Проверить соответствие положения лага ремня в одну линию с правой частью кронштейна.",
+      "purpose": "Несоответствие стандарту приводит к нестабильной передачи внутренней рамки",
+      "whyCreated": "Из-за смещения ремня, происходило замятие внутренней рамки в конечном положении, что приводило к смещению и стопам по\n \"Внутренней рамке\"",
+      "measurements": [
+        {
+          "brand": "",
+          "points": [
+            {
+              "value": "в одну линию"
+            }
+          ]
+        }
+      ],
+      "appliesTo": [],
+      "triggers": [],
+      "author": "—",
+      "createdAt": "2026-10-07T15:47:43.562Z",
+      "updatedAt": "2026-10-07T15:47:43.562Z",
+      "photos": [
+        "550-5.jpg"
+      ],
+      "deactivationComment": "",
+      "deactivationHistory": [],
+      "topLosses": []
+    },
+    {
+      "id": "id_1791388063562_aekzp",
+      "active": true,
+      "number": "5",
+      "oplNumber": "OPL-6",
+      "machine": "550",
+      "title": "Верхние направляющие на входе в магазин",
+      "line": "SD12",
+      "node": "Магазин бланков",
+      "nodePart": "Packer",
+      "controlType": "ok_not_ok",
+      "problemDescription": "Остановки по \"Нет этикета\", \"Магазин бланка пуст\", \"Нет клапана бланка\", замятия бланка, клапана бланка",
+      "controlDescription": "Проверить совпадение стрелки со значением 0 в точках 1-4.",
+      "purpose": "Соответствие стандарту позволяет материалу свободно проходить между направляющих.",
+      "whyCreated": "Из-за неравномерной подачи стопы бланков происходили замятия бланков.",
+      "measurements": [
+        {
+          "brand": "",
+          "points": [
+            {
+              "value": "0"
+            },
+            {
+              "value": "0"
+            },
+            {
+              "value": "0"
+            },
+            {
+              "value": "0"
+            }
+          ]
+        }
+      ],
+      "appliesTo": [],
+      "triggers": [],
+      "author": "—",
+      "createdAt": "2026-10-07T15:47:43.562Z",
+      "updatedAt": "2026-10-07T15:47:43.562Z",
+      "photos": [
+        "550-6.jpg"
+      ],
+      "deactivationComment": "",
+      "deactivationHistory": [],
+      "topLosses": []
+    },
+    {
+      "id": "id_1791388063562_rbqfe",
+      "active": true,
+      "number": "6",
+      "oplNumber": "OPL-7",
+      "machine": "550",
+      "title": "Спиральный фальцеватель",
+      "line": "SD12",
+      "node": "Канал пачек",
+      "nodePart": "Packer",
+      "controlType": "value_input",
+      "problemDescription": "Повышенное загрязнение, смещение или деформация пачки.",
+      "controlDescription": "Провести замеры штангенциркулем в  точках 1-3, щупами в точке 4. При несоответствии - установить указанные значения.",
+      "purpose": "Сокращение времени на CIL, поддержание качества продукции.",
+      "whyCreated": "Из-за смещенных направляющих происходило смещение панелей на пачке и повышенное загрязнение последующих узлов и деталей.",
+      "measurements": [
+        {
+          "brand": "",
+          "points": [
+            {
+              "value": "23"
+            },
+            {
+              "value": "24"
+            },
+            {
+              "value": "47.6"
+            },
+            {
+              "value": "0.5"
+            }
+          ]
+        }
+      ],
+      "appliesTo": [],
+      "triggers": [],
+      "author": "—",
+      "createdAt": "2026-10-07T15:47:43.562Z",
+      "updatedAt": "2026-10-07T15:47:43.562Z",
+      "photos": [
+        "550-7.jpg"
+      ],
+      "deactivationComment": "",
+      "deactivationHistory": [],
+      "topLosses": []
+    },
+    {
+      "id": "id_1791388063562_4u9er",
+      "active": true,
+      "number": "7",
+      "oplNumber": "OPL-8",
+      "machine": "550",
+      "title": "Положение толкателей внутренней рамки",
+      "line": "SD12",
+      "node": "Внутренняя рамка",
+      "nodePart": "Packer",
+      "controlType": "ok_not_ok",
+      "problemDescription": "Вылетает внутренняя рамка",
+      "controlDescription": "На втором шаге складывающего колеса вставляем калибр №2 (т.А). Прокручиваем машину за штурвал и перемещаем калибр на третий шаг складывающего колеса. Подводим толкатели, в 151⁰ толкатель должен касаться калибра. Вращаем машину и извлекаем калибр",
+      "purpose": "Неправильное положение толкателя отражается на качестве продукции и повышаются кол-во  мелких остановок, связанных с вылетающей вн. рамкой.",
+      "whyCreated": "Неправильное положение толкателя отражается на качестве продукции и повышаются кол-во  мелких остановок, связанных с вылетающей вн. рамкой.",
+      "measurements": [
+        {
+          "brand": "",
+          "points": [
+            {
+              "value": "Согласно описанию"
+            }
+          ]
+        }
+      ],
+      "appliesTo": [],
+      "triggers": [],
+      "author": "—",
+      "createdAt": "2026-10-07T15:47:43.562Z",
+      "updatedAt": "2026-10-07T15:47:43.562Z",
+      "photos": [
+        "550-8.jpg"
+      ],
+      "deactivationComment": "",
+      "deactivationHistory": [],
+      "topLosses": []
+    },
+    {
+      "id": "id_1791388063563_49zmx",
+      "active": true,
+      "number": "8",
+      "oplNumber": "OPL-9",
+      "machine": "550",
+      "title": "Ремени между 1-м и 2-м сушильными колесами.",
+      "line": "SD12",
+      "node": "Конвейер между 1-м и 2-м сушильными колесами.",
+      "nodePart": "Packer",
+      "controlType": "ok_not_ok",
+      "problemDescription": "Остановки \"Выдача заполнена\", падение пачек на ремнях",
+      "controlDescription": "Проверить совмещение указателей и линеек в точках 1-4. Замеры должны соответствовать \"0\" на линейке.",
+      "purpose": "Сокращение стопов и время на настройки после замены ремней.",
+      "whyCreated": "Постоянная регулировка ремней приводила к замятию продукции, нестабильной работы линии и повышенным стопам.",
+      "measurements": [
+        {
+          "brand": "",
+          "points": [
+            {
+              "value": "0"
+            },
+            {
+              "value": "0"
+            },
+            {
+              "value": "0"
+            },
+            {
+              "value": "0"
+            }
+          ]
+        }
+      ],
+      "appliesTo": [],
+      "triggers": [],
+      "author": "—",
+      "createdAt": "2026-10-07T15:47:43.563Z",
+      "updatedAt": "2026-10-07T15:47:43.563Z",
+      "photos": [
+        "550-9.jpg"
+      ],
+      "deactivationComment": "",
+      "deactivationHistory": [],
+      "topLosses": []
+    },
+    {
+      "id": "id_1791388063563_sdh1n",
+      "active": true,
+      "number": "9",
+      "oplNumber": "OPL-11",
+      "machine": "550",
+      "title": "Гибочная станция",
+      "line": "SD12",
+      "node": "Гибочная станция",
+      "nodePart": "Packer",
+      "controlType": "ok_not_ok",
+      "problemDescription": "Смещение бланка, неправильное формирование",
+      "controlDescription": "Проверить совпадение стрелок с отметкой 0 на линейках в точках 1 и 2",
+      "purpose": "Несоответствие стандарту может привести к выпуску некачественной продукции и повышенному загрязнению линии.",
+      "whyCreated": "Неправильная установка выравнивателей привела к повышенному загрязнению линии и смещение линий на лицевой панели готовой продукции.",
+      "measurements": [
+        {
+          "brand": "",
+          "points": [
+            {
+              "value": "0"
+            }
+          ]
+        }
+      ],
+      "appliesTo": [
+        "CL_TO"
+      ],
+      "triggers": [],
+      "author": "—",
+      "createdAt": "2026-10-07T15:47:43.563Z",
+      "updatedAt": "2026-10-07T22:05:08.442Z",
+      "photos": [
+        "550-11.jpg"
+      ],
+      "deactivationComment": "",
+      "deactivationHistory": [],
+      "topLosses": [
+        "loss_hopper",
+        "loss_нет_этикета_в_складывающем_кол",
+        "loss_cig_crush",
+        "loss_les"
+      ]
+    },
+    {
+      "id": "id_1791388063563_terh2",
+      "active": true,
+      "number": "10",
+      "oplNumber": "OPL-12",
+      "machine": "550",
+      "title": "Стенки магазина бланков",
+      "line": "SD12",
+      "node": "Магазин бланков",
+      "nodePart": "Packer",
+      "controlType": "value_input",
+      "problemDescription": "Неправильная подача бланков на первую пару роликов, стопы по \"Нет этикета справа/слева\"",
+      "controlDescription": "Проверить расстояние в соответствующих точках как указано на рисунке",
+      "purpose": "Сокращение стопов, снижение реджектов",
+      "whyCreated": "Неправильная подача бланков, повышенное кол-во стопов по \"Нет этикета справа/слева\"",
+      "measurements": [
+        {
+          "brand": "",
+          "points": [
+            {
+              "value": "11.5"
+            },
+            {
+              "value": "10.5"
+            }
+          ]
+        }
+      ],
+      "appliesTo": [
+        "CL_TO"
+      ],
+      "triggers": [],
+      "author": "—",
+      "createdAt": "2026-10-07T15:47:43.563Z",
+      "updatedAt": "2026-10-07T22:05:12.843Z",
+      "photos": [
+        "550-12.jpg"
+      ],
+      "deactivationComment": "",
+      "deactivationHistory": [],
+      "topLosses": [
+        "loss_hopper",
+        "loss_cig_crush",
+        "loss_les"
+      ]
+    },
+    {
+      "id": "id_1791388063563_bp8b5",
+      "active": true,
+      "number": "11",
+      "oplNumber": "OPL-13",
+      "machine": "550",
+      "title": "Задняя стенка магазина бланков",
+      "line": "SD12",
+      "node": "Магазин бланков",
+      "nodePart": "Packer",
+      "controlType": "value_input",
+      "problemDescription": "Неправильная подача бланков на первую пару роликов, стопы по \"Нет этикета справа/слева\"",
+      "controlDescription": "Проверить расстояния в точке 1.",
+      "purpose": "Сокращение стопов, снижение реджектов",
+      "whyCreated": "Неправильная подача бланков, повышенное кол-во стопов по \"Нет этикета справа/слева\"",
+      "measurements": [
+        {
+          "brand": "",
+          "points": [
+            {
+              "value": "10"
+            }
+          ]
+        }
+      ],
+      "appliesTo": [
+        "CL_TO"
+      ],
+      "triggers": [],
+      "author": "—",
+      "createdAt": "2026-10-07T15:47:43.563Z",
+      "updatedAt": "2026-10-07T21:43:15.673Z",
+      "photos": [
+        "550-13.jpg"
+      ],
+      "deactivationComment": "",
+      "deactivationHistory": [],
+      "topLosses": []
+    },
+    {
+      "id": "id_1791388063563_a3xk8",
+      "active": true,
+      "number": "12",
+      "oplNumber": "OPL-14",
+      "machine": "550",
+      "title": "Ширина магазина бланков",
+      "line": "SD12",
+      "node": "Магазин бланков",
+      "nodePart": "Packer",
+      "controlType": "value_input",
+      "problemDescription": "Остановки \"нет этикета справа/слева\"",
+      "controlDescription": "Проверить растояние в точках 1-4.",
+      "purpose": "Несоответствие может приводить к остановкам на дорожке бланков и повышению уровня отходов.",
+      "whyCreated": "Из-за неправильной настройки бланк подавался на дорожку бланков с перекосом.",
+      "measurements": [
+        {
+          "brand": "",
+          "points": [
+            {
+              "value": "75.5"
+            },
+            {
+              "value": "75.5"
+            },
+            {
+              "value": "13.5"
+            },
+            {
+              "value": "14"
+            }
+          ]
+        }
+      ],
+      "appliesTo": [
+        "CL_TO"
+      ],
+      "triggers": [],
+      "author": "—",
+      "createdAt": "2026-10-07T15:47:43.563Z",
+      "updatedAt": "2026-10-07T22:05:17.765Z",
+      "photos": [
+        "550-14.jpg"
+      ],
+      "deactivationComment": "",
+      "deactivationHistory": [],
+      "topLosses": [
+        "loss_tipping",
+        "loss_les",
+        "loss_otis"
+      ]
+    },
+    {
+      "id": "id_1791388063563_tb7pr",
+      "active": true,
+      "number": "13",
+      "oplNumber": "OPL-15",
+      "machine": "550",
+      "title": "Положение поддерживающих роликов",
+      "line": "SD12",
+      "node": "Магазин бланков",
+      "nodePart": "Packer",
+      "controlType": "ok_not_ok",
+      "problemDescription": "Остановки \"нет этикета справа/слева\"",
+      "controlDescription": "Проверить совпадение указателя с 0 в точках 1,2. (проверку точки 2 рекомендуется проводить при помощи зеркала)",
+      "purpose": "Несоответствие может приводить к остановкам на дорожке бланков и повышению уровня отходов.",
+      "whyCreated": "Из-за неправильной настройки бланк подавался на дорожку бланков с перекосом.",
+      "measurements": [
+        {
+          "brand": "",
+          "points": [
+            {
+              "value": "0"
+            },
+            {
+              "value": "0"
+            }
+          ]
+        }
+      ],
+      "appliesTo": [],
+      "triggers": [],
+      "author": "—",
+      "createdAt": "2026-10-07T15:47:43.563Z",
+      "updatedAt": "2026-10-07T15:47:43.563Z",
+      "photos": [
+        "550-15.jpg"
+      ],
+      "deactivationComment": "",
+      "deactivationHistory": [],
+      "topLosses": []
+    },
+    {
+      "id": "id_1791388063563_qokvt",
+      "active": true,
+      "number": "14",
+      "oplNumber": "OPL-17",
+      "machine": "550",
+      "title": "Упор бланка",
+      "line": "SD12",
+      "node": "Упор бланка",
+      "nodePart": "Packer",
+      "controlType": "ok_not_ok",
+      "problemDescription": "Формирование бланка в складывающем колесе, \"Нет этикета в складывающем колесе\".",
+      "controlDescription": "Проверить совпадение стрелки и значения \"0\" на линейке.\nВ случае отсутствия метки либо ее смещения проверить значение в точке 2 с помощью линейки",
+      "purpose": "Сокращение стопов из-за вылетающих бланков. Соблюдение стандарта позволяет контролировать положение второй пары роликов.",
+      "whyCreated": "Из-за неправильно установленного упора происходило некорректное формирование бланка в складывающем колесе.",
+      "measurements": [
+        {
+          "brand": "",
+          "points": [
+            {
+              "value": "0"
+            },
+            {
+              "value": "без зазора"
+            }
+          ]
+        }
+      ],
+      "appliesTo": [],
+      "triggers": [],
+      "author": "—",
+      "createdAt": "2026-10-07T15:47:43.563Z",
+      "updatedAt": "2026-10-07T22:05:21.844Z",
+      "photos": [
+        "550-17.jpg"
+      ],
+      "deactivationComment": "",
+      "deactivationHistory": [],
+      "topLosses": [
+        "loss_tipping",
+        "loss_les",
+        "loss_otis"
+      ]
+    },
+    {
+      "id": "id_1791388063563_tt0ze",
+      "active": true,
+      "number": "15",
+      "oplNumber": "OPL-18",
+      "machine": "550",
+      "title": "Положение щёк",
+      "line": "SD12",
+      "node": "Щёки",
+      "nodePart": "Packer",
+      "controlType": "ok_not_ok",
+      "problemDescription": "Формирование бланка в складывающем колесе, \"Нет этикета в складывающем колесе\", заторы бланков на входе.",
+      "controlDescription": "Проверить совмещение стрелки и значения \"0\" на шкале в точках 1 и 2.",
+      "purpose": "Сокращение стопов из-за вылетающих бланков. Сокращение времени на CIL",
+      "whyCreated": "Из-за неправильного положения щёк происходило их загрязнение, трение о лапу и неправильное формирование бланка.",
+      "measurements": [
+        {
+          "brand": "",
+          "points": [
+            {
+              "value": "0"
+            },
+            {
+              "value": "0"
+            }
+          ]
+        }
+      ],
+      "appliesTo": [],
+      "triggers": [],
+      "author": "—",
+      "createdAt": "2026-10-07T15:47:43.563Z",
+      "updatedAt": "2026-10-07T15:47:43.563Z",
+      "photos": [
+        "550-18.jpg"
+      ],
+      "deactivationComment": "",
+      "deactivationHistory": [],
+      "topLosses": []
+    },
+    {
+      "id": "id_1791414759958_d8bhu",
+      "active": true,
+      "number": "",
+      "oplNumber": "OPL-4.2.1",
+      "machine": "SE",
+      "title": "Давление на передающем устройстве (Паук)",
+      "line": "SD12",
+      "node": "Узел передачи табачных палочек",
+      "nodePart": "Maker",
+      "controlType": "value_input",
+      "problemDescription": "Отклонение от OPL может приводить к падению табачных палочек",
+      "controlDescription": "Показания манометра должны соответствовать значению в т.1",
+      "purpose": "Предотвращение падения табачных палочек",
+      "whyCreated": "Отсутствие контроля приводит к обрывам штранга B1M",
+      "measurements": [
+        {
+          "brand": "A",
+          "points": [
+            {
+              "value": "-65 kPa (±10 kPa)"
+            }
+          ]
+        },
+        {
+          "brand": "B",
+          "points": [
+            {
+              "value": "-60 kPa (±5 kPa)"
+            }
+          ]
+        }
+      ],
+      "appliesTo": [
+        "ChangeOver"
+      ],
+      "triggers": [
+        "tobacco",
+        "materials"
+      ],
+      "author": "—",
+      "createdAt": "2026-10-07T23:12:39.958Z",
+      "updatedAt": "2026-10-07T23:12:39.958Z",
+      "photos": [
+        "max-1.jpg",
+        "drum.jpg"
+      ],
+      "deactivationComment": "",
+      "deactivationHistory": [],
+      "topLosses": [
+        "loss_strand",
+        "loss_max_jam"
+      ]
+    },
+    {
+      "id": "id_1791414759958_uh878",
+      "active": true,
+      "number": "",
+      "oplNumber": "OPL-4.2.3",
+      "machine": "SE",
+      "title": "232343",
+      "line": "SD12",
+      "node": "Узел передачи табачных палочек",
+      "nodePart": "Maker",
+      "controlType": "range_input",
+      "problemDescription": "Отклонение от OPL может приводить к падению табачных палочек",
+      "controlDescription": "Показания манометра должны соответствовать значению в т.1",
+      "purpose": "Предотвращение падения табачных палочек",
+      "whyCreated": "Отсутствие контроля приводит к обрывам штранга B1M",
+      "measurements": [
+        {
+          "brand": "",
+          "points": [
+            {
+              "value": "10"
+            },
+            {
+              "value": "12"
+            }
+          ]
+        },
+        {
+          "brand": "кент",
+          "points": [
+            {
+              "value": "-60 kPa (±5 kPa)"
+            },
+            {
+              "value": "41"
+            }
+          ]
+        }
+      ],
+      "appliesTo": [
+        "ChangeOver"
+      ],
+      "triggers": [
+        "tobacco",
+        "materials"
+      ],
+      "author": "—",
+      "createdAt": "2026-10-07T23:12:39.958Z",
+      "updatedAt": "2026-10-07T23:12:39.958Z",
+      "photos": [
+        "max-1.jpg",
+        "drum.jpg"
+      ],
+      "deactivationComment": "",
+      "deactivationHistory": [],
+      "topLosses": [
+        "loss_strand",
+        "loss_max_jam"
+      ]
+    },
+    {
+      "id": "id_1791416402350_m3jfh",
+      "active": true,
+      "number": "",
+      "oplNumber": "OPL-1-copy",
+      "machine": "550",
+      "title": "Регулировка подвижной крышки хопера",
+      "line": "SD12",
+      "node": "Хопер",
+      "nodePart": "Packer",
+      "controlType": "range_input",
+      "problemDescription": "Остановки по \"Фильтр\", \"Сигаретная шахта пуста\".",
+      "controlDescription": "1. Проверить визуально совпадение меток с \"0\" в  точках 1 и 2. \n2. Приложить линейку к плоскости крышки и проверить точки 3 и 4, как указано на рисунке. Линейка должна перпендикулярно упираться в \"0\".",
+      "purpose": "Несоответствие может приводить к остановкам по хопперу, износу пластин хоппера, повышению уровня отходов.",
+      "whyCreated": "Причина создания, Предотвращение зависания, равномерное распредление сигарет в ручьях",
+      "measurements": [
+        {
+          "brand": "A",
+          "points": [
+            {
+              "value": "5 до 8"
+            },
+            {
+              "value": "6 до 9"
+            },
+            {
+              "value": "3 до 5"
+            },
+            {
+              "value": "0"
+            },
+            {
+              "value": "5"
+            }
+          ]
+        },
+        {
+          "brand": "B",
+          "points": [
+            {
+              "value": "1+-2"
+            },
+            {
+              "value": "2+-3"
+            },
+            {
+              "value": "3"
+            },
+            {
+              "value": "4"
+            },
+            {
+              "value": "5"
+            }
+          ]
+        }
+      ],
+      "appliesTo": [
+        "ChangeOver",
+        "CL_TO",
+        "CL_Conversion"
+      ],
+      "triggers": [],
+      "author": "—",
+      "createdAt": "2026-10-07T15:47:43.560Z",
+      "updatedAt": "2026-10-07T22:05:02.898Z",
+      "photos": [
+        "550-1.jpg"
+      ],
+      "deactivationComment": "",
+      "deactivationHistory": [],
+      "topLosses": [
+        "loss_hopper",
+        "loss_нет_этикета_в_складывающем_кол",
+        "loss_cig_crush",
+        "loss_les"
+      ]
+    }
+  ],
+  "history": [
+    {
+      "id": "id_1789927629533_9z368",
+      "timestamp": "2026-09-20T18:07:09.533Z",
+      "operator": "иванов денис авыаыва",
+      "shift": "A",
+      "line": "SD01",
+      "part": "Maker",
+      "type": "Minor",
+      "brandFrom": "A",
+      "brandTo": "A",
+      "triggers": [
+        "tobacco",
+        "materials",
+        "tobacco",
+        "materials"
+      ],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1789672779695_tokkk",
+          "standardNumber": "вап3",
+          "node": "авпва",
+          "checkPoint": "ываыва",
+          "linePart": "Maker",
+          "controlType": "value_input",
+          "answer": "3 мм",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1789672803409_dkzdz",
+          "standardNumber": "23",
+          "node": "213йцу",
+          "checkPoint": "фывфыв",
+          "linePart": "Maker",
+          "controlType": "tolerance",
+          "answer": "4 мм — не в допуске",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1789679363650_15drz",
+          "standardNumber": "вап3-copy",
+          "node": "авпва",
+          "checkPoint": "ываыва",
+          "linePart": "Maker",
+          "controlType": "value_input",
+          "answer": "4 мм",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1789923169012_f0xv4",
+          "standardNumber": "CL-4.2.2",
+          "node": "Табачный блок",
+          "checkPoint": "Совпадение меток",
+          "linePart": "Maker",
+          "controlType": "ok_not_ok",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1789927651910_mg483",
+      "timestamp": "2026-09-20T18:07:31.910Z",
+      "operator": "иванов денис гор",
+      "shift": "A",
+      "line": "SD01",
+      "part": "Packer",
+      "type": "Minor",
+      "brandFrom": "B",
+      "brandTo": "B",
+      "triggers": [
+        "foil_paper",
+        "polypropylene"
+      ],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1789923169012_nrh6d",
+          "standardNumber": "CL-4.2.1",
+          "node": "Грелки полипропилена",
+          "checkPoint": "Температура и положение",
+          "linePart": "Packer",
+          "controlType": "value_input",
+          "answer": "3 °C",
+          "status": "OK",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1789941743557_cspal",
+      "timestamp": "2026-09-20T22:02:23.557Z",
+      "operator": "иванов денис игорьевич",
+      "shift": "A",
+      "line": "SD03",
+      "part": "Maker",
+      "type": "Minor",
+      "brandFrom": "B",
+      "brandTo": "B",
+      "triggers": [
+        "tobacco",
+        "materials"
+      ],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1789941102968_qszm7",
+          "node": "Узел передачи табачных палочек",
+          "controlType": "value_input",
+          "answer": "3",
+          "status": "OK",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1789943057289_jmv15",
+      "timestamp": "2026-09-20T22:24:17.289Z",
+      "operator": "ываыва",
+      "shift": "C",
+      "line": "SD01",
+      "part": "Maker",
+      "type": "Minor",
+      "brandFrom": "A",
+      "brandTo": "B",
+      "triggers": [
+        "tobacco",
+        "materials",
+        "tobacco",
+        "materials"
+      ],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1789941092375_xshd6",
+          "node": "Узел передачи табачных палочек",
+          "controlType": "value_input",
+          "answer": "234",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1789941102968_qszm7",
+          "node": "Узел передачи табачных палочек",
+          "controlType": "value_input",
+          "answer": "324",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1789942441362_wuzhc",
+          "node": "уке",
+          "controlType": "value_input",
+          "answer": "324",
+          "status": "OK",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1790019571364_b86q3",
+      "timestamp": "2026-09-21T19:39:31.364Z",
+      "operator": "иванов денис папвп",
+      "shift": "А",
+      "line": "SD01",
+      "part": "Maker",
+      "type": "Minor",
+      "brandFrom": "A",
+      "brandTo": "A",
+      "triggers": [
+        "tobacco",
+        "materials"
+      ],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1789941092375_xshd6",
+          "number": "13",
+          "oplNumber": "OPL-4.2.1",
+          "machine": "SE",
+          "node": "Узел передачи табачных палочек",
+          "nodePart": "Maker",
+          "title": "Давление на передающем устройстве (Паук)",
+          "controlType": "value_input",
+          "norm": "-65 kPa (±10 kPa)",
+          "answer": "4",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1789942441362_wuzhc",
+          "number": "435",
+          "oplNumber": "345",
+          "machine": "345",
+          "node": "уке",
+          "nodePart": "Maker",
+          "title": "уке",
+          "controlType": "value_input",
+          "norm": "435",
+          "answer": "3",
+          "status": "OK",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1790285129063_h8bko",
+      "timestamp": "2026-09-24T21:25:29.063Z",
+      "operator": "иванов денис гор",
+      "shift": "B",
+      "line": "SD01",
+      "part": "Maker",
+      "type": "Minor",
+      "brandFrom": "B",
+      "brandTo": "B",
+      "triggers": [
+        "tobacco"
+      ],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1789941092375_xshd6",
+          "number": "13",
+          "oplNumber": "OPL-4.2.1",
+          "machine": "ывааыв",
+          "node": "Узел передачи табачных палочек",
+          "nodePart": "Maker",
+          "title": "Давление на передающем устройстве (Паук)",
+          "controlType": "value_input",
+          "norm": "-65 kPa (±10 kPa)",
+          "answer": "4",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790031889805_tmmrs",
+          "number": "45",
+          "oplNumber": "45",
+          "machine": "rtgfd",
+          "node": "gdfg",
+          "nodePart": "Maker",
+          "title": "fdgdf",
+          "controlType": "ok_not_ok",
+          "norm": "",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790032096395_fpjtf",
+          "number": "45",
+          "oplNumber": "435345",
+          "machine": "укепаваа",
+          "node": "авпвап",
+          "nodePart": "Maker",
+          "title": "укекуе",
+          "controlType": "ok_not_ok",
+          "norm": "4ц5",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790032282700_u7exv",
+          "number": "123123",
+          "oplNumber": "45-copy",
+          "machine": "rtgfd",
+          "node": "gdfg",
+          "nodePart": "Maker",
+          "title": "fdgdf",
+          "controlType": "ok_not_ok",
+          "norm": "",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790196236834_i586u",
+          "number": "",
+          "oplNumber": "45-copy",
+          "machine": "rtgfd",
+          "node": "gdfg",
+          "nodePart": "Maker",
+          "title": "fdgdf",
+          "controlType": "ok_not_ok",
+          "norm": "",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1790286279492_eyt83",
+      "timestamp": "2026-09-24T21:44:39.492Z",
+      "operator": "иванов денис авыаыва",
+      "shift": "B",
+      "line": "SD01",
+      "part": "Maker",
+      "type": "Minor",
+      "brandFrom": "B",
+      "brandTo": "A",
+      "triggers": [
+        "tobacco"
+      ],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1789941092375_xshd6",
+          "number": "13",
+          "oplNumber": "OPL-4.2.1",
+          "machine": "ывааыв",
+          "node": "Узел передачи табачных палочек",
+          "nodePart": "Maker",
+          "title": "Давление на передающем устройстве (Паук)",
+          "controlType": "value_input",
+          "norm": "-65 kPa (±10 kPa)",
+          "answer": "3",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790031889805_tmmrs",
+          "number": "45",
+          "oplNumber": "45",
+          "machine": "rtgfd",
+          "node": "gdfg",
+          "nodePart": "Maker",
+          "title": "fdgdf",
+          "controlType": "ok_not_ok",
+          "norm": "",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790032096395_fpjtf",
+          "number": "45",
+          "oplNumber": "435345",
+          "machine": "укепаваа",
+          "node": "авпвап",
+          "nodePart": "Maker",
+          "title": "укекуе",
+          "controlType": "ok_not_ok",
+          "norm": "4ц5",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790032282700_u7exv",
+          "number": "123123",
+          "oplNumber": "45-copy",
+          "machine": "rtgfd",
+          "node": "gdfg",
+          "nodePart": "Maker",
+          "title": "fdgdf",
+          "controlType": "ok_not_ok",
+          "norm": "",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790196236834_i586u",
+          "number": "",
+          "oplNumber": "45-copy",
+          "machine": "rtgfd",
+          "node": "gdfg",
+          "nodePart": "Maker",
+          "title": "fdgdf",
+          "controlType": "ok_not_ok",
+          "norm": "",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1790544048735_t2ajj",
+      "timestamp": "2026-09-27T21:20:48.735Z",
+      "operator": "Аврин Илья Николаевич",
+      "shift": "A",
+      "line": "SD08",
+      "part": "Maker",
+      "type": "Minor",
+      "brandFrom": "пап",
+      "brandTo": "пап",
+      "triggers": [
+        "tobacco"
+      ],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1790196519874_oo40p",
+          "number": "3",
+          "oplNumber": "OPL-4.2.2-copy",
+          "machine": "123",
+          "node": "Узел передачи табачных палочек",
+          "nodePart": "Maker",
+          "title": "Давление на передающем устройстве (Паук)",
+          "controlType": "value_input",
+          "norm": "-65 kPa (±10 kPa)",
+          "answer": "1",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790201158736_8qkn8",
+          "number": "13",
+          "oplNumber": "OPL-4.2.1",
+          "machine": "SE",
+          "node": "Узел передачи табачных палочек",
+          "nodePart": "Maker",
+          "title": "Давление на передающем устройстве (Паук)",
+          "controlType": "value_input",
+          "norm": "-65 kPa (±10 kPa)",
+          "answer": "2",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790201233786_ot9de",
+          "number": "12",
+          "oplNumber": "OPL-4.2.2",
+          "machine": "ТК",
+          "node": "Узел передачи табачных палочек",
+          "nodePart": "Maker",
+          "title": "Давление на передающем устройстве (Паук)",
+          "controlType": "value_input",
+          "norm": "-65 kPa (±10 kPa)",
+          "answer": "1",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790332945128_78isi",
+          "number": "15",
+          "oplNumber": "OPL-4.2.3",
+          "machine": "SE",
+          "node": "Узел передачи табачных палочек",
+          "nodePart": "Maker",
+          "title": "Давление на передающем устройстве (Паук)",
+          "controlType": "value_input",
+          "norm": "-65 kPa (±10 kPa)",
+          "answer": "2",
+          "status": "OK",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1790589597588_ee8si",
+      "timestamp": "2026-09-28T09:59:57.588Z",
+      "operator": "Ачкасов Ефим Юрьевич",
+      "shift": "A",
+      "line": "SD01",
+      "part": "Maker",
+      "type": "Minor",
+      "brandFrom": "A",
+      "brandTo": "C",
+      "triggers": [
+        "tobacco"
+      ],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1789941092375_xshd6",
+          "number": "13",
+          "oplNumber": "OPL-4.2.1",
+          "machine": "ывааыв",
+          "node": "Узел передачи табачных палочек",
+          "nodePart": "Maker",
+          "title": "Давление на передающем устройстве (Паук)",
+          "controlType": "value_input",
+          "norm": "-65 kPa (±10 kPa)",
+          "answer": "10",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790032096395_fpjtf",
+          "number": "45",
+          "oplNumber": "435345",
+          "machine": "укепаваа",
+          "node": "авпвап",
+          "nodePart": "Maker",
+          "title": "укекуе",
+          "controlType": "ok_not_ok",
+          "norm": "4ц5",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790032282700_u7exv",
+          "number": "123123",
+          "oplNumber": "45-copy",
+          "machine": "rtgfd",
+          "node": "gdfg",
+          "nodePart": "Maker",
+          "title": "fdgdf",
+          "controlType": "ok_not_ok",
+          "norm": "",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790034138862_de827",
+          "number": "2",
+          "oplNumber": "234234-copy",
+          "machine": "rtgfd",
+          "node": "fdg",
+          "nodePart": "Maker",
+          "title": "324234",
+          "controlType": "value_input",
+          "norm": "",
+          "answer": "10",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790196236834_i586u",
+          "number": "",
+          "oplNumber": "45-copy",
+          "machine": "rtgfd",
+          "node": "gdfg",
+          "nodePart": "Maker",
+          "title": "fdgdf",
+          "controlType": "ok_not_ok",
+          "norm": "",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790511995791_c03dh",
+          "number": "1",
+          "oplNumber": "123",
+          "machine": "rtgfd",
+          "node": "fdg",
+          "nodePart": "Maker",
+          "title": "324234",
+          "controlType": "ok_not_ok",
+          "norm": "",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790512017575_pa80q",
+          "number": "3",
+          "oplNumber": "234234-copy-copy",
+          "machine": "rtgfd",
+          "node": "fdg",
+          "nodePart": "Maker",
+          "title": "324234",
+          "controlType": "tolerance",
+          "norm": "",
+          "answer": "10 — в допуске",
+          "status": "OK",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1790598706885_lk0nj",
+      "timestamp": "2026-09-28T12:31:46.885Z",
+      "mode": "toploss",
+      "operator": "Андросов Владимир Анатольевич",
+      "shift": "B",
+      "line": "SD01",
+      "topLosses": [
+        "loss_hopper",
+        "loss_cig_crush"
+      ],
+      "items": [
+        {
+          "standardId": "id_1790511995791_c03dh",
+          "number": "1",
+          "oplNumber": "123",
+          "machine": "rtgfd",
+          "node": "fdg",
+          "nodePart": "Maker",
+          "title": "324234",
+          "controlType": "ok_not_ok",
+          "norm": "",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790034138862_de827",
+          "number": "2",
+          "oplNumber": "234234-copy",
+          "machine": "rtgfd",
+          "node": "fdg",
+          "nodePart": "Maker",
+          "title": "324234",
+          "controlType": "value_input",
+          "norm": "",
+          "answer": "0",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790512017575_pa80q",
+          "number": "3",
+          "oplNumber": "234234-copy-copy",
+          "machine": "rtgfd",
+          "node": "fdg",
+          "nodePart": "Maker",
+          "title": "324234",
+          "controlType": "tolerance",
+          "norm": "",
+          "answer": "10 — не в допуске",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790032096395_fpjtf",
+          "number": "45",
+          "oplNumber": "435345",
+          "machine": "укепаваа",
+          "node": "авпвап",
+          "nodePart": "Maker",
+          "title": "укекуе",
+          "controlType": "ok_not_ok",
+          "norm": "4ц5",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790032282700_u7exv",
+          "number": "123123",
+          "oplNumber": "45-copy7",
+          "machine": "rtgfd",
+          "node": "gdfg",
+          "nodePart": "Maker",
+          "title": "fdgdf",
+          "controlType": "ok_not_ok",
+          "norm": "",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1790605488752_3uegr",
+      "timestamp": "2026-09-28T14:24:48.752Z",
+      "mode": "toploss",
+      "operator": "Бельский Егор Алексеевич",
+      "shift": "A",
+      "line": "SD01",
+      "topLosses": [
+        "loss_hopper",
+        "loss_strand"
+      ],
+      "items": [
+        {
+          "standardId": "id_1790511995791_c03dh",
+          "number": "1",
+          "oplNumber": "123",
+          "machine": "rtgfd",
+          "node": "fdg",
+          "nodePart": "Maker",
+          "title": "324234",
+          "controlType": "ok_not_ok",
+          "norm": "",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790605448695_d9kud",
+          "number": "",
+          "oplNumber": "123-copy",
+          "machine": "rtgfd",
+          "node": "fdg",
+          "nodePart": "Maker",
+          "title": "324234",
+          "controlType": "ok_not_ok",
+          "norm": "",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790034138862_de827",
+          "number": "2",
+          "oplNumber": "234234-copy",
+          "machine": "rtgfd",
+          "node": "fdg",
+          "nodePart": "Maker",
+          "title": "324234",
+          "controlType": "value_input",
+          "norm": "",
+          "answer": "5",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790512017575_pa80q",
+          "number": "3",
+          "oplNumber": "234234-copy-copy",
+          "machine": "rtgfd",
+          "node": "fdg",
+          "nodePart": "Maker",
+          "title": "324234",
+          "controlType": "tolerance",
+          "norm": "",
+          "answer": "5 — в допуске",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790032096395_fpjtf",
+          "number": "45",
+          "oplNumber": "435345",
+          "machine": "укепаваа",
+          "node": "авпвап",
+          "nodePart": "Maker",
+          "title": "укекуе",
+          "controlType": "ok_not_ok",
+          "norm": "4ц5",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790032282700_u7exv",
+          "number": "123123",
+          "oplNumber": "45-copy7",
+          "machine": "rtgfd",
+          "node": "gdfg",
+          "nodePart": "Maker",
+          "title": "fdgdf",
+          "controlType": "ok_not_ok",
+          "norm": "",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1790841132175_oqyb2",
+      "timestamp": "2026-10-01T07:52:12.175Z",
+      "mode": "electronic",
+      "operator": "Ахмедов Давид Разимович",
+      "line": "SD03",
+      "shift": "B",
+      "date": "2026-10-01",
+      "brandPlanned": "A",
+      "brandActual": "A",
+      "brandReason": "",
+      "items": [
+        {
+          "standardId": "elec_1790840984958_08566",
+          "machine": "BE",
+          "paramName": "вапвап",
+          "work": "Run",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": null,
+          "tolerance": null,
+          "normText": "",
+          "answer": "30",
+          "value": 30,
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790841013612_1bpph",
+          "machine": "BE",
+          "paramName": "ываывапыв",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": null,
+          "tolerance": null,
+          "normText": "",
+          "answer": "30",
+          "value": 30,
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790841029485_hrm7y",
+          "machine": "re",
+          "paramName": "23124",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": null,
+          "tolerance": null,
+          "normText": "",
+          "answer": "433",
+          "value": 433,
+          "status": "OK",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1790842734839_175ej",
+      "timestamp": "2026-10-01T08:18:54.839Z",
+      "mode": "electronic",
+      "operator": "Аврин Илья Николаевич",
+      "line": "SD03",
+      "shift": "B",
+      "date": "2026-10-01",
+      "brandPlanned": "A",
+      "brandActual": "A",
+      "brandReason": "",
+      "items": [
+        {
+          "standardId": "elec_1790840984958_08566",
+          "machine": "BE",
+          "paramName": "вапвап",
+          "work": "Run",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 32,
+          "tolerance": 2,
+          "normText": "",
+          "answer": "45",
+          "value": 45,
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790841013612_1bpph",
+          "machine": "BE",
+          "paramName": "ываывапыв",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 45,
+          "tolerance": 21,
+          "normText": "",
+          "answer": "4",
+          "value": 4,
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790841029485_hrm7y",
+          "machine": "re",
+          "paramName": "23124",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 435,
+          "tolerance": 12,
+          "normText": "",
+          "answer": "12",
+          "value": 12,
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1790845317790_y964t",
+      "timestamp": "2026-10-01T09:01:57.790Z",
+      "mode": "electronic",
+      "operator": "Андросов Владимир Анатольевич",
+      "line": "SD03",
+      "shift": "A",
+      "date": "2026-10-01",
+      "brandPlanned": "A",
+      "brandActual": "A",
+      "brandReason": "",
+      "items": [
+        {
+          "standardId": "elec_1790840984958_08566",
+          "machine": "BE",
+          "paramName": "вапвап",
+          "work": "Run",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": null,
+          "tolerance": null,
+          "normText": "",
+          "answer": "33",
+          "value": 33,
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790841013612_1bpph",
+          "machine": "BE",
+          "paramName": "ываывапыв",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": null,
+          "tolerance": null,
+          "normText": "",
+          "answer": "40",
+          "value": 40,
+          "status": "OK",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1790845323491_yyhbs",
+      "timestamp": "2026-10-01T09:02:03.491Z",
+      "mode": "electronic",
+      "operator": "Андросов Владимир Анатольевич",
+      "line": "SD03",
+      "shift": "D",
+      "date": "2026-10-02",
+      "brandPlanned": "A",
+      "brandActual": "A",
+      "brandReason": "",
+      "items": [
+        {
+          "standardId": "elec_1790840984958_08566",
+          "machine": "BE",
+          "paramName": "вапвап",
+          "work": "Run",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": null,
+          "tolerance": null,
+          "normText": "",
+          "answer": "30",
+          "value": 30,
+          "status": "OK",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1790851983028_adg49",
+      "timestamp": "2026-10-01T10:53:03.028Z",
+      "operator": "Ахмедов Давид Разимович",
+      "shift": "A",
+      "line": "SD12",
+      "part": "Packer",
+      "type": "Intermediate",
+      "brandFrom": "B",
+      "brandTo": "C",
+      "triggers": [
+        "node:Блок обертки"
+      ],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1790851306574_3cukp",
+          "number": "3",
+          "oplNumber": "OPL-3",
+          "machine": "550",
+          "node": "Внутренняя рамка",
+          "nodePart": "Packer",
+          "title": "Направляющие нижнего ролика внутренней рамки на входе",
+          "controlType": "value_input",
+          "norm": "144.5",
+          "answer": "10",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790851306574_ktqa1",
+          "number": "4",
+          "oplNumber": "OPL-5",
+          "machine": "550",
+          "node": "Внутренняя рамка",
+          "nodePart": "Packer",
+          "title": "Положение лагов ремня поперечной выдачи",
+          "controlType": "ok_not_ok",
+          "norm": "в одну линию",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790851306575_qcm5r",
+          "number": "8",
+          "oplNumber": "OPL-9",
+          "machine": "550",
+          "node": "Конвейер между 1-м и 2-м сушильными колесами.",
+          "nodePart": "Packer",
+          "title": "Ремени между 1-м и 2-м сушильными колесами.",
+          "controlType": "ok_not_ok",
+          "norm": "0",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790851306575_sbdmw",
+          "number": "9",
+          "oplNumber": "OPL-11",
+          "machine": "550",
+          "node": "Гибочная станция",
+          "nodePart": "Packer",
+          "title": "Гибочная станция",
+          "controlType": "ok_not_ok",
+          "norm": "0",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790851306575_ueb8h",
+          "number": "10",
+          "oplNumber": "OPL-12",
+          "machine": "550",
+          "node": "Магазин бланков",
+          "nodePart": "Packer",
+          "title": "Стенки магазина бланков",
+          "controlType": "value_input",
+          "norm": "11.5",
+          "answer": "10",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790851306575_a6xrr",
+          "number": "11",
+          "oplNumber": "OPL-13",
+          "machine": "550",
+          "node": "Магазин бланков",
+          "nodePart": "Packer",
+          "title": "Задняя стенка магазина бланков",
+          "controlType": "value_input",
+          "norm": "10",
+          "answer": "54",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790851306575_o80x0",
+          "number": "14",
+          "oplNumber": "OPL-17",
+          "machine": "550",
+          "node": "Упор бланка",
+          "nodePart": "Packer",
+          "title": "Упор бланка",
+          "controlType": "ok_not_ok",
+          "norm": "0",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790851306576_7dhma",
+          "number": "15",
+          "oplNumber": "OPL-18",
+          "machine": "550",
+          "node": "Щёки",
+          "nodePart": "Packer",
+          "title": "Положение щёк",
+          "controlType": "ok_not_ok",
+          "norm": "0",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1790852992913_7yuml",
+      "timestamp": "2026-10-01T11:09:52.913Z",
+      "operator": "Артемьев Дмитрий Николаевич",
+      "shift": "A",
+      "line": "SD12",
+      "part": "Packer",
+      "type": "Intermediate",
+      "brandFrom": "A",
+      "brandTo": "B",
+      "triggers": [],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1790851306574_3cukp",
+          "number": "3",
+          "oplNumber": "OPL-3",
+          "machine": "550",
+          "node": "Внутренняя рамка",
+          "nodePart": "Packer",
+          "title": "Направляющие нижнего ролика внутренней рамки на входе",
+          "controlType": "value_input",
+          "norm": "144.5",
+          "answer": "11",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790851306574_ktqa1",
+          "number": "4",
+          "oplNumber": "OPL-5",
+          "machine": "550",
+          "node": "Внутренняя рамка",
+          "nodePart": "Packer",
+          "title": "Положение лагов ремня поперечной выдачи",
+          "controlType": "ok_not_ok",
+          "norm": "в одну линию",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790851306575_sbdmw",
+          "number": "9",
+          "oplNumber": "OPL-11",
+          "machine": "550",
+          "node": "Гибочная станция",
+          "nodePart": "Packer",
+          "title": "Гибочная станция",
+          "controlType": "ok_not_ok",
+          "norm": "0",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790851306575_a6xrr",
+          "number": "11",
+          "oplNumber": "OPL-13",
+          "machine": "550",
+          "node": "Магазин бланков",
+          "nodePart": "Packer",
+          "title": "Задняя стенка магазина бланков",
+          "controlType": "value_input",
+          "norm": "10",
+          "answer": "12",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790851306575_o80x0",
+          "number": "14",
+          "oplNumber": "OPL-17",
+          "machine": "550",
+          "node": "Упор бланка",
+          "nodePart": "Packer",
+          "title": "Упор бланка",
+          "controlType": "ok_not_ok",
+          "norm": "0",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1790851306576_7dhma",
+          "number": "15",
+          "oplNumber": "OPL-18",
+          "machine": "550",
+          "node": "Щёки",
+          "nodePart": "Packer",
+          "title": "Положение щёк",
+          "controlType": "ok_not_ok",
+          "norm": "0",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791292171070_hsbd1",
+      "timestamp": "2026-10-06T13:09:31.070Z",
+      "mode": "electronic",
+      "operator": "Андросов Владимир Анатольевич",
+      "line": "SD03",
+      "shift": "C",
+      "date": "2026-10-06",
+      "brandPlanned": "A",
+      "brandActual": "A",
+      "brandReason": "",
+      "items": [
+        {
+          "standardId": "elec_1790840984958_08566",
+          "machine": "BE",
+          "paramName": "вапвап",
+          "work": "Run",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": null,
+          "tolerance": null,
+          "normText": "",
+          "answer": "33",
+          "value": 33,
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790841013612_1bpph",
+          "machine": "BE",
+          "paramName": "ываывапыв",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": null,
+          "tolerance": null,
+          "normText": "",
+          "answer": "12",
+          "value": 12,
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790841029485_hrm7y",
+          "machine": "re",
+          "paramName": "23124",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": null,
+          "tolerance": null,
+          "normText": "",
+          "answer": "32",
+          "value": 32,
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791292194751_o5urt",
+      "timestamp": "2026-10-06T13:09:54.751Z",
+      "mode": "electronic",
+      "operator": "Андросов Владимир Анатольевич",
+      "line": "SD03",
+      "shift": "C",
+      "date": "2026-10-06",
+      "brandPlanned": "A",
+      "brandActual": "A",
+      "brandReason": "",
+      "items": [
+        {
+          "standardId": "elec_1790840984958_08566",
+          "machine": "BE",
+          "paramName": "вапвап",
+          "work": "Run",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 32,
+          "tolerance": 2,
+          "normText": "",
+          "answer": "33",
+          "value": 33,
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790841013612_1bpph",
+          "machine": "BE",
+          "paramName": "ываывапыв",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 45,
+          "tolerance": 21,
+          "normText": "",
+          "answer": "31",
+          "value": 31,
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790841029485_hrm7y",
+          "machine": "re",
+          "paramName": "23124",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 435,
+          "tolerance": 12,
+          "normText": "",
+          "answer": "12",
+          "value": 12,
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791292216168_kk1lo",
+      "timestamp": "2026-10-06T13:10:16.168Z",
+      "mode": "electronic",
+      "operator": "Андросов Владимир Анатольевич",
+      "line": "SD03",
+      "shift": "C",
+      "date": "2026-10-06",
+      "brandPlanned": "A",
+      "brandActual": "A",
+      "brandReason": "",
+      "items": [
+        {
+          "standardId": "elec_1790840984958_08566",
+          "machine": "BE",
+          "paramName": "вапвап",
+          "work": "Run",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 32,
+          "tolerance": 2,
+          "normText": "",
+          "answer": "21",
+          "value": 21,
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790841013612_1bpph",
+          "machine": "BE",
+          "paramName": "ываывапыв",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 45,
+          "tolerance": 21,
+          "normText": "",
+          "answer": "22",
+          "value": 22,
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790841029485_hrm7y",
+          "machine": "re",
+          "paramName": "23124",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 435,
+          "tolerance": 12,
+          "normText": "",
+          "answer": "31",
+          "value": 31,
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791292304307_fiih4",
+      "timestamp": "2026-10-06T13:11:44.307Z",
+      "mode": "electronic",
+      "operator": "Андросов Владимир Анатольевич",
+      "line": "SD03",
+      "shift": "C",
+      "date": "2026-10-06",
+      "brandPlanned": "A",
+      "brandActual": "A",
+      "brandReason": "",
+      "items": [
+        {
+          "standardId": "elec_1790840984958_08566",
+          "machine": "BE",
+          "paramName": "вапвап",
+          "work": "Run",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 32,
+          "tolerance": 2,
+          "normText": "",
+          "answer": "13",
+          "value": 13,
+          "status": "FAIL",
+          "comment": "qe213123"
+        },
+        {
+          "standardId": "elec_1790841013612_1bpph",
+          "machine": "BE",
+          "paramName": "ываывапыв",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 45,
+          "tolerance": 21,
+          "normText": "",
+          "answer": "22",
+          "value": 22,
+          "status": "FAIL",
+          "comment": "32werfwer"
+        },
+        {
+          "standardId": "elec_1790841029485_hrm7y",
+          "machine": "re",
+          "paramName": "23124",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 435,
+          "tolerance": 12,
+          "normText": "",
+          "answer": "433",
+          "value": 433,
+          "status": "OK",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791383415485_oeqwj",
+      "timestamp": "2026-10-07T14:30:15.485Z",
+      "mode": "electronic",
+      "operator": "Аврин Илья Николаевич",
+      "line": "SD03",
+      "shift": "C",
+      "date": "2026-10-07",
+      "brandPlanned": "B",
+      "brandActual": "B",
+      "brandReason": "",
+      "items": [
+        {
+          "standardId": "elec_1790840984958_08566",
+          "machine": "BE",
+          "paramName": "вапвап",
+          "work": "Run",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "ok_not_ok",
+          "target": null,
+          "tolerance": null,
+          "normText": "гуд",
+          "answer": "Не ОК",
+          "value": null,
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791406057027_gwb1o",
+      "timestamp": "2026-10-07T20:47:37.027Z",
+      "operator": "Андросов Владимир Анатольевич",
+      "shift": "A",
+      "line": "SD12",
+      "part": "Packer",
+      "type": "CL_TO",
+      "brandFrom": "",
+      "brandTo": "",
+      "triggers": [],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1791388063560_e20gj",
+          "number": "1",
+          "oplNumber": "OPL-1",
+          "machine": "550",
+          "node": "Хопер",
+          "nodePart": "Packer",
+          "title": "Регулировка подвижной крышки хопера",
+          "controlType": "value_input",
+          "norm": "9+-5",
+          "answer": "5, 2, 3, 13, 4",
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791407746331_w13sz",
+      "timestamp": "2026-10-07T21:15:46.331Z",
+      "operator": "Ахмедов Давид Разимович",
+      "shift": "C",
+      "line": "SD12",
+      "part": "Packer",
+      "type": "CL_TO",
+      "brandFrom": "",
+      "brandTo": "",
+      "triggers": [],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1791388063560_e20gj",
+          "number": "1",
+          "oplNumber": "OPL-1",
+          "machine": "550",
+          "node": "Хопер",
+          "nodePart": "Packer",
+          "title": "Регулировка подвижной крышки хопера",
+          "controlType": "range_input",
+          "norm": "5 до 8",
+          "answer": "9, 4, 3, 0, 0",
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791407835022_elvur",
+      "timestamp": "2026-10-07T21:17:15.022Z",
+      "operator": "Артемьев Дмитрий Николаевич",
+      "shift": "B",
+      "line": "SD12",
+      "part": "Packer",
+      "type": "CL_TO",
+      "brandFrom": "",
+      "brandTo": "",
+      "triggers": [],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1791388063560_e20gj",
+          "number": "1",
+          "oplNumber": "OPL-1",
+          "machine": "550",
+          "node": "Хопер",
+          "nodePart": "Packer",
+          "title": "Регулировка подвижной крышки хопера",
+          "controlType": "range_input",
+          "norm": "5 до 8",
+          "answer": "4, 56, 4, 3, 5",
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791408146941_at4fp",
+      "timestamp": "2026-10-07T21:22:26.941Z",
+      "operator": "Ахмедов Давид Разимович",
+      "shift": "B",
+      "line": "SD12",
+      "part": "Packer",
+      "type": "CL_TO",
+      "brandFrom": "",
+      "brandTo": "",
+      "triggers": [],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1791388063560_e20gj",
+          "number": "1",
+          "oplNumber": "OPL-1",
+          "machine": "550",
+          "node": "Хопер",
+          "nodePart": "Packer",
+          "title": "Регулировка подвижной крышки хопера",
+          "controlType": "range_input",
+          "norm": "5 до 8",
+          "answer": "4, 5, 4, 3, 5",
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791408430893_lr9xl",
+      "timestamp": "2026-10-07T21:27:10.893Z",
+      "operator": "Артемьев Дмитрий Николаевич",
+      "shift": "A",
+      "line": "SD12",
+      "part": "Packer",
+      "type": "CL_TO",
+      "brandFrom": "",
+      "brandTo": "",
+      "triggers": [],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1791388063560_e20gj",
+          "number": "1",
+          "oplNumber": "OPL-1",
+          "machine": "550",
+          "node": "Хопер",
+          "nodePart": "Packer",
+          "title": "Регулировка подвижной крышки хопера",
+          "controlType": "range_input",
+          "norm": "5 до 8",
+          "answer": "3, 3, 4, 5, 2",
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791408473854_jljrr",
+      "timestamp": "2026-10-07T21:27:53.854Z",
+      "operator": "Артемьев Дмитрий Николаевич",
+      "shift": "C",
+      "line": "SD12",
+      "part": "Packer",
+      "type": "CL_TO",
+      "brandFrom": "",
+      "brandTo": "",
+      "triggers": [],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1791388063560_e20gj",
+          "number": "1",
+          "oplNumber": "OPL-1",
+          "machine": "550",
+          "node": "Хопер",
+          "nodePart": "Packer",
+          "title": "Регулировка подвижной крышки хопера",
+          "controlType": "range_input",
+          "norm": "5 до 8",
+          "answer": "3, 3, 43, 1, 2",
+          "status": "FAIL",
+          "comment": "ФЫВЫФВ"
+        }
+      ]
+    },
+    {
+      "id": "id_1791408642622_f0yix",
+      "timestamp": "2026-10-07T21:30:42.622Z",
+      "operator": "Артемьев Дмитрий Николаевич",
+      "shift": "B",
+      "line": "SD12",
+      "part": "Packer",
+      "type": "CL_Conversion",
+      "brandFrom": "",
+      "brandTo": "",
+      "triggers": [],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1791388063560_e20gj",
+          "number": "1",
+          "oplNumber": "OPL-1",
+          "machine": "550",
+          "node": "Хопер",
+          "nodePart": "Packer",
+          "title": "Регулировка подвижной крышки хопера",
+          "controlType": "range_input",
+          "norm": "5 до 8",
+          "answer": "1, 2, 2, 3, 5",
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791409525063_l8w09",
+      "timestamp": "2026-10-07T21:45:25.063Z",
+      "operator": "Артемьев Дмитрий Николаевич",
+      "shift": "C",
+      "line": "SD12",
+      "part": "Packer",
+      "type": "CL_TO",
+      "brandFrom": "",
+      "brandTo": "",
+      "triggers": [],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1791388063560_e20gj",
+          "number": "1",
+          "oplNumber": "OPL-1",
+          "machine": "550",
+          "node": "Хопер",
+          "nodePart": "Packer",
+          "title": "Регулировка подвижной крышки хопера",
+          "controlType": "range_input",
+          "norm": "5 до 8",
+          "answer": "3, 3, 4, 1, 4",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1791388063563_sdh1n",
+          "number": "9",
+          "oplNumber": "OPL-11",
+          "machine": "550",
+          "node": "Гибочная станция",
+          "nodePart": "Packer",
+          "title": "Гибочная станция",
+          "controlType": "ok_not_ok",
+          "norm": "0",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1791388063563_terh2",
+          "number": "10",
+          "oplNumber": "OPL-12",
+          "machine": "550",
+          "node": "Магазин бланков",
+          "nodePart": "Packer",
+          "title": "Стенки магазина бланков",
+          "controlType": "value_input",
+          "norm": "11.5",
+          "answer": "11, 12",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1791388063563_bp8b5",
+          "number": "11",
+          "oplNumber": "OPL-13",
+          "machine": "550",
+          "node": "Магазин бланков",
+          "nodePart": "Packer",
+          "title": "Задняя стенка магазина бланков",
+          "controlType": "value_input",
+          "norm": "10",
+          "answer": "11",
+          "status": "FAIL",
+          "comment": "dsfdsf"
+        },
+        {
+          "standardId": "id_1791388063563_a3xk8",
+          "number": "12",
+          "oplNumber": "OPL-14",
+          "machine": "550",
+          "node": "Магазин бланков",
+          "nodePart": "Packer",
+          "title": "Ширина магазина бланков",
+          "controlType": "value_input",
+          "norm": "75.5",
+          "answer": "11, 11, 11, 14",
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791411837460_7m8ou",
+      "timestamp": "2026-10-07T22:23:57.460Z",
+      "mode": "toploss",
+      "operator": "Андросов Владимир Анатольевич",
+      "line": "SD12",
+      "topLosses": [
+        "loss_hopper"
+      ],
+      "items": [
+        {
+          "standardId": "id_1791388063560_e20gj",
+          "number": "1",
+          "oplNumber": "OPL-1",
+          "machine": "550",
+          "node": "Хопер",
+          "nodePart": "Packer",
+          "title": "Регулировка подвижной крышки хопера",
+          "controlType": "ok_not_ok",
+          "norm": "5 до 8",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1791388063563_sdh1n",
+          "number": "9",
+          "oplNumber": "OPL-11",
+          "machine": "550",
+          "node": "Гибочная станция",
+          "nodePart": "Packer",
+          "title": "Гибочная станция",
+          "controlType": "ok_not_ok",
+          "norm": "0",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1791388063563_terh2",
+          "number": "10",
+          "oplNumber": "OPL-12",
+          "machine": "550",
+          "node": "Магазин бланков",
+          "nodePart": "Packer",
+          "title": "Стенки магазина бланков",
+          "controlType": "ok_not_ok",
+          "norm": "11.5",
+          "answer": "—",
+          "status": "UNCHECKED",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791411907001_oju7u",
+      "timestamp": "2026-10-07T22:25:07.001Z",
+      "operator": "Артемьев Дмитрий Николаевич",
+      "shift": "A",
+      "line": "SD12",
+      "part": "Packer",
+      "type": "CL_TO",
+      "brandFrom": "",
+      "brandTo": "",
+      "triggers": [],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1791388063560_e20gj",
+          "number": "1",
+          "oplNumber": "OPL-1",
+          "machine": "550",
+          "node": "Хопер",
+          "nodePart": "Packer",
+          "title": "Регулировка подвижной крышки хопера",
+          "controlType": "range_input",
+          "norm": "5 до 8",
+          "answer": "3, 3, 1, 2, 32",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1791388063563_sdh1n",
+          "number": "9",
+          "oplNumber": "OPL-11",
+          "machine": "550",
+          "node": "Гибочная станция",
+          "nodePart": "Packer",
+          "title": "Гибочная станция",
+          "controlType": "ok_not_ok",
+          "norm": "0",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1791388063563_terh2",
+          "number": "10",
+          "oplNumber": "OPL-12",
+          "machine": "550",
+          "node": "Магазин бланков",
+          "nodePart": "Packer",
+          "title": "Стенки магазина бланков",
+          "controlType": "value_input",
+          "norm": "11.5",
+          "answer": "12, 3",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1791388063563_bp8b5",
+          "number": "11",
+          "oplNumber": "OPL-13",
+          "machine": "550",
+          "node": "Магазин бланков",
+          "nodePart": "Packer",
+          "title": "Задняя стенка магазина бланков",
+          "controlType": "value_input",
+          "norm": "10",
+          "answer": "4",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1791388063563_a3xk8",
+          "number": "12",
+          "oplNumber": "OPL-14",
+          "machine": "550",
+          "node": "Магазин бланков",
+          "nodePart": "Packer",
+          "title": "Ширина магазина бланков",
+          "controlType": "value_input",
+          "norm": "75.5",
+          "answer": "12, 3, 2, 3",
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791412062284_4j7d8",
+      "timestamp": "2026-10-07T22:27:42.284Z",
+      "mode": "toploss",
+      "operator": "Андросов Владимир Анатольевич",
+      "line": "SD12",
+      "topLosses": [
+        "loss_hopper",
+        "loss_cig_crush"
+      ],
+      "items": [
+        {
+          "standardId": "id_1791388063560_e20gj",
+          "number": "1",
+          "oplNumber": "OPL-1",
+          "machine": "550",
+          "node": "Хопер",
+          "nodePart": "Packer",
+          "title": "Регулировка подвижной крышки хопера",
+          "controlType": "ok_not_ok",
+          "norm": "5 до 8",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1791388063563_sdh1n",
+          "number": "9",
+          "oplNumber": "OPL-11",
+          "machine": "550",
+          "node": "Гибочная станция",
+          "nodePart": "Packer",
+          "title": "Гибочная станция",
+          "controlType": "ok_not_ok",
+          "norm": "0",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1791388063563_terh2",
+          "number": "10",
+          "oplNumber": "OPL-12",
+          "machine": "550",
+          "node": "Магазин бланков",
+          "nodePart": "Packer",
+          "title": "Стенки магазина бланков",
+          "controlType": "ok_not_ok",
+          "norm": "11.5",
+          "answer": "—",
+          "status": "UNCHECKED",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791412216908_ax9eq",
+      "timestamp": "2026-10-07T22:30:16.908Z",
+      "mode": "toploss",
+      "operator": "Андросов Владимир Анатольевич",
+      "line": "SD12",
+      "topLosses": [
+        "loss_hopper",
+        "loss_les"
+      ],
+      "items": [
+        {
+          "standardId": "id_1791388063560_e20gj",
+          "number": "1",
+          "oplNumber": "OPL-1",
+          "machine": "550",
+          "node": "Хопер",
+          "nodePart": "Packer",
+          "title": "Регулировка подвижной крышки хопера",
+          "controlType": "ok_not_ok",
+          "norm": "5 до 8",
+          "answer": "Не ОК",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1791388063563_sdh1n",
+          "number": "9",
+          "oplNumber": "OPL-11",
+          "machine": "550",
+          "node": "Гибочная станция",
+          "nodePart": "Packer",
+          "title": "Гибочная станция",
+          "controlType": "ok_not_ok",
+          "norm": "0",
+          "answer": "—",
+          "status": "UNCHECKED",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1791388063563_terh2",
+          "number": "10",
+          "oplNumber": "OPL-12",
+          "machine": "550",
+          "node": "Магазин бланков",
+          "nodePart": "Packer",
+          "title": "Стенки магазина бланков",
+          "controlType": "ok_not_ok",
+          "norm": "11.5",
+          "answer": "—",
+          "status": "UNCHECKED",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1791388063563_a3xk8",
+          "number": "12",
+          "oplNumber": "OPL-14",
+          "machine": "550",
+          "node": "Магазин бланков",
+          "nodePart": "Packer",
+          "title": "Ширина магазина бланков",
+          "controlType": "ok_not_ok",
+          "norm": "75.5",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1791388063563_qokvt",
+          "number": "14",
+          "oplNumber": "OPL-17",
+          "machine": "550",
+          "node": "Упор бланка",
+          "nodePart": "Packer",
+          "title": "Упор бланка",
+          "controlType": "ok_not_ok",
+          "norm": "0",
+          "answer": "—",
+          "status": "UNCHECKED",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791412301318_m63jm",
+      "timestamp": "2026-10-07T22:31:41.318Z",
+      "operator": "Андросов Владимир Анатольевич",
+      "shift": "A",
+      "line": "SD12",
+      "part": "Packer",
+      "type": "CL_TO",
+      "brandFrom": "",
+      "brandTo": "",
+      "triggers": [],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1791388063560_e20gj",
+          "number": "1",
+          "oplNumber": "OPL-1",
+          "machine": "550",
+          "node": "Хопер",
+          "nodePart": "Packer",
+          "title": "Регулировка подвижной крышки хопера",
+          "controlType": "range_input",
+          "norm": "5 до 8",
+          "answer": "3, 1, 4, 6, 5",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1791388063563_sdh1n",
+          "number": "9",
+          "oplNumber": "OPL-11",
+          "machine": "550",
+          "node": "Гибочная станция",
+          "nodePart": "Packer",
+          "title": "Гибочная станция",
+          "controlType": "ok_not_ok",
+          "norm": "0",
+          "answer": "ОК",
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1791388063563_terh2",
+          "number": "10",
+          "oplNumber": "OPL-12",
+          "machine": "550",
+          "node": "Магазин бланков",
+          "nodePart": "Packer",
+          "title": "Стенки магазина бланков",
+          "controlType": "value_input",
+          "norm": "11.5",
+          "answer": "12, 12",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1791388063563_bp8b5",
+          "number": "11",
+          "oplNumber": "OPL-13",
+          "machine": "550",
+          "node": "Магазин бланков",
+          "nodePart": "Packer",
+          "title": "Задняя стенка магазина бланков",
+          "controlType": "value_input",
+          "norm": "10",
+          "answer": "34",
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "id_1791388063563_a3xk8",
+          "number": "12",
+          "oplNumber": "OPL-14",
+          "machine": "550",
+          "node": "Магазин бланков",
+          "nodePart": "Packer",
+          "title": "Ширина магазина бланков",
+          "controlType": "value_input",
+          "norm": "75.5",
+          "answer": "324, 3, 23, 23",
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791412692182_s0w04",
+      "timestamp": "2026-10-07T22:38:12.182Z",
+      "operator": "Андросов Владимир Анатольевич",
+      "shift": "B",
+      "line": "SD12",
+      "part": "Packer",
+      "type": "ChangeOver",
+      "brandFrom": "C",
+      "brandTo": "A",
+      "triggers": [],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1791388063560_e20gj",
+          "number": "1",
+          "oplNumber": "OPL-1",
+          "machine": "550",
+          "node": "Хопер",
+          "nodePart": "Packer",
+          "title": "Регулировка подвижной крышки хопера",
+          "controlType": "range_input",
+          "norm": "5 до 8",
+          "answer": "23, 23, 2, 3, 1",
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791412766927_arscl",
+      "timestamp": "2026-10-07T22:39:26.927Z",
+      "mode": "electronic",
+      "operator": "Андросов Владимир Анатольевич",
+      "line": "SD03",
+      "shift": "A",
+      "date": "2026-10-08",
+      "brandPlanned": "A",
+      "brandActual": "A",
+      "brandReason": "",
+      "items": [
+        {
+          "standardId": "elec_1790840984958_08566",
+          "machine": "BE",
+          "paramName": "вапвап",
+          "work": "Run",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "ok_not_ok",
+          "target": null,
+          "tolerance": null,
+          "normText": "гуд",
+          "answer": "Не ОК",
+          "value": null,
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790841046504_oivp8",
+          "machine": "BE",
+          "paramName": "уцкцу",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 2,
+          "tolerance": 1,
+          "normText": "",
+          "answer": "3",
+          "value": 3,
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790841013612_1bpph",
+          "machine": "BE",
+          "paramName": "ываывапыв",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 45,
+          "tolerance": 21,
+          "normText": "",
+          "answer": "2",
+          "value": 2,
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790841029485_hrm7y",
+          "machine": "re",
+          "paramName": "23124",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 435,
+          "tolerance": 12,
+          "normText": "",
+          "answer": "3",
+          "value": 3,
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791415419812_b63hu",
+      "timestamp": "2026-10-07T23:23:39.812Z",
+      "operator": "Артемьев Дмитрий Николаевич",
+      "shift": "B",
+      "line": "SD12",
+      "part": "Packer",
+      "type": "CL_Conversion",
+      "brandFrom": "",
+      "brandTo": "",
+      "triggers": [],
+      "customNode": "",
+      "items": [
+        {
+          "standardId": "id_1791388063560_e20gj",
+          "number": "1",
+          "oplNumber": "OPL-1",
+          "machine": "550",
+          "node": "Хопер",
+          "nodePart": "Packer",
+          "title": "Регулировка подвижной крышки хопера",
+          "controlType": "range_input",
+          "norm": "5 до 8",
+          "answer": "2, 1, 3, 0, 5",
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791448869384_j787x",
+      "timestamp": "2026-10-08T08:41:09.384Z",
+      "mode": "electronic",
+      "operator": "Артемьев Дмитрий Николаевич",
+      "line": "SD03",
+      "shift": "B",
+      "date": "2026-10-08",
+      "brandPlanned": "A",
+      "brandActual": "A",
+      "brandReason": "",
+      "items": [
+        {
+          "standardId": "elec_1790840984958_08566",
+          "machine": "BE",
+          "paramName": "вапвап",
+          "work": "Run",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "ok_not_ok",
+          "target": null,
+          "tolerance": null,
+          "normText": "гуд",
+          "answer": "—",
+          "value": null,
+          "status": "UNCHECKED",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790841046504_oivp8",
+          "machine": "BE",
+          "paramName": "уцкцу",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 2,
+          "tolerance": 1,
+          "normText": "",
+          "answer": "10",
+          "value": 10,
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790841013612_1bpph",
+          "machine": "BE",
+          "paramName": "ываывапыв",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 45,
+          "tolerance": 21,
+          "normText": "",
+          "answer": "44",
+          "value": 44,
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790841029485_hrm7y",
+          "machine": "re",
+          "paramName": "23124",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 435,
+          "tolerance": 12,
+          "normText": "",
+          "answer": "34",
+          "value": 34,
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791450479213_2282k",
+      "timestamp": "2026-10-08T09:07:59.213Z",
+      "mode": "electronic",
+      "operator": "Андросов Владимир Анатольевич",
+      "line": "SD03",
+      "shift": "B",
+      "date": "2026-10-08",
+      "brandPlanned": "A",
+      "brandActual": "A",
+      "brandReason": "",
+      "items": [
+        {
+          "standardId": "elec_1790840984958_08566",
+          "machine": "BE",
+          "paramName": "вапвап",
+          "work": "Run",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "ok_not_ok",
+          "target": null,
+          "tolerance": null,
+          "normText": "гуд",
+          "answer": "Не ОК",
+          "value": null,
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790841046504_oivp8",
+          "machine": "BE",
+          "paramName": "уцкцу",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 2,
+          "tolerance": 1,
+          "normText": "",
+          "answer": "—",
+          "value": null,
+          "status": "UNCHECKED",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790841013612_1bpph",
+          "machine": "BE",
+          "paramName": "ываывапыв",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 45,
+          "tolerance": 21,
+          "normText": "",
+          "answer": "34",
+          "value": 34,
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790841029485_hrm7y",
+          "machine": "re",
+          "paramName": "23124",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 435,
+          "tolerance": 12,
+          "normText": "",
+          "answer": "-12",
+          "value": -12,
+          "status": "FAIL",
+          "comment": "ВЫАВЫ"
+        }
+      ]
+    },
+    {
+      "id": "id_1791451712899_gpcv9",
+      "timestamp": "2026-10-08T09:28:32.899Z",
+      "mode": "electronic",
+      "operator": "Артемьев Дмитрий Николаевич",
+      "line": "SD03",
+      "shift": "A",
+      "date": "2026-10-09",
+      "brandPlanned": "B",
+      "brandActual": "B",
+      "brandReason": "",
+      "items": [
+        {
+          "standardId": "elec_1790841029485_hrm7y",
+          "machine": "re",
+          "paramName": "23124",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": null,
+          "tolerance": null,
+          "normText": "",
+          "answer": "12",
+          "value": 12,
+          "status": "OK",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790840984958_08566",
+          "machine": "BE",
+          "paramName": "вапвап",
+          "work": "Run",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "ok_not_ok",
+          "target": null,
+          "tolerance": null,
+          "normText": "гуд",
+          "answer": "ОК",
+          "value": null,
+          "status": "OK",
+          "comment": ""
+        }
+      ]
+    },
+    {
+      "id": "id_1791451900683_0eiol",
+      "timestamp": "2026-10-08T09:31:40.683Z",
+      "mode": "electronic",
+      "operator": "Артемьев Дмитрий Николаевич",
+      "line": "SD03",
+      "shift": "B",
+      "date": "2026-10-08",
+      "brandPlanned": "A",
+      "brandActual": "A",
+      "brandReason": "",
+      "items": [
+        {
+          "standardId": "elec_1790840984958_08566",
+          "machine": "BE",
+          "paramName": "вапвап",
+          "work": "Run",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "ok_not_ok",
+          "target": null,
+          "tolerance": null,
+          "normText": "гуд",
+          "answer": "Не ОК",
+          "value": null,
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790841013612_1bpph",
+          "machine": "BE",
+          "paramName": "ываывапыв",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 45,
+          "tolerance": 21,
+          "normText": "",
+          "answer": "12",
+          "value": 12,
+          "status": "FAIL",
+          "comment": ""
+        },
+        {
+          "standardId": "elec_1790841029485_hrm7y",
+          "machine": "re",
+          "paramName": "23124",
+          "work": "Stop",
+          "timeFrom": "09:10",
+          "timeTo": "10:00",
+          "controlType": "value_input",
+          "target": 435,
+          "tolerance": 12,
+          "normText": "",
+          "answer": "3",
+          "value": 3,
+          "status": "FAIL",
+          "comment": ""
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "Форматный блок",
+      "part": "Maker"
+    },
+    {
+      "name": "Блок фильтра",
+      "part": "Maker"
+    },
+    {
+      "name": "Блок обертки",
+      "part": "Packer"
+    },
+    {
+      "name": "Блок пачки",
+      "part": "Packer"
+    },
+    {
+      "name": "Блок целлофана",
+      "part": "Packer"
+    },
+    {
+      "name": "Блок блока",
+      "part": "Packer"
+    },
+    {
+      "name": "Привод главный",
+      "part": "Both"
+    },
+    {
+      "name": "Пневматика",
+      "part": "Both"
+    }
+  ],
+  "lines": [
+    "SD01",
+    "SD03",
+    "SD06",
+    "SD08",
+    "SD12",
+    "SD25",
+    "SD27",
+    "SD31"
+  ],
+  "shifts": [
+    "A",
+    "B",
+    "C",
+    "D"
+  ],
+  "brands": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+    "fff",
+    "кент"
+  ],
+  "lineBrands": {
+    "SD01": [
+      "кент",
+      "B",
+      "C",
+      "D",
+      "A",
+      "F",
+      "E",
+      "fff",
+      "G",
+      "H",
+      "I",
+      "J"
+    ],
+    "SD03": [
+      "A",
+      "B",
+      "C",
+      "кент"
+    ],
+    "SD12": [
+      "A",
+      "B",
+      "C",
+      "E",
+      "I",
+      "K"
+    ],
+    "SD31": [
+      "H",
+      "J",
+      "I"
+    ],
+    "SD06": [
+      "C",
+      "B",
+      "F",
+      "кент"
+    ],
+    "SD25": [
+      "кент"
+    ],
+    "SD27": [
+      "кент"
+    ],
+    "SD08": []
+  },
+  "operators": [
+    "Аврин Илья Николаевич",
+    "Андросов Владимир Анатольевич",
+    "Артемьев Дмитрий Николаевич",
+    "Ахмедов Давид Разимович",
+    "Ачкасов Ефим Юрьевич",
+    "Бельский Егор Алексеевич",
+    "Богданов Владимир Борисович",
+    "Богданов Максим Владимирович",
+    "Бышев Дмитрий Анатольевич",
+    "Воробьев Евгений Александрович",
+    "Гарбузов Олег Геннадиевич",
+    "Геранин Степан Вадимович",
+    "Дормидонтов Станислав Игоревич",
+    "Егоров Георгий Вадимович",
+    "Егоров Юрий Анатольевич",
+    "Ершов Юрий Владимирович",
+    "Ефимов Вадислав Николаевич",
+    "Заочинский Михаил Александрович",
+    "Зубенко Сергей Юрьевич",
+    "Зуев Дмитрий Валерьевич",
+    "иванов денис авыаыва",
+    "иванов денис гор",
+    "иванов денис игорьевич",
+    "иванов денис папвп",
+    "Иванов дмитрий иванович",
+    "Иванов Иван Иванович",
+    "Ильин Максим Андреевич",
+    "Ишин Иван Валерьевич",
+    "Кабацков Павел Сергеевич",
+    "Казин Вадим Олегович",
+    "Капитанов Владислав Сергеевич",
+    "Кейнер Виктор Александрович",
+    "Кириллов Виталий Васильевич",
+    "Ковалев Сергей Сергеевич",
+    "Кокаева Юлия Владимировна",
+    "Колесников Сергей Иванович",
+    "Константиниди Роман Владимирович",
+    "Коротков Олег Николаевич",
+    "Корсаков Денис Владимирович",
+    "Кошкин Иван Сергеевич",
+    "Крюков Евгений Николаевич",
+    "Кузьмин Олег Борисович",
+    "Кукушкин Дмитрий Олегович",
+    "кучма дмитрий михайлович",
+    "Леонтьев Сергей Игоревич",
+    "Лепп Андрей Александрович",
+    "Маханьков Кирилл  Сергеевич",
+    "Меркулов Павел Геннадьевич",
+    "Михеев Олег Анатольевич",
+    "Онищук Леонид Витальевич",
+    "Охотников Николай Анатольевич",
+    "Петров Пётр Петрович",
+    "Пименов Александр Леонидович",
+    "Полищук Федор Анатольевич",
+    "Полынкин Евгений Сергеевич",
+    "Постников Александр Николаевич",
+    "Прокопов Сергей Николаевич",
+    "Прохватило Дмитрий Александрович",
+    "Пятовский Александр Иванович",
+    "Радчук Александр Павлович",
+    "Рожков Николай Алексеевич",
+    "Рыбкин Павел Владимирович",
+    "Садомсков Георгий Николаевич",
+    "Самодуров Алексей Анатольевич",
+    "Сатаев Курбан Вильданович",
+    "Седачев Сергей Александрович",
+    "Семененко Владислав Олегович",
+    "Сеньков Павел Геннадьевич",
+    "Сергеев Илья Александрович",
+    "Скопинцев Дмитрий Витальевич",
+    "Скотников Денис Евгеньевич",
+    "Смирнов Вадим Эдуардович",
+    "Смирнов Евгений Андреевич",
+    "Соколов Станислав Николаевич",
+    "Сорокин Александр Сергеевич",
+    "Суховеев Иван Михайлович",
+    "Тарунтаев Антон Викторович",
+    "Тихонов Антон Евгеньевич",
+    "Трофимов Дмитрий Сергеевич",
+    "Феценец Сергей Васильевич",
+    "Цисарский Сергей Васильевич",
+    "Шалимов Алексей Сергеевич",
+    "Щербаков Алексей Владимирович",
+    "ываываыва",
+    "Яковлев Сергей Геннадьевич"
+  ],
+  "blocks": [
+    {
+      "id": "block_lst1",
+      "name": "Cell2 (LST 1)",
+      "lines": [
+        "SD12",
+        "SD27",
+        "SD31",
+        "SD06"
+      ]
+    },
+    {
+      "id": "block_lst2",
+      "name": "Cell2 (LST 2)",
+      "lines": [
+        "SD01",
+        "SD08",
+        "SD25",
+        "SD03"
+      ]
+    }
+  ],
+  "lineMachines": {
+    "SD01": [
+      "ывааыв",
+      "раппрап",
+      "выаыв",
+      "2",
+      "ываыва",
+      "321",
+      "21"
+    ],
+    "SD03": [
+      "BE",
+      "re",
+      "m5"
+    ],
+    "SD08": [
+      "SE",
+      "456",
+      "ТК",
+      "ук"
+    ],
+    "SD12": [
+      "SE",
+      "MWQ",
+      "550",
+      "ку"
+    ],
+    "SD06": [
+      "укаыв"
+    ]
+  },
+  "topLosses": [
+    {
+      "id": "cat_stops",
+      "name": "Увеличенные остановки",
+      "items": [
+        {
+          "id": "loss_hopper",
+          "name": "Остановки по хопперу"
+        },
+        {
+          "id": "loss_strand",
+          "name": "Обрыв штранга"
+        },
+        {
+          "id": "loss_max_jam",
+          "name": "Заторы на MAX"
+        },
+        {
+          "id": "loss_foil_break",
+          "name": "Обрыв фольги"
+        },
+        {
+          "id": "loss_no_label",
+          "name": "Нет этикета (бланка)"
+        },
+        {
+          "id": "loss_фильтр",
+          "name": "Фильтр"
+        },
+        {
+          "id": "loss_внутренняя_рамка",
+          "name": "Внутренняя рамка"
+        },
+        {
+          "id": "loss_нет_этикета_магазин_бланка_пус",
+          "name": "Нет этикета"
+        },
+        {
+          "id": "loss_загрязнение_узлов",
+          "name": "Загрязнение узлов"
+        },
+        {
+          "id": "loss_вылетает_внутренняя_рамка",
+          "name": "Вылетает внутренняя рамка"
+        },
+        {
+          "id": "loss_выдача_заполнена",
+          "name": "Выдача заполнена"
+        },
+        {
+          "id": "loss_сигаретная_шахта_пуста",
+          "name": "Сигаретная шахта пуста"
+        },
+        {
+          "id": "loss_нет_этикета_справа_слева",
+          "name": "Нет этикета справа/слева"
+        },
+        {
+          "id": "loss_нет_этикета_в_складывающем_кол",
+          "name": "Нет этикета в складывающем колесе"
+        },
+        {
+          "id": "loss_крышка_канала_пачек",
+          "name": "Крышка канала пачек"
+        },
+        {
+          "id": "loss_магазин_бланка_пуст",
+          "name": "Магазин бланка пуст"
+        },
+        {
+          "id": "loss_нет_клапана_бланка",
+          "name": "Нет клапана бланка"
+        }
+      ]
+    },
+    {
+      "id": "cat_quality",
+      "name": "Дефекты по качеству",
+      "items": [
+        {
+          "id": "loss_cig_crush",
+          "name": "Замятие сигарет"
+        },
+        {
+          "id": "loss_tipping",
+          "name": "Замятие типпинга"
+        },
+        {
+          "id": "loss_empty_ends",
+          "name": "Осыпка (пустые торцы сигарет)"
+        },
+        {
+          "id": "loss_pack_gaps",
+          "name": "Дефекты на пачке: щели"
+        },
+        {
+          "id": "loss_pack_panels",
+          "name": "Дефекты на пачке: выступающие панели"
+        }
+      ]
+    },
+    {
+      "id": "cat_emissions",
+      "name": "Повышенные выбросы",
+      "items": [
+        {
+          "id": "loss_les",
+          "name": "Выбросы по LES"
+        },
+        {
+          "id": "loss_otis",
+          "name": "Выбросы по OTIS"
+        },
+        {
+          "id": "loss_foil_valve",
+          "name": "Выбросы по фольге (отрывному клапану)"
+        },
+        {
+          "id": "loss_tear_tape",
+          "name": "Выбросы по отрывной ленточке пачки/блока"
+        },
+        {
+          "id": "loss_вавы",
+          "name": "вавы"
+        }
+      ]
+    }
+  ]
+}
