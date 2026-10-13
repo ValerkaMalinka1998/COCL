@@ -10,7 +10,8 @@ const STORAGE_KEYS = {
   brands: 'cl_brands_v2',
   lineBrands: 'cl_lineBrands_v2',
   operators: 'cl_operators_v2',
-  blocks: 'cl_blocks_v1',
+  workshops: 'cl_workshops_v1',   // ← НОВОЕ (заменяет blocks)
+  blocks: 'cl_blocks_v1',         // оставлен для удаления при миграции
   lineMachines: 'cl_lineMachines_v1',
   topLosses: 'cl_toplosses_v1',
   electronicShiftCfg: 'cl_electronic_shiftcfg_v1',
@@ -26,11 +27,135 @@ const DEFAULT_LINES = ['SD01','SD03','SD06','SD08','SD12','SD25','SD27','SD31'];
 const DEFAULT_SHIFTS = ['A','B','C','D'];
 const DEFAULT_BRANDS = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P'];
 
-/* Блоки линий — по умолчанию два блока Cell2 */
-const DEFAULT_BLOCKS = [
-  { id: 'block_lst1', name: 'Cell2 (LST 1)', lines: ['SD06', 'SD12', 'SD27', 'SD31'] },
-  { id: 'block_lst2', name: 'Cell2 (LST 2)', lines: ['SD01', 'SD03', 'SD08', 'SD25'] }
+/* ============================================================
+   СТРУКТУРА ПРОИЗВОДСТВА
+   Цех (workshop) → Участок (area) → Блок (block, опционально) → Линия
+   ============================================================ */
+
+const DEFAULT_WORKSHOPS = [
+  {
+    id: 'smd',
+    name: 'SMD',
+    subtitle: 'Производство сигарет/стиков',
+    areas: [
+      {
+        id: 'smd_area1',
+        name: 'Участок 1',
+        blocks: [
+          { id: 'smd_area1_lst1', name: 'LST 1', lines: [] },
+          { id: 'smd_area1_lst2', name: 'LST 2', lines: [] }
+        ]
+      },
+      {
+        id: 'smd_area2',
+        name: 'Участок 2',
+        blocks: [
+          { id: 'smd_area2_lst1', name: 'LST 1', lines: ['SD06', 'SD12', 'SD27', 'SD31'] },
+          { id: 'smd_area2_lst2', name: 'LST 2', lines: ['SD01', 'SD03', 'SD08', 'SD25'] }
+        ]
+      },
+      {
+        id: 'smd_area3',
+        name: 'Участок 3',
+        blocks: [
+          { id: 'smd_area3_lst1', name: 'LST 1', lines: [] },
+          { id: 'smd_area3_lst2', name: 'LST 2', lines: [] }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'pmd',
+    name: 'PMD',
+    subtitle: 'Производство табака',
+    areas: [
+      {
+        id: 'pmd_sfg',
+        name: 'SFG',
+        blocks: null,
+        lines: ['CLD', 'CRS (жилка)', 'Fibex', 'Бракобойка']
+      },
+      {
+        id: 'pmd_crt',
+        name: 'CRT',
+        blocks: null,
+        lines: ['Lamina', 'Восточный склад', 'Северный склад']
+      }
+    ]
+  },
+  {
+    id: 'fmd',
+    name: 'FMD',
+    subtitle: 'Производство фильтров',
+    areas: [
+      {
+        id: 'fmd_cell1',
+        name: 'Cell 1',
+        blocks: [
+          { id: 'fmd_cell1_lst1', name: 'LST 1', lines: [] },
+          { id: 'fmd_cell1_lst2', name: 'LST 2', lines: [] }
+        ]
+      },
+      {
+        id: 'fmd_cell2',
+        name: 'Cell 2',
+        blocks: [
+          { id: 'fmd_cell2_lst1', name: 'LST 1', lines: [] },
+          { id: 'fmd_cell2_lst2', name: 'LST 2', lines: [] }
+        ]
+      }
+    ]
+  }
 ];
+
+/* ============================================================
+   РЕДАКТОР: недавние линии и режим просмотра
+   ============================================================ */
+
+const RECENT_LINES_KEY = 'cl_recent_lines';
+const RECENT_LINES_MAX = 5;
+const EDITOR_LINE_VIEW_KEY = 'cl_editor_line_view';   // 'tree' | 'list'
+
+/* --- Недавние линии --- */
+function getRecentLines() {
+  try {
+    const raw = localStorage.getItem(RECENT_LINES_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(arr)) return [];
+
+    // Отфильтровать удалённые из структуры линии
+    const allLines = getLines();
+    const valid = arr.filter(l => typeof l === 'string' && allLines.includes(l));
+
+    // Если что-то отфильтровалось — сохранить очищенный список
+    if (valid.length !== arr.length) {
+      localStorage.setItem(RECENT_LINES_KEY, JSON.stringify(valid));
+    }
+    return valid.slice(0, RECENT_LINES_MAX);
+  } catch (e) {
+    return [];
+  }
+}
+
+function addRecentLine(line) {
+  if (!line) return;
+  const current = getRecentLines();
+  const next = [line, ...current.filter(l => l !== line)].slice(0, RECENT_LINES_MAX);
+  try {
+    localStorage.setItem(RECENT_LINES_KEY, JSON.stringify(next));
+  } catch (e) {}
+}
+
+/* --- Режим просмотра (tree / list) --- */
+function getEditorLineViewMode() {
+  try {
+    const m = localStorage.getItem(EDITOR_LINE_VIEW_KEY);
+    return (m === 'list') ? 'list' : 'tree';
+  } catch (e) { return 'tree'; }
+}
+function setEditorLineViewMode(mode) {
+  try { localStorage.setItem(EDITOR_LINE_VIEW_KEY, mode); } catch (e) {}
+}
 
 /* Машины для линий — по умолчанию пустые (заполняются в Настройках) */
 const DEFAULT_LINE_MACHINES = {};
@@ -314,6 +439,252 @@ function renderEditorBlocksView() {
       </div>
     `;
   }).join('') + '</div>';
+}
+
+/* ============================================================
+   РЕДАКТОР: экран выбора линии
+   ============================================================ */
+
+/* Показать экран выбора линии */
+function renderEditorSelectLineView() {
+  // Показываем нужные экраны
+  $('#editorSelectLineView').style.display = 'block';
+  $('#editorLineView').style.display = 'none';
+
+  // Отрисовать недавние
+  renderEditorRecentLines();
+
+  // Отрисовать дерево или список
+  const mode = getEditorLineViewMode();
+  document.querySelectorAll('#editorLineViewSwitch .editor-line-view-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === mode);
+  });
+
+  renderEditorLinesContent();
+}
+
+/* Отрисовать контент (дерево или список) в зависимости от режима и поиска */
+function renderEditorLinesContent() {
+  const container = $('#editorLinesContent');
+  if (!container) return;
+
+  const mode = getEditorLineViewMode();
+  const query = ($('#editorLineSearch')?.value || '').trim().toLowerCase();
+
+  if (mode === 'list') {
+    renderEditorLineFlatList(query, container);
+  } else {
+    renderEditorLineTree(query, container);
+  }
+}
+
+/* --- Дерево --- */
+function renderEditorLineTree(query, container) {
+  const workshops = getWorkshops();
+
+  // Плоский список линий с контекстом (для счётчика стандартов)
+  const allLinesWithContext = getAllLinesWithContext();
+  const standards = getStandards();
+
+  // Фильтрация по коду линии
+  const matchLine = (line) => {
+    if (!query) return true;
+    return String(line).toLowerCase().includes(query);
+  };
+
+  // Проверяем, есть ли хоть одна линия после фильтра
+  let totalVisible = 0;
+  workshops.forEach(w => {
+    (w.areas || []).forEach(a => {
+      if (Array.isArray(a.blocks)) {
+        a.blocks.forEach(b => {
+          (b.lines || []).forEach(l => { if (matchLine(l)) totalVisible++; });
+        });
+      } else {
+        (a.lines || []).forEach(l => { if (matchLine(l)) totalVisible++; });
+      }
+    });
+  });
+
+  if (totalVisible === 0) {
+    container.innerHTML = query
+      ? `<div class="editor-empty">Ничего не найдено по запросу «${escapeHtml(query)}»</div>`
+      : `<div class="editor-empty">Линий пока нет. Добавьте их в Настройках → Структура производства.</div>`;
+    return;
+  }
+
+  // Функция счётчика стандартов по линии
+  const countStandards = (line) => standards.filter(s => s.line === line).length;
+
+  // Функция рисования чипа линии
+  const renderLineChip = (line) => {
+    const count = countStandards(line);
+    const countText = count > 0 ? `${count} ст.` : 'пусто';
+    return `<button type="button" class="editor-line-chip" data-line="${escapeAttr(line)}">
+      ${escapeHtml(line)}
+      <span class="editor-line-chip-count">${countText}</span>
+    </button>`;
+  };
+
+  let html = '<div class="editor-tree">';
+
+  workshops.forEach(w => {
+    // Собираем блоки/линии по участку
+    let workshopHtml = '';
+    let workshopHasVisibleLines = false;
+
+    (w.areas || []).forEach(a => {
+      let areaHtml = '';
+      let areaHasVisibleLines = false;
+
+      if (Array.isArray(a.blocks)) {
+        // Участок с блоками
+        a.blocks.forEach(b => {
+          const visibleLines = (b.lines || []).filter(matchLine);
+          if (!visibleLines.length) return;
+
+          areaHasVisibleLines = true;
+          workshopHasVisibleLines = true;
+
+          areaHtml += `
+            <div class="editor-tree-block">
+              <div class="editor-tree-block-name">${escapeHtml(b.name)}</div>
+              <div class="editor-tree-lines">
+                ${visibleLines.map(renderLineChip).join('')}
+              </div>
+            </div>
+          `;
+        });
+      } else {
+        // Участок без блоков (PMD)
+        const visibleLines = (a.lines || []).filter(matchLine);
+        if (visibleLines.length) {
+          areaHasVisibleLines = true;
+          workshopHasVisibleLines = true;
+
+          areaHtml += `
+            <div class="editor-tree-lines" style="padding-left:0">
+              ${visibleLines.map(renderLineChip).join('')}
+            </div>
+          `;
+        }
+      }
+
+      if (areaHasVisibleLines) {
+        workshopHtml += `
+          <div class="editor-tree-area">
+            <div class="editor-tree-area-name">${escapeHtml(a.name)}</div>
+            ${areaHtml}
+          </div>
+        `;
+      }
+    });
+
+    if (workshopHasVisibleLines) {
+      html += `
+        <div class="editor-tree-workshop">
+          <div class="editor-tree-workshop-name">${escapeHtml(w.name)}</div>
+          ${workshopHtml}
+        </div>
+      `;
+    }
+  });
+
+  html += '</div>';
+  container.innerHTML = html;
+
+  // Обработчики на чипы линий
+  container.querySelectorAll('.editor-line-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const line = chip.dataset.line;
+      if (line) openEditorLine(line);
+    });
+  });
+}
+
+/* --- Плоский список --- */
+function renderEditorLineFlatList(query, container) {
+  const allLines = getAllLinesWithContext();
+  const standards = getStandards();
+
+  // Фильтрация
+  const filtered = query
+    ? allLines.filter(x => String(x.line).toLowerCase().includes(query))
+    : allLines;
+
+  if (!filtered.length) {
+    container.innerHTML = query
+      ? `<div class="editor-empty">Ничего не найдено по запросу «${escapeHtml(query)}»</div>`
+      : `<div class="editor-empty">Линий пока нет. Добавьте их в Настройках → Структура производства.</div>`;
+    return;
+  }
+
+  // Сортировка: по цеху → участку → блоку → линии
+  filtered.sort((a, b) => {
+    const wCmp = (a.workshopName || '').localeCompare(b.workshopName || '', 'ru');
+    if (wCmp !== 0) return wCmp;
+    const aCmp = (a.areaName || '').localeCompare(b.areaName || '', 'ru');
+    if (aCmp !== 0) return aCmp;
+    const bCmp = (a.blockName || '').localeCompare(b.blockName || '', 'ru');
+    if (bCmp !== 0) return bCmp;
+    return String(a.line).localeCompare(String(b.line), 'ru');
+  });
+
+  const rows = filtered.map(x => {
+    const context = [x.workshopName, x.areaName, x.blockName].filter(Boolean).join(' / ');
+    const count = standards.filter(s => s.line === x.line).length;
+    const countText = count > 0 ? `${count} ст.` : '';
+
+    return `
+      <div class="editor-flat-row" data-line="${escapeAttr(x.line)}">
+        <span class="editor-flat-line">${escapeHtml(x.line)}</span>
+        <span class="editor-flat-context">${escapeHtml(context)}</span>
+        <span class="editor-flat-count">${countText}</span>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = `<div class="editor-flat-list">${rows}</div>`;
+
+  // Обработчики
+  container.querySelectorAll('.editor-flat-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const line = row.dataset.line;
+      if (line) openEditorLine(line);
+    });
+  });
+}
+
+/* --- Недавние линии --- */
+function renderEditorRecentLines() {
+  const wrap = $('#editorRecentLinesWrap');
+  const chips = $('#editorRecentLines');
+  if (!wrap || !chips) return;
+
+  const recent = getRecentLines();
+
+  if (!recent.length) {
+    wrap.style.display = 'none';
+    return;
+  }
+
+  wrap.style.display = 'block';
+  chips.innerHTML = recent.map(line => `
+    <button type="button" class="editor-recent-chip" data-line="${escapeAttr(line)}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+      ${escapeHtml(line)}
+    </button>
+  `).join('');
+
+  chips.querySelectorAll('.editor-recent-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const line = chip.dataset.line;
+      if (line) openEditorLine(line);
+    });
+  });
 }
 
 /* Склонение: 1 стандарт / 2 стандарта / 5 стандартов */
@@ -910,13 +1281,21 @@ function updateFreqBlocksVisibility() {
 
 /* Открыть линию */
 window.openEditorLine = function(line) {
+  if (!line) return;
+
   currentEditorLine = line;
   localStorage.setItem('cl_editor_line', line);
+  addRecentLine(line);
 
-  $('#editorBlocksView').style.display = 'none';
-  $('#editorLinesView').style.display = 'none';
-  $('#editorLineView').style.display = 'block';
-  $('#editorLineTitle').textContent = line;
+  // Переключаем экраны
+  const selectView = $('#editorSelectLineView');
+  const lineView = $('#editorLineView');
+  if (selectView) selectView.style.display = 'none';
+  if (lineView) lineView.style.display = 'block';
+
+  // Заголовок
+  const title = $('#editorLineTitle');
+  if (title) title.textContent = line;
 
   // Хлебные крошки
   renderEditorBreadcrumbs(line);
@@ -924,25 +1303,19 @@ window.openEditorLine = function(line) {
   // Сброс фильтров
   const search = $('#editorSearch');
   if (search) search.value = '';
-  const ft = $('#editorFilterType');
-  if (ft) ft.value = '';
-  const fp = $('#editorFilterPart');
-  if (fp) fp.value = '';
-  const fm = $('#editorFilterMachine');
-  if (fm) fm.value = '';
-  const fn = $('#editorFilterNode');
-  if (fn) fn.value = '';
-  const fa = $('#editorFilterActive');   
-  if (fa) fa.value = '';
+  const ft = $('#editorFilterType');    if (ft) ft.value = '';
+  const fp = $('#editorFilterPart');    if (fp) fp.value = '';
+  const fm = $('#editorFilterMachine'); if (fm) fm.value = '';
+  const fn = $('#editorFilterNode');    if (fn) fn.value = '';
+  const fa = $('#editorFilterActive');  if (fa) fa.value = '';
 
-  currentPage = 1;   
+  currentPage = 1;
 
-  // Заполняем фильтр машин (из настроек линии)
+  // Заполняем фильтры
   fillEditorMachineFilter(line);
-
-  // Заполняем фильтр узлов (из стандартов линии)
   fillEditorNodeFilter(line);
 
+  // Рендерим таблицу стандартов
   renderEditorStandardsList();
 };
 
@@ -2976,14 +3349,178 @@ function save(key, value) {
 }
 function getOperators() { return load(STORAGE_KEYS.operators, []); }
 function setOperators(v) { save(STORAGE_KEYS.operators, v); }
-/* Блоки линий */
-function getBlocks() {
-  const raw = load(STORAGE_KEYS.blocks, null);
-  // Если ничего нет — возвращаем дефолт
-  if (raw === null) return [...DEFAULT_BLOCKS];
-  return Array.isArray(raw) ? raw : [...DEFAULT_BLOCKS];
+/* ============================================================
+   СТРУКТУРА ПРОИЗВОДСТВА — доступ к данным
+   ============================================================ */
+
+/* --- Миграция: создаём структуру при первом запуске --- */
+function migrateToWorkshopsStructure() {
+  const existing = localStorage.getItem(STORAGE_KEYS.workshops);
+  if (existing) return;  // уже мигрировали
+
+  // Создаём дефолтную структуру
+  save(STORAGE_KEYS.workshops, DEFAULT_WORKSHOPS);
+
+  // Удаляем старые блоки (они больше не используются)
+  localStorage.removeItem(STORAGE_KEYS.blocks);
 }
-function setBlocks(v) { save(STORAGE_KEYS.blocks, v); }
+
+/* --- Получить все цеха --- */
+function getWorkshops() {
+  migrateToWorkshopsStructure();
+  const raw = load(STORAGE_KEYS.workshops, null);
+  if (!Array.isArray(raw) || !raw.length) {
+    return JSON.parse(JSON.stringify(DEFAULT_WORKSHOPS));
+  }
+  return raw;
+}
+function setWorkshops(v) {
+  save(STORAGE_KEYS.workshops, v);
+}
+
+/* --- Найти цех по id --- */
+function getWorkshop(workshopId) {
+  return getWorkshops().find(w => w.id === workshopId) || null;
+}
+
+/* --- Найти участок по id (поиск по всем цехам) --- */
+function getArea(areaId) {
+  for (const w of getWorkshops()) {
+    const a = (w.areas || []).find(x => x.id === areaId);
+    if (a) return { workshop: w, area: a };
+  }
+  return null;
+}
+
+/* --- Найти блок по id (поиск по всем цехам/участкам) --- */
+function getBlock(blockId) {
+  for (const w of getWorkshops()) {
+    for (const a of (w.areas || [])) {
+      if (Array.isArray(a.blocks)) {
+        const b = a.blocks.find(x => x.id === blockId);
+        if (b) return { workshop: w, area: a, block: b };
+      }
+    }
+  }
+  return null;
+}
+
+/* --- Найти, к какому цеху/участку/блоку относится линия --- */
+function getBlockForLine(line) {
+  for (const w of getWorkshops()) {
+    for (const a of (w.areas || [])) {
+      if (Array.isArray(a.blocks)) {
+        for (const b of a.blocks) {
+          if (Array.isArray(b.lines) && b.lines.includes(line)) {
+            return { workshop: w, area: a, block: b };
+          }
+        }
+      } else if (Array.isArray(a.lines) && a.lines.includes(line)) {
+        return { workshop: w, area: a, block: null };
+      }
+    }
+  }
+  return null;
+}
+
+/* --- Плоский список всех линий с контекстом --- */
+function getAllLinesWithContext() {
+  const result = [];
+  getWorkshops().forEach(w => {
+    (w.areas || []).forEach(a => {
+      if (Array.isArray(a.blocks)) {
+        a.blocks.forEach(b => {
+          (b.lines || []).forEach(l => result.push({
+            line: l,
+            workshopId: w.id, workshopName: w.name,
+            areaId: a.id, areaName: a.name,
+            blockId: b.id, blockName: b.name
+          }));
+        });
+      } else if (Array.isArray(a.lines)) {
+        a.lines.forEach(l => result.push({
+          line: l,
+          workshopId: w.id, workshopName: w.name,
+          areaId: a.id, areaName: a.name,
+          blockId: null, blockName: null
+        }));
+      }
+    });
+  });
+  return result;
+}
+
+/* ============================================================
+   ОБРАТНАЯ СОВМЕСТИМОСТЬ
+   Старые функции возвращают упрощённые данные,
+   чтобы не ломать существующий код (дашборд, фильтры, редактор).
+   ============================================================ */
+
+/* --- Плоский список кодов всех линий (для селектов, фильтров) --- */
+function getLines() {
+  const all = getAllLinesWithContext();
+  // Уникальные коды линий (на случай дублирования)
+  const seen = new Set();
+  const result = [];
+  all.forEach(x => {
+    if (!seen.has(x.line)) {
+      seen.add(x.line);
+      result.push(x.line);
+    }
+  });
+  return result;
+}
+function setLines(v) {
+  // Сеттер больше не нужен — линии задаются в структуре производства.
+  // Оставлен для совместимости со старыми вызовами (бэкап).
+  console.warn('setLines() устарел — линии редактируются через getWorkshops().');
+}
+
+/* --- Плоский список всех блоков (с контекстом цеха/участка) --- */
+function getBlocks() {
+  const result = [];
+  getWorkshops().forEach(w => {
+    (w.areas || []).forEach(a => {
+      if (Array.isArray(a.blocks)) {
+        a.blocks.forEach(b => {
+          result.push({
+            id: b.id,
+            name: b.name,
+            lines: b.lines || [],
+            workshopId: w.id,
+            workshopName: w.name,
+            areaId: a.id,
+            areaName: a.name
+          });
+        });
+      }
+    });
+  });
+  return result;
+}
+function setBlocks(v) {
+  console.warn('setBlocks() устарел — блоки редактируются через getWorkshops().');
+}
+
+/* --- Плоский список всех участков --- */
+function getAllAreas() {
+  const result = [];
+  getWorkshops().forEach(w => {
+    (w.areas || []).forEach(a => {
+      result.push({
+        id: a.id,
+        name: a.name,
+        workshopId: w.id,
+        workshopName: w.name,
+        hasBlocks: Array.isArray(a.blocks) && a.blocks.length > 0,
+        linesCount: Array.isArray(a.blocks)
+          ? a.blocks.reduce((sum, b) => sum + (b.lines || []).length, 0)
+          : (a.lines || []).length
+      });
+    });
+  });
+  return result;
+}
 
 /* Машины для линий */
 function getLineMachines() {
@@ -13497,17 +14034,16 @@ function fallbackCopy(text) {
 /* Бэкап */
 $('#backupDownloadBtn').addEventListener('click', () => {
 const backup = {
-  version: 3,
+  version: 4,
   exportedAt: new Date().toISOString(),
   standards: getStandards(),
   history: getHistory(),
   nodes: getNodes(),
-  lines: getLines(),
+  workshops: getWorkshops(),   // ← НОВОЕ
   shifts: getShifts(),
   brands: getBrands(),
   lineBrands: getLineBrands(),
   operators: getOperators(),
-  blocks: getBlocks(),
   lineMachines: getLineMachines(),
   topLosses: getTopLosses()
 };
@@ -13537,7 +14073,7 @@ $('#backupFileInput').addEventListener('change', (e) => {
       if (Array.isArray(data.brands)) setBrands(data.brands);
       if (data.lineBrands && typeof data.lineBrands === 'object') setLineBrands(data.lineBrands);
       if (Array.isArray(data.operators)) setOperators(data.operators);
-      if (Array.isArray(data.blocks)) setBlocks(data.blocks);
+      if (Array.isArray(data.workshops)) setWorkshops(data.workshops);
       if (data.lineMachines && typeof data.lineMachines === 'object') setLineMachines(data.lineMachines);
       if (Array.isArray(data.topLosses)) setTopLosses(data.topLosses);
       init();
@@ -13557,6 +14093,46 @@ $('#resetAllBtn').addEventListener('click', () => {
   localStorage.removeItem('cl_photos_broken_count');
   init();
   showToast('Все данные сброшены');
+});
+
+/* ============================================================
+   РЕДАКТОР: обработчики поиска и переключателя режима
+   ============================================================ */
+
+/* Поиск по линиям */
+$('#editorLineSearch')?.addEventListener('input', () => {
+  const input = $('#editorLineSearch');
+  const clearBtn = $('#editorLineSearchClear');
+  if (clearBtn) {
+    clearBtn.style.display = input.value.trim() ? 'inline-flex' : 'none';
+  }
+  renderEditorLinesContent();
+});
+
+/* Очистка поиска */
+$('#editorLineSearchClear')?.addEventListener('click', () => {
+  const input = $('#editorLineSearch');
+  if (input) {
+    input.value = '';
+    input.focus();
+  }
+  const clearBtn = $('#editorLineSearchClear');
+  if (clearBtn) clearBtn.style.display = 'none';
+  renderEditorLinesContent();
+});
+
+/* Переключатель режима (Дерево / Список) */
+$('#editorLineViewSwitch')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.editor-line-view-btn');
+  if (!btn) return;
+  const mode = btn.dataset.view;
+  if (!mode) return;
+
+  setEditorLineViewMode(mode);
+  document.querySelectorAll('#editorLineViewSwitch .editor-line-view-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === mode);
+  });
+  renderEditorLinesContent();
 });
 
 /* ============================================================

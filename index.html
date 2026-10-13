@@ -453,7 +453,7 @@
 <div class="tab" id="tab-editor">
 
   <!-- Переключатель типа стандарта -->
-  <div class="card" style="padding:14px 18px">
+  <div class="card editor-mode-card">
     <div class="editor-mode-switch" id="editorModeSwitch">
       <button type="button" class="editor-mode-btn active" data-mode="mech">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -471,124 +471,230 @@
     </div>
   </div>
 
-  <!-- ЭКРАН 1: Список блоков (механический) -->
-  <div id="editorBlocksView">
-    <div class="card">
-      <h2>Редактор стандартов</h2>
-      <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
-        Выберите блок участка, чтобы просмотреть линии и их стандарты OPL.
-      </p>
-      <div id="editorBlocksList"></div>
+<!-- ======================= РЕЖИМ: МЕХАНИЧЕСКИЙ ======================= -->
+<div id="editorMechView">
+
+  <!-- Карточка 1: заголовок + действия + фильтры -->
+  <div class="card editor-panel-card">
+
+    <!-- Шапка панели -->
+    <div class="editor-panel-head">
+      <div class="editor-panel-title-wrap">
+        <h2 class="editor-panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          Стандарты OPL
+        </h2>
+        <span class="editor-panel-count" id="editorMechCount"></span>
+      </div>
+      <div class="editor-panel-actions">
+        <button class="btn btn-success btn-icon-text" id="editorMechAddBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span>Создать стандарт</span>
+        </button>
+        <button class="btn btn-secondary btn-icon-text btn-sm" id="editorMechUploadBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <span>Импорт</span>
+        </button>
+        <input type="file" id="editorMechUploadInput" accept=".xlsx,.xls" style="display:none">
+        <button class="btn btn-secondary btn-icon-text btn-sm" id="editorMechTemplateBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <span>Шаблон</span>
+        </button>
+        <button class="btn btn-secondary btn-icon-text btn-sm" id="editorMechExportBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <span>Экспорт</span>
+        </button>
+      </div>
     </div>
-  </div>
 
-  <!-- ЭКРАН 2: Список линий внутри блока -->
-  <div id="editorLinesView" style="display:none">
-    <div class="card">
-      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px">
-        <button class="btn btn-secondary" id="editorBlocksBackBtn">← Назад к блокам</button>
-        <h2 id="editorLinesTitle" style="margin:0;border:none;padding:0;flex:1;min-width:150px"></h2>
+    <!-- Разделитель -->
+    <div class="editor-panel-divider"></div>
+
+    <!-- Фильтры -->
+    <div class="editor-filters">
+      <div class="editor-filter-field">
+        <label>Цех</label>
+        <select id="emFilterWorkshop"><option value="">Все</option></select>
       </div>
-      <div id="editorLinesList"></div>
-    </div>
-  </div>
-
-  <!-- ЭКРАН 3: Стандарты линии -->
-  <div id="editorLineView" style="display:none">
-    <div class="card">
-      <!-- Хлебные крошки -->
-      <div class="breadcrumbs" id="editorBreadcrumbs"></div>
-
-      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px">
-        <button class="btn btn-secondary" id="editorBackBtn">← Назад к линиям</button>
-        <h2 id="editorLineTitle" style="margin:0;border:none;padding:0;flex:1;min-width:150px"></h2>
+      <div class="editor-filter-field">
+        <label>Участок</label>
+        <select id="emFilterArea"><option value="">Все</option></select>
       </div>
-
-      <div class="row" style="margin-bottom:14px">
-        <div class="field" style="flex:0 0 auto;min-width:auto">
-          <button class="btn btn-primary btn-icon-text" id="editorAddStandardBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            <span>Добавить стандарт</span>
-          </button>
-        </div>
-        <div class="field" style="flex:0 0 auto;min-width:auto">
-          <button class="btn btn-secondary btn-icon-text" id="editorDownloadTemplateBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            <span>Скачать шаблон</span>
-          </button>
-        </div>
-        <div class="field" style="flex:0 0 auto;min-width:auto">
-          <button class="btn btn-secondary btn-icon-text" id="editorExportBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
-            <span>Экспорт в Excel</span>
-          </button>
-        </div>
-        <div class="field" style="flex:0 0 auto;min-width:auto">
-          <button class="btn btn-success btn-icon-text" id="editorUploadBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
-            <span>Импорт из Excel</span>
-          </button>
-        </div>
-        <input type="file" id="editorUploadInput" accept=".xlsx,.xls" style="display:none">
+      <div class="editor-filter-field">
+        <label>Линия</label>
+        <select id="emFilterLine"><option value="">Все</option></select>
       </div>
-
-      <div class="list-toolbar">
-        <input type="text" id="editorSearch" placeholder="🔍 Поиск по №, OPL №, узлу, названию...">
+      <div class="editor-filter-field">
+        <label>Машина</label>
+        <select id="emFilterMachine"><option value="">Все</option></select>
       </div>
-
-      <div class="list-toolbar" style="margin-top:0;flex-wrap:wrap">
-        <select id="editorFilterPart" style="max-width:160px">
-          <option value="">Все части</option>
+      <div class="editor-filter-field">
+        <label>Узел</label>
+        <select id="emFilterNode"><option value="">Все</option></select>
+      </div>
+      <div class="editor-filter-field">
+        <label>Тип</label>
+        <select id="emFilterType">
+          <option value="">Все</option>
+          <option value="ChangeOver">Change Over</option>
+          <option value="CL_TO">CL в ТО</option>
+          <option value="CL_Conversion">CL в Конвертацию</option>
+          <option value="__none">Без привязки</option>
+        </select>
+      </div>
+      <div class="editor-filter-field">
+        <label>Часть линии</label>
+        <select id="emFilterPart">
+          <option value="">Все</option>
           <option value="Maker">Maker</option>
           <option value="Packer">Packer</option>
         </select>
-        <select id="editorFilterMachine" style="max-width:180px">
-          <option value="">Все машины</option>
-        </select>
-        <select id="editorFilterNode" style="max-width:220px">
-          <option value="">Все узлы</option>
-        </select>
-        <select id="editorFilterType" style="max-width:180px">
-          <option value="">Все типы</option>
-          <option value="Minor">Minor</option>
-          <option value="Intermediate">Intermediate</option>
-          <option value="Major">Major</option>
-          <option value="__none">Без привязки</option>
-        </select>
-        <select id="editorFilterActive" style="max-width:180px">
-          <option value="">Все стандарты</option>
+      </div>
+      <div class="editor-filter-field">
+        <label>Статус</label>
+        <select id="emFilterActive">
+          <option value="">Все</option>
           <option value="active">Только активные</option>
           <option value="inactive">Только неактивные</option>
         </select>
-        <span class="list-counter" id="editorLineCounter"></span>
       </div>
-
-      <div class="standards-table-wrap" id="editorStandardsList" style="margin-top:12px"></div>
-
-      <div class="pagination-bar" id="editorPagination"></div>
+        <div class="editor-filter-field editor-filter-field-wide">
+          <label>Поиск</label>
+          <div class="editor-filter-search-row">
+            <input type="text" id="emFilterSearch" placeholder="Название, OPL №, узел...">
+            <button class="editor-filter-reset-btn" id="emFilterResetBtn" type="button" title="Сбросить фильтры">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"/>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+              </svg>
+            </button>
+          </div>
+        </div>
     </div>
   </div>
 
-  <!-- ЭЛЕКТРОННЫЙ РЕЖИМ — дерево -->
-  <div id="editorElectronicView" style="display:none"></div>
+  <!-- Карточка 2: таблица -->
+  <div class="card editor-table-card">
+    <div class="editor-table-wrap" id="editorMechTableWrap"></div>
+    <div class="pagination-bar" id="editorMechPagination"></div>
+  </div>
 
 </div>
 
+<!-- ======================= РЕЖИМ: ЭЛЕКТРОННЫЙ ======================= -->
+<div id="editorElecView" style="display:none">
+
+  <div class="card editor-panel-card">
+
+    <div class="editor-panel-head">
+      <div class="editor-panel-title-wrap">
+        <h2 class="editor-panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+          Электронные параметры
+        </h2>
+        <span class="editor-panel-count" id="editorElecCount"></span>
+      </div>
+      <div class="editor-panel-actions">
+        <button class="btn btn-success btn-icon-text" id="editorElecAddBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span>Создать параметр</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="editor-panel-divider"></div>
+
+    <div class="editor-filters">
+      <div class="editor-filter-field">
+        <label>Цех</label>
+        <select id="eeFilterWorkshop"><option value="">Все</option></select>
+      </div>
+      <div class="editor-filter-field">
+        <label>Участок</label>
+        <select id="eeFilterArea"><option value="">Все</option></select>
+      </div>
+      <div class="editor-filter-field">
+        <label>Линия</label>
+        <select id="eeFilterLine"><option value="">Все</option></select>
+      </div>
+      <div class="editor-filter-field">
+        <label>Машина</label>
+        <select id="eeFilterMachine"><option value="">Все</option></select>
+      </div>
+      <div class="editor-filter-field">
+        <label>Тип контроля</label>
+        <select id="eeFilterControlType">
+          <option value="">Все</option>
+          <option value="value_input">Числовой</option>
+          <option value="ok_not_ok">ОК / Не ОК</option>
+        </select>
+      </div>
+      <div class="editor-filter-field">
+        <label>Периодичность</label>
+        <select id="eeFilterFreq">
+          <option value="">Все</option>
+          <option value="daily">Каждый день</option>
+          <option value="weekly">По дням недели</option>
+          <option value="once">Разовые даты</option>
+        </select>
+      </div>
+      <div class="editor-filter-field">
+        <label>Статус</label>
+        <select id="eeFilterActive">
+          <option value="">Все</option>
+          <option value="active">Только активные</option>
+          <option value="inactive">Только неактивные</option>
+        </select>
+      </div>
+        <div class="editor-filter-field editor-filter-field-wide">
+          <label>Поиск</label>
+          <div class="editor-filter-search-row">
+            <input type="text" id="emFilterSearch" placeholder="Название, OPL №, узел...">
+            <button class="editor-filter-reset-btn" id="emFilterResetBtn" type="button" title="Сбросить фильтры">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"/>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+    </div>
+  </div>
+
+  <div class="card editor-table-card">
+    <div class="editor-table-wrap" id="editorElecTableWrap"></div>
+    <div class="pagination-bar" id="editorElecPagination"></div>
+  </div>
+
+</div>
+
+</div>
 <!-- ======================= ВКЛАДКА ИСТОРИЯ ======================= -->
 <div class="tab" id="tab-history">
 
