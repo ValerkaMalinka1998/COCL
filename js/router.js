@@ -28,47 +28,34 @@ function switchTab(tabName, pushHistory = true) {
   }
 
   // Специальная логика для вкладок
-  if (tabName === 'editor') {
-    const blocksView = document.getElementById('editorBlocksView');
-    const linesView = document.getElementById('editorLinesView');
-    const lineView = document.getElementById('editorLineView');
-    const elecView = document.getElementById('editorElectronicView');
-
-    // Скрываем все экраны (и мех, и электрон)
-    if (blocksView) blocksView.style.display = 'none';
-    if (linesView) linesView.style.display = 'none';
-    if (lineView) lineView.style.display = 'none';
-    if (elecView) elecView.style.display = 'none';
-
-    // Смотрим, какой режим был в прошлый раз
-    const savedMode = localStorage.getItem('cl_editor_mode');
-    if (savedMode === 'elec' && typeof switchEditorMode === 'function') {
-      // Электронный режим — пусть switchEditorMode сам всё покажет
-      switchEditorMode('elec');
-    } else {
-      // Механический режим — восстанавливаем сохранённый блок/линию
-      const savedLine = localStorage.getItem('cl_editor_line');
-      const savedBlock = localStorage.getItem('cl_editor_block');
-
-      if (savedLine && savedBlock && typeof openEditorLine === 'function') {
-        openEditorLine(savedLine);
-      } else if (savedBlock && typeof openEditorBlock === 'function') {
-        openEditorBlock(savedBlock);
-      } else {
-        if (blocksView) blocksView.style.display = 'block';
-        if (typeof renderEditorBlocksView === 'function') renderEditorBlocksView();
-      }
-
-      // Синхронизируем подсветку кнопок переключателя
-      if (typeof switchEditorMode === 'function') {
-        // Вызываем только для подсветки, но не для смены контента
-        document.querySelectorAll('#editorModeSwitch .editor-mode-btn').forEach(btn => {
-          btn.classList.toggle('active', btn.dataset.mode === 'mech');
-        });
-      }
-    }
+if (tabName === 'editor') {
+  // Восстановить режим (мех или элек)
+  const savedMode = localStorage.getItem('cl_editor_mode') || 'mech';
+  if (typeof switchEditorModeInline === 'function') {
+    switchEditorModeInline(savedMode);
   }
 
+  // Обновить UI (чип, крошки, счётчики)
+  if (typeof updateEditorLineContext === 'function') updateEditorLineContext();
+  if (typeof updatePartCounters === 'function') updatePartCounters();
+
+  // Обновить таблицы
+  if (typeof refreshEditorMechTable === 'function') refreshEditorMechTable();
+  if (typeof refreshEditorElecTable === 'function') refreshEditorElecTable();
+
+  // Авто-открытие модалки, если линия не выбрана
+  const savedLine = localStorage.getItem('cl_editor_line');
+  const allLines = typeof getLines === 'function' ? getLines() : [];
+  const hasValidLine = savedLine && allLines.includes(savedLine);
+
+  if (!hasValidLine) {
+    if (savedLine) localStorage.removeItem('cl_editor_line');
+    // Небольшая задержка, чтобы панель успела отрисоваться
+    setTimeout(() => {
+      if (typeof openLinePickerModal === 'function') openLinePickerModal();
+    }, 150);
+  }
+}
   if (tabName === 'history' && typeof renderHistory === 'function') {
     renderHistory();
   }

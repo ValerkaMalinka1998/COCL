@@ -19,6 +19,11 @@ const STORAGE_KEYS = {
   electronicBrandSchedule: 'cl_electronic_brandschedule_v1'
 };
 
+/* ============================================================
+   ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ РЕДАКТОРА
+   ============================================================ */
+
+let currentEditorLine = null;
 
 /* ============================================================
    ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
@@ -114,7 +119,6 @@ const DEFAULT_WORKSHOPS = [
 
 const RECENT_LINES_KEY = 'cl_recent_lines';
 const RECENT_LINES_MAX = 5;
-const EDITOR_LINE_VIEW_KEY = 'cl_editor_line_view';   // 'tree' | 'list'
 
 /* --- Недавние линии --- */
 function getRecentLines() {
@@ -144,17 +148,6 @@ function addRecentLine(line) {
   try {
     localStorage.setItem(RECENT_LINES_KEY, JSON.stringify(next));
   } catch (e) {}
-}
-
-/* --- Режим просмотра (tree / list) --- */
-function getEditorLineViewMode() {
-  try {
-    const m = localStorage.getItem(EDITOR_LINE_VIEW_KEY);
-    return (m === 'list') ? 'list' : 'tree';
-  } catch (e) { return 'tree'; }
-}
-function setEditorLineViewMode(mode) {
-  try { localStorage.setItem(EDITOR_LINE_VIEW_KEY, mode); } catch (e) {}
 }
 
 /* Машины для линий — по умолчанию пустые (заполняются в Настройках) */
@@ -402,291 +395,6 @@ function bindModalBackdropClose(modalId) {
   });
 }
 
-/* ============================================================
-   ЭКРАН 1: БЛОКИ
-   ============================================================ */
-function renderEditorBlocksView() {
-  const list = $('#editorBlocksList');
-  if (!list) return;
-
-  const blocks = getBlocks();
-  if (!blocks.length) {
-    list.innerHTML = '<div class="empty-state">Блоков нет. Добавьте их в Настройках.</div>';
-    return;
-  }
-
-  const allStandards = getStandards();
-
-  list.innerHTML = '<div class="blocks-grid">' + blocks.map(b => {
-    const blockLines = (b.lines || []).filter(l => getLines().includes(l));
-    const totalStandards = allStandards.filter(s => blockLines.includes(s.line)).length;
-    const linesText = blockLines.length
-      ? blockLines.map(escapeHtml).join(', ')
-      : '<span style="color:var(--accent-red);font-style:italic">— нет линий</span>';
-
-    return `
-      <div class="block-tile" onclick="openEditorBlock('${b.id}')">
-        <div class="block-tile-head">
-          <span class="block-tile-name">${escapeHtml(b.name || 'Без названия')}</span>
-        </div>
-        <div class="block-tile-lines">${linesText}</div>
-        <div class="block-tile-footer">
-          <span class="block-tile-count">${totalStandards} ${pluralizeStandards(totalStandards)}</span>
-          <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openEditorBlock('${b.id}')">
-            Открыть →
-          </button>
-        </div>
-      </div>
-    `;
-  }).join('') + '</div>';
-}
-
-/* ============================================================
-   РЕДАКТОР: экран выбора линии
-   ============================================================ */
-
-/* Показать экран выбора линии */
-function renderEditorSelectLineView() {
-  // Показываем нужные экраны
-  $('#editorSelectLineView').style.display = 'block';
-  $('#editorLineView').style.display = 'none';
-
-  // Отрисовать недавние
-  renderEditorRecentLines();
-
-  // Отрисовать дерево или список
-  const mode = getEditorLineViewMode();
-  document.querySelectorAll('#editorLineViewSwitch .editor-line-view-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.view === mode);
-  });
-
-  renderEditorLinesContent();
-}
-
-/* Отрисовать контент (дерево или список) в зависимости от режима и поиска */
-function renderEditorLinesContent() {
-  const container = $('#editorLinesContent');
-  if (!container) return;
-
-  const mode = getEditorLineViewMode();
-  const query = ($('#editorLineSearch')?.value || '').trim().toLowerCase();
-
-  if (mode === 'list') {
-    renderEditorLineFlatList(query, container);
-  } else {
-    renderEditorLineTree(query, container);
-  }
-}
-
-/* --- Дерево --- */
-function renderEditorLineTree(query, container) {
-  const workshops = getWorkshops();
-
-  // Плоский список линий с контекстом (для счётчика стандартов)
-  const allLinesWithContext = getAllLinesWithContext();
-  const standards = getStandards();
-
-  // Фильтрация по коду линии
-  const matchLine = (line) => {
-    if (!query) return true;
-    return String(line).toLowerCase().includes(query);
-  };
-
-  // Проверяем, есть ли хоть одна линия после фильтра
-  let totalVisible = 0;
-  workshops.forEach(w => {
-    (w.areas || []).forEach(a => {
-      if (Array.isArray(a.blocks)) {
-        a.blocks.forEach(b => {
-          (b.lines || []).forEach(l => { if (matchLine(l)) totalVisible++; });
-        });
-      } else {
-        (a.lines || []).forEach(l => { if (matchLine(l)) totalVisible++; });
-      }
-    });
-  });
-
-  if (totalVisible === 0) {
-    container.innerHTML = query
-      ? `<div class="editor-empty">Ничего не найдено по запросу «${escapeHtml(query)}»</div>`
-      : `<div class="editor-empty">Линий пока нет. Добавьте их в Настройках → Структура производства.</div>`;
-    return;
-  }
-
-  // Функция счётчика стандартов по линии
-  const countStandards = (line) => standards.filter(s => s.line === line).length;
-
-  // Функция рисования чипа линии
-  const renderLineChip = (line) => {
-    const count = countStandards(line);
-    const countText = count > 0 ? `${count} ст.` : 'пусто';
-    return `<button type="button" class="editor-line-chip" data-line="${escapeAttr(line)}">
-      ${escapeHtml(line)}
-      <span class="editor-line-chip-count">${countText}</span>
-    </button>`;
-  };
-
-  let html = '<div class="editor-tree">';
-
-  workshops.forEach(w => {
-    // Собираем блоки/линии по участку
-    let workshopHtml = '';
-    let workshopHasVisibleLines = false;
-
-    (w.areas || []).forEach(a => {
-      let areaHtml = '';
-      let areaHasVisibleLines = false;
-
-      if (Array.isArray(a.blocks)) {
-        // Участок с блоками
-        a.blocks.forEach(b => {
-          const visibleLines = (b.lines || []).filter(matchLine);
-          if (!visibleLines.length) return;
-
-          areaHasVisibleLines = true;
-          workshopHasVisibleLines = true;
-
-          areaHtml += `
-            <div class="editor-tree-block">
-              <div class="editor-tree-block-name">${escapeHtml(b.name)}</div>
-              <div class="editor-tree-lines">
-                ${visibleLines.map(renderLineChip).join('')}
-              </div>
-            </div>
-          `;
-        });
-      } else {
-        // Участок без блоков (PMD)
-        const visibleLines = (a.lines || []).filter(matchLine);
-        if (visibleLines.length) {
-          areaHasVisibleLines = true;
-          workshopHasVisibleLines = true;
-
-          areaHtml += `
-            <div class="editor-tree-lines" style="padding-left:0">
-              ${visibleLines.map(renderLineChip).join('')}
-            </div>
-          `;
-        }
-      }
-
-      if (areaHasVisibleLines) {
-        workshopHtml += `
-          <div class="editor-tree-area">
-            <div class="editor-tree-area-name">${escapeHtml(a.name)}</div>
-            ${areaHtml}
-          </div>
-        `;
-      }
-    });
-
-    if (workshopHasVisibleLines) {
-      html += `
-        <div class="editor-tree-workshop">
-          <div class="editor-tree-workshop-name">${escapeHtml(w.name)}</div>
-          ${workshopHtml}
-        </div>
-      `;
-    }
-  });
-
-  html += '</div>';
-  container.innerHTML = html;
-
-  // Обработчики на чипы линий
-  container.querySelectorAll('.editor-line-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      const line = chip.dataset.line;
-      if (line) openEditorLine(line);
-    });
-  });
-}
-
-/* --- Плоский список --- */
-function renderEditorLineFlatList(query, container) {
-  const allLines = getAllLinesWithContext();
-  const standards = getStandards();
-
-  // Фильтрация
-  const filtered = query
-    ? allLines.filter(x => String(x.line).toLowerCase().includes(query))
-    : allLines;
-
-  if (!filtered.length) {
-    container.innerHTML = query
-      ? `<div class="editor-empty">Ничего не найдено по запросу «${escapeHtml(query)}»</div>`
-      : `<div class="editor-empty">Линий пока нет. Добавьте их в Настройках → Структура производства.</div>`;
-    return;
-  }
-
-  // Сортировка: по цеху → участку → блоку → линии
-  filtered.sort((a, b) => {
-    const wCmp = (a.workshopName || '').localeCompare(b.workshopName || '', 'ru');
-    if (wCmp !== 0) return wCmp;
-    const aCmp = (a.areaName || '').localeCompare(b.areaName || '', 'ru');
-    if (aCmp !== 0) return aCmp;
-    const bCmp = (a.blockName || '').localeCompare(b.blockName || '', 'ru');
-    if (bCmp !== 0) return bCmp;
-    return String(a.line).localeCompare(String(b.line), 'ru');
-  });
-
-  const rows = filtered.map(x => {
-    const context = [x.workshopName, x.areaName, x.blockName].filter(Boolean).join(' / ');
-    const count = standards.filter(s => s.line === x.line).length;
-    const countText = count > 0 ? `${count} ст.` : '';
-
-    return `
-      <div class="editor-flat-row" data-line="${escapeAttr(x.line)}">
-        <span class="editor-flat-line">${escapeHtml(x.line)}</span>
-        <span class="editor-flat-context">${escapeHtml(context)}</span>
-        <span class="editor-flat-count">${countText}</span>
-      </div>
-    `;
-  }).join('');
-
-  container.innerHTML = `<div class="editor-flat-list">${rows}</div>`;
-
-  // Обработчики
-  container.querySelectorAll('.editor-flat-row').forEach(row => {
-    row.addEventListener('click', () => {
-      const line = row.dataset.line;
-      if (line) openEditorLine(line);
-    });
-  });
-}
-
-/* --- Недавние линии --- */
-function renderEditorRecentLines() {
-  const wrap = $('#editorRecentLinesWrap');
-  const chips = $('#editorRecentLines');
-  if (!wrap || !chips) return;
-
-  const recent = getRecentLines();
-
-  if (!recent.length) {
-    wrap.style.display = 'none';
-    return;
-  }
-
-  wrap.style.display = 'block';
-  chips.innerHTML = recent.map(line => `
-    <button type="button" class="editor-recent-chip" data-line="${escapeAttr(line)}">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"/>
-        <polyline points="12 6 12 12 16 14"/>
-      </svg>
-      ${escapeHtml(line)}
-    </button>
-  `).join('');
-
-  chips.querySelectorAll('.editor-recent-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      const line = chip.dataset.line;
-      if (line) openEditorLine(line);
-    });
-  });
-}
-
 /* Склонение: 1 стандарт / 2 стандарта / 5 стандартов */
 function pluralizeStandards(n) {
   const mod10 = n % 10;
@@ -695,27 +403,6 @@ function pluralizeStandards(n) {
   if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'стандарта';
   return 'стандартов';
 }
-
-/* Открыть блок — показать список его линий */
-window.openEditorBlock = function(blockId) {
-  const blocks = getBlocks();
-  const block = blocks.find(b => b.id === blockId);
-  if (!block) return;
-
-  // Скрываем экран блоков, показываем экран линий
-  $('#editorBlocksView').style.display = 'none';
-  $('#editorLinesView').style.display = 'block';
-  $('#editorLineView').style.display = 'none';
-
-  // Заголовок
-  const title = $('#editorLinesTitle');
-  if (title) title.textContent = block.name || 'Без названия';
-
-  // Запоминаем текущий блок для возврата
-  localStorage.setItem('cl_editor_block', blockId);
-
-  renderEditorLinesView(blockId);
-};
 
 /* Кнопка «← Назад к блокам» */
 $('#editorBlocksBackBtn')?.addEventListener('click', () => {
@@ -726,53 +413,7 @@ $('#editorBlocksBackBtn')?.addEventListener('click', () => {
   localStorage.removeItem('cl_editor_line');
   renderEditorBlocksView();
 });
-/* ============================================================
-   РЕДАКТОР СТАНДАРТОВ — СПИСОК ЛИНИЙ
-   ============================================================ */
-function renderEditorLinesView(blockId) {
-  const list = $('#editorLinesList');
-  if (!list) return;
 
-  // Если blockId не передан — берём из localStorage
-  if (!blockId) {
-    blockId = localStorage.getItem('cl_editor_block');
-  }
-
-  let lines = getLines();
-
-  // Фильтруем по блоку
-  if (blockId) {
-    const blocks = getBlocks();
-    const block = blocks.find(b => b.id === blockId);
-    if (block && Array.isArray(block.lines)) {
-      lines = lines.filter(l => block.lines.includes(l));
-    } else {
-      lines = [];
-    }
-  }
-
-  if (!lines.length) {
-    list.innerHTML = '<div class="empty-state">В этом блоке нет линий. Добавьте их в Настройках.</div>';
-    return;
-  }
-
-  const allStandards = getStandards();
-
-  list.innerHTML = lines.map(line => {
-    const count = allStandards.filter(s => s.line === line).length;
-    return `
-      <div class="line-row" style="cursor:pointer" onclick="openEditorLine('${escapeHtml(line).replace(/'/g,"\\'")}')">
-        <div class="line-name">${escapeHtml(line)}</div>
-        <div class="line-brands-preview">
-          <span class="line-counter" style="font-size:14px">${count} ${pluralizeStandards(count)}</span>
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openEditorLine('${escapeHtml(line).replace(/'/g,"\\'")}')">
-          Открыть →
-        </button>
-      </div>
-    `;
-  }).join('');
-}
 /* ============================================================
    РЕДАКТОР — ЭЛЕКТРОННЫЙ РЕЖИМ
    ============================================================ */
@@ -781,69 +422,6 @@ function renderEditorLinesView(blockId) {
 let currentElectronicLine = null;   // выбранная линия
 let currentElectronicMachine = null; // выбранная машина
 
-/* Экран 1: список линий с электронными параметрами */
-function renderElectronicView() {
-  const container = $('#editorElectronicView');
-  if (!container) return;
-
-  currentElectronicLine = null;
-  currentElectronicMachine = null;
-
-  const allParams = getElectronicParams().map(normalizeElectronicParam);
-  const lines = getLines();
-
-  // Для каждой линии — сколько параметров
-  const linesWithCount = lines.map(line => {
-    const count = allParams.filter(p => p.line === line).length;
-    return { line, count };
-  });
-
-  // Показываем только те линии, где есть хотя бы один параметр?
-  // Нет — показываем все, чтобы технолог мог добавить первый.
-  // Но сортируем: сначала те, где параметров больше.
-
-  container.innerHTML = `
-      <div class="blocks-grid">
-        ${linesWithCount.map(({line, count}) => {
-          const scheduleCount = getElectronicBrandScheduleForLine(line).length;
-          const scheduleText = scheduleCount === 0
-            ? '<span style="color:var(--accent-amber);font-style:italic">— расписание не задано</span>'
-            : `${scheduleCount} ${pluralizeDays(scheduleCount)} в расписании`;
-          return `
-            <div class="block-tile" onclick="openElectronicLine('${escapeHtml(line).replace(/'/g,"\\'")}')">
-              <div class="block-tile-head">
-                <span class="block-tile-name">${escapeHtml(line)}</span>
-              </div>
-              <div class="block-tile-lines">
-                ${count === 0
-                  ? '<span style="color:var(--text-dim);font-style:italic">— нет параметров</span>'
-                  : `${count} ${pluralizeParams(count)}`}
-              </div>
-              <div class="block-tile-lines" style="min-height:auto">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;vertical-align:-2px;margin-right:4px">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6"/>
-                  <line x1="8" y1="2" x2="8" y2="6"/>
-                  <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                ${scheduleText}
-              </div>
-              <div class="block-tile-footer" style="flex-wrap:wrap;gap:6px">
-                <span class="block-tile-count">${count > 0 ? count : ''}</span>
-                <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openElectronicBrandSchedule('${escapeHtml(line).replace(/'/g,"\\'")}')" title="Расписание брендов">
-                  📅 Расписание
-                </button>
-                <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openElectronicLine('${escapeHtml(line).replace(/'/g,"\\'")}')">
-                  Открыть →
-                </button>
-              </div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    </div>
-  `;
-}
 
 function pluralizeParams(n) {
   const m10 = n % 10, m100 = n % 100;
@@ -858,133 +436,6 @@ function pluralizeDays(n) {
   return 'дней';
 }
 
-/* Экран 2: список машин на линии + список параметров */
-window.openElectronicLine = function(line) {
-  const container = $('#editorElectronicView');
-  if (!container) return;
-
-  currentElectronicLine = line;
-
-  const params = getElectronicParamsForLine(line);
-  const machines = getMachinesForLine(line);
-
-  // Машины, у которых есть параметры, + все остальные из справочника
-  const machinesSet = new Set(machines);
-  params.forEach(p => machinesSet.add(p.machine));
-  const allMachines = [...machinesSet].filter(Boolean).sort((a, b) => a.localeCompare(b, 'ru'));
-
-  // Счётчики
-  const machinesWithCount = allMachines.map(m => ({
-    machine: m,
-    count: params.filter(p => p.machine === m).length
-  }));
-
-  container.innerHTML = `
-    <div class="card">
-      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px">
-        <button class="btn btn-secondary" id="elecBackBtn">← К линиям</button>
-        <h2 style="margin:0;border:none;padding:0;flex:1;min-width:150px">${escapeHtml(line)} — электронные параметры</h2>
-        <button class="btn btn-primary btn-icon-text" id="elecAddParamBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          <span>Добавить параметр</span>
-        </button>
-      </div>
-
-      ${allMachines.length === 0
-        ? '<div class="empty-state">На этой линии нет машин. Добавьте их в Настройках → «Машины для линий».</div>'
-        : `
-          <div class="elec-machines-grid">
-            ${machinesWithCount.map(({machine, count}) => `
-              <div class="elec-machine-tile" onclick="openElectronicMachine('${escapeHtml(machine).replace(/'/g,"\\'")}')">
-                <div class="elec-machine-tile-name">${escapeHtml(machine)}</div>
-                <div class="elec-machine-tile-count">
-                  ${count === 0
-                    ? '— нет параметров'
-                    : `${count} ${pluralizeParams(count)}`}
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        `}
-    </div>
-  `;
-
-  $('#elecBackBtn')?.addEventListener('click', () => {
-    renderElectronicView();
-  });
-
-  $('#elecAddParamBtn')?.addEventListener('click', () => {
-    // Открываем форму для первой машины из списка
-    if (!allMachines.length) {
-      return showToast('Сначала добавьте машину для линии', true);
-    }
-    currentElectronicMachine = allMachines[0];
-    openElectronicParamForm(null);
-  });
-};
-
-/* Экран 3: список параметров на выбранной машине */
-window.openElectronicMachine = function(machine) {
-  const container = $('#editorElectronicView');
-  if (!container || !currentElectronicLine) return;
-
-  currentElectronicMachine = machine;
-
-  const params = getElectronicParamsForMachine(currentElectronicLine, machine);
-
-  container.innerHTML = `
-    <div class="card">
-      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px">
-        <button class="btn btn-secondary" id="elecBackToLineBtn">← К машинам</button>
-        <h2 style="margin:0;border:none;padding:0;flex:1;min-width:200px">
-          ${escapeHtml(currentElectronicLine)} · ${escapeHtml(machine)}
-        </h2>
-        <button class="btn btn-primary btn-icon-text" id="elecAddParamBtn2">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          <span>Добавить параметр</span>
-        </button>
-      </div>
-
-      ${params.length === 0
-        ? '<div class="empty-state">На этой машине пока нет параметров. Нажмите «Добавить параметр».</div>'
-        : params.map(p => renderElectronicParamRow(p)).join('')}
-    </div>
-  `;
-
-  $('#elecBackToLineBtn')?.addEventListener('click', () => {
-    openElectronicLine(currentElectronicLine);
-  });
-
-  $('#elecAddParamBtn2')?.addEventListener('click', () => {
-    openElectronicParamForm(null);
-  });
-
-  // Обработчики на кнопки параметров (edit / delete / toggle)
-  container.querySelectorAll('[data-elec-edit]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      openElectronicParamForm(btn.dataset.elecEdit);
-    });
-  });
-  container.querySelectorAll('[data-elec-delete]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      deleteElectronicParam(btn.dataset.elecDelete);
-    });
-  });
-  container.querySelectorAll('[data-elec-toggle]').forEach(cb => {
-    cb.addEventListener('change', (e) => {
-      e.stopPropagation();
-      toggleElectronicParamActive(cb.dataset.elecToggle, cb.checked);
-    });
-  });
-};
 
 /* Отрисовка одной строки параметра */
 function renderElectronicParamRow(p) {
@@ -1279,213 +730,15 @@ function updateFreqBlocksVisibility() {
   $('#ep_freqOnceBlock').style.display   = (type === 'once')   ? 'block' : 'none';
 }
 
-/* Открыть линию */
-window.openEditorLine = function(line) {
-  if (!line) return;
-
-  currentEditorLine = line;
-  localStorage.setItem('cl_editor_line', line);
-  addRecentLine(line);
-
-  // Переключаем экраны
-  const selectView = $('#editorSelectLineView');
-  const lineView = $('#editorLineView');
-  if (selectView) selectView.style.display = 'none';
-  if (lineView) lineView.style.display = 'block';
-
-  // Заголовок
-  const title = $('#editorLineTitle');
-  if (title) title.textContent = line;
-
-  // Хлебные крошки
-  renderEditorBreadcrumbs(line);
-
-  // Сброс фильтров
-  const search = $('#editorSearch');
-  if (search) search.value = '';
-  const ft = $('#editorFilterType');    if (ft) ft.value = '';
-  const fp = $('#editorFilterPart');    if (fp) fp.value = '';
-  const fm = $('#editorFilterMachine'); if (fm) fm.value = '';
-  const fn = $('#editorFilterNode');    if (fn) fn.value = '';
-  const fa = $('#editorFilterActive');  if (fa) fa.value = '';
-
-  currentPage = 1;
-
-  // Заполняем фильтры
-  fillEditorMachineFilter(line);
-  fillEditorNodeFilter(line);
-
-  // Рендерим таблицу стандартов
-  renderEditorStandardsList();
-};
-
-/* Заполнить фильтр «Машина» */
-function fillEditorMachineFilter(line) {
-  const select = $('#editorFilterMachine');
-  if (!select) return;
-
-  const machines = typeof getMachinesForLine === 'function'
-    ? getMachinesForLine(line)
-    : [];
-
-  select.innerHTML = '<option value="">Все машины</option>' +
-    machines.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
-}
-
-/* Заполнить фильтр «Узел» */
-function fillEditorNodeFilter(line) {
-  const select = $('#editorFilterNode');
-  if (!select) return;
-
-  const all = getStandards().filter(s => s.line === line);
-  const nodes = [...new Set(all.map(s => s.node).filter(Boolean))];
-  nodes.sort((a, b) => a.localeCompare(b, 'ru'));
-
-  select.innerHTML = '<option value="">Все узлы</option>' +
-    nodes.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
-}
-
-/* Хлебные крошки */
-function renderEditorBreadcrumbs(line) {
-  const container = $('#editorBreadcrumbs');
-  if (!container) return;
-
-  const blockId = localStorage.getItem('cl_editor_block');
-  const blocks = getBlocks();
-  const block = blocks.find(b => b.id === blockId);
-
-  const iconBox = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>';
-  const iconFactory = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M4 20V8l6-4v16"/><path d="M14 20V4l6 4v12"/><line x1="8" y1="10" x2="8" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="8" y1="18" x2="8" y2="18"/><line x1="18" y1="10" x2="18" y2="10"/><line x1="18" y1="14" x2="18" y2="14"/><line x1="18" y1="18" x2="18" y2="18"/></svg>';
-  const iconList = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>';
-
-  let html = '';
-
-  if (block) {
-    html += `<a href="#" class="breadcrumb-link" onclick="event.preventDefault();backToBlock();">${iconBox} ${escapeHtml(block.name || 'Без названия')}</a>`;
-    html += '<span class="breadcrumb-sep">›</span>';
-  }
-
-  html += `<a href="#" class="breadcrumb-link" onclick="event.preventDefault();backToLines();">${iconFactory} ${escapeHtml(line)}</a>`;
-  html += '<span class="breadcrumb-sep">›</span>';
-  html += `<span class="breadcrumb-current">${iconList} Стандарты</span>`;
-
-  container.innerHTML = html;
-}
-
-/* Клик по «📦 Cell2 (LST 1)» в крошках — к списку линий блока */
-window.backToBlock = function() {
-  localStorage.removeItem('cl_editor_line');
-  let currentEditorLine = null;
-
-  $('#editorLineView').style.display = 'none';
-  $('#editorLinesView').style.display = 'block';
-  $('#editorBlocksView').style.display = 'none';
-
-  const blockId = localStorage.getItem('cl_editor_block');
-  const blocks = getBlocks();
-  const block = blocks.find(b => b.id === blockId);
-  if (block) {
-    $('#editorLinesTitle').textContent = block.name || 'Без названия';
-  }
-  renderEditorLinesView(blockId);
-};
-
-/* Клик по «🏭 SD01» в крошках — оставляет на линии, но убирает «назад» */
-window.backToLines = function() {
-  // То же, что и «← Назад к линиям» — но без сброса линии в localStorage
-  // (пользователь вернулся, но может открыть снова)
-  backToBlock();
-};
-
 /* ============================================================
    СПИСОК СТАНДАРТОВ — таблица + пагинация + сортировка
    ============================================================ */
-let sortField = 'oplNumber';   // 'number' | 'oplNumber' | 'title' | 'machine' | 'node'
-let sortDir = 'asc';           // 'asc' | 'desc'
+   
 let currentPage = 1;   // текущая страница пагинации
 let pageSize = 10;     // размер страницы
 /* Пагинация истории — отдельные переменные, чтобы не конфликтовать с редактором */
 let historyPage = 1;
 let historyPageSize = 10;
-
-function getFilteredStandardsForLine() {
-  if (!currentEditorLine) return [];
-
-  const all = getStandards().filter(s => s.line === currentEditorLine);
-  const search = ($('#editorSearch')?.value || '').trim().toLowerCase();
-  const filterType = $('#editorFilterType')?.value || '';
-  const filterPart = $('#editorFilterPart')?.value || '';
-  const filterMachine = $('#editorFilterMachine')?.value || '';
-  const filterNode = $('#editorFilterNode')?.value || '';
-  const filterActive = $('#editorFilterActive')?.value || '';
-
-  let filtered = all;
-
-  if (search) {
-    filtered = filtered.filter(s =>
-      String(s.number || '').toLowerCase().includes(search) ||
-      String(s.oplNumber || '').toLowerCase().includes(search) ||
-      String(s.title || '').toLowerCase().includes(search) ||
-      String(s.node || '').toLowerCase().includes(search) ||
-      String(s.machine || '').toLowerCase().includes(search)
-    );
-  }
-
-  if (filterType) {
-    if (filterType === '__none') {
-      filtered = filtered.filter(s => !s.appliesTo || s.appliesTo.length === 0);
-    } else {
-      filtered = filtered.filter(s => s.appliesTo && s.appliesTo.includes(filterType));
-    }
-  }
-
-  if (filterPart) {
-    filtered = filtered.filter(s => s.nodePart === filterPart);
-  }
-
-  if (filterMachine) {
-    filtered = filtered.filter(s => s.machine === filterMachine);
-  }
-
-  if (filterNode) {
-    filtered = filtered.filter(s => s.node === filterNode);
-  }
-
-  if (filterActive === 'active') {
-    filtered = filtered.filter(s => s.active !== false);
-  } else if (filterActive === 'inactive') {
-    filtered = filtered.filter(s => s.active === false);
-  }
-
-  // Сортировка
-  filtered.sort((a, b) => {
-    let cmp = 0;
-
-    if (sortField === 'number') {
-      const va = Number(a.number) || 999999;
-      const vb = Number(b.number) || 999999;
-      cmp = va - vb;
-    } else if (sortField === 'oplNumber') {
-      // OPL: сначала по машине, потом по номеру OPL
-      const ma = String(a.machine || '').toLowerCase();
-      const mb = String(b.machine || '').toLowerCase();
-      cmp = ma.localeCompare(mb, 'ru');
-      if (cmp === 0) {
-        const oa = String(a.oplNumber || '').toLowerCase();
-        const ob = String(b.oplNumber || '').toLowerCase();
-        cmp = oa.localeCompare(ob, 'ru');
-      }
-    } else {
-      const va = String(a[sortField] || '').toLowerCase();
-      const vb = String(b[sortField] || '').toLowerCase();
-      cmp = va.localeCompare(vb, 'ru');
-    }
-
-    return sortDir === 'asc' ? cmp : -cmp;
-  });
-
-  return { filtered, total: all.length };
-}
 
 /* ============================================================
    СПИСОК СТАНДАРТОВ — таблица + пагинация + сортировка
@@ -1496,305 +749,7 @@ function getFilteredStandardsForLine() {
  * @param {string} field — ключ колонки
  * @returns {string} HTML-строка
  */
-function getSortIcon(field) {
-  if (sortField !== field) return '<span class="sort-idle">↕</span>';
-  return sortDir === 'asc' ? '↑' : '↓';
-}
 
-function renderEditorStandardsList() {
-  const list = $('#editorStandardsList');
-  if (!list || !currentEditorLine) return;
-
-  const result = getFilteredStandardsForLine();
-  const filtered = result.filtered;
-  const total = result.total;
-
-  // Счётчик в тулбаре
-  const counter = $('#editorLineCounter');
-  if (counter) counter.textContent = `${filtered.length} из ${total}`;
-
-  // Пустые состояния
-  if (!total) {
-    list.innerHTML = '<div class="empty-state">Стандартов пока нет. Нажмите «➕ Добавить стандарт».</div>';
-    $('#editorPagination').innerHTML = '';
-    return;
-  }
-  if (!filtered.length) {
-    list.innerHTML = '<div class="empty-state">Ничего не найдено</div>';
-    $('#editorPagination').innerHTML = '';
-    return;
-  }
-
-  // Пагинация — корректируем currentPage, если вышли за пределы
-  const totalPages = Math.ceil(filtered.length / pageSize);
-  if (currentPage > totalPages) currentPage = totalPages;
-  if (currentPage < 1) currentPage = 1;
-
-  const startIdx = (currentPage - 1) * pageSize;
-  const endIdx = Math.min(startIdx + pageSize, filtered.length);
-  const pageItems = filtered.slice(startIdx, endIdx);
-
-// Шапка таблицы
-let html = `
-  <table class="standards-table">
-    <thead>
-      <tr>
-        <th title="Активен / Неактивен">☐</th>
-        <th data-sort="number">№ ${getSortIcon('number')}</th>
-        <th data-sort="oplNumber">№ OPL ${getSortIcon('oplNumber')}</th>
-        <th data-sort="machine">Машина ${getSortIcon('machine')}</th>
-        <th data-sort="node">Узел ${getSortIcon('node')}</th>
-        <th data-sort="title">Название ${getSortIcon('title')}</th>
-        <th>Применять к</th>
-        <th>Действия</th>
-      </tr>
-    </thead>
-    <tbody>
-`;
-
-  // Тело таблицы
-  html += pageItems.map(st => {
-    const typesHtml = (st.appliesTo && st.appliesTo.length)
-      ? st.appliesTo.map(t => {
-          // Класс по названию типа
-          const cls = t === 'ChangeOver' ? 'type-chip-changeover'
-                    : t === 'CL_TO' ? 'type-chip-clto'
-                    : t === 'CL_Conversion' ? 'type-chip-clconv'
-                    : '';
-          // Отображаемая метка
-          const label = t === 'ChangeOver' ? 'Change Over'
-                      : t === 'CL_TO' ? 'CL в ТО'
-                      : t === 'CL_Conversion' ? 'CL в Конвертацию'
-                      : t;
-          return `<span class="type-chip ${cls} type-chip-xs">${escapeHtml(label)}</span>`;
-        }).join('')
-      : '<span class="type-chip-empty">без привязки</span>';
-
-    const isActive = st.active !== false;
-    const rowClass = isActive ? '' : 'standard-inactive';
-    const numText = st.number ? escapeHtml(String(st.number)) : '—';
-    const oplText = escapeHtml(st.oplNumber || '—');
-    const machineText = escapeHtml(st.machine || '—');
-    const titleText = escapeHtml(st.title || '—');
-    const nodeText = escapeHtml(st.node || '—');
-    const partText = st.nodePart
-      ? `<div class="standard-part">${escapeHtml(st.nodePart)}</div>`
-      : '';
-
-    // --- НОВОЕ: бейдж с количеством фото ---
-    const photoCount = Array.isArray(st.photos) ? st.photos.length : 0;
-    const photoBadge = photoCount > 0
-      ? `<span class="photo-badge" title="${photoCount} ${photoCount === 1 ? 'фото' : 'фото'}">
-           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-             <circle cx="8.5" cy="8.5" r="1.5"/>
-             <polyline points="21 15 16 10 5 21"/>
-           </svg>
-           <span>${photoCount}</span>
-         </span>`
-      : '';
-    // --- НОВОЕ: иконка комментария к деактивации ---
-    const isDeactivated = st.active === false;
-    const hasComment = st.deactivationComment && st.deactivationComment.trim().length > 0;
-
-    // Кнопка-иконка: активна только у деактивированных
-    const commentBtnClass = isDeactivated
-      ? (hasComment ? 'std-comment-btn has-comment' : 'std-comment-btn')
-      : 'std-comment-btn inactive';
-
-    // Tooltip: с текстом комментария, если он есть
-    let commentBtnTitle;
-    if (hasComment) {
-      const preview = st.deactivationComment.length > 80
-        ? st.deactivationComment.slice(0, 80).trim() + '…'
-        : st.deactivationComment.trim();
-      commentBtnTitle = `Комментарий: «${preview}» — нажмите, чтобы открыть`;
-    } else {
-      commentBtnTitle = 'Добавить комментарий к деактивации';
-    }
-
-    // Кнопка комментария — только для деактивированных
-    const commentBtn = isDeactivated ? `
-      <button class="${commentBtnClass}"
-              type="button"
-              data-deactivation-comment="${st.id}"
-              title="${escapeAttr(commentBtnTitle)}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-      </button>
-    ` : '';
-return `
-  <tr class="${rowClass}" data-std-id="${st.id}">
-    <td class="td-active">
-      <div class="std-active-cell">
-        <input type="checkbox" class="std-active-cb" ${isActive ? 'checked' : ''}
-               onchange="toggleStandardActive('${st.id}', this.checked)">
-        ${commentBtn}
-      </div>
-    </td>
-    <td>${numText}</td>
-    <td class="td-opl" onclick="openStandardForm('${st.id}')">${oplText}</td>
-    <td>${machineText}</td>
-    <td class="td-node">${nodeText}</td>
-    <td class="td-title" onclick="openStandardForm('${st.id}')">
-      <div class="standard-title">
-        <span class="standard-title-text">${titleText}</span>
-        ${photoBadge}
-      </div>
-      ${partText}
-    </td>
-    <td>${typesHtml}</td>
-    <td class="td-actions">
-      <button class="btn btn-secondary btn-sm btn-icon" onclick="event.stopPropagation();openStandardForm('${st.id}')" title="Изменить">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-        </svg>
-      </button>
-      <button class="btn btn-secondary btn-sm btn-icon" onclick="event.stopPropagation();copyStandardNew('${st.id}')" title="Копировать">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-        </svg>
-      </button>
-      <button class="btn btn-danger btn-sm btn-icon" onclick="event.stopPropagation();deleteStandardNew('${st.id}')" title="Удалить">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="3 6 5 6 21 6"/>
-          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-          <path d="M10 11v6"/>
-          <path d="M14 11v6"/>
-          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-        </svg>
-      </button>
-    </td>
-  </tr>
-`;
-  }).join('');
-
-  html += '</tbody></table>';
-  list.innerHTML = html;
-  // --- Делегирование клика по иконке комментария к деактивации ---
-  list.querySelectorAll('[data-deactivation-comment]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const stdId = btn.dataset.deactivationComment;
-      if (stdId) openDeactivationCommentModal(stdId);
-    });
-  });
-  // Делегирование клика по сортировке — один обработчик на всю таблицу
-  list.querySelector('thead')?.addEventListener('click', (e) => {
-    const th = e.target.closest('th[data-sort]');
-    if (!th) return;
-    const field = th.dataset.sort;
-    if (sortField === field) {
-      sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-    } else {
-      sortField = field;
-      sortDir = 'asc';
-    }
-    currentPage = 1;
-    renderEditorStandardsList();
-  });
-
-  // Пагинация
-  renderPagination(filtered.length, totalPages, startIdx, endIdx);
-}
-
-function renderPagination(totalItems, totalPages, startIdx, endIdx) {
-  const bar = $('#editorPagination');
-  if (!bar) return;
-
-  if (totalPages <= 1 && totalItems <= 10) {
-    bar.innerHTML = `<span class="pagination-info">Показано ${startIdx + 1}–${endIdx} из ${totalItems}</span>`;
-    return;
-  }
-
-  let html = `<span class="pagination-info">Показано ${startIdx + 1}–${endIdx} из ${totalItems}</span>`;
-  html += '<div class="pagination-controls">';
-
-  // Назад
-  html += `<button class="pagination-btn" ${currentPage === 1 ? 'disabled' : ''}
-           onclick="changePage(${currentPage - 1})">←</button>`;
-
-  // Страницы (сокращённо — показываем 5 вокруг текущей)
-  const pages = [];
-  for (let i = 1; i <= totalPages; i++) {
-    if (i === 1 || i === totalPages || Math.abs(i - currentPage) <= 2) {
-      pages.push(i);
-    } else if (pages[pages.length - 1] !== '...') {
-      pages.push('...');
-    }
-  }
-  pages.forEach(p => {
-    if (p === '...') {
-      html += `<span class="pagination-dots">…</span>`;
-    } else {
-      html += `<button class="pagination-btn ${p === currentPage ? 'active' : ''}"
-               onclick="changePage(${p})">${p}</button>`;
-    }
-  });
-
-  // Вперёд
-  html += `<button class="pagination-btn" ${currentPage === totalPages ? 'disabled' : ''}
-           onclick="changePage(${currentPage + 1})">→</button>`;
-
-  // Селектор размера страницы
-  html += `
-    <select class="pagination-size" onchange="changePageSize(this.value)">
-      <option value="10" ${pageSize === 10 ? 'selected' : ''}>10</option>
-      <option value="20" ${pageSize === 20 ? 'selected' : ''}>20</option>
-      <option value="50" ${pageSize === 50 ? 'selected' : ''}>50</option>
-    </select>
-  `;
-
-  html += '</div>';
-  bar.innerHTML = html;
-}
-
-window.changePage = function(page) {
-  currentPage = page;
-  renderEditorStandardsList();
-};
-
-window.changePageSize = function(size) {
-  pageSize = parseInt(size, 10);
-  currentPage = 1;
-  renderEditorStandardsList();
-};
-
-/* Переключение активности стандарта */
-window.toggleStandardActive = function(id, isActive) {
-  const all = getStandards();
-  const st = all.find(s => s.id === id);
-  if (!st) return;
-
-  const wasActive = st.active !== false;
-  const willBeActive = !!isActive;
-
-  // --- При активации: архивируем комментарий, если он есть ---
-  if (!wasActive && willBeActive) {
-    if (st.deactivationComment && st.deactivationComment.trim()) {
-      if (!Array.isArray(st.deactivationHistory)) st.deactivationHistory = [];
-      st.deactivationHistory.push({
-        text: st.deactivationComment.trim(),
-        date: new Date().toISOString()
-      });
-      st.deactivationComment = '';
-    }
-  }
-
-  st.active = willBeActive;
-  setStandards(all);
-  renderEditorStandardsList();
-  renderEditorLinesView(localStorage.getItem('cl_editor_block'));
-
-  if (willBeActive) {
-    showToast('Стандарт активирован');
-  } else {
-    showToast('Стандарт деактивирован');
-  }
-};
 /* ============================================================
    КОММЕНТАРИЙ К ДЕАКТИВАЦИИ
    ============================================================ */
@@ -1906,42 +861,6 @@ const resetPageAndRender = () => {
   renderEditorStandardsList();
 };
 
-$('#editorSearch')?.addEventListener('input', resetPageAndRender);
-$('#editorFilterType')?.addEventListener('change', resetPageAndRender);
-$('#editorFilterPart')?.addEventListener('change', resetPageAndRender);
-$('#editorFilterMachine')?.addEventListener('change', resetPageAndRender);
-$('#editorFilterNode')?.addEventListener('change', resetPageAndRender);
-$('#editorFilterActive')?.addEventListener('change', resetPageAndRender);
-
-/* --- Копирование стандарта --- */
-window.copyStandardNew = function(id) {
-  const st = getStandards().find(s => s.id === id);
-  if (!st) return;
-  const copy = JSON.parse(JSON.stringify(st));
-  copy.id = uid();
-  copy.oplNumber = (st.oplNumber || '') + '-copy';
-  copy.number = '';
-  const all = getStandards();
-  all.push(copy);
-  setStandards(all);
-  renderEditorStandardsList();
-  showToast('Стандарт скопирован');
-  // Открыть форму редактирования копии
-  if (typeof openStandardForm === 'function') {
-    openStandardForm(copy.id);
-  }
-};
-
-/* --- Удаление стандарта --- */
-window.deleteStandardNew = function(id) {
-  const st = getStandards().find(s => s.id === id);
-  if (!st) return;
-  if (!confirm(`Удалить стандарт "${st.oplNumber || st.title}"?`)) return;
-  setStandards(getStandards().filter(s => s.id !== id));
-  renderEditorStandardsList();
-  renderEditorLinesView();
-  showToast('Стандарт удалён');
-};
 /* ============================================================
    ФОРМА СТАНДАРТА — заполнение выпадающего списка машин
    ============================================================ */
@@ -2017,6 +936,44 @@ function openStandardForm(id) {
   $('#sf_title').value = st.title || '';
   $('#sf_node').value = st.node || '';
   $('#sf_nodePart').value = st.nodePart || '';
+    // Часть линии — показываем ТОЛЬКО для SMD
+  (function updateNodePartVisibility() {
+    const lineForCheck = st.line || currentEditorLine || '';
+    const workshopId = getWorkshopIdForLine(lineForCheck);
+    const nodePartSelect = document.getElementById('sf_nodePart');
+    const nodePartField = nodePartSelect ? nodePartSelect.closest('.field') : null;
+    const nodePartLabel = nodePartField ? nodePartField.querySelector('label') : null;
+
+    if (!nodePartField) return;
+
+    if (workshopId === 'smd') {
+      nodePartField.style.display = '';
+      if (nodePartLabel) {
+        nodePartLabel.classList.add('required');
+      }
+    } else {
+      nodePartField.style.display = 'none';
+      if (nodePartLabel) {
+        nodePartLabel.classList.remove('required');
+      }
+      // Значение оставляем (для существующих), но для новых оно пустое
+      if (nodePartSelect) {
+        // не обнуляем — вдруг у стандарта уже была часть
+      }
+    }
+  })();
+    // Часть линии показываем только для SMD
+  const workshopId = getWorkshopIdForLine(st.line || currentEditorLine);
+  const nodePartField = $('#sf_nodePart')?.closest('.field');
+  if (nodePartField) {
+    if (workshopId === 'smd') {
+      nodePartField.style.display = '';
+    } else {
+      nodePartField.style.display = 'none';
+      // Очищаем значение, чтобы не сохранилось случайно
+      $('#sf_nodePart').value = '';
+    }
+  }
   $('#sf_problemDescription').value = st.problemDescription || '';
   $('#sf_controlDescription').value = st.controlDescription || '';
   $('#sf_purpose').value = st.purpose || '';
@@ -2789,7 +1746,10 @@ if (!machine)     return showToast('Укажите машину', true);
 if (!title)       return showToast('Укажите название', true);
 if (!line)        return showToast('Линия не определена', true);
 if (!node)        return showToast('Укажите узел', true);
-if (!nodePart)    return showToast('Выберите часть линии', true);
+const workshopIdForSave = getWorkshopIdForLine(line);
+if (workshopIdForSave === 'smd' && !nodePart) {
+  return showToast('Выберите часть линии', true);
+}
 if (!controlType) return showToast('Выберите тип контроля', true);
 
   // Проверка дубликата OPL № на этой линии + машине
@@ -2870,66 +1830,35 @@ if (!controlType) return showToast('Выберите тип контроля', t
   closeStandardForm();
   showToast(id ? 'Стандарт обновлён' : 'Стандарт добавлен');
 });
-/* ============================================================
-   НАВИГАЦИЯ ВНУТРИ РЕДАКТОРА — назад к списку линий
-   ============================================================ */
-$('#editorBackBtn')?.addEventListener('click', () => {
-  currentEditorLine = null;
-  localStorage.removeItem('cl_editor_line');
-  $('#editorLineView').style.display = 'none';
-  $('#editorLinesView').style.display = 'block';
-  $('#editorBlocksView').style.display = 'none';
 
-  // Заголовок и список — по текущему блоку
-  const blockId = localStorage.getItem('cl_editor_block');
-  const blocks = getBlocks();
-  const block = blocks.find(b => b.id === blockId);
-  if (block) {
-    $('#editorLinesTitle').textContent = block.name || 'Без названия';
-  }
-  renderEditorLinesView(blockId);
-});
-/* Клик по кнопке «Добавить стандарт» */
-$('#editorAddStandardBtn')?.addEventListener('click', () => {
-  openStandardForm(null);
-});
 
 /* ============================================================
    ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМА РЕДАКТОРА (Механический / Электронный)
    ============================================================ */
 
 function switchEditorMode(mode) {
-  const mechView = $('#editorBlocksView');
-  const elecView = $('#editorElectronicView');
-
-  // Скрываем все мех-экраны
-  const mechViews = ['#editorBlocksView', '#editorLinesView', '#editorLineView'];
-  mechViews.forEach(sel => {
-    const el = $(sel);
-    if (el) el.style.display = 'none';
-  });
-  if (elecView) elecView.style.display = 'none';
-
-  if (mode === 'elec') {
-    if (elecView) {
-      elecView.style.display = 'block';
-      renderElectronicView();
-    }
-  } else {
-    // Механический — с учётом сохранённых блоков/линий
-    if (mechView) mechView.style.display = 'block';
-    if (typeof renderEditorBlocksView === 'function') renderEditorBlocksView();
-  }
-
   // Подсветка кнопок
   document.querySelectorAll('#editorModeSwitch .editor-mode-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.mode === mode);
   });
 
-  // Сохраняем выбор
-  try { localStorage.setItem('cl_editor_mode', mode); } catch(e) {}
-}
+  // Показ/скрытие блоков
+  const mechView = $('#editorMechView');
+  const elecView = $('#editorElecView');
+  if (mechView) mechView.style.display = (mode === 'elec') ? 'none' : 'block';
+  if (elecView) elecView.style.display = (mode === 'elec') ? 'block' : 'none';
 
+  // Сохраняем выбор
+  try { localStorage.setItem('cl_editor_mode', mode); } catch (e) {}
+
+  // Обновить UI и таблицу
+  if (typeof updateActiveLineUI === 'function') updateActiveLineUI();
+  if (mode === 'elec') {
+    if (typeof refreshEditorElecTable === 'function') refreshEditorElecTable();
+  } else {
+    if (typeof refreshEditorMechTable === 'function') refreshEditorMechTable();
+  }
+}
 /* Обработчики кнопок переключателя */
 document.querySelectorAll('#editorModeSwitch .editor-mode-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -3421,6 +2350,13 @@ function getBlockForLine(line) {
     }
   }
   return null;
+}
+
+/* Получить ID цеха по линии */
+function getWorkshopIdForLine(line) {
+  if (!line) return null;
+  const ctx = typeof getBlockForLine === 'function' ? getBlockForLine(line) : null;
+  return ctx ? ctx.workshop.id : null;
 }
 
 /* --- Плоский список всех линий с контекстом --- */
@@ -14096,58 +13032,55 @@ $('#resetAllBtn').addEventListener('click', () => {
 });
 
 /* ============================================================
-   РЕДАКТОР: обработчики поиска и переключателя режима
-   ============================================================ */
-
-/* Поиск по линиям */
-$('#editorLineSearch')?.addEventListener('input', () => {
-  const input = $('#editorLineSearch');
-  const clearBtn = $('#editorLineSearchClear');
-  if (clearBtn) {
-    clearBtn.style.display = input.value.trim() ? 'inline-flex' : 'none';
-  }
-  renderEditorLinesContent();
-});
-
-/* Очистка поиска */
-$('#editorLineSearchClear')?.addEventListener('click', () => {
-  const input = $('#editorLineSearch');
-  if (input) {
-    input.value = '';
-    input.focus();
-  }
-  const clearBtn = $('#editorLineSearchClear');
-  if (clearBtn) clearBtn.style.display = 'none';
-  renderEditorLinesContent();
-});
-
-/* Переключатель режима (Дерево / Список) */
-$('#editorLineViewSwitch')?.addEventListener('click', (e) => {
-  const btn = e.target.closest('.editor-line-view-btn');
-  if (!btn) return;
-  const mode = btn.dataset.view;
-  if (!mode) return;
-
-  setEditorLineViewMode(mode);
-  document.querySelectorAll('#editorLineViewSwitch .editor-line-view-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.view === mode);
-  });
-  renderEditorLinesContent();
-});
-
-/* ============================================================
    ИНИЦИАЛИЗАЦИЯ
    ============================================================ */
 function init() {
   fillShifts();
   fillLinesForOperator();
   fillHistoryFilters();
-  renderEditorBlocksView();
   renderSettings();
   fillTopLossTab();
-  fillElectronicTab();      
+  fillElectronicTab();
   initRouter();
   updateNavCounters();
+
+  // ============ ОТЛАДКА АВТО-ОТКРЫТИЯ МОДАЛКИ ============
+  setTimeout(() => {
+    console.log('[AUTO-OPEN] setTimeout сработал');
+
+    const activeTab = localStorage.getItem('cl_active_tab');
+    console.log('[AUTO-OPEN] activeTab =', activeTab);
+
+    if (activeTab !== 'editor') {
+      console.log('[AUTO-OPEN] activeTab !== editor → выход');
+      return;
+    }
+
+    const savedLine = localStorage.getItem('cl_editor_line');
+    const allLines = typeof getLines === 'function' ? getLines() : [];
+    const hasValidLine = savedLine && allLines.includes(savedLine);
+
+    console.log('[AUTO-OPEN] savedLine =', savedLine);
+    console.log('[AUTO-OPEN] allLines.length =', allLines.length);
+    console.log('[AUTO-OPEN] hasValidLine =', hasValidLine);
+    console.log('[AUTO-OPEN] typeof openLinePickerModal =', typeof openLinePickerModal);
+
+    if (!hasValidLine) {
+      if (savedLine) localStorage.removeItem('cl_editor_line');
+
+      if (typeof openLinePickerModal === 'function') {
+        console.log('[AUTO-OPEN] Вызываю openLinePickerModal...');
+        openLinePickerModal();
+        console.log('[AUTO-OPEN] openLinePickerModal вызвана');
+      } else {
+        console.warn('[AUTO-OPEN] openLinePickerModal НЕ определена!');
+      }
+    } else {
+      console.log('[AUTO-OPEN] Линия валидна → обновляю UI');
+      if (typeof updateEditorLineContext === 'function') updateEditorLineContext();
+      if (typeof updatePartCounters === 'function') updatePartCounters();
+    }
+  }, 300);
 }
 /* ============================================================
    Переключатель темы (light / dark)
@@ -14758,256 +13691,7 @@ async function parseBrandsExcel(file) {
 
   return result;
 }
-/* ============================================================
-   ШАБЛОН OPL — кнопка в линии
-   ============================================================ */
-$('#editorDownloadTemplateBtn')?.addEventListener('click', async () => {
-  if (typeof ExcelJS === 'undefined') {
-    return showToast('Библиотека ExcelJS не загружена', true);
-  }
 
-  const wb = new ExcelJS.Workbook();
-  const exampleLine = currentEditorLine || 'SD08';
-
-  // ======================= ЛИСТ 1: «Стандарты» =======================
-  const ws = wb.addWorksheet('Стандарты');
-
-  const headers = [
-    'Часть линии',
-    'Машина',
-    'OPL №',
-    'Узел',
-    'Название',
-    'Линия',
-    'Тип контроля',
-    'Применять к',
-    'Активен',
-    'Описание проблемы',
-    'Описание контроля',
-    'Цель',
-    'Почему создан',
-    'Триггеры',
-    'Top Losses',
-    'Фото'
-  ];
-
-  ws.addRow(headers);
-
-  // Пример-строка
-  ws.addRow([
-    'Maker',                           // Часть линии
-    'SE',                              // Машина
-    'OPL-4.2.1',                       // OPL №
-    'Узел передачи табачных палочек',  // Узел
-    'Давление на передающем устройстве (Паук)', // Название
-    exampleLine,                       // Линия
-    'value_input',                     // Тип контроля
-    'ChangeOver',                      // Применять к
-    'Да',                              // Активен
-    'Отклонение от OPL может приводить к падению табачных палочек',
-    'Показания манометра должны соответствовать значению в т.1',
-    'Предотвращение падения табачных палочек',
-    'Отсутствие контроля приводит к обрывам штранга B1M',
-    'Табак, Материалы',                // Триггеры (для ChangeOver)
-    'Обрыв штранга, Заторы на MAX',    // Top Losses (по названиям)
-    'max-1.jpg, drum.jpg'              // Фото
-  ]);
-
-  // Ширины (под новый порядок)
-  const widths = [12, 10, 14, 30, 34, 10, 14, 18, 10, 34, 34, 30, 30, 22, 30, 30];
-  ws.columns.forEach((col, i) => { col.width = widths[i] || 14; });
-
-  // Стилизация шапки
-  const headerRow = ws.getRow(1);
-  headerRow.height = 40;
-  headerRow.eachCell((cell) => {
-    cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4FA8' } };
-    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-    cell.border = {
-      top:    { style: 'thin', color: { argb: 'FF0A4FA8' } },
-      bottom: { style: 'thin', color: { argb: 'FF0A4FA8' } },
-      left:   { style: 'thin', color: { argb: 'FF0A4FA8' } },
-      right:  { style: 'thin', color: { argb: 'FF0A4FA8' } }
-    };
-  });
-
-  // Стилизация примера
-  const exampleRow = ws.getRow(2);
-  exampleRow.height = 60;
-  exampleRow.eachCell((cell) => {
-    cell.font = { name: 'Calibri', size: 11 };
-    cell.alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
-    cell.border = {
-      top:    { style: 'thin', color: { argb: 'FFCBD2D9' } },
-      bottom: { style: 'thin', color: { argb: 'FFCBD2D9' } },
-      left:   { style: 'thin', color: { argb: 'FFCBD2D9' } },
-      right:  { style: 'thin', color: { argb: 'FFCBD2D9' } }
-    };
-  });
-
-  // Примечания к заголовкам
-  const notes = {
-    1: 'Maker или Packer',
-    2: 'Машина из справочника линии. Если машины нет — добавится автоматически.',
-    3: 'Номер OPL. Уникален в пределах линии + машины. Пример: OPL-4.2.1',
-    4: 'Узел (свободный текст)',
-    5: 'Название стандарта',
-    6: 'Линия, к которой относится стандарт',
-    7: 'ok_not_ok / value_input / range_input',
-    8: 'ChangeOver, CL_TO, CL_Conversion (через запятую)',
-    9: 'Да / Нет. По умолчанию — Да',
-    14: 'Триггеры (для ChangeOver): Табак, Материалы, Фольга / Бумага, Полипропилен, node:Узел',
-    15: 'Названия потерь через запятую (из справочника Top Losses)',
-    16: 'Имена файлов из photos/<line>/<part>/, через запятую'
-  };
-  Object.entries(notes).forEach(([col, text]) => {
-    const cell = ws.getRow(1).getCell(parseInt(col, 10));
-    cell.note = text;
-  });
-
-  // ======================= ЛИСТ 2: «Точки» =======================
-  const ws2 = wb.addWorksheet('Точки');
-
-  const headers2 = [
-    'OPL №',
-    'Машина',
-    'Бренд',
-    '№ точки',
-    'Значение'
-  ];
-
-  ws2.addRow(headers2);
-
-  // Примеры
-  ws2.addRow(['OPL-4.2.1', 'SE', '', 1, '-65 kPa (±10 kPa)']);
-  ws2.addRow(['OPL-4.2.1', 'SE', '', 2, '']);
-  ws2.addRow(['OPL-4.2.1', 'SE', 'Kent', 1, '-60 kPa (±5 kPa)']);
-  ws2.addRow(['OPL-4.2.1', 'SE', 'Kent', 2, '']);
-
-  // Ширины
-  const widths2 = [14, 12, 20, 10, 26];
-  ws2.columns.forEach((col, i) => { col.width = widths2[i] || 14; });
-
-  // Шапка
-  const headerRow2 = ws2.getRow(1);
-  headerRow2.height = 30;
-  headerRow2.eachCell((cell) => {
-    cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4FA8' } };
-    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-    cell.border = {
-      top:    { style: 'thin', color: { argb: 'FF0A4FA8' } },
-      bottom: { style: 'thin', color: { argb: 'FF0A4FA8' } },
-      left:   { style: 'thin', color: { argb: 'FF0A4FA8' } },
-      right:  { style: 'thin', color: { argb: 'FF0A4FA8' } }
-    };
-  });
-
-  // Примечания
-  const notes2 = {
-    1: 'OPL № — должен совпадать со стандартом из листа «Стандарты»',
-    2: 'Машина — должна совпадать со стандартом',
-    3: 'Пусто = «Все бренды». Если указан — стандарт появится у оператора при выборе этого бренда.',
-    4: 'Номер точки: 1, 2, 3, …',
-    5: 'Формат для value_input: «92 ± 5» или «92+-5». Для range_input: «5 до 8» или «5.5 - 8.5». Единицы можно писать рядом: «-65 kPa (±10 kPa)».'
-  };
-  Object.entries(notes2).forEach(([col, text]) => {
-    const cell = ws2.getRow(1).getCell(parseInt(col, 10));
-    cell.note = text;
-  });
-
-  // Стилизация примеров
-  for (let i = 2; i <= 5; i++) {
-    const row = ws2.getRow(i);
-    row.eachCell((cell) => {
-      cell.font = { name: 'Calibri', size: 11 };
-      cell.alignment = { vertical: 'middle', horizontal: 'left' };
-      cell.border = {
-        top:    { style: 'thin', color: { argb: 'FFCBD2D9' } },
-        bottom: { style: 'thin', color: { argb: 'FFCBD2D9' } },
-        left:   { style: 'thin', color: { argb: 'FFCBD2D9' } },
-        right:  { style: 'thin', color: { argb: 'FFCBD2D9' } }
-      };
-    });
-  }
-
-  // ======================= ЛИСТ 3: «Инструкция» =======================
-  const wsInfo = wb.addWorksheet('Инструкция');
-  wsInfo.columns = [{ width: 100 }];
-
-  const info = [
-    ['📋 Шаблон импорта OPL (v2)'],
-    [''],
-    ['КАК ПОЛЬЗОВАТЬСЯ:'],
-    ['1. Заполните лист «Стандарты» — по одной строке на стандарт.'],
-    ['2. Лист «Точки» — НЕОБЯЗАТЕЛЬНЫЙ.'],
-    ['   • Если вы не хотите заполнять точки в Excel — просто удалите лист «Точки».'],
-    ['     Стандарты создадутся без точек, а точки вы заполните в редакторе.'],
-    ['   • Если заполняете — по одной строке на каждую точку.'],
-    ['3. Лист «Инструкция» можно удалить перед загрузкой.'],
-    ['4. Сохраните файл в .xlsx.'],
-    ['5. В приложении: Редактор → открыть линию → «Импорт из Excel».'],
-    [''],
-    ['============================================================'],
-    ['ЛИСТ «СТАНДАРТЫ» — ОБЯЗАТЕЛЬНЫЕ ПОЛЯ:'],
-    ['============================================================'],
-    ['  • OPL № — номер вида OPL-4.2.1.'],
-    ['      Уникален в пределах линии + машины.'],
-    ['  • Часть линии — Maker или Packer.'],
-    ['  • Машина — обозначение (SE, M1, …). Если её нет в списке линии — добавится автоматически.'],
-    ['  • Узел — свободный текст.'],
-    ['  • Название — краткое описание стандарта.'],
-    ['  • Линия — код линии (например, SD08).'],
-    ['  • Тип контроля — один из: ok_not_ok / value_input / range_input.'],
-    ['      ok_not_ok — проверка «ОК / Не ОК» (без точек).'],
-    ['      value_input — число ± допуск (92 ± 5).'],
-    ['      range_input — диапазон (5 до 8).'],
-    ['  • Применять к — через запятую: ChangeOver, CL_TO, CL_Conversion.'],
-    ['  • Активен — Да или Нет. По умолчанию Да.'],
-    [''],
-    ['============================================================'],
-    ['ЛИСТ «СТАНДАРТЫ» — ОПЦИОНАЛЬНЫЕ ПОЛЯ:'],
-    ['============================================================'],
-    ['  • Описание проблемы / Описание контроля / Цель / Почему создан — свободный текст.'],
-    ['  • Триггеры — через запятую. Для ChangeOver.'],
-    ['      Пример: Табак, Материалы, node:Узел передачи'],
-    ['  • Top Losses — названия потерь через запятую.'],
-    ['      Пример: Обрыв штранга, Заторы на MAX'],
-    ['  • Фото — имена файлов из photos/<Линия>/<Часть>/, через запятую.'],
-    [''],
-    ['============================================================'],
-    ['ЛИСТ «ТОЧКИ» (необязательный):'],
-    ['============================================================'],
-    ['  Строки связываются со стандартами по ключу OPL № + Машина.'],
-    [''],
-    ['  • OPL № — должен совпадать с листом «Стандарты».'],
-    ['  • Машина — должна совпадать.'],
-    ['  • Бренд — пусто = «Все бренды». Иначе — конкретный бренд из справочника.'],
-    ['  • № точки — 1, 2, 3, …'],
-    ['  • Значение — норма для этой точки:'],
-    ['      Для value_input: «92 ± 5», «92+-5».'],
-    ['      Для range_input: «5 до 8», «5.5 - 8.5».'],
-    ['      Можно писать с единицами: «-65 kPa (±10 kPa)».'],
-    [''],
-    ['ПРАВИЛА ИМПОРТА:'],
-    ['  • Если машины нет в списке линии — она добавится автоматически.'],
-    ['  • Если потеря (Top Losses) не найдена по названию — она пропускается.'],
-    ['  • Если триггер не распознан — он пропускается.'],
-    ['  • Дубликаты по OPL № + Машина — пропускаются.'],
-    ['  • Пустые строки игнорируются.'],
-    ['']
-  ];
-
-  info.forEach(([text]) => wsInfo.addRow([text]));
-  wsInfo.getRow(1).font = { bold: true, size: 16, color: { argb: 'FF0A4FA8' } };
-
-  // ======================= Скачивание =======================
-  const buf = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  downloadBlob(blob, 'template_opl_' + (currentEditorLine || 'line') + '.xlsx');
-  showToast('Шаблон скачан');
-});
 /* ============================================================
    ЭКСПОРТ СТАНДАРТОВ ЛИНИИ В EXCEL
    ============================================================ */
@@ -15275,41 +13959,7 @@ $('#editorExportBtn')?.addEventListener('click', async () => {
   downloadBlob(blob, `standards_${currentEditorLine}_${ts}.xlsx`);
   showToast(`Экспортировано: ${standards.length} стандарт(ов)`);
 });
-/* ============================================================
-   ИМПОРТ СТАНДАРТОВ В ЛИНИЮ
-   ============================================================ */
-$('#editorUploadBtn')?.addEventListener('click', () => {
-  if (!currentEditorLine) {
-    return showToast('Сначала откройте линию', true);
-  }
-  $('#editorUploadInput').click();
-});
 
-$('#editorUploadInput')?.addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  e.target.value = '';
-
-  if (!currentEditorLine) {
-    return showToast('Сначала откройте линию', true);
-  }
-
-  try {
-    const result = await parseStandardsExcelV3(file, currentEditorLine);
-    showImportReport(result, 'editorStandardsList');
-
-    if (result.added > 0) {
-      renderEditorStandardsList();
-      renderEditorLinesView();
-      showToast(`Добавлено стандартов: ${result.added}`);
-    } else {
-      showToast('Новых стандартов не найдено', true);
-    }
-  } catch (err) {
-    console.error(err);
-    showToast('Ошибка чтения файла: ' + err.message, true);
-  }
-});
 /* ============================================================
    COCL: Сворачивание верхней части и показ чек-листа
    ============================================================ */
@@ -15660,7 +14310,7 @@ async function parseStandardsExcelV3(file, targetLine) {
   if (result.addedMachines.length > 0) {
     setLineMachines(lineMachines);
     if (typeof renderLineMachinesSettings === 'function') renderLineMachinesSettings();
-    if (typeof fillEditorMachineFilter === 'function') fillEditorMachineFilter(targetLine);
+    if (typeof fillEditorFilters === 'function') fillEditorFilters();
   }
 
   result.pointsImported = pointsImported;
@@ -15678,5 +14328,1983 @@ document.addEventListener('click', (e) => {
   if (!parent) return;
   parent.classList.toggle('expanded');
 });
+/* ============================================================
+   ВЫБОР ЛИНИИ — компактный dropdown (#linePickerModal)
+   ============================================================ */
+
+const linePickerState = {
+  workshopId: null,
+  areaId: null,
+  blockId: null
+};
+
+function resetLinePickerState() {
+  linePickerState.workshopId = null;
+  linePickerState.areaId = null;
+  linePickerState.blockId = null;
+}
+
+/* --- Открытие / закрытие --- */
+function openLinePickerModal() {
+  const modal = $('#linePickerModal');
+  if (!modal) return;
+
+  const search = $('#linePickerSearch');
+  if (search) search.value = '';
+
+  resetLinePickerState();
+  renderLinePickerModal('');
+  openModal(modal);
+  setTimeout(() => { if (search) search.focus(); }, 100);
+}
+
+function closeLinePickerModal() {
+  closeModal('#linePickerModal');
+  resetLinePickerState();
+}
+
+/* --- Главный рендер --- */
+function renderLinePickerModal(query = '') {
+  const body = $('#linePickerBody');
+  if (!body) return;
+
+  const q = String(query || '').trim().toLowerCase();
+
+  // 1) Поиск — плоский список найденных линий
+  if (q) {
+    renderLinePickerSearch(q, body);
+    return;
+  }
+
+  // 2) Есть выбранный цех — рендерим его содержимое
+  if (linePickerState.workshopId) {
+    renderLinePickerWorkshopView(body);
+    return;
+  }
+
+  // 3) Стартовый экран — плитки цехов
+  renderLinePickerStart(body);
+}
+
+/* --- Стартовый экран: недавние + плитки цехов --- */
+function renderLinePickerStart(body) {
+  let html = renderLinePickerRecent();
+
+  const workshops = getWorkshops();
+  if (!workshops.length) {
+    html += '<div class="line-picker-empty">Цехов нет. Добавьте их в Настройках.</div>';
+    body.innerHTML = html;
+    bindLinePickerEvents(body);
+    return;
+  }
+
+  const allLines = getAllLinesWithContext();
+
+  html += '<div class="line-picker-tiles">';
+  workshops.forEach(w => {
+    const count = allLines.filter(x => x.workshopId === w.id).length;
+    const sub = count > 0 ? `${count} ${pluralizeLines(count)}` : 'нет линий';
+
+    html += `
+      <button type="button" class="line-picker-tile" data-workshop-id="${escapeAttr(w.id)}">
+        <span class="line-picker-tile-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <line x1="3" y1="9" x2="21" y2="9"/>
+            <line x1="9" y1="21" x2="9" y2="9"/>
+          </svg>
+        </span>
+        <span class="line-picker-tile-info">
+          <span class="line-picker-tile-name">${escapeHtml(w.name)}</span>
+          <span class="line-picker-tile-sub">${sub}</span>
+        </span>
+      </button>
+    `;
+  });
+  html += '</div>';
+
+  body.innerHTML = html;
+  bindLinePickerEvents(body);
+}
+
+/* --- Экран внутри цеха --- */
+function renderLinePickerWorkshopView(body) {
+  const w = getWorkshop(linePickerState.workshopId);
+  if (!w) {
+    resetLinePickerState();
+    renderLinePickerStart(body);
+    return;
+  }
+
+  const area = linePickerState.areaId
+    ? (w.areas || []).find(a => a.id === linePickerState.areaId)
+    : null;
+
+  const block = (area && linePickerState.blockId && Array.isArray(area.blocks))
+    ? area.blocks.find(b => b.id === linePickerState.blockId)
+    : null;
+
+  let html = renderLinePickerRecent();
+  html += renderLinePickerBreadcrumbs(w, area, block);
+
+  if (block) {
+    html += renderLinePickerRowsForBlock(block, w, area);
+  } else if (area) {
+    if (Array.isArray(area.blocks) && area.blocks.length) {
+      html += renderLinePickerBlockTiles(area, w);
+    } else {
+      html += renderLinePickerRowsForArea(area, w);
+    }
+  } else {
+    html += renderLinePickerAreaTiles(w);
+  }
+
+  body.innerHTML = html;
+  bindLinePickerEvents(body);
+}
+
+/* --- Недавние --- */
+function renderLinePickerRecent() {
+  const recent = getRecentLines();
+  if (!recent.length) return '';
+
+  return `
+    <div class="line-picker-recent">
+      <div class="line-picker-recent-label">Недавние</div>
+      <div class="line-picker-recent-chips">
+        ${recent.map(line => `
+          <button type="button" class="line-picker-recent-chip" data-line="${escapeAttr(line)}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            ${escapeHtml(line)}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+/* --- Крошки внутри модалки --- */
+function renderLinePickerBreadcrumbs(w, area, block) {
+  const crumbs = [];
+  crumbs.push(`<button type="button" class="line-picker-crumb" data-crumb="root">Цеха</button>`);
+
+  if (w) {
+    if (area && block) {
+      crumbs.push(`<button type="button" class="line-picker-crumb" data-crumb="workshop" data-workshop-id="${escapeAttr(w.id)}">${escapeHtml(w.name)}</button>`);
+      crumbs.push(`<button type="button" class="line-picker-crumb" data-crumb="area" data-workshop-id="${escapeAttr(w.id)}" data-area-id="${escapeAttr(area.id)}">${escapeHtml(area.name)}</button>`);
+      crumbs.push(`<span class="line-picker-crumb-current">${escapeHtml(block.name)}</span>`);
+    } else if (area) {
+      crumbs.push(`<button type="button" class="line-picker-crumb" data-crumb="workshop" data-workshop-id="${escapeAttr(w.id)}">${escapeHtml(w.name)}</button>`);
+      crumbs.push(`<span class="line-picker-crumb-current">${escapeHtml(area.name)}</span>`);
+    } else {
+      crumbs.push(`<span class="line-picker-crumb-current">${escapeHtml(w.name)}</span>`);
+    }
+  }
+
+  return `<div class="line-picker-breadcrumbs">${crumbs.join('<span class="line-picker-crumb-sep">›</span>')}</div>`;
+}
+
+/* --- Плитки участков --- */
+function renderLinePickerAreaTiles(w) {
+  const areas = (w.areas || []);
+  if (!areas.length) {
+    return '<div class="line-picker-empty">В этом цехе нет участков</div>';
+  }
+
+  let html = '<div class="line-picker-tiles">';
+  areas.forEach(a => {
+    let count = 0;
+    if (Array.isArray(a.blocks)) {
+      a.blocks.forEach(b => { count += (b.lines || []).length; });
+    } else {
+      count = (a.lines || []).length;
+    }
+    const sub = count > 0 ? `${count} ${pluralizeLines(count)}` : 'нет линий';
+
+    html += `
+      <button type="button" class="line-picker-tile" data-workshop-id="${escapeAttr(w.id)}" data-area-id="${escapeAttr(a.id)}">
+        <span class="line-picker-tile-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+        </span>
+        <span class="line-picker-tile-info">
+          <span class="line-picker-tile-name">${escapeHtml(a.name)}</span>
+          <span class="line-picker-tile-sub">${sub}</span>
+        </span>
+      </button>
+    `;
+  });
+  html += '</div>';
+  return html;
+}
+
+/* --- Плитки блоков --- */
+function renderLinePickerBlockTiles(area, w) {
+  const blocks = area.blocks || [];
+  if (!blocks.length) {
+    return '<div class="line-picker-empty">В этом участке нет блоков</div>';
+  }
+
+  let html = '<div class="line-picker-tiles">';
+  blocks.forEach(b => {
+    const count = (b.lines || []).length;
+    const sub = count > 0 ? `${count} ${pluralizeLines(count)}` : 'нет линий';
+
+    html += `
+      <button type="button" class="line-picker-tile" data-workshop-id="${escapeAttr(w.id)}" data-area-id="${escapeAttr(area.id)}" data-block-id="${escapeAttr(b.id)}">
+        <span class="line-picker-tile-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          </svg>
+        </span>
+        <span class="line-picker-tile-info">
+          <span class="line-picker-tile-name">${escapeHtml(b.name)}</span>
+          <span class="line-picker-tile-sub">${sub}</span>
+        </span>
+      </button>
+    `;
+  });
+  html += '</div>';
+  return html;
+}
+
+/* --- Строки линий участка (без блоков) --- */
+function renderLinePickerRowsForArea(area, w) {
+  const lines = (area.lines || []).filter(Boolean);
+  if (!lines.length) {
+    return '<div class="line-picker-empty">В этом участке нет линий</div>';
+  }
+
+  const ctx = `${w.name} / ${area.name}`;
+  return '<div class="line-picker-rows">' + lines.map(line => `
+    <button type="button" class="line-picker-row" data-line="${escapeAttr(line)}">
+      <span class="line-picker-row-line">${escapeHtml(line)}</span>
+      <span class="line-picker-row-context">${escapeHtml(ctx)}</span>
+    </button>
+  `).join('') + '</div>';
+}
+
+/* --- Строки линий блока --- */
+function renderLinePickerRowsForBlock(block, w, area) {
+  const lines = (block.lines || []).filter(Boolean);
+  if (!lines.length) {
+    return '<div class="line-picker-empty">В этом блоке нет линий</div>';
+  }
+
+  const ctx = `${w.name} / ${area.name} / ${block.name}`;
+  return '<div class="line-picker-rows">' + lines.map(line => `
+    <button type="button" class="line-picker-row" data-line="${escapeAttr(line)}">
+      <span class="line-picker-row-line">${escapeHtml(line)}</span>
+      <span class="line-picker-row-context">${escapeHtml(ctx)}</span>
+    </button>
+  `).join('') + '</div>';
+}
+
+/* --- Результаты поиска --- */
+function renderLinePickerSearch(q, body) {
+  const all = getAllLinesWithContext();
+  const filtered = all.filter(x => String(x.line).toLowerCase().includes(q));
+
+  let html = renderLinePickerRecent();
+
+  if (!filtered.length) {
+    html += `<div class="line-picker-empty">Ничего не найдено по запросу «${escapeHtml(q)}»</div>`;
+    body.innerHTML = html;
+    bindLinePickerEvents(body);
+    return;
+  }
+
+  filtered.sort((a, b) => {
+    const w = (a.workshopName || '').localeCompare(b.workshopName || '', 'ru');
+    if (w !== 0) return w;
+    const ar = (a.areaName || '').localeCompare(b.areaName || '', 'ru');
+    if (ar !== 0) return ar;
+    const bl = (a.blockName || '').localeCompare(b.blockName || '', 'ru');
+    if (bl !== 0) return bl;
+    return String(a.line).localeCompare(String(b.line), 'ru');
+  });
+
+  html += '<div class="line-picker-rows">';
+  filtered.forEach(x => {
+    const ctx = [x.workshopName, x.areaName, x.blockName].filter(Boolean).join(' / ');
+    html += `
+      <button type="button" class="line-picker-row" data-line="${escapeAttr(x.line)}">
+        <span class="line-picker-row-line">${escapeHtml(x.line)}</span>
+        <span class="line-picker-row-context">${escapeHtml(ctx)}</span>
+      </button>
+    `;
+  });
+  html += '</div>';
+
+  body.innerHTML = html;
+  bindLinePickerEvents(body);
+}
+
+/* --- Привязка обработчиков --- */
+function bindLinePickerEvents(container) {
+  // Недавние
+  container.querySelectorAll('.line-picker-recent-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const line = chip.dataset.line;
+      if (line) selectLine(line);
+    });
+  });
+
+  // Плитки
+  container.querySelectorAll('.line-picker-tile').forEach(tile => {
+    tile.addEventListener('click', () => {
+      const wId = tile.dataset.workshopId;
+      const aId = tile.dataset.areaId || null;
+      const bId = tile.dataset.blockId || null;
+      if (!wId) return;
+      linePickerState.workshopId = wId;
+      linePickerState.areaId = aId;
+      linePickerState.blockId = bId;
+      renderLinePickerModal('');
+    });
+  });
+
+  // Крошки
+  container.querySelectorAll('.line-picker-crumb').forEach(crumb => {
+    crumb.addEventListener('click', () => {
+      const kind = crumb.dataset.crumb;
+      if (kind === 'root') resetLinePickerState();
+      else if (kind === 'workshop') { linePickerState.areaId = null; linePickerState.blockId = null; }
+      else if (kind === 'area') { linePickerState.blockId = null; }
+      renderLinePickerModal('');
+    });
+  });
+
+  // Строки
+  container.querySelectorAll('.line-picker-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const line = row.dataset.line;
+      if (line) selectLine(line);
+    });
+  });
+}
+
+/* ============================================================
+   Выбор линии
+   ============================================================ */
+
+function selectLine(line) {
+  if (!line) return;
+
+  localStorage.setItem('cl_editor_line', line);
+  currentEditorLine = line;   // ← глобальная для формы стандарта
+  addRecentLine(line);
+
+  // Сбрасываем пагинацию и выделение
+  editorTableState.mechPage = 1;
+  editorTableState.elecPage = 1;
+  editorTableState.mechSelected.clear();
+  editorTableState.elecSelected.clear();
+
+  // Обновляем фильтры (пересобираем опции)
+  if (typeof fillEditorFilters === 'function') fillEditorFilters();
+
+  // Выставляем фильтр «Линия» = выбранная линия
+  const emLine = document.getElementById('emFilterLine');
+  if (emLine) emLine.value = line;
+  const eeLine = document.getElementById('eeFilterLine');
+  if (eeLine) eeLine.value = line;
+
+  // Обновляем UI
+  updateEditorLineContext();
+  updatePartCounters();
+
+  // Перерисовка таблиц
+  if (typeof refreshEditorMechTable === 'function') refreshEditorMechTable();
+  if (typeof refreshEditorElecTable === 'function') refreshEditorElecTable();
+
+  closeLinePickerModal();
+  showToast('Выбрана линия: ' + line);
+}
+
+/* ============================================================
+   Обновление UI: чип + крошки + счётчики
+   ============================================================ */
+
+function updateEditorLineContext() {
+  const line = localStorage.getItem('cl_editor_line') || '';
+
+  ['em', 'ee'].forEach(prefix => {
+    const codeEl = $(`#${prefix}LinePillCode`);
+    const crumbsEl = $(`#${prefix}EditorCrumbs`);
+    const countersEl = $(`#${prefix}PartCounters`);
+    const modeSwitchEl = $(`#${prefix}ModeSwitch`);
+
+    // Чип линии
+    if (codeEl) {
+      if (line) {
+        const ctx = typeof getBlockForLine === 'function' ? getBlockForLine(line) : null;
+        const workshopName = ctx ? ctx.workshop.name : '';
+        codeEl.textContent = line + (workshopName ? ' · ' + workshopName : '');
+      } else {
+        codeEl.textContent = 'Выбрать линию';
+      }
+    }
+
+    // Крошки — только если линия выбрана
+    if (crumbsEl) {
+      if (line) {
+        crumbsEl.innerHTML = buildEditorCrumbs(line);
+        crumbsEl.style.display = 'flex';
+      } else {
+        crumbsEl.innerHTML = '';
+        crumbsEl.style.display = 'none';
+      }
+    }
+
+    // Счётчики — только если линия выбрана
+    if (countersEl) {
+      countersEl.style.display = line ? 'inline-flex' : 'none';
+    }
+
+    // Переключатель Мех/Элек — скрыт, пока линия не выбрана
+    if (modeSwitchEl) {
+      modeSwitchEl.style.display = line ? 'inline-flex' : 'none';
+    }
+  });
+  // Обновляем опции фильтров
+  if (typeof fillEditorFilters === 'function') fillEditorFilters();
+}
+/* --- Крошки над панелью --- */
+function buildEditorCrumbs(line) {
+  const ctx = typeof getBlockForLine === 'function' ? getBlockForLine(line) : null;
+  if (!ctx) return '';
+
+  const iconWorkshop = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M4 20V8l6-4v16"/><path d="M14 20V4l6 4v12"/></svg>';
+  const iconArea = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+  const iconBlock = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>';
+  const iconLine = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>';
+
+  let html = '';
+  html += `<button type="button" class="editor-crumb" data-crumb="open-picker">${iconWorkshop} ${escapeHtml(ctx.workshop.name)}</button>`;
+  html += '<span class="editor-crumb-sep">›</span>';
+  html += `<span class="editor-crumb-current">${iconArea} ${escapeHtml(ctx.area.name)}</span>`;
+
+  if (ctx.block) {
+    html += '<span class="editor-crumb-sep">›</span>';
+    html += `<span class="editor-crumb-current">${iconBlock} ${escapeHtml(ctx.block.name)}</span>`;
+  }
+
+  html += '<span class="editor-crumb-sep">›</span>';
+  html += `<span class="editor-crumb-current">${iconLine} ${escapeHtml(line)}</span>`;
+
+  return html;
+}
+
+/* ============================================================
+   Счётчики Maker / Packer
+   ============================================================ */
+
+function updatePartCounters() {
+  const line = localStorage.getItem('cl_editor_line') || '';
+  if (!line) return;
+
+  const standards = getStandards().filter(s => s.line === line);
+
+  const countPart = (part) => {
+    const all = standards.filter(s => s.nodePart === part).length;
+    const active = standards.filter(s => s.nodePart === part && s.active !== false).length;
+    return { all, active };
+  };
+
+  const m = countPart('Maker');
+  const p = countPart('Packer');
+
+  ['em', 'ee'].forEach(prefix => {
+    const mk = $(`#${prefix}CounterMaker`);
+    const pk = $(`#${prefix}CounterPacker`);
+    if (mk) mk.textContent = `${m.active}/${m.all}`;
+    if (pk) pk.textContent = `${p.active}/${p.all}`;
+
+    // Синхронизируем активное состояние переключателя с текущим фильтром
+    const switchEl = $(`#${prefix}PartCounters`);
+    const currentPart = ($(`#${prefix}FilterPart`)?.value) || '';
+    if (switchEl) {
+      switchEl.querySelectorAll('.editor-part-switch-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.part === currentPart);
+      });
+    }
+  });
+}
+
+/* ============================================================
+   Переключатель режима внутри панели
+   ============================================================ */
+
+function switchEditorModeInline(mode) {
+  // Подсветка кнопок в обеих панелях
+  document.querySelectorAll('#emModeSwitch .editor-mode-inline-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+  document.querySelectorAll('#eeModeSwitch .editor-mode-inline-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+
+  // Показ панелей (работает ВСЕГДА, даже без линии)
+  const mechView = $('#editorMechView');
+  const elecView = $('#editorElecView');
+  if (mechView) mechView.style.display = (mode === 'elec') ? 'none' : 'block';
+  if (elecView) elecView.style.display = (mode === 'elec') ? 'block' : 'none';
+
+  try { localStorage.setItem('cl_editor_mode', mode); } catch (e) {}
+
+  // Обновить UI (если линия есть — обновит, если нет — просто ничего)
+  updateEditorLineContext();
+  updatePartCounters();
+
+  // Обновить таблицы
+  if (mode === 'elec') {
+    if (typeof refreshEditorElecTable === 'function') refreshEditorElecTable();
+  } else {
+    if (typeof refreshEditorMechTable === 'function') refreshEditorMechTable();
+  }
+}
+/* ============================================================
+   Сброс линии
+   ============================================================ */
+
+function clearEditorLine() {
+  localStorage.removeItem('cl_editor_line');
+  currentEditorLine = null;
+
+  // Сброс фильтра «Линия»
+  const emLine = document.getElementById('emFilterLine');
+  if (emLine) emLine.value = '';
+  const eeLine = document.getElementById('eeFilterLine');
+  if (eeLine) eeLine.value = '';
+
+  // Сброс пагинации и выделения
+  editorTableState.mechPage = 1;
+  editorTableState.elecPage = 1;
+  editorTableState.mechSelected.clear();
+  editorTableState.elecSelected.clear();
+
+  updateEditorLineContext();
+
+  if (typeof refreshEditorMechTable === 'function') refreshEditorMechTable();
+  if (typeof refreshEditorElecTable === 'function') refreshEditorElecTable();
+
+  showToast('Линия сброшена');
+}
+
+/* ============================================================
+   Обработчики
+   ============================================================ */
+
+/* Модалка */
+$('#linePickerClose')?.addEventListener('click', closeLinePickerModal);
+$('#linePickerModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'linePickerModal') closeLinePickerModal();
+});
+
+/* Поиск в модалке */
+$('#linePickerSearch')?.addEventListener('input', (e) => {
+  renderLinePickerModal(e.target.value);
+});
+
+/* Чип линии — открывает модалку */
+$('#emLinePill')?.addEventListener('click', openLinePickerModal);
+$('#eeLinePill')?.addEventListener('click', openLinePickerModal);
+
+/* Переключатель режима внутри панели */
+$('#emModeSwitch')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.editor-mode-inline-btn');
+  if (!btn) return;
+  switchEditorModeInline(btn.dataset.mode);
+});
+$('#eeModeSwitch')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.editor-mode-inline-btn');
+  if (!btn) return;
+  switchEditorModeInline(btn.dataset.mode);
+});
+
+/* Переключатель по части линии */
+function bindPartSwitchHandlers(containerId, prefix) {
+  const container = $(`#${containerId}`);
+  if (!container) return;
+
+  container.querySelectorAll('.editor-part-switch-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const part = btn.dataset.part || '';
+
+      // Подсветка активного
+      container.querySelectorAll('.editor-part-switch-btn').forEach(b => {
+        b.classList.toggle('active', b === btn);
+      });
+
+      // Синхронизируем фильтр «Часть линии»
+      const sel = $(`#${prefix}FilterPart`);
+      if (sel) sel.value = part;
+
+      // Перерисовка таблицы
+      if (prefix === 'em') {
+        if (typeof refreshEditorMechTable === 'function') refreshEditorMechTable();
+      } else {
+        if (typeof refreshEditorElecTable === 'function') refreshEditorElecTable();
+      }
+    });
+  });
+}
+
+bindPartSwitchHandlers('emPartCounters', 'em');
+bindPartSwitchHandlers('eePartCounters', 'ee');
+
+/* Крошки — клик по цеху → открыть модалку */
+document.addEventListener('click', (e) => {
+  const crumb = e.target.closest('.editor-crumb[data-crumb="open-picker"]');
+  if (crumb) {
+    openLinePickerModal();
+  }
+});
+
+/* ============================================================
+   РЕДАКТОР: состояние таблиц (пагинация + выделение)
+   ============================================================ */
+
+const editorTableState = {
+  mechPage: 1,
+  mechPageSize: 20,
+  mechSelected: new Set(),     // Set из id выбранных стандартов
+
+  elecPage: 1,
+  elecPageSize: 20,
+  elecSelected: new Set()
+};
+
+/* ============================================================
+   РЕДАКТОР: парсинг нормы (для колонок)
+   ============================================================ */
+
+function formatEditorDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}.${mm}.${yyyy}`;
+}
+
+/* ============================================================
+   МЕХАНИЧЕСКИЕ СТАНДАРТЫ: фильтрация
+   ============================================================ */
+
+function getFilteredMechStandards() {
+  const all = getStandards();
+
+  // Учитываем активную линию, если она выбрана
+  const editorLine = localStorage.getItem('cl_editor_line') || '';
+
+  const workshopId = $('#emFilterWorkshop')?.value || '';
+  const areaId = $('#emFilterArea')?.value || '';
+  const line = $('#emFilterLine')?.value || '';
+  const machine = $('#emFilterMachine')?.value || '';
+  const node = $('#emFilterNode')?.value || '';
+  const type = $('#emFilterType')?.value || '';
+  const part = $('#emFilterPart')?.value || '';
+  const activeFilter = $('#emFilterActive')?.value || '';
+  const search = ($('#emFilterSearch')?.value || '').trim().toLowerCase();
+
+  // Заранее готовим кэш: для каждой линии — контекст (workshopId/areaId/blockId)
+  const lineContextCache = {};
+  const allLinesCtx = getAllLinesWithContext();
+  allLinesCtx.forEach(x => { lineContextCache[x.line] = x; });
+
+  let filtered = all.filter(st => {
+    // Цех
+    if (workshopId) {
+      const ctx = lineContextCache[st.line];
+      if (!ctx || ctx.workshopId !== workshopId) return false;
+    }
+
+    // Участок
+    if (areaId) {
+      const ctx = lineContextCache[st.line];
+      if (!ctx || ctx.areaId !== areaId) return false;
+    }
+
+    // Линия (приоритет — фильтр, если задан, иначе — выбранная)
+    if (line) {
+      if (st.line !== line) return false;
+    } else if (editorLine) {
+      if (st.line !== editorLine) return false;
+    }
+
+    // Машина
+    if (machine && st.machine !== machine) return false;
+
+    // Узел
+    if (node && st.node !== node) return false;
+
+    // Тип (appliesTo)
+    if (type === '__none') {
+      if (st.appliesTo && st.appliesTo.length) return false;
+    } else if (type) {
+      if (!st.appliesTo || !st.appliesTo.includes(type)) return false;
+    }
+
+    // Часть линии
+    if (part && st.nodePart !== part) return false;
+
+    // Активность
+    if (activeFilter === 'active' && st.active === false) return false;
+    if (activeFilter === 'inactive' && st.active !== false) return false;
+
+    // Поиск
+    if (search) {
+      const hay = [
+        st.title, st.oplNumber, st.node, st.machine, st.nodePart, st.number
+      ].map(v => String(v || '').toLowerCase()).join(' ');
+      if (!hay.includes(search)) return false;
+    }
+
+    return true;
+  });
+
+  // Сортировка: по OPL № (натурально), потом по машине
+  filtered.sort((a, b) => {
+    const oa = String(a.oplNumber || '').toLowerCase();
+    const ob = String(b.oplNumber || '').toLowerCase();
+    if (oa !== ob) return oa.localeCompare(ob, 'ru', { numeric: true });
+    const ma = String(a.machine || '');
+    const mb = String(b.machine || '');
+    return ma.localeCompare(mb, 'ru');
+  });
+
+  return filtered;
+}
+
+/* ============================================================
+   МЕХАНИЧЕСКИЕ СТАНДАРТЫ: рендер таблицы
+   ============================================================ */
+
+function refreshEditorMechTable() {
+  const wrap = $('#editorMechTableWrap');
+  const paginationEl = $('#editorMechPagination');
+  const countEl = $('#editorMechCount');
+  if (!wrap) return;
+
+  const line = localStorage.getItem('cl_editor_line') || '';
+  const standards = getFilteredMechStandards();
+
+  // Счётчик в шапке панели
+  if (countEl) {
+    if (line) {
+      const totalLine = getStandards().filter(s => s.line === line).length;
+      countEl.textContent = `${standards.length} из ${totalLine}`;
+    } else {
+      countEl.textContent = `${standards.length}`;
+    }
+  }
+
+  // Пустое состояние
+  if (!standards.length) {
+    wrap.innerHTML = '<div class="editor-empty">Стандарты не найдены</div>';
+    if (paginationEl) paginationEl.innerHTML = '';
+    return;
+  }
+
+  // Пагинация
+  const totalPages = Math.ceil(standards.length / editorTableState.mechPageSize);
+  if (editorTableState.mechPage > totalPages) editorTableState.mechPage = totalPages;
+  if (editorTableState.mechPage < 1) editorTableState.mechPage = 1;
+
+  const startIdx = (editorTableState.mechPage - 1) * editorTableState.mechPageSize;
+  const endIdx = Math.min(startIdx + editorTableState.mechPageSize, standards.length);
+  const pageItems = standards.slice(startIdx, endIdx);
+
+  // --- Таблица ---
+  let html = `
+    <table class="editor-table">
+      <thead>
+        <tr>
+          <th class="et-col-check">
+            <input type="checkbox" class="et-check-all" id="emCheckAll">
+          </th>
+          <th class="et-col-title">Название</th>
+          <th class="et-col-machine">Машина</th>
+          <th class="et-col-opl">№ OPL</th>
+          <th class="et-col-struct">Структура</th>
+          <th class="et-col-part">Часть</th>
+          <th class="et-col-types">Тип</th>
+          <th class="et-col-status">Статус</th>
+          <th class="et-col-date">Дата</th>
+          <th class="et-col-actions">Действия</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  pageItems.forEach(st => {
+    const isActive = st.active !== false;
+    const isSelected = editorTableState.mechSelected.has(st.id);
+
+    const ctx = lineContextCacheForLine(st.line);
+    const contextHtml = ctx
+      ? `<div class="et-struct">${escapeHtml(ctx.workshopName)}<br>${escapeHtml([ctx.areaName, ctx.blockName].filter(Boolean).join(' / '))}<br><strong>${escapeHtml(st.line)}</strong></div>`
+      : `<div class="et-struct">${escapeHtml(st.line || '—')}</div>`;
+
+    const typesHtml = renderMechTypeChips(st.appliesTo);
+    const partHtml = st.nodePart ? `<span class="et-part-chip et-part-${st.nodePart.toLowerCase()}">${escapeHtml(st.nodePart)}</span>` : '—';
+
+    html += `
+      <tr data-std-id="${escapeAttr(st.id)}" class="${isSelected ? 'is-selected' : ''}">
+        <td class="et-col-check">
+          <input type="checkbox" class="et-check-row" data-std-id="${escapeAttr(st.id)}" ${isSelected ? 'checked' : ''}>
+        </td>
+        <td class="et-col-title">
+          <div class="et-title">
+            <span class="et-title-text">${escapeHtml(st.title || '—')}</span>
+          </div>
+        </td>
+        <td class="et-col-machine"><span class="et-machine">${escapeHtml(st.machine || '—')}</span></td>
+        <td class="et-col-opl">
+          <span class="et-opl" data-open-view="${escapeAttr(st.id)}">${escapeHtml(st.oplNumber || '—')}</span>
+        </td>
+        <td class="et-col-struct">${contextHtml}</td>
+        <td class="et-col-part">${partHtml}</td>
+        <td class="et-col-types"><div class="et-types">${typesHtml}</div></td>
+        <td class="et-col-status">
+          <span class="et-status ${isActive ? 'et-status-active' : 'et-status-inactive'}"
+                data-toggle-active="${escapeAttr(st.id)}"
+                title="Клик — переключить активность">
+            ${isActive ? 'Активен' : 'Неактивен'}
+          </span>
+        </td>
+        <td class="et-col-date">
+          <span class="et-date">${escapeHtml(formatEditorDate(st.updatedAt || st.createdAt))}</span>
+        </td>
+        <td class="et-col-actions">
+          <div class="et-actions">
+            <button type="button" class="et-action-btn et-action-edit" data-edit="${escapeAttr(st.id)}" title="Редактировать">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
+            <button type="button" class="et-action-btn et-action-copy" data-copy="${escapeAttr(st.id)}" title="Копировать">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+            </button>
+            <button type="button" class="et-action-btn et-action-delete" data-delete="${escapeAttr(st.id)}" title="Удалить">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6"/><path d="M14 11v6"/>
+                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+              </svg>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  });
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+
+  // --- Пагинация ---
+  renderEditorMechPagination(standards.length, totalPages, startIdx, endIdx);
+
+  // --- Обработчики ---
+
+  // Клик по OPL / по названию → просмотр
+  wrap.querySelectorAll('[data-open-view]').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = el.dataset.openView;
+      if (id) openStandardView(id);
+    });
+  });
+
+  // Клик по статусу → переключение активности
+  wrap.querySelectorAll('[data-toggle-active]').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = el.dataset.toggleActive;
+      if (!id) return;
+      const st = getStandards().find(s => s.id === id);
+      if (!st) return;
+      toggleStandardActive(id, st.active === false);
+    });
+  });
+
+  // Кнопки действий
+  wrap.querySelectorAll('[data-edit]').forEach(btn => {
+    btn.addEventListener('click', () => openStandardForm(btn.dataset.edit));
+  });
+  wrap.querySelectorAll('[data-copy]').forEach(btn => {
+    btn.addEventListener('click', () => copyStandardNew(btn.dataset.copy));
+  });
+  wrap.querySelectorAll('[data-delete]').forEach(btn => {
+    btn.addEventListener('click', () => deleteStandardNew(btn.dataset.delete));
+  });
+
+  // Чекбоксы выделения
+  wrap.querySelectorAll('.et-check-row').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const id = cb.dataset.stdId;
+      if (!id) return;
+      if (cb.checked) editorTableState.mechSelected.add(id);
+      else editorTableState.mechSelected.delete(id);
+      updateMechSelectionUI();
+    });
+  });
+
+  // «Выделить все» — чекбокс в шапке
+  const checkAll = wrap.querySelector('#emCheckAll');
+  if (checkAll) {
+    const allOnPageSelected = pageItems.every(st => editorTableState.mechSelected.has(st.id));
+    checkAll.checked = allOnPageSelected;
+
+    checkAll.addEventListener('change', () => {
+      if (checkAll.checked) {
+        pageItems.forEach(st => editorTableState.mechSelected.add(st.id));
+      } else {
+        pageItems.forEach(st => editorTableState.mechSelected.delete(st.id));
+      }
+      refreshEditorMechTable();
+    });
+  }
+
+  // Подсветка выделенных строк
+  updateMechSelectionUI();
+}
+
+/* --- Хелпер: контекст линии --- */
+const _lineContextCache = {};
+function lineContextCacheForLine(line) {
+  if (_lineContextCache[line]) return _lineContextCache[line];
+  const ctx = typeof getBlockForLine === 'function' ? getBlockForLine(line) : null;
+  const result = ctx ? {
+    workshopId: ctx.workshop.id, workshopName: ctx.workshop.name,
+    areaId: ctx.area.id, areaName: ctx.area.name,
+    blockId: ctx.block ? ctx.block.id : null,
+    blockName: ctx.block ? ctx.block.name : null
+  } : null;
+  _lineContextCache[line] = result;
+  return result;
+}
+
+/* --- Хелпер: чипы типов --- */
+function renderMechTypeChips(appliesTo) {
+  if (!Array.isArray(appliesTo) || !appliesTo.length) {
+    return '<span class="et-type-chip et-type-none">Без привязки</span>';
+  }
+  const map = {
+    ChangeOver: { cls: 'et-type-changeover', label: 'Change Over' },
+    CL_TO: { cls: 'et-type-clto', label: 'CL в ТО' },
+    CL_Conversion: { cls: 'et-type-clconv', label: 'CL в Конв.' }
+  };
+  return appliesTo.map(t => {
+    const info = map[t];
+    if (!info) return '';
+    return `<span class="et-type-chip ${info.cls}">${info.label}</span>`;
+  }).join('');
+}
+
+/* --- UI: счётчик выделенных + подсветка --- */
+function updateMechSelectionUI() {
+  const selected = editorTableState.mechSelected.size;
+
+  // Счётчик в шапке
+  const countEl = $('#editorMechCount');
+  if (countEl) {
+    // если выделено — показываем «Выбрано: N» вместо «из X»
+    if (selected > 0) {
+      const line = localStorage.getItem('cl_editor_line') || '';
+      const standards = getFilteredMechStandards();
+      countEl.textContent = `Выбрано: ${selected} · ${standards.length} из ${line ? getStandards().filter(s => s.line === line).length : getStandards().length}`;
+    } else {
+      // Пересчитываем в обычный вид
+      const standards = getFilteredMechStandards();
+      const line = localStorage.getItem('cl_editor_line') || '';
+      countEl.textContent = line
+        ? `${standards.length} из ${getStandards().filter(s => s.line === line).length}`
+        : `${standards.length}`;
+    }
+  }
+
+  // Подсветка строк
+  document.querySelectorAll('#editorMechTableWrap tr[data-std-id]').forEach(tr => {
+    tr.classList.toggle('is-selected', editorTableState.mechSelected.has(tr.dataset.stdId));
+  });
+}
+
+/* --- Пагинация --- */
+function renderEditorMechPagination(total, totalPages, startIdx, endIdx) {
+  const bar = $('#editorMechPagination');
+  if (!bar) return;
+
+  if (totalPages <= 1) {
+    bar.innerHTML = `
+      <span class="pagination-info">Показано ${startIdx + 1}–${endIdx} из ${total}</span>
+      <div class="pagination-controls">
+        <select class="pagination-size" id="eePageSize">
+          <option value="10"  ${editorTableState.elecPageSize === 10 ? 'selected' : ''}>10</option>
+          <option value="20"  ${editorTableState.elecPageSize === 20 ? 'selected' : ''}>20</option>
+          <option value="50"  ${editorTableState.elecPageSize === 50 ? 'selected' : ''}>50</option>
+          <option value="100" ${editorTableState.elecPageSize === 100 ? 'selected' : ''}>100</option>
+        </select>
+      </div>
+    `;
+    bar.querySelector('#eePageSize')?.addEventListener('change', (e) => {
+      editorTableState.elecPageSize = parseInt(e.target.value, 10) || 20;
+      editorTableState.elecPage = 1;
+      refreshEditorElecTable();
+    });
+    return;
+  }
+
+  const cur = editorTableState.mechPage;
+  let html = `<span class="pagination-info">Показано ${startIdx + 1}–${endIdx} из ${total}</span>`;
+  html += '<div class="pagination-controls">';
+  html += `<button class="pagination-btn" ${cur === 1 ? 'disabled' : ''} data-page="${cur - 1}">←</button>`;
+
+  // страницы
+  const pages = [];
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || Math.abs(i - cur) <= 2) pages.push(i);
+    else if (pages[pages.length - 1] !== '...') pages.push('...');
+  }
+  pages.forEach(p => {
+    if (p === '...') html += '<span class="pagination-dots">…</span>';
+    else html += `<button class="pagination-btn ${p === cur ? 'active' : ''}" data-page="${p}">${p}</button>`;
+  });
+
+  html += `<button class="pagination-btn" ${cur === totalPages ? 'disabled' : ''} data-page="${cur + 1}">→</button>`;
+
+  // Размер страницы
+  html += `
+    <select class="pagination-size" id="emPageSize">
+      <option value="10"  ${editorTableState.mechPageSize === 10 ? 'selected' : ''}>10</option>
+      <option value="20"  ${editorTableState.mechPageSize === 20 ? 'selected' : ''}>20</option>
+      <option value="50"  ${editorTableState.mechPageSize === 50 ? 'selected' : ''}>50</option>
+      <option value="100" ${editorTableState.mechPageSize === 100 ? 'selected' : ''}>100</option>
+    </select>
+  `;
+  html += '</div>';
+  bar.innerHTML = html;
+
+  // Обработчики пагинации
+  bar.querySelectorAll('[data-page]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = parseInt(btn.dataset.page, 10);
+      if (!isNaN(p) && p >= 1 && p <= totalPages) {
+        editorTableState.mechPage = p;
+        refreshEditorMechTable();
+      }
+    });
+  });
+
+  bar.querySelector('#emPageSize')?.addEventListener('change', (e) => {
+    editorTableState.mechPageSize = parseInt(e.target.value, 10) || 20;
+    editorTableState.mechPage = 1;
+    refreshEditorMechTable();
+  });
+}
+
+/* ============================================================
+   ЭЛЕКТРОННЫЕ ПАРАМЕТРЫ: фильтрация
+   ============================================================ */
+
+function getFilteredElecParams() {
+  const all = getElectronicParams().map(normalizeElectronicParam);
+
+  const workshopId = $('#eeFilterWorkshop')?.value || '';
+  const areaId = $('#eeFilterArea')?.value || '';
+  const line = $('#eeFilterLine')?.value || '';
+  const machine = $('#eeFilterMachine')?.value || '';
+  const controlType = $('#eeFilterControlType')?.value || '';
+  const freqType = $('#eeFilterFreq')?.value || '';
+  const activeFilter = $('#eeFilterActive')?.value || '';
+  const search = ($('#eeFilterSearch')?.value || '').trim().toLowerCase();
+
+  const lineContextCache = {};
+  const allLinesCtx = getAllLinesWithContext();
+  allLinesCtx.forEach(x => { lineContextCache[x.line] = x; });
+
+  let filtered = all.filter(p => {
+    if (workshopId) {
+      const ctx = lineContextCache[p.line];
+      if (!ctx || ctx.workshopId !== workshopId) return false;
+    }
+    if (areaId) {
+      const ctx = lineContextCache[p.line];
+      if (!ctx || ctx.areaId !== areaId) return false;
+    }
+    if (line && p.line !== line) return false;
+    if (machine && p.machine !== machine) return false;
+
+    if (controlType && p.controlType !== controlType) return false;
+    if (freqType && p.frequency?.type !== freqType) return false;
+
+    if (activeFilter === 'active' && p.active === false) return false;
+    if (activeFilter === 'inactive' && p.active !== false) return false;
+
+    if (search) {
+      const hay = [p.paramName, p.machine, p.line].map(v => String(v || '').toLowerCase()).join(' ');
+      if (!hay.includes(search)) return false;
+    }
+
+    return true;
+  });
+
+  filtered.sort((a, b) => {
+    const la = String(a.line || '').toLowerCase();
+    const lb = String(b.line || '').toLowerCase();
+    if (la !== lb) return la.localeCompare(lb, 'ru');
+    const ma = String(a.machine || '').toLowerCase();
+    const mb = String(b.machine || '').toLowerCase();
+    if (ma !== mb) return ma.localeCompare(mb, 'ru');
+    return String(a.paramName || '').localeCompare(String(b.paramName || ''), 'ru');
+  });
+
+  return filtered;
+}
+
+/* ============================================================
+   ЭЛЕКТРОННЫЕ ПАРАМЕТРЫ: рендер таблицы
+   ============================================================ */
+
+function refreshEditorElecTable() {
+  const wrap = $('#editorElecTableWrap');
+  const paginationEl = $('#editorElecPagination');
+  const countEl = $('#editorElecCount');
+  if (!wrap) return;
+
+  const line = localStorage.getItem('cl_editor_line') || '';
+  const params = getFilteredElecParams();
+
+  if (countEl) {
+    if (line) {
+      const totalLine = getElectronicParamsForLine(line).length;
+      countEl.textContent = `${params.length} из ${totalLine}`;
+    } else {
+      countEl.textContent = `${params.length}`;
+    }
+  }
+
+  if (!params.length) {
+    wrap.innerHTML = '<div class="editor-empty">Электронные параметры не найдены</div>';
+    if (paginationEl) paginationEl.innerHTML = '';
+    return;
+  }
+
+  const totalPages = Math.ceil(params.length / editorTableState.elecPageSize);
+  if (editorTableState.elecPage > totalPages) editorTableState.elecPage = totalPages;
+  if (editorTableState.elecPage < 1) editorTableState.elecPage = 1;
+
+  const startIdx = (editorTableState.elecPage - 1) * editorTableState.elecPageSize;
+  const endIdx = Math.min(startIdx + editorTableState.elecPageSize, params.length);
+  const pageItems = params.slice(startIdx, endIdx);
+
+  let html = `
+    <table class="editor-table">
+      <thead>
+        <tr>
+          <th class="et-col-check"><input type="checkbox" class="et-check-all" id="eeCheckAll"></th>
+          <th class="et-col-title">Параметр</th>
+          <th class="et-col-machine">Машина</th>
+          <th class="et-col-struct">Структура</th>
+          <th class="et-col-types">Тип</th>
+          <th class="et-col-part">Периодичность</th>
+          <th class="et-col-status">Run/Stop</th>
+          <th class="et-col-date">Статус</th>
+          <th class="et-col-actions">Действия</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  pageItems.forEach(p => {
+    const isActive = p.active !== false;
+    const isSelected = editorTableState.elecSelected.has(p.id);
+
+    const ctx = lineContextCacheForLine(p.line);
+    const contextHtml = ctx
+      ? `<div class="et-struct">${escapeHtml(ctx.workshopName)}<br>${escapeHtml([ctx.areaName, ctx.blockName].filter(Boolean).join(' / '))}<br><strong>${escapeHtml(p.line)}</strong></div>`
+      : `<div class="et-struct">${escapeHtml(p.line || '—')}</div>`;
+
+    const typeLabel = p.controlType === 'ok_not_ok' ? 'ОК / Не ОК' : 'Числовой';
+    const freqMap = { daily: 'Каждый день', weekly: 'По дням', once: 'Разовые' };
+    const freqLabel = freqMap[p.frequency?.type] || '—';
+
+    const workCls = p.work === 'Run' ? 'et-part-maker' : 'et-part-packer';
+
+    html += `
+      <tr data-param-id="${escapeAttr(p.id)}" class="${isSelected ? 'is-selected' : ''}">
+        <td class="et-col-check">
+          <input type="checkbox" class="et-check-row" data-param-id="${escapeAttr(p.id)}" ${isSelected ? 'checked' : ''}>
+        </td>
+        <td class="et-col-title">
+          <div class="et-title">
+            <span class="et-title-text" data-open-view-elec="${escapeAttr(p.id)}" style="cursor:pointer">${escapeHtml(p.paramName || '—')}</span>
+          </div>
+        </td>
+        <td class="et-col-machine"><span class="et-machine">${escapeHtml(p.machine || '—')}</span></td>
+        <td class="et-col-struct">${contextHtml}</td>
+        <td class="et-col-types"><span class="et-type-chip et-type-clto">${escapeHtml(typeLabel)}</span></td>
+        <td class="et-col-part"><span style="font-size:12px">${escapeHtml(freqLabel)}</span></td>
+        <td class="et-col-status"><span class="et-part-chip ${workCls}">${escapeHtml(p.work)}</span></td>
+        <td class="et-col-date">
+          <span class="et-status ${isActive ? 'et-status-active' : 'et-status-inactive'}"
+                data-toggle-active-elec="${escapeAttr(p.id)}"
+                title="Клик — переключить активность">
+            ${isActive ? 'Активен' : 'Неактивен'}
+          </span>
+        </td>
+        <td class="et-col-actions">
+          <div class="et-actions">
+            <button type="button" class="et-action-btn et-action-edit" data-edit-elec="${escapeAttr(p.id)}" title="Редактировать">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
+            <button type="button" class="et-action-btn et-action-delete" data-delete-elec="${escapeAttr(p.id)}" title="Удалить">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6"/><path d="M14 11v6"/>
+                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+              </svg>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  });
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+
+  renderEditorElecPagination(params.length, totalPages, startIdx, endIdx);
+
+  // Обработчики
+  wrap.querySelectorAll('[data-edit-elec]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.editElec;
+      const p = getElectronicParams().find(x => x.id === id);
+      if (!p) return;
+
+      // Устанавливаем контекст для формы
+      currentElectronicLine = p.line;
+      currentElectronicMachine = p.machine;
+      openElectronicParamForm(id);
+    });
+  });
+
+  wrap.querySelectorAll('[data-delete-elec]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.deleteElec;
+      const p = getElectronicParams().find(x => x.id === id);
+      if (!p) return;
+      if (!confirm(`Удалить параметр "${p.paramName}"?`)) return;
+      setElectronicParams(getElectronicParams().filter(x => x.id !== id));
+      refreshEditorElecTable();
+      showToast('Параметр удалён');
+    });
+  });
+
+  wrap.querySelectorAll('[data-toggle-active-elec]').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = el.dataset.toggleActiveElec;
+      const all = getElectronicParams().map(normalizeElectronicParam);
+      const p = all.find(x => x.id === id);
+      if (!p) return;
+      p.active = p.active === false ? true : false;
+      p.updatedAt = new Date().toISOString();
+      setElectronicParams(all);
+      refreshEditorElecTable();
+      showToast(p.active ? 'Параметр активирован' : 'Параметр деактивирован');
+    });
+  });
+
+  // Чекбоксы выделения
+  wrap.querySelectorAll('.et-check-row').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const id = cb.dataset.paramId;
+      if (!id) return;
+      if (cb.checked) editorTableState.elecSelected.add(id);
+      else editorTableState.elecSelected.delete(id);
+      updateElecSelectionUI();
+    });
+  });
+
+  const checkAll = wrap.querySelector('#eeCheckAll');
+  if (checkAll) {
+    const allOnPageSelected = pageItems.every(p => editorTableState.elecSelected.has(p.id));
+    checkAll.checked = allOnPageSelected;
+    checkAll.addEventListener('change', () => {
+      if (checkAll.checked) pageItems.forEach(p => editorTableState.elecSelected.add(p.id));
+      else pageItems.forEach(p => editorTableState.elecSelected.delete(p.id));
+      refreshEditorElecTable();
+    });
+  }
+
+  updateElecSelectionUI();
+}
+
+function updateElecSelectionUI() {
+  const selected = editorTableState.elecSelected.size;
+  const countEl = $('#editorElecCount');
+  if (countEl) {
+    const params = getFilteredElecParams();
+    const line = localStorage.getItem('cl_editor_line') || '';
+    if (selected > 0) {
+      countEl.textContent = `Выбрано: ${selected} · ${params.length} из ${line ? getElectronicParamsForLine(line).length : getElectronicParams().length}`;
+    } else {
+      countEl.textContent = line
+        ? `${params.length} из ${getElectronicParamsForLine(line).length}`
+        : `${params.length}`;
+    }
+  }
+  document.querySelectorAll('#editorElecTableWrap tr[data-param-id]').forEach(tr => {
+    tr.classList.toggle('is-selected', editorTableState.elecSelected.has(tr.dataset.paramId));
+  });
+}
+
+function renderEditorElecPagination(total, totalPages, startIdx, endIdx) {
+  const bar = $('#editorElecPagination');
+  if (!bar) return;
+
+  if (totalPages <= 1) {
+    bar.innerHTML = `
+      <span class="pagination-info">Показано ${startIdx + 1}–${endIdx} из ${total}</span>
+      <div class="pagination-controls">
+        <select class="pagination-size" id="emPageSize">
+          <option value="10"  ${editorTableState.mechPageSize === 10 ? 'selected' : ''}>10</option>
+          <option value="20"  ${editorTableState.mechPageSize === 20 ? 'selected' : ''}>20</option>
+          <option value="50"  ${editorTableState.mechPageSize === 50 ? 'selected' : ''}>50</option>
+          <option value="100" ${editorTableState.mechPageSize === 100 ? 'selected' : ''}>100</option>
+        </select>
+      </div>
+    `;
+    bar.querySelector('#emPageSize')?.addEventListener('change', (e) => {
+      editorTableState.mechPageSize = parseInt(e.target.value, 10) || 20;
+      editorTableState.mechPage = 1;
+      refreshEditorMechTable();
+    });
+    return;
+  }
+
+  const cur = editorTableState.elecPage;
+  let html = `<span class="pagination-info">Показано ${startIdx + 1}–${endIdx} из ${total}</span>`;
+  html += '<div class="pagination-controls">';
+  html += `<button class="pagination-btn" ${cur === 1 ? 'disabled' : ''} data-page="${cur - 1}">←</button>`;
+
+  const pages = [];
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || Math.abs(i - cur) <= 2) pages.push(i);
+    else if (pages[pages.length - 1] !== '...') pages.push('...');
+  }
+  pages.forEach(p => {
+    if (p === '...') html += '<span class="pagination-dots">…</span>';
+    else html += `<button class="pagination-btn ${p === cur ? 'active' : ''}" data-page="${p}">${p}</button>`;
+  });
+
+  html += `<button class="pagination-btn" ${cur === totalPages ? 'disabled' : ''} data-page="${cur + 1}">→</button>`;
+
+  html += `
+    <select class="pagination-size" id="eePageSize">
+      <option value="10"  ${editorTableState.elecPageSize === 10 ? 'selected' : ''}>10</option>
+      <option value="20"  ${editorTableState.elecPageSize === 20 ? 'selected' : ''}>20</option>
+      <option value="50"  ${editorTableState.elecPageSize === 50 ? 'selected' : ''}>50</option>
+      <option value="100" ${editorTableState.elecPageSize === 100 ? 'selected' : ''}>100</option>
+    </select>
+  `;
+  html += '</div>';
+  bar.innerHTML = html;
+
+  bar.querySelectorAll('[data-page]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = parseInt(btn.dataset.page, 10);
+      if (!isNaN(p) && p >= 1 && p <= totalPages) {
+        editorTableState.elecPage = p;
+        refreshEditorElecTable();
+      }
+    });
+  });
+
+  bar.querySelector('#eePageSize')?.addEventListener('change', (e) => {
+    editorTableState.elecPageSize = parseInt(e.target.value, 10) || 20;
+    editorTableState.elecPage = 1;
+    refreshEditorElecTable();
+  });
+}
+
+/* ============================================================
+   РЕДАКТОР: обновление сброса фильтров
+   ============================================================ */
+
+function resetMechFilters() {
+  ['emFilterWorkshop', 'emFilterArea', 'emFilterLine', 'emFilterMachine',
+   'emFilterNode', 'emFilterType', 'emFilterPart', 'emFilterActive', 'emFilterSearch'
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  editorTableState.mechPage = 1;
+  editorTableState.mechSelected.clear();
+  refreshEditorMechTable();
+  updatePartCounters();
+}
+
+function resetElecFilters() {
+  ['eeFilterWorkshop', 'eeFilterArea', 'eeFilterLine', 'eeFilterMachine',
+   'eeFilterControlType', 'eeFilterFreq', 'eeFilterActive', 'eeFilterSearch'
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  editorTableState.elecPage = 1;
+  editorTableState.elecSelected.clear();
+  refreshEditorElecTable();
+}
+
+/* ============================================================
+   РЕДАКТОР: обработчики фильтров и поиска
+   ============================================================ */
+
+/* Фильтры мех-таблицы */
+['emFilterWorkshop', 'emFilterArea', 'emFilterLine', 'emFilterMachine',
+ 'emFilterNode', 'emFilterType', 'emFilterPart', 'emFilterActive'
+].forEach(id => {
+  document.getElementById(id)?.addEventListener('change', () => {
+    editorTableState.mechPage = 1;
+    refreshEditorMechTable();
+  });
+});
+
+$('#emFilterSearch')?.addEventListener('input', () => {
+  editorTableState.mechPage = 1;
+  refreshEditorMechTable();
+});
+
+$('#emFilterResetBtn')?.addEventListener('click', resetMechFilters);
+
+/* Фильтры электронной таблицы */
+['eeFilterWorkshop', 'eeFilterArea', 'eeFilterLine', 'eeFilterMachine',
+ 'eeFilterControlType', 'eeFilterFreq', 'eeFilterActive'
+].forEach(id => {
+  document.getElementById(id)?.addEventListener('change', () => {
+    editorTableState.elecPage = 1;
+    refreshEditorElecTable();
+  });
+});
+
+$('#eeFilterSearch')?.addEventListener('input', () => {
+  editorTableState.elecPage = 1;
+  refreshEditorElecTable();
+});
+
+$('#eeFilterResetBtn')?.addEventListener('click', resetElecFilters);
+
+/* ============================================================
+   РЕДАКТОР: кнопки «Создать»
+   ============================================================ */
+
+$('#editorMechAddBtn')?.addEventListener('click', () => {
+  const line = localStorage.getItem('cl_editor_line');
+  if (!line) {
+    showToast('Сначала выберите линию', true);
+    return;
+  }
+  // Устанавливаем контекст как раньше — currentEditorLine
+  currentEditorLine = line;
+  openStandardForm(null);
+});
+
+$('#editorElecAddBtn')?.addEventListener('click', () => {
+  const line = localStorage.getItem('cl_editor_line');
+  if (!line) {
+    showToast('Сначала выберите линию', true);
+    return;
+  }
+  currentElectronicLine = line;
+  // Машина — первая из линии
+  const machines = getMachinesForLine(line);
+  if (!machines.length) {
+    showToast('Сначала добавьте машину для линии', true);
+    return;
+  }
+  currentElectronicMachine = machines[0];
+  openElectronicParamForm(null);
+});
+/* ============================================================
+   РЕДАКТОР: заполнение фильтров
+   ============================================================ */
+
+function fillEditorFilters() {
+  const workshops = getWorkshops();
+  const allLines = getAllLinesWithContext();
+  const standards = getStandards();
+
+  /* --- Цех --- */
+  ['emFilterWorkshop', 'eeFilterWorkshop'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Все</option>' +
+      workshops.map(w => `<option value="${escapeAttr(w.id)}">${escapeHtml(w.name)}</option>`).join('');
+    sel.value = cur;
+  });
+
+  /* --- Участок (зависит от цеха) --- */
+  ['emFilterArea', 'eeFilterArea'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const cur = sel.value;
+    const workshopId = (id === 'emFilterArea' ? $('#emFilterWorkshop') : $('#eeFilterWorkshop'))?.value;
+
+    let areas = [];
+    if (workshopId) {
+      const w = getWorkshop(workshopId);
+      if (w) areas = w.areas || [];
+    } else {
+      // Все участки всех цехов
+      workshops.forEach(w => (w.areas || []).forEach(a => areas.push(a)));
+    }
+
+    sel.innerHTML = '<option value="">Все</option>' +
+      areas.map(a => `<option value="${escapeAttr(a.id)}">${escapeHtml(a.name)}</option>`).join('');
+    sel.value = cur;
+  });
+
+  /* --- Линия --- */
+  ['emFilterLine', 'eeFilterLine'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Все</option>' +
+      allLines.map(x => `<option value="${escapeAttr(x.line)}">${escapeHtml(x.line)}</option>`).join('');
+    sel.value = cur;
+  });
+
+  /* --- Машина (все машины) --- */
+  const allMachines = new Set();
+  Object.values(getLineMachines()).forEach(arr => (arr || []).forEach(m => allMachines.add(m)));
+  ['emFilterMachine', 'eeFilterMachine'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Все</option>' +
+      [...allMachines].sort().map(m => `<option value="${escapeAttr(m)}">${escapeHtml(m)}</option>`).join('');
+    sel.value = cur;
+  });
+
+  /* --- Узел --- */
+  const allNodes = [...new Set(standards.map(s => s.node).filter(Boolean))].sort();
+  ['emFilterNode'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Все</option>' +
+      allNodes.map(n => `<option value="${escapeAttr(n)}">${escapeHtml(n)}</option>`).join('');
+    sel.value = cur;
+  });
+}
+
+/* Каскад: при смене цеха — обновить список участков */
+$('#emFilterWorkshop')?.addEventListener('change', () => fillEditorFilters());
+$('#eeFilterWorkshop')?.addEventListener('change', () => fillEditorFilters());
+
+/* ============================================================
+   РЕДАКТОР: переключение активности стандарта
+   ============================================================ */
+
+function toggleStandardActive(id, newValue) {
+  const all = getStandards();
+  const st = all.find(s => s.id === id);
+  if (!st) return;
+
+  const wasActive = st.active !== false;
+  const willBeActive = !!newValue;
+
+  // При активации — архивируем комментарий к деактивации (если был)
+  if (!wasActive && willBeActive) {
+    if (st.deactivationComment && st.deactivationComment.trim()) {
+      if (!Array.isArray(st.deactivationHistory)) st.deactivationHistory = [];
+      st.deactivationHistory.push({
+        text: st.deactivationComment.trim(),
+        date: new Date().toISOString()
+      });
+      st.deactivationComment = '';
+    }
+  }
+
+  st.active = willBeActive;
+  st.updatedAt = new Date().toISOString();
+  setStandards(all);
+
+  refreshEditorMechTable();
+  if (typeof updatePartCounters === 'function') updatePartCounters();
+
+  showToast(willBeActive ? 'Стандарт активирован' : 'Стандарт деактивирован');
+}
+
+/* ============================================================
+   РЕДАКТОР: копирование стандарта
+   ============================================================ */
+
+function copyStandardNew(id) {
+  const all = getStandards();
+  const st = all.find(s => s.id === id);
+  if (!st) return;
+
+  const copy = JSON.parse(JSON.stringify(st));
+  copy.id = uid();
+  copy.oplNumber = (st.oplNumber || '') + '-copy';
+  copy.number = '';
+  copy.createdAt = new Date().toISOString();
+  copy.updatedAt = new Date().toISOString();
+
+  all.push(copy);
+  setStandards(all);
+
+  refreshEditorMechTable();
+  if (typeof updatePartCounters === 'function') updatePartCounters();
+
+  showToast('Стандарт скопирован');
+  openStandardForm(copy.id);
+}
+
+/* ============================================================
+   РЕДАКТОР: удаление стандарта
+   ============================================================ */
+
+function deleteStandardNew(id) {
+  const st = getStandards().find(s => s.id === id);
+  if (!st) return;
+  if (!confirm(`Удалить стандарт "${st.oplNumber || st.title}"?`)) return;
+
+  setStandards(getStandards().filter(s => s.id !== id));
+
+  refreshEditorMechTable();
+  if (typeof updatePartCounters === 'function') updatePartCounters();
+  if (typeof fillEditorFilters === 'function') fillEditorFilters();
+
+  showToast('Стандарт удалён');
+}
+
+/* ============================================================
+   РЕДАКТОР: обработчики шапки (мех. режим)
+   ============================================================ */
+
+/* Создать стандарт */
+$('#editorMechAddBtn')?.addEventListener('click', () => {
+  const line = localStorage.getItem('cl_editor_line');
+  if (!line) return showToast('Сначала выберите линию', true);
+  currentEditorLine = line;
+  openStandardForm(null);
+});
+
+/* Импорт из Excel — открыть диалог выбора файла */
+$('#editorMechUploadBtn')?.addEventListener('click', () => {
+  const line = localStorage.getItem('cl_editor_line');
+  if (!line) return showToast('Сначала выберите линию', true);
+  $('#editorMechUploadInput').click();
+});
+
+/* Импорт из Excel — обработка выбранного файла */
+$('#editorMechUploadInput')?.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+
+  const line = localStorage.getItem('cl_editor_line');
+  if (!line) return showToast('Сначала выберите линию', true);
+
+  try {
+    const result = await parseStandardsExcelV3(file, line);
+
+    // Показываем отчёт об импорте
+    showImportReport(result, 'editorMechTableWrap');
+
+    if (result.added > 0) {
+      refreshEditorMechTable();
+      if (typeof updatePartCounters === 'function') updatePartCounters();
+      if (typeof fillEditorFilters === 'function') fillEditorFilters();
+      showToast(`Добавлено стандартов: ${result.added}`);
+    } else {
+      showToast('Новых стандартов не найдено', true);
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('Ошибка чтения файла: ' + err.message, true);
+  }
+});
+
+/* Скачать шаблон — привязка к старой функции */
+$('#editorMechTemplateBtn')?.addEventListener('click', () => {
+  const line = localStorage.getItem('cl_editor_line');
+  if (!line) return showToast('Сначала выберите линию', true);
+
+  currentEditorLine = line;
+
+  // Проверяем, есть ли функция шаблона в app.js
+  if (typeof editorDownloadTemplate === 'function') {
+    editorDownloadTemplate();
+  } else {
+    showToast('Функция шаблона не найдена', true);
+  }
+});
+
+/* Экспорт — привязка к старой функции */
+$('#editorMechExportBtn')?.addEventListener('click', () => {
+  const line = localStorage.getItem('cl_editor_line');
+  if (!line) return showToast('Сначала выберите линию', true);
+
+  currentEditorLine = line;
+
+  if (typeof editorExportLine === 'function') {
+    editorExportLine();
+  } else {
+    showToast('Функция экспорта не найдена', true);
+  }
+});
+/* ============================================================
+   РЕДАКТОР: скачать шаблон OPL для линии
+   ============================================================ */
+
+async function editorDownloadTemplate() {
+  if (typeof ExcelJS === 'undefined') {
+    return showToast('Библиотека ExcelJS не загружена', true);
+  }
+  const line = currentEditorLine || localStorage.getItem('cl_editor_line');
+  if (!line) return showToast('Сначала выберите линию', true);
+
+  const wb = new ExcelJS.Workbook();
+
+  // ================== ЛИСТ 1: «Стандарты» ==================
+  const ws = wb.addWorksheet('Стандарты');
+  const headers = [
+    'Часть линии', 'Машина', 'OPL №', 'Узел', 'Название', 'Линия',
+    'Тип контроля', 'Применять к', 'Активен',
+    'Описание проблемы', 'Описание контроля', 'Цель', 'Почему создан',
+    'Триггеры', 'Top Losses', 'Фото'
+  ];
+  ws.addRow(headers);
+
+  // Пример
+  ws.addRow([
+    'Maker', 'SE', 'OPL-1.1.1', 'Узел передачи',
+    'Давление на передающем устройстве (Паук)', line,
+    'value_input', 'ChangeOver', 'Да',
+    'Пример: к чему приводит отклонение',
+    'Пример: как проверить',
+    'Пример: цель контроля',
+    'Пример: причина создания',
+    'Табак, Материалы',
+    'Обрыв штранга, Заторы на MAX',
+    'max-1.jpg, drum.jpg'
+  ]);
+
+  // Ширины
+  const widths = [12, 10, 14, 30, 34, 10, 14, 18, 10, 34, 34, 30, 30, 22, 30, 30];
+  ws.columns.forEach((col, i) => { col.width = widths[i] || 14; });
+
+  // Стиль шапки
+  const headerRow = ws.getRow(1);
+  headerRow.height = 36;
+  headerRow.eachCell((cell) => {
+    cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4FA8' } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    cell.border = {
+      top: { style: 'thin' }, bottom: { style: 'thin' },
+      left: { style: 'thin' }, right: { style: 'thin' }
+    };
+  });
+
+  // ================== ЛИСТ 2: «Точки» ==================
+  const ws2 = wb.addWorksheet('Точки');
+  ws2.addRow(['OPL №', 'Машина', 'Бренд', '№ точки', 'Значение']);
+
+  ws2.addRow(['OPL-1.1.1', 'SE', '', 1, '92 ± 5']);
+  ws2.addRow(['OPL-1.1.1', 'SE', '', 2, '']);
+  ws2.addRow(['OPL-1.1.1', 'SE', 'Kent', 1, '90 ± 3']);
+
+  const widths2 = [14, 12, 20, 10, 26];
+  ws2.columns.forEach((col, i) => { col.width = widths2[i] || 14; });
+
+  const headerRow2 = ws2.getRow(1);
+  headerRow2.height = 30;
+  headerRow2.eachCell((cell) => {
+    cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4FA8' } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    cell.border = {
+      top: { style: 'thin' }, bottom: { style: 'thin' },
+      left: { style: 'thin' }, right: { style: 'thin' }
+    };
+  });
+
+  // ================== ЛИСТ 3: «Инструкция» ==================
+  const wsInfo = wb.addWorksheet('Инструкция');
+  wsInfo.columns = [{ width: 100 }];
+  const info = [
+    ['📋 Шаблон импорта OPL — ' + line],
+    [''],
+    ['1. Заполните лист «Стандарты» — по одной строке на стандарт.'],
+    ['2. Заполните лист «Точки» — точки замера (можно оставить пустым).'],
+    ['3. Сохраните файл (.xlsx) и загрузите через кнопку «Импорт» в редакторе.'],
+    [''],
+    ['ОБЯЗАТЕЛЬНЫЕ ПОЛЯ на листе «Стандарты»:'],
+    ['  • OPL № — уникален в пределах линии + машины'],
+    ['  • Часть линии — Maker или Packer'],
+    ['  • Машина — обозначение (SE, MAX, …)'],
+    ['  • Узел, Название, Линия, Тип контроля'],
+    ['  • Тип контроля: ok_not_ok / value_input / range_input'],
+    ['  • Применять к: ChangeOver, CL_TO, CL_Conversion (через запятую)'],
+    ['  • Активен: Да / Нет'],
+    [''],
+    ['ЛИСТ «Точки»:'],
+    ['  • Связь со стандартом — по ключу OPL № + Машина'],
+    ['  • Бренд — пусто = «Все бренды»'],
+    ['  • № точки: 1, 2, 3, …'],
+    ['  • Значение: «92 ± 5» / «5 до 8» / «0»']
+  ];
+  info.forEach(([text]) => wsInfo.addRow([text]));
+  wsInfo.getRow(1).font = { bold: true, size: 16, color: { argb: 'FF0A4FA8' } };
+
+  // Сохранение
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  downloadBlob(blob, `template_opl_${line}.xlsx`);
+  showToast('Шаблон скачан');
+}
+
+/* ============================================================
+   РЕДАКТОР: экспорт стандартов линии в XLSX
+   ============================================================ */
+
+async function editorExportLine() {
+  if (typeof ExcelJS === 'undefined') {
+    return showToast('Библиотека ExcelJS не загружена', true);
+  }
+  const line = currentEditorLine || localStorage.getItem('cl_editor_line');
+  if (!line) return showToast('Сначала выберите линию', true);
+
+  const standards = getStandards().filter(s => s.line === line);
+  if (!standards.length) {
+    return showToast('На этой линии нет стандартов', true);
+  }
+
+  const wb = new ExcelJS.Workbook();
+
+  // ================== ЛИСТ 1: «Стандарты» ==================
+  const ws = wb.addWorksheet('Стандарты');
+  const headers = [
+    'Часть линии', 'Машина', 'OPL №', 'Узел', 'Название', 'Линия',
+    'Тип контроля', 'Применять к', 'Активен',
+    'Описание проблемы', 'Описание контроля', 'Цель', 'Почему создан',
+    'Триггеры', 'Top Losses', 'Фото'
+  ];
+  ws.addRow(headers);
+
+  standards.forEach(st => {
+    const triggersText = Array.isArray(st.triggers)
+      ? st.triggers.map(t => t.replace(/^node:/, '')).join(', ')
+      : '';
+
+    const topLossesText = Array.isArray(st.topLosses)
+      ? st.topLosses.map(id => {
+          const l = findLossById(id);
+          return l ? l.name : null;
+        }).filter(Boolean).join(', ')
+      : '';
+
+    const photosText = Array.isArray(st.photos) ? st.photos.join(', ') : '';
+    const appliesToText = Array.isArray(st.appliesTo) ? st.appliesTo.join(', ') : '';
+
+    ws.addRow([
+      st.nodePart || '',
+      st.machine || '',
+      st.oplNumber || '',
+      st.node || '',
+      st.title || '',
+      st.line || line,
+      st.controlType || '',
+      appliesToText,
+      st.active !== false ? 'Да' : 'Нет',
+      st.problemDescription || '',
+      st.controlDescription || '',
+      st.purpose || '',
+      st.whyCreated || '',
+      triggersText,
+      topLossesText,
+      photosText
+    ]);
+  });
+
+  const widths = [12, 10, 14, 30, 34, 10, 14, 18, 10, 34, 34, 30, 30, 22, 30, 30];
+  ws.columns.forEach((col, i) => { col.width = widths[i] || 14; });
+
+  const headerRow = ws.getRow(1);
+  headerRow.height = 36;
+  headerRow.eachCell((cell) => {
+    cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4FA8' } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    cell.border = {
+      top: { style: 'thin' }, bottom: { style: 'thin' },
+      left: { style: 'thin' }, right: { style: 'thin' }
+    };
+  });
+
+  // ================== ЛИСТ 2: «Точки» ==================
+  const ws2 = wb.addWorksheet('Точки');
+  ws2.addRow(['OPL №', 'Машина', 'Бренд', '№ точки', 'Значение']);
+
+  standards.forEach(st => {
+    const blocks = Array.isArray(st.measurements) ? st.measurements : [];
+    blocks.forEach(block => {
+      const points = Array.isArray(block.points) ? block.points : [];
+      points.forEach((p, i) => {
+        ws2.addRow([
+          st.oplNumber || '',
+          st.machine || '',
+          block.brand || '',
+          i + 1,
+          p.value || ''
+        ]);
+      });
+    });
+  });
+
+  const widths2 = [14, 12, 20, 10, 26];
+  ws2.columns.forEach((col, i) => { col.width = widths2[i] || 14; });
+
+  const headerRow2 = ws2.getRow(1);
+  headerRow2.height = 30;
+  headerRow2.eachCell((cell) => {
+    cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4FA8' } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    cell.border = {
+      top: { style: 'thin' }, bottom: { style: 'thin' },
+      left: { style: 'thin' }, right: { style: 'thin' }
+    };
+  });
+
+  // Сохранение
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const ts = new Date().toISOString().slice(0, 10);
+  downloadBlob(blob, `standards_${line}_${ts}.xlsx`);
+  showToast(`Экспортировано: ${standards.length} стандартов`);
+}
 
 init(); 
