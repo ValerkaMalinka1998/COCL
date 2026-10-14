@@ -8,11 +8,11 @@
  * @param {boolean} pushHistory — добавить запись в историю браузера
  */
 function switchTab(tabName, pushHistory = true) {
-  if (!tabName) tabName = 'check';
+  if (!tabName) tabName = 'electronic';
 
   // Проверяем, что вкладка существует
   const tabEl = document.getElementById('tab-' + tabName);
-  if (!tabEl) tabName = 'check';
+  if (!tabEl) tabName = 'electronic';
 
   // Переключаем активные классы
   document.querySelectorAll('nav a[data-tab]').forEach(b => b.classList.remove('active'));
@@ -70,11 +70,10 @@ if (tabName === 'editor') {
   }
 
   if (tabName === 'electronic') {
-    if (typeof fillElectronicTab === 'function') fillElectronicTab();
+    if (typeof openClCheckTab === 'function') openClCheckTab();
   }
-
-  if (tabName === 'settings' && typeof renderSettings === 'function') {
-    renderSettings();
+  if (tabName === 'schedule') {
+    if (typeof openScheduleTab === 'function') openScheduleTab();
   }
 
   // Сохраняем активную вкладку в localStorage
@@ -141,7 +140,7 @@ function initRouter() {
   // Восстановление при первой загрузке
   const hashTab = location.hash.replace('#', '');
   const savedTab = localStorage.getItem('cl_active_tab');
-  const initialTab = hashTab || savedTab || 'check';
+  const initialTab = hashTab || savedTab || 'electronic';
   switchTab(initialTab, false);
    // Помечаем приложение готовым — снимаем anti-flash защиту
   document.documentElement.setAttribute('data-app-ready', '1');

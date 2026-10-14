@@ -17,9 +17,11 @@ html:not([data-app-ready]) .tab {
 
 html[data-initial-tab="check"]:not([data-app-ready]) #tab-check,
 html[data-initial-tab="toploss"]:not([data-app-ready]) #tab-toploss,
+html[data-initial-tab="electronic"]:not([data-app-ready]) #tab-electronic,
 html[data-initial-tab="dashboard"]:not([data-app-ready]) #tab-dashboard,
 html[data-initial-tab="history"]:not([data-app-ready]) #tab-history,
 html[data-initial-tab="editor"]:not([data-app-ready]) #tab-editor,
+html[data-initial-tab="schedule"]:not([data-app-ready]) #tab-schedule,
 html[data-initial-tab="settings"]:not([data-app-ready]) #tab-settings {
   display: block;
 }

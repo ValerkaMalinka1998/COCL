@@ -9,8 +9,8 @@
   /* Anti-flash: до рендеринга определяем нужную вкладку */
   (function() {
     var hashTab = location.hash.replace('#', '');
-    var savedTab = 'check';
-    try { savedTab = localStorage.getItem('cl_active_tab') || 'check'; } catch(e) {}
+    var savedTab = 'electronic';
+    try { savedTab = localStorage.getItem('cl_active_tab') || 'electronic'; } catch(e) {}
     var tab = hashTab || savedTab;
     document.documentElement.setAttribute('data-initial-tab', tab);
   })();
@@ -52,14 +52,14 @@
     <!-- ============ ГРУППА: ПРОВЕРКИ ============ -->
     <div class="nav-group-title">Проверки</div>
 
-    <a href="#check" data-tab="check" class="active" title="Проверка COCL">
+    <a href="#electronic" data-tab="electronic" class="active" title="Чек-лист CL">
       <span class="nav-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-          <polyline points="22 4 12 14.01 9 11.01"/>
+          <path d="M9 11l3 3L22 4"/>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
         </svg>
       </span>
-      <span class="nav-label">Проверка COCL</span>
+      <span class="nav-label">Чек-лист CL</span>
     </a>
 
     <a href="#toploss" data-tab="toploss" title="TOP Losses">
@@ -73,13 +73,14 @@
       <span class="nav-label">TOP Losses</span>
     </a>
 
-    <a href="#electronic" data-tab="electronic" title="CL Electronic">
+    <a href="#check" data-tab="check" title="Проверка COCL">
       <span class="nav-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
         </svg>
       </span>
-      <span class="nav-label">CL Electronic</span>
+      <span class="nav-label">Проверка COCL</span>
     </a>
 
     <div class="sidebar-divider"></div>
@@ -116,7 +117,7 @@
     <!-- ============ ГРУППА: НАСТРОЙКА ============ -->
     <div class="nav-group-title">Настройка</div>
 
-    <a href="#editor" data-tab="editor" title="Редактор стандартов">
+    <a href="#editor" data-tab="editor" title="Стандарты CL">
       <span class="nav-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -125,7 +126,20 @@
           <line x1="16" y1="17" x2="8" y2="17"/>
         </svg>
       </span>
-      <span class="nav-label">Редактор стандартов</span>
+      <span class="nav-label">Стандарты CL</span>
+    </a>
+
+    <a href="#schedule" data-tab="schedule" title="Расписание CL">
+      <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+          <polyline points="9 15 11 17 15 13"/>
+        </svg>
+      </span>
+      <span class="nav-label">Расписание CL</span>
     </a>
 
     <a href="#settings" data-tab="settings" title="Настройки">
@@ -139,11 +153,10 @@
       <span class="nav-badge-alert" id="navSettingsBadge" style="display:none" title="Есть битые ссылки на фото">!</span>
     </a>
   </nav>
-
   <main>
 
 <!-- ======================= ВКЛАДКА ПРОВЕРКА ======================= -->
-<div class="tab active" id="tab-check">
+<div class="tab" id="tab-check">
 
   <div class="card">
     <h2>1. Оператор и смена</h2>
@@ -330,123 +343,106 @@
   <div id="tlSummaryView" style="display:none"></div>
 
 </div>
-<!-- ======================= ВКЛАДКА CL ELECTRONIC ======================= -->
-<div class="tab" id="tab-electronic">
+<!-- ======================= ВКЛАДКА ЧЕК-ЛИСТ CL ======================= -->
+<div class="tab active" id="tab-electronic">
 
-  <!-- ЭКРАН 1: выбор контекста + чек-лист + превью недели -->
-<div id="elecSelectView">
+  <!-- ===== Панель: чип линии + переключатели + кнопка ===== -->
+  <div class="card editor-panel-card">
 
-  <!-- ===== Карточка: Оператор + Линия ===== -->
-  <div class="card">
-    <h2>1. Оператор и линия</h2>
-
-    <div class="row">
-      <div class="field" style="position:relative">
-        <label class="required" for="elecOperator">ФИО оператора</label>
-        <input type="text" id="elecOperator" placeholder="Начните вводить фамилию..." autocomplete="off">
-        <div id="elecOperatorAutocomplete" class="autocomplete-dropdown" style="display:none"></div>
-      </div>
-      <div class="field">
-        <label class="required" for="elecLine">Линия</label>
-        <select id="elecLine">
-          <option value="">— выберите —</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- Инфо-подсказка на пустом экране -->
-    <div class="elec-hint" id="elecHintEmpty">
-      <span class="elec-hint-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="16" x2="12" y2="12"/>
-          <line x1="12" y1="8" x2="12.01" y2="8"/>
-        </svg>
-      </span>
-      <div class="elec-hint-text">
-        После выбора линии автоматически подтянутся <strong>дата</strong>, <strong>смена</strong> (по графику)
-        и <strong>бренд</strong> на сегодня. Затем появится список параметров к проверке.
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== Контекст (дата, смена, бренд) ===== -->
-  <div id="elecContextInfo" class="elec-context-info" style="display:none"></div>
-
-  <!-- ===== Под-вкладки: Проверка на сегодня / Неделя ===== -->
-<div class="elec-subtabs" id="elecSubtabs" style="display:none">
-  <button type="button" class="elec-subtab-btn active" data-subtab="today">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M9 11l3 3L22 4"/>
-      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-    </svg>
-    <span>Проверка на сегодня</span>
-  </button>
-  <button type="button" class="elec-subtab-btn" data-subtab="week">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-      <line x1="16" y1="2" x2="16" y2="6"/>
-      <line x1="8" y1="2" x2="8" y2="6"/>
-      <line x1="3" y1="10" x2="21" y2="10"/>
-    </svg>
-    <span>Неделя</span>
-  </button>
-</div>
-
-  <!-- ===== Под-вкладка 1: Проверка на сегодня ===== -->
-  <div id="elecSubtabToday" style="display:none">
-    <div class="card" id="elecTodayCard">
-      <div class="elec-today-header">
-        <h2 style="margin:0;padding:0;border:none;flex:1">
-          <span class="elec-today-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-            </svg>
-          </span>
-          Параметры на сегодня
+    <div class="editor-panel-head">
+      <div class="editor-panel-title-wrap">
+        <h2 class="editor-panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 11l3 3L22 4"/>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+          Чек-лист CL
         </h2>
-        <span class="elec-today-count" id="elecTodayCount"></span>
+        <span class="editor-panel-count" id="clPanelCount"></span>
       </div>
 
-      <div id="elecChecklistContainer"></div>
+      <div class="editor-panel-actions">
+        <button class="btn btn-success btn-icon-text" id="clStartCheckBtn" type="button" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          <span>Начать проверку</span>
+        </button>
 
-      <div class="tl-select-footer" id="elecFooter" style="margin-top:14px">
-        <div class="tl-footer-buttons">
-          <button class="btn btn-secondary" id="elecReloadBtn" type="button">Обновить</button>
-          <button class="btn btn-success btn-icon-text" id="elecSaveCheckBtn" disabled>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-              <polyline points="17 21 17 13 7 13 7 21"/>
-              <polyline points="7 3 7 8 15 8"/>
-            </svg>
-            <span>Зафиксировать результат</span>
-          </button>
-        </div>
+        <button class="btn btn-secondary btn-icon-text" id="clStopCheckBtn" type="button" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="6" y="6" width="12" height="12" rx="1"/>
+          </svg>
+          <span>Закончить проверку</span>
+        </button>
       </div>
+    </div>
+
+    <div class="editor-panel-divider"></div>
+
+    <!-- Контекстная строка -->
+    <div class="editor-context-bar">
+
+      <button type="button" class="editor-line-pill" id="clLinePill" title="Сменить линию">
+        <span class="editor-line-pill-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+        </span>
+        <span class="editor-line-pill-code" id="clLinePillCode">Выбрать линию</span>
+        <span class="editor-line-pill-caret">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </span>
+      </button>
+
+      <div class="editor-mode-inline" id="clModeSwitch">
+        <button type="button" class="editor-mode-inline-btn active" data-mode="mech">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          <span>Механические</span>
+        </button>
+        <button type="button" class="editor-mode-inline-btn" data-mode="elec">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+          <span>Электронные</span>
+        </button>
+      </div>
+
+      <div class="editor-part-switch" id="clPartSwitch">
+        <button type="button" class="editor-part-switch-btn active" data-part="">
+          <span>Все</span>
+        </button>
+        <button type="button" class="editor-part-switch-btn" data-part="Maker">
+          <span>Maker</span>
+        </button>
+        <button type="button" class="editor-part-switch-btn" data-part="Packer">
+          <span>Packer</span>
+        </button>
+      </div>
+
+    </div>
+
+    <div class="editor-panel-divider"></div>
+
+    <!-- Контекст: дата, смена, бренд -->
+    <div class="cl-context-bar" id="clContextBar" style="display:none"></div>
+
+  </div>
+
+  <!-- ===== Матрица проверки ===== -->
+  <div class="card editor-table-card">
+    <div id="clMatrixWrap" class="sch-matrix-wrap">
+      <div class="editor-empty">Выберите линию для начала проверки</div>
     </div>
   </div>
 
-  <!-- ===== Под-вкладка 2: Неделя ===== -->
-  <div id="elecSubtabWeek" style="display:none">
-    <div class="card" id="elecWeekCard">
-      <div class="elec-week-header expanded" id="elecWeekHeader">
-        <h2 style="margin:0;padding:0;border:none;flex:1">
-          <span class="elec-week-toggle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"/>
-            </svg>
-          </span>
-          Неделя целиком
-        </h2>
-      </div>
-      <div id="elecWeekMatrix" style="display:block"></div>
-    </div>
-  </div>
-
-</div>
-
-  <!-- ЭКРАН 2: Резюме проверки -->
-  <div id="elecSummaryView" style="display:none"></div>
+  <!-- ===== Экран резюме после проверки ===== -->
+  <div id="clSummaryView" style="display:none"></div>
 
 </div>
 <!-- ======================= ВКЛАДКА РЕДАКТОР ======================= -->
@@ -467,7 +463,7 @@
               <line x1="16" y1="13" x2="8" y2="13"/>
               <line x1="16" y1="17" x2="8" y2="17"/>
             </svg>
-            Стандарты OPL
+            Стандарты CL
           </h2>
           <span class="editor-panel-count" id="editorMechCount"></span>
         </div>
@@ -780,9 +776,150 @@
       <div class="pagination-bar" id="editorElecPagination"></div>
     </div>
 
+  </div>     
+
+</div>        
+
+<!-- ======================= ВКЛАДКА РАСПИСАНИЕ CL ======================= -->
+<div class="tab" id="tab-schedule">
+
+  <div class="card editor-panel-card">
+
+    <div class="editor-panel-head">
+      <div class="editor-panel-title-wrap">
+        <h2 class="editor-panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+            <polyline points="9 15 11 17 15 13"/>
+          </svg>
+          Расписание CL
+        </h2>
+        <span class="editor-panel-count" id="schPanelCount"></span>
+      </div>
+
+      <div class="editor-panel-actions">
+        <button class="btn btn-primary btn-icon-text" id="schAddStandardsBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span>Добавить стандарты</span>
+        </button>
+
+        <button class="btn btn-success btn-icon-text" id="schSaveBtn" type="button" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+            <polyline points="17 21 17 13 7 13 7 21"/>
+            <polyline points="7 3 7 8 15 8"/>
+          </svg>
+          <span>Сохранить изменения</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="editor-panel-divider"></div>
+
+    <div class="editor-context-bar">
+      <button type="button" class="editor-line-pill" id="schLinePill" title="Сменить линию">
+        <span class="editor-line-pill-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+        </span>
+        <span class="editor-line-pill-code" id="schLinePillCode">Выбрать линию</span>
+        <span class="editor-line-pill-caret">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </span>
+      </button>
+
+      <div class="editor-mode-inline" id="schModeSwitch">
+        <button type="button" class="editor-mode-inline-btn active" data-mode="mech">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          <span>Механические</span>
+        </button>
+        <button type="button" class="editor-mode-inline-btn" data-mode="elec">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+          <span>Электронные</span>
+        </button>
+      </div>
+
+      <div class="editor-part-switch" id="schPartSwitch">
+        <button type="button" class="editor-part-switch-btn active" data-part="">
+          <span>Все</span>
+        </button>
+        <button type="button" class="editor-part-switch-btn" data-part="Maker">
+          <span>Maker</span>
+        </button>
+        <button type="button" class="editor-part-switch-btn" data-part="Packer">
+          <span>Packer</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="editor-panel-divider"></div>
+
+    <!-- Панель массовых операций -->
+    <div class="sch-bulk-bar" id="schBulkBar" style="display:none">
+      <div class="sch-bulk-info">
+        Выбрано строк: <strong id="schBulkCount">0</strong>
+      </div>
+      <div class="sch-bulk-actions">
+        <button type="button" class="btn btn-secondary btn-sm" id="schBulkFillAllBtn">
+          Заполнить всё
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" id="schBulkClearAllBtn">
+          Очистить всё
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="card editor-table-card">
+
+    <!-- Тулбар: фильтр + поиск слева, счётчики + легенда справа -->
+    <div class="sch-matrix-toolbar" id="schMatrixToolbar" style="display:none">
+
+      <!-- Левая часть: фильтр + поиск -->
+      <div class="sch-matrix-filters">
+        <div class="sch-matrix-filter-field">
+          <label>Машина</label>
+          <select id="schFilterMachine"><option value="">Все</option></select>
+        </div>
+        <div class="sch-matrix-filter-field sch-matrix-filter-search">
+          <label>Поиск</label>
+          <input type="text" id="schFilterSearch" placeholder="OPL №, название, узел..." autocomplete="off">
+        </div>
+      </div>
+
+      <!-- Правая часть: счётчики + легенда -->
+      <div class="sch-matrix-info">
+        <div class="sch-matrix-counters" id="schMatrixCounters"></div>
+        <div class="sch-matrix-legend" id="schMatrixLegend">
+          <span><span class="sch-matrix-legend-swatch sch-matrix-legend-day"></span> День</span>
+          <span><span class="sch-matrix-legend-swatch sch-matrix-legend-night"></span> Ночь</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div id="schMatrixWrap" class="sch-matrix-wrap">
+      <div class="editor-empty">Выберите линию для просмотра расписания</div>
+    </div>
   </div>
 
 </div>
+
 <!-- ======================= ВКЛАДКА ИСТОРИЯ ======================= -->
 <div class="tab" id="tab-history">
 
@@ -1178,25 +1315,29 @@
 </div>
 <!-- ======================= МОДАЛЬНОЕ ОКНО: БЫСТРАЯ ПРОВЕРКА (из матрицы) ======================= -->
 <div class="modal-overlay" id="quickCheckModal">
-  <div class="modal">
+  <div class="modal modal-wide">
     <div class="modal-header">
-      <h3 id="quickCheckModalTitle">Быстрая проверка</h3>
+      <h3 id="quickCheckModalTitle">Проверка CL</h3>
       <button class="modal-close" id="quickCheckModalClose">✕</button>
     </div>
     <div class="modal-body">
 
-      <!-- Контекст: машина, параметр, время, смена -->
+      <!-- Контекст -->
       <div class="qc-context">
         <div class="qc-context-row">
-          <span class="qc-context-label">Машина:</span>
+          <span class="qc-context-label">Линия · Машина:</span>
           <span class="qc-context-value qc-machine" id="qcMachine">—</span>
         </div>
         <div class="qc-context-row">
-          <span class="qc-context-label">Параметр:</span>
+          <span class="qc-context-label">Стандарт:</span>
           <span class="qc-context-value" id="qcParamName">—</span>
         </div>
         <div class="qc-context-row">
-          <span class="qc-context-label">Время:</span>
+          <span class="qc-context-label">Узел:</span>
+          <span class="qc-context-value" id="qcNode">—</span>
+        </div>
+        <div class="qc-context-row">
+          <span class="qc-context-label">Время проверки:</span>
           <span class="qc-context-value qc-time" id="qcTime">—</span>
           <span class="qc-work-badge" id="qcWork">—</span>
         </div>
@@ -1211,27 +1352,36 @@
       </div>
 
       <!-- Норма -->
-      <div class="qc-norm-block" id="qcNormBlock">
+      <div class="qc-norm-block" id="qcNormBlock" style="display:none">
         <div class="qc-norm-label">Норма:</div>
         <div class="qc-norm-value" id="qcNormValue">—</div>
       </div>
-
-      <!-- Поле ответа: для value_input -->
-      <div class="qc-answer-block" id="qcAnswerValueInput" style="display:none">
-        <label class="required">Значение</label>
-        <div class="qc-answer-row">
-          <input type="number" step="any" id="qcValueInput" placeholder="0">
-          <span class="qc-status-badge" id="qcValueStatus"></span>
+      <!-- Описание контроля (сворачиваемое) -->
+      <div class="qc-collapsible" id="qcControlDescBlock">
+        <div class="qc-collapsible-header" id="qcControlDescToggle">
+          <span class="qc-collapsible-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </span>
+          <span class="qc-collapsible-title">Как проверять</span>
+          <span class="qc-collapsible-hint" id="qcControlDescHint"></span>
         </div>
+        <div class="qc-collapsible-body" id="qcControlDescBody"></div>
       </div>
-
-      <!-- Поле ответа: для ok_not_ok -->
+      <!-- Блок для ok_not_ok -->
       <div class="qc-answer-block" id="qcAnswerOkNotOk" style="display:none">
         <label class="required">Результат</label>
         <div class="radio-group qc-radio-group">
           <label><input type="radio" name="qc_answer" value="OK" id="qcAnswerOk"> ОК</label>
           <label><input type="radio" name="qc_answer" value="FAIL" id="qcAnswerFail"> Не ОК</label>
         </div>
+      </div>
+
+      <!-- Блок для value_input / range_input — точки замера -->
+      <div class="qc-answer-block" id="qcAnswerPoints" style="display:none">
+        <label class="required">Точки замера</label>
+        <div id="qcPointsList" class="qc-points-list"></div>
       </div>
 
       <!-- Комментарий -->
@@ -1252,6 +1402,13 @@
 
     </div>
     <div class="modal-footer">
+      <button class="btn btn-secondary btn-icon-text modal-add-btn-left" id="qcOpenStandardBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+        <span>Открыть полный просмотр</span>
+      </button>
       <button class="btn btn-secondary" id="quickCheckCancelBtn">Отмена</button>
       <button class="btn btn-primary" id="quickCheckSaveBtn">Сохранить</button>
     </div>
@@ -1473,10 +1630,6 @@
 
     <h4 class="form-section-title">Основные</h4>
       <div class="row">
-        <div class="field" style="max-width:120px">
-          <label class="required">№</label>
-          <input type="number" id="sf_number" placeholder="13">
-        </div>
         <div class="field" style="max-width:200px">
           <label class="required">OPL №</label>
           <input type="text" id="sf_oplNumber" placeholder="OPL-4.2.1">
@@ -1538,6 +1691,19 @@
         <label>Почему создан</label>
         <textarea id="sf_whyCreated" rows="2" placeholder="К чему приводит отсутствие контроля"></textarea>
       </div>
+
+      <h4 class="form-section-title">Работа</h4>
+      <div class="row">
+        <div class="field" style="flex:0 0 auto;min-width:auto">
+          <div class="elec-work-chips" id="sf_workChips">
+            <button type="button" class="elec-work-chip elec-work-chip-run active" data-work="Run">Run</button>
+            <button type="button" class="elec-work-chip elec-work-chip-stop" data-work="Stop">Stop</button>
+          </div>
+        </div>
+      </div>
+      <p style="color:var(--text-second);font-size:12px;margin-top:-6px;margin-bottom:10px">
+        Время проверки задаётся в «Расписании CL».
+      </p>
 
       <h4 class="form-section-title">Тип контроля</h4>
       <div class="field">
@@ -1680,6 +1846,14 @@
             </button>
           </div>
         </div>
+        <div class="field" id="ep_nodePartField" style="max-width:180px">
+          <label class="required">Часть линии</label>
+          <select id="ep_nodePart">
+            <option value="">— выберите —</option>
+            <option value="Maker">Maker</option>
+            <option value="Packer">Packer</option>
+          </select>
+        </div>
       </div>
 
       <div class="field">
@@ -1695,15 +1869,10 @@
             <button type="button" class="elec-work-chip elec-work-chip-stop" data-work="Stop">Stop</button>
           </div>
         </div>
-        <div class="field" style="max-width:160px">
-          <label>Время проверки — с</label>
-          <input type="time" id="ep_timeFrom" value="09:10">
-        </div>
-        <div class="field" style="max-width:160px">
-          <label>по</label>
-          <input type="time" id="ep_timeTo" value="10:00">
-        </div>
       </div>
+      <p style="color:var(--text-second);font-size:12px;margin-top:-6px;margin-bottom:10px">
+        Время проверки задаётся в «Расписании CL».
+      </p>
 
       <h4 class="form-section-title">Тип контроля</h4>
       <div class="field" style="flex-basis:100%">
@@ -1720,12 +1889,21 @@
           </div>
       </div>
 
-      <div id="ep_normTextBlock" style="display:none;margin-top:12px">
-        <div class="field">
-          <label>Текст нормы</label>
-          <input type="text" id="ep_normText" placeholder="Вкл. / Corn. CO CL / …">
-        </div>
+      <h4 class="form-section-title">Применять к</h4>
+      <div class="checkbox-group type-checkbox-group" id="ep_appliesToGroup">
+        <label class="type-checkbox type-checkbox-changeover">
+          <input type="checkbox" value="ChangeOver"> <span>Change Over</span>
+        </label>
+        <label class="type-checkbox type-checkbox-clto">
+          <input type="checkbox" value="CL_TO"> <span>CL в ТО</span>
+        </label>
+        <label class="type-checkbox type-checkbox-clconv">
+          <input type="checkbox" value="CL_Conversion"> <span>CL в Конвертацию</span>
+        </label>
       </div>
+      <p style="color:var(--text-second);font-size:12px;margin-top:8px;margin-bottom:12px">
+        Если ничего не выбрано — параметр хранится, но оператору не показывается.
+      </p>
 
       <div id="ep_brandsBlock">
         <h4 class="form-section-title">Значения по брендам</h4>
@@ -1748,33 +1926,7 @@
           + Добавить бренд
         </button>
       </div>
-
-      <h4 class="form-section-title">Периодичность</h4>
-      <div class="field">
-        <label class="required">Тип периодичности</label>
-        <select id="ep_freqType">
-          <option value="daily">Каждый день</option>
-          <option value="weekly">По дням недели</option>
-          <option value="once">Разовые даты</option>
-        </select>
-      </div>
-
-      <div id="ep_freqDailyBlock" style="margin-top:10px">
-        <label>Смены</label>
-        <div class="checkbox-group" id="ep_freqDailyShifts"></div>
-      </div>
-        <div id="ep_freqWeeklyBlock" style="display:none;margin-top:10px">
-          <label>Дни недели</label>
-          <div class="checkbox-group" id="ep_freqWeeklyDays"></div>
-        </div>
-
-        <div id="ep_freqOnceBlock" style="display:none;margin-top:10px">
-          <div class="field">
-            <label>Даты (через запятую или с новой строки)</label>
-            <textarea id="ep_freqOnceDates" rows="3" placeholder="2026-09-28, 2026-09-30, 2026-10-02"></textarea>
-          </div>
-        </div>
-      </div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" id="electronicParamCancel">Отмена</button>
       <button class="btn btn-primary" id="electronicParamSave">Сохранить</button>
@@ -1992,7 +2144,80 @@
     </div>
   </div>
 </div>
+<!-- ======================= МОДАЛЬНОЕ ОКНО: ДОБАВИТЬ СТАНДАРТЫ В РАСПИСАНИЕ ======================= -->
+<div class="modal-overlay" id="schAddStandardsModal">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <h3>Добавить стандарты в расписание</h3>
+      <button class="modal-close" id="schAddStandardsClose">✕</button>
+    </div>
+    <div class="modal-body">
 
+      <div class="field" style="margin-bottom:14px">
+        <input type="text" id="schAddStandardsSearch" placeholder="🔍 Поиск по OPL, машине, узлу, названию..." autocomplete="off">
+      </div>
+
+      <div class="sch-add-toolbar">
+        <label class="sch-add-check-all">
+          <input type="checkbox" id="schAddCheckAll">
+          <span>Выделить все видимые</span>
+        </label>
+        <span class="sch-add-counter" id="schAddCounter">Выбрано: 0</span>
+      </div>
+
+      <div id="schAddStandardsList" class="sch-add-list"></div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="schAddStandardsCancel">Отмена</button>
+      <button class="btn btn-primary" id="schAddStandardsConfirm" disabled>Добавить 0</button>
+    </div>
+  </div>
+</div>
+<!-- ======================= МОДАЛЬНОЕ ОКНО: ВРЕМЯ ПРОВЕРКИ ======================= -->
+<div class="modal-overlay" id="timeWindowsModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Время проверки</h3>
+      <button class="modal-close" id="timeWindowsClose">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <p id="timeWindowsPoint" style="color:var(--text-second);font-size:13px;margin-bottom:14px"></p>
+
+      <div class="tw-presets">
+        <div class="tw-presets-label">Быстрый выбор:</div>
+        <div class="tw-presets-list" id="twPresetsList">
+          <button type="button" class="tw-preset-btn" data-from="09:00" data-to="09:30">09:00–09:30</button>
+          <button type="button" class="tw-preset-btn" data-from="13:00" data-to="13:30">13:00–13:30</button>
+          <button type="button" class="tw-preset-btn" data-from="21:00" data-to="21:30">21:00–21:30</button>
+          <button type="button" class="tw-preset-btn" data-from="03:00" data-to="03:30">03:00–03:30</button>
+        </div>
+      </div>
+
+      <div class="tw-custom-row">
+        <div class="tw-custom-field">
+          <label>С</label>
+          <input type="time" id="twCustomFrom" value="09:00">
+        </div>
+        <div class="tw-custom-field">
+          <label>По</label>
+          <input type="time" id="twCustomTo" value="09:30">
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" id="twAddCustomBtn">Добавить</button>
+      </div>
+
+      <div class="tw-list-title">Выбранные окна:</div>
+      <div class="tw-list" id="twList"></div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="twClearAllBtn" style="margin-right:auto">Очистить всё</button>
+      <button class="btn btn-secondary" id="twCancelBtn">Отмена</button>
+      <button class="btn btn-primary" id="twSaveBtn">Сохранить</button>
+    </div>
+  </div>
+</div>
 <!-- ======================= МОДАЛЬНОЕ ОКНО: ПРОВЕРКА ФОТО ======================= -->
 <div class="modal-overlay" id="checkPhotosModal">
   <div class="modal modal-wide">

@@ -45,7 +45,7 @@ const DEFAULT_WORKSHOPS = [
     areas: [
       {
         id: 'smd_area1',
-        name: 'Участок 1',
+        name: 'Cell 1',
         blocks: [
           { id: 'smd_area1_lst1', name: 'LST 1', lines: [] },
           { id: 'smd_area1_lst2', name: 'LST 2', lines: [] }
@@ -53,7 +53,7 @@ const DEFAULT_WORKSHOPS = [
       },
       {
         id: 'smd_area2',
-        name: 'Участок 2',
+        name: 'Cell 2',
         blocks: [
           { id: 'smd_area2_lst1', name: 'LST 1', lines: ['SD06', 'SD12', 'SD27', 'SD31'] },
           { id: 'smd_area2_lst2', name: 'LST 2', lines: ['SD01', 'SD03', 'SD08', 'SD25'] }
@@ -61,7 +61,7 @@ const DEFAULT_WORKSHOPS = [
       },
       {
         id: 'smd_area3',
-        name: 'Участок 3',
+        name: 'Cell 3',
         blocks: [
           { id: 'smd_area3_lst1', name: 'LST 1', lines: [] },
           { id: 'smd_area3_lst2', name: 'LST 2', lines: [] }
@@ -112,6 +112,24 @@ const DEFAULT_WORKSHOPS = [
     ]
   }
 ];
+/* ============================================================
+   ПРОВЕРКА CL — состояние вкладки
+   ============================================================ */
+
+const clState = {
+  line: null,
+  mode: 'mech',
+  part: '',
+  checkMode: false,
+  rows: [],
+  todayISO: '',
+  shiftType: 'day',
+  shiftLetter: '—',
+  brand: '',
+  brandPlanned: '',
+  brandReason: '',
+  quickDraft: {}
+};
 
 /* ============================================================
    РЕДАКТОР: недавние линии и режим просмотра
@@ -436,94 +454,6 @@ function pluralizeDays(n) {
   return 'дней';
 }
 
-
-/* Отрисовка одной строки параметра */
-function renderElectronicParamRow(p) {
-  const freqLabels = {
-    daily:    'Каждый день',
-    weekly:   'По дням недели',
-    once:     'Разовые даты'
-  };
-
-  const workClass = p.work === 'Run' ? 'work-run' : 'work-stop';
-
-  // Описание нормы
-  let normInfo;
-  if (p.controlType === 'ok_not_ok') {
-    normInfo = p.normText ? escapeHtml(p.normText) : '<span style="color:var(--text-dim)">— без нормы</span>';
-  } else {
-    const brandsCount = (p.valuesByBrand || []).filter(v =>
-      v.target !== '' && v.target != null && v.tolerance !== '' && v.tolerance != null
-    ).length;
-    normInfo = brandsCount > 0
-      ? `${brandsCount} ${brandsCount === 1 ? 'бренд' : 'бренда'}`
-      : '<span style="color:var(--text-dim)">— нет норм</span>';
-  }
-
-  const isActive = p.active !== false;
-
-  return `
-    <div class="elec-param-row ${isActive ? '' : 'inactive'}">
-      <div class="std-active-cell" style="flex-shrink:0">
-        <input type="checkbox" class="std-active-cb" ${isActive ? 'checked' : ''}
-               data-elec-toggle="${escapeAttr(p.id)}" title="Активен">
-      </div>
-      <div class="elec-param-row-info">
-        <div class="elec-param-row-name">${escapeHtml(p.paramName || '—')}</div>
-        <div class="elec-param-row-meta">
-          <span><strong>Тип:</strong> ${p.controlType === 'ok_not_ok' ? 'ОК/Не ОК' : 'Числовой'}</span>
-          <span><strong>Норма:</strong> ${normInfo}</span>
-          <span><strong>Работа:</strong> ${p.work}</span>
-          ${p.timeFrom ? `<span><strong>Время:</strong> ${escapeHtml(p.timeFrom)}–${escapeHtml(p.timeTo || '')}</span>` : ''}
-          <span><strong>Периодичность:</strong> ${freqLabels[p.frequency?.type] || '—'}</span>
-        </div>
-      </div>
-      <div class="elec-param-row-actions">
-        <button class="btn btn-secondary btn-sm btn-icon" data-elec-edit="${escapeAttr(p.id)}" title="Изменить">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-          </svg>
-        </button>
-        <button class="btn btn-danger btn-sm btn-icon" data-elec-delete="${escapeAttr(p.id)}" title="Удалить">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6"/>
-            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-            <path d="M10 11v6"/><path d="M14 11v6"/>
-            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-          </svg>
-        </button>
-      </div>
-    </div>
-  `;
-}
-
-/* Удаление параметра */
-function deleteElectronicParam(id) {
-  const p = getElectronicParams().find(x => x.id === id);
-  if (!p) return;
-  if (!confirm(`Удалить параметр "${p.paramName}"?`)) return;
-
-  setElectronicParams(getElectronicParams().filter(x => x.id !== id));
-  if (currentElectronicMachine) {
-    openElectronicMachine(currentElectronicMachine);
-  } else {
-    renderElectronicView();
-  }
-  showToast('Параметр удалён');
-}
-
-/* Переключение активности */
-function toggleElectronicParamActive(id, isActive) {
-  const all = getElectronicParams();
-  const p = all.find(x => x.id === id);
-  if (!p) return;
-  p.active = !!isActive;
-  p.updatedAt = new Date().toISOString();
-  setElectronicParams(all);
-  openElectronicMachine(currentElectronicMachine);
-  showToast(isActive ? 'Параметр активирован' : 'Параметр деактивирован');
-}
 /* ============================================================
    ФОРМА ЭЛЕКТРОННОГО ПАРАМЕТРА
    ============================================================ */
@@ -554,7 +484,8 @@ function openElectronicParamForm(id) {
       controlType: 'value_input',
       normText: '',
       valuesByBrand: [],
-      frequency: { type: 'daily', shifts: ['A','B','C','D'], daysOfWeek: [], dates: [] }
+      frequency: { type: 'weekly', schedule: [], shifts: ['day','night'], daysOfWeek: [], dates: [] },
+      inSchedule: false
     };
     title.textContent = 'Добавить электронный параметр — ' + currentElectronicMachine;
   }
@@ -563,37 +494,57 @@ function openElectronicParamForm(id) {
   $('#ep_id').value = id || '';
   $('#ep_line').value = currentElectronicLine;
 
+  // Часть линии — только для SMD
+  const ep_nodePartField = $('#ep_nodePartField');
+  const ep_nodePartSelect = $('#ep_nodePart');
+  if (ep_nodePartField) {
+    const workshopId = getWorkshopIdForLine(currentElectronicLine);
+    if (workshopId === 'smd') {
+      ep_nodePartField.style.display = '';
+    } else {
+      ep_nodePartField.style.display = 'none';
+    }
+  }
+  if (ep_nodePartSelect) {
+    ep_nodePartSelect.value = p.nodePart || '';
+  }
+
   // Машина — выпадающий список
   fillElectronicMachineSelect(currentElectronicLine, p.machine);
   $('#ep_paramName').value = p.paramName || '';
-  $('#ep_timeFrom').value = p.timeFrom || '09:10';
-  $('#ep_timeTo').value = p.timeTo || '10:00';
 
   // Работа — чипы
-  $('#ep_workChips').querySelectorAll('.elec-work-chip').forEach(btn => {
+  $('#ep_workChips')?.querySelectorAll('.elec-work-chip').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.work === p.work);
   });
 
   // Тип контроля
-  $('#ep_controlType').value = p.controlType;
-  $('#ep_controlTypeSelector').querySelectorAll('.type-option').forEach(btn => {
+  const epControlTypeEl = $('#ep_controlType');
+  if (epControlTypeEl) epControlTypeEl.value = p.controlType;
+  $('#ep_controlTypeSelector')?.querySelectorAll('.type-option').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.value === p.controlType);
   });
   updateElectronicFormVisibility();
 
   // Текстовая норма
-  $('#ep_normText').value = p.normText || '';
+  const epNormTextEl = $('#ep_normText');
+  if (epNormTextEl) epNormTextEl.value = p.normText || '';
+
+  // Применяемость — чипы
+  const appliesToArr = Array.isArray(p.appliesTo) ? p.appliesTo : [];
+  $$('#ep_appliesToGroup input').forEach(cb => {
+    cb.checked = appliesToArr.includes(cb.value);
+    cb.closest('label').classList.toggle('checked', cb.checked);
+    cb.onchange = (e) => {
+      e.target.closest('label').classList.toggle('checked', e.target.checked);
+    };
+  });
 
   // Таблица брендов
   renderElectronicBrandsTable(p.valuesByBrand || []);
 
-  // Периодичность
-  $('#ep_freqType').value = p.frequency.type;
-  renderFreqShiftsCheckboxes('ep_freqDailyShifts',  p.frequency.shifts || ['A','B','C','D']);
-  renderFreqDaysCheckboxes('ep_freqWeeklyDays',     p.frequency.daysOfWeek || []);
-  $('#ep_freqOnceDates').value = (p.frequency.dates || []).join(', ');
-
-  updateFreqBlocksVisibility();
+  // Периодичность — скрываем, теперь она настраивается в «Расписании CL»
+  p.frequency = p.frequency || { type: 'weekly', schedule: [], shifts: ['day','night'], daysOfWeek: [], dates: [] };
 
   openModal(modal);
 }
@@ -620,9 +571,13 @@ function fillElectronicMachineSelect(line, currentValue) {
 
 /* Показать/скрыть блоки в зависимости от controlType */
 function updateElectronicFormVisibility() {
-  const ct = $('#ep_controlType').value;
-  $('#ep_normTextBlock').style.display = (ct === 'ok_not_ok') ? 'block' : 'none';
-  $('#ep_brandsBlock').style.display    = (ct === 'value_input') ? 'block' : 'none';
+  const ct = $('#ep_controlType')?.value || 'value_input';
+
+  const normBlock = $('#ep_normTextBlock');
+  const brandsBlock = $('#ep_brandsBlock');
+
+  if (normBlock)   normBlock.style.display   = (ct === 'ok_not_ok')    ? 'block' : 'none';
+  if (brandsBlock) brandsBlock.style.display = (ct === 'value_input')  ? 'block' : 'none';
 }
 
 /* ============================================================
@@ -834,7 +789,7 @@ $('#deactivationSaveBtn')?.addEventListener('click', () => {
   st.deactivationComment = text;
   setStandards(all);
 
-  renderEditorStandardsList();
+   refreshEditorMechTable();
   closeDeactivationCommentModal();
   showToast(text ? 'Комментарий сохранён' : 'Комментарий удалён');
 });
@@ -851,14 +806,14 @@ $('#deactivationClearBtn')?.addEventListener('click', () => {
   st.deactivationComment = '';
   setStandards(all);
 
-  renderEditorStandardsList();
+  refreshEditorMechTable();
   closeDeactivationCommentModal();
   showToast('Комментарий удалён');
 });
 /* Обработчики поиска/фильтров — со сбросом пагинации */
 const resetPageAndRender = () => {
   currentPage = 1;
-  renderEditorStandardsList();
+  refreshEditorMechTable();
 };
 
 /* ============================================================
@@ -907,6 +862,11 @@ function updateStandardPointsVisibility() {
 }
 
 function openStandardForm(id) {
+  // Восстанавливаем из localStorage, если переменная пусто
+  if (!currentEditorLine) {
+    const saved = localStorage.getItem('cl_editor_line');
+    if (saved) currentEditorLine = saved;
+  }
   if (!currentEditorLine) return showToast('Сначала откройте линию', true);
 
   const modal = $('#standardFormModal');
@@ -927,7 +887,6 @@ function openStandardForm(id) {
 
   // Заполняем поля
   $('#sf_id').value = id || '';
-  $('#sf_number').value = st.number || '';
   $('#sf_oplNumber').value = st.oplNumber || '';
   // Машина — выпадающий список из машин линии
   const standardLine = st.line || currentEditorLine;
@@ -979,6 +938,12 @@ function openStandardForm(id) {
   $('#sf_purpose').value = st.purpose || '';
   $('#sf_whyCreated').value = st.whyCreated || '';
   $('#sf_controlType').value = st.controlType || '';
+
+  // --- НОВОЕ: работа и время проверки ---
+  const workVal = (st.work === 'Stop') ? 'Stop' : 'Run';
+  $('#sf_workChips')?.querySelectorAll('.elec-work-chip').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.work === workVal);
+  });
 
   // Показ/скрытие блока точек в зависимости от типа контроля
   updateStandardPointsVisibility();
@@ -1671,8 +1636,13 @@ $('#topLossPickerSearch')?.addEventListener('input', (e) => {
   renderTopLossPickerList(e.target.value);
 });
 
-$('#standardFormClose')?.addEventListener('click', closeStandardForm);
-$('#standardFormCancel')?.addEventListener('click', closeStandardForm);
+/* --- Чипы Run/Stop в форме стандарта --- */
+$('#sf_workChips')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.elec-work-chip');
+  if (!btn) return;
+  $('#sf_workChips').querySelectorAll('.elec-work-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+});
 /* --- Обработчики блока «Фотографии» --- */
 $('#sf_addPhotoBtn')?.addEventListener('click', addPhotoFromInput);
 /* --- Кнопка «+ Добавить блок бренда» --- */
@@ -1722,29 +1692,35 @@ $('#standardFormModal')?.addEventListener('click', (e) => {
    СОХРАНЕНИЕ СТАНДАРТА
    ============================================================ */
 $('#standardFormSave')?.addEventListener('click', () => {
-  console.log('=== ОБРАБОТЧИК СРАБОТАЛ ===');  
   const id = $('#sf_id').value;
-    console.log('ID из формы =', JSON.stringify(id), '| тип:', typeof id, '| длина:', (id || '').length);
 
   // Собираем значения
-  const number = $('#sf_number').value.trim();
+  const number = '';   // поле № убрано
   const oplNumber = $('#sf_oplNumber').value.trim();
   const machine = ($('#sf_machine').value || '').trim();
   const title = $('#sf_title').value.trim();
-  const line = $('#sf_line').value;
+  let line = $('#sf_line').value;
   const node = $('#sf_node').value.trim();
   const nodePart = $('#sf_nodePart').value;
   const controlType = $('#sf_controlType').value;
-    console.log('ПРОВЕРКА ПОЛЕЙ:', {
-  number, oplNumber, machine, title, line, node, nodePart, controlType
-});
+
+  // --- НОВОЕ: работа и время ---
+  const work = $('#sf_workChips')?.querySelector('.elec-work-chip.active')?.dataset.work || 'Run';
 
   // Валидация обязательных полей
-if (!number)      return showToast('Укажите №', true);
 if (!oplNumber)   return showToast('Укажите OPL №', true);
 if (!machine)     return showToast('Укажите машину', true);
 if (!title)       return showToast('Укажите название', true);
-if (!line)        return showToast('Линия не определена', true);
+if (!line) {
+  // Пробуем восстановить из localStorage или currentEditorLine
+  const fallback = localStorage.getItem('cl_editor_line') || currentEditorLine;
+  if (fallback) {
+    $('#sf_line').value = fallback;
+    line = fallback;  // ← но line объявлен как const — надо поменять на let
+  } else {
+    return showToast('Линия не определена. Выберите линию заново.', true);
+  }
+}
 if (!node)        return showToast('Укажите узел', true);
 const workshopIdForSave = getWorkshopIdForLine(line);
 if (workshopIdForSave === 'smd' && !nodePart) {
@@ -1791,6 +1767,10 @@ if (!controlType) return showToast('Выберите тип контроля', t
     node,
     nodePart,
     controlType,
+    // --- НОВОЕ: работа и время ---
+    work,
+    timeFrom: '',
+    timeTo: '',
     problemDescription: $('#sf_problemDescription').value.trim(),
     controlDescription: $('#sf_controlDescription').value.trim(),
     purpose: $('#sf_purpose').value.trim(),
@@ -1817,20 +1797,27 @@ if (!controlType) return showToast('Выберите тип контроля', t
     all.push(obj);
   }
 
-  console.log('ПЕРЕД setStandards: all.length =', all.length);
-  console.log('ПЕРЕД setStandards: obj =', obj);
-  console.log('typeof setStandards =', typeof setStandards);
-
   setStandards(all);
 
-  console.log('ПОСЛЕ setStandards: localStorage =', localStorage.getItem('cl_standards_v3'));
-
-  renderEditorStandardsList();
-  renderEditorLinesView();
+  refreshEditorMechTable();
+  if (typeof updatePartCounters === 'function') updatePartCounters();
   closeStandardForm();
   showToast(id ? 'Стандарт обновлён' : 'Стандарт добавлен');
 });
+/* ============================================================
+   ФОРМА СТАНДАРТА — отмена и закрытие
+   ============================================================ */
+$('#standardFormClose')?.addEventListener('click', () => {
+  closeStandardForm();
+});
 
+$('#standardFormCancel')?.addEventListener('click', () => {
+  closeStandardForm();
+});
+
+$('#standardFormModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'standardFormModal') closeStandardForm();
+});
 
 /* ============================================================
    ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМА РЕДАКТОРА (Механический / Электронный)
@@ -1947,13 +1934,19 @@ $('#electronicParamSave')?.addEventListener('click', () => {
   const controlType = $('#ep_controlType').value;
   const normText = ($('#ep_normText')?.value || '').trim();
   const work = $('#ep_workChips')?.querySelector('.elec-work-chip.active')?.dataset.work || 'Run';
-  const timeFrom = ($('#ep_timeFrom')?.value || '').trim();
-  const timeTo = ($('#ep_timeTo')?.value || '').trim();
-  const freqType = $('#ep_freqType').value;
 
+  // Часть линии — только для SMD
+  const lineForPart = currentElectronicLine;
+  const workshopId = getWorkshopIdForLine(lineForPart);
+  const nodePart = (workshopId === 'smd') ? ($('#ep_nodePart')?.value || '').trim() : '';
+    // Применяемость
+  const appliesTo = [...$$('#ep_appliesToGroup input:checked')].map(cb => cb.value);
   // Валидация
   if (!machine)     return showToast('Выберите машину', true);
   if (!paramName)   return showToast('Укажите название параметра', true);
+  if (workshopId === 'smd' && !nodePart) {
+    return showToast('Выберите часть линии', true);
+  }
   if (controlType === 'ok_not_ok' && !normText) {
     return showToast('Укажите текст нормы', true);
   }
@@ -1980,23 +1973,6 @@ $('#electronicParamSave')?.addEventListener('click', () => {
     }
   }
 
-  // Периодичность
-  const frequency = { type: freqType, shifts: [], daysOfWeek: [], dates: [] };
-
-  if (freqType === 'daily') {
-    frequency.shifts = [...($$('#ep_freqDailyShifts input:checked'))].map(cb => cb.value);
-    if (!frequency.shifts.length) return showToast('Выберите хотя бы одну смену', true);
-  } else if (freqType === 'weekly') {
-    frequency.daysOfWeek = [...($$('#ep_freqWeeklyDays input:checked'))].map(cb => Number(cb.value));
-    frequency.shifts = ['day', 'night'];  // показывается в обе смены
-    if (!frequency.daysOfWeek.length) return showToast('Выберите дни недели', true);
-  } else if (freqType === 'once') {
-    const raw = ($('#ep_freqOnceDates')?.value || '').trim();
-    frequency.dates = raw.split(/[\s,]+/).map(s => s.trim()).filter(s => /^\d{4}-\d{2}-\d{2}$/.test(s));
-    frequency.shifts = ['day', 'night'];  // показывается в обе смены
-    if (!frequency.dates.length) return showToast('Укажите хотя бы одну дату в формате YYYY-MM-DD', true);
-  }
-
   // Проверка дубликата (line + machine + paramName)
   const all = getElectronicParams().map(normalizeElectronicParam);
   const dup = all.find(p =>
@@ -2009,19 +1985,27 @@ $('#electronicParamSave')?.addEventListener('click', () => {
     return showToast(`Параметр «${paramName}» уже есть на машине ${machine}`, true);
   }
 
+  // Периодичность — берём существующую или дефолтную
+  // (настраивается в «Расписании CL»)
+  const existingParam = id ? all.find(p => p.id === id) : null;
+  const frequency = existingParam?.frequency
+    || { type: 'weekly', schedule: [], shifts: ['day','night'], daysOfWeek: [], dates: [] };
+
   // Формируем объект
   const obj = {
     id: id || makeElectronicParamId(),
     active: id ? (all.find(p => p.id === id)?.active !== false) : true,
     line: currentElectronicLine,
     machine,
+    nodePart,
     paramName,
     work,
-    timeFrom,
-    timeTo,
+    timeFrom: '',
+    timeTo: '',
     controlType,
     normText: controlType === 'ok_not_ok' ? normText : '',
     valuesByBrand: controlType === 'value_input' ? valuesByBrand : [],
+    appliesTo,
     frequency,
     author: id ? (all.find(p => p.id === id)?.author || '') : '',
     createdAt: id ? (all.find(p => p.id === id)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
@@ -2038,10 +2022,8 @@ $('#electronicParamSave')?.addEventListener('click', () => {
   setElectronicParams(all);
   closeElectronicParamForm();
 
-  // Перерисовываем список параметров на машине
-  if (currentElectronicMachine) {
-    openElectronicMachine(currentElectronicMachine);
-  }
+  // Перерисовываем таблицу параметров
+  refreshEditorElecTable();
 
   showToast(id ? 'Параметр обновлён' : 'Параметр добавлен');
 });
@@ -2122,6 +2104,20 @@ function createEmptyStandard() {
     nodePart: '',
     controlType: '',
 
+    // --- НОВОЕ: работа и время проверки ---
+    work: 'Run',              // 'Run' | 'Stop'
+    timeFrom: '',             // '09:10'
+    timeTo: '',               // '10:00'
+    // --- НОВОЕ: периодичность (расписание проверок) ---
+    frequency: {
+      type: 'weekly',
+      schedule: [],             // массив { day, shift }
+      shifts: ['day', 'night'],
+      daysOfWeek: [],
+      dates: []
+    },
+    // --- НОВОЕ: в расписании технолога ---
+    inSchedule: false,
     problemDescription: '',
     controlDescription: '',
     purpose: '',
@@ -2142,6 +2138,7 @@ function createEmptyStandard() {
     // --- НОВОЕ: комментарий к деактивации ---
     deactivationComment: '',
     deactivationHistory: []   // массив { text, date }
+    
   };
 }
 
@@ -2255,6 +2252,8 @@ function normalizeStandard(st) {
     photos: Array.isArray(st.photos)
       ? st.photos.filter(p => typeof p === 'string' && p.trim() !== '')
       : [],
+    // --- НОВОЕ: в расписании технолога (миграция) ---
+    inSchedule: st.inSchedule === true,
     // --- НОВОЕ: миграция истории ---
     author: typeof st.author === 'string' ? st.author : '',
     createdAt: st.createdAt || null,
@@ -2285,13 +2284,43 @@ function setOperators(v) { save(STORAGE_KEYS.operators, v); }
 /* --- Миграция: создаём структуру при первом запуске --- */
 function migrateToWorkshopsStructure() {
   const existing = localStorage.getItem(STORAGE_KEYS.workshops);
-  if (existing) return;  // уже мигрировали
+  if (!existing) {
+    // Первый запуск — создаём дефолтную структуру
+    save(STORAGE_KEYS.workshops, DEFAULT_WORKSHOPS);
+    // Удаляем старые блоки (они больше не используются)
+    localStorage.removeItem(STORAGE_KEYS.blocks);
+    return;
+  }
 
-  // Создаём дефолтную структуру
-  save(STORAGE_KEYS.workshops, DEFAULT_WORKSHOPS);
+  // --- Разовая миграция: переименование SMD-участков в "Cell N" ---
+  const MIGRATION_KEY = 'cl_workshops_migration_smd_cell_named';
+  if (localStorage.getItem(MIGRATION_KEY) === '1') return;
 
-  // Удаляем старые блоки (они больше не используются)
-  localStorage.removeItem(STORAGE_KEYS.blocks);
+  try {
+    const workshops = JSON.parse(existing);
+    if (!Array.isArray(workshops)) return;
+
+    // Карта переименований: только SMD-участки
+    // PMD (SFG/CRT) и FMD (Cell 1/Cell 2) — без изменений
+    const renameMap = {
+      'smd_area1': 'Cell 1',
+      'smd_area2': 'Cell 2',
+      'smd_area3': 'Cell 3'
+    };
+
+    workshops.forEach(w => {
+      (w.areas || []).forEach(a => {
+        if (renameMap[a.id]) {
+          a.name = renameMap[a.id];
+        }
+      });
+    });
+
+    save(STORAGE_KEYS.workshops, workshops);
+    localStorage.setItem(MIGRATION_KEY, '1');
+  } catch (e) {
+    console.warn('Migration error:', e);
+  }
 }
 
 /* --- Получить все цеха --- */
@@ -2495,6 +2524,7 @@ function normalizeElectronicParam(p) {
 
     line: p.line || '',
     machine: p.machine || '',
+    nodePart: p.nodePart || '',
     paramName: p.paramName || '',
     work: (p.work === 'Stop') ? 'Stop' : 'Run',
     timeFrom: p.timeFrom || '',
@@ -2507,7 +2537,15 @@ function normalizeElectronicParam(p) {
       ? p.valuesByBrand.filter(v => v && v.brand)
       : [],
 
+    // --- Применяемость ---
+    appliesTo: Array.isArray(p.appliesTo) ? p.appliesTo.filter(v =>
+      ['ChangeOver', 'CL_TO', 'CL_Conversion'].includes(v)
+    ) : [],
+
     frequency: normalizeElectronicFrequency(p.frequency),
+
+    // --- НОВОЕ: в расписании технолога ---
+    inSchedule: p.inSchedule === true,
 
     author: typeof p.author === 'string' ? p.author : '',
     createdAt: p.createdAt || null,
@@ -2517,13 +2555,45 @@ function normalizeElectronicParam(p) {
 
 /* Нормализация периодичности */
 function normalizeElectronicFrequency(f) {
-  const def = { type: 'daily', shifts: ['day','night'], daysOfWeek: [], dates: [] };
+  const def = { type: 'weekly', schedule: [], shifts: ['day', 'night'], daysOfWeek: [], dates: [] };
   if (!f || typeof f !== 'object') return def;
 
-  // type: rotation больше нет — мигрируем в daily
-  let type = ['daily','weekly','once'].includes(f.type) ? f.type : 'daily';
+  // type: rotation больше нет — мигрируем в weekly
+  let type = ['daily','weekly','once'].includes(f.type) ? f.type : 'weekly';
 
-  // shifts: поддерживаем старый формат ['A','B','C','D'] → ['day','night']
+  // dates
+  const dates = Array.isArray(f.dates)
+    ? f.dates.filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
+    : [];
+
+  // --- Новый формат: schedule ---
+  if (Array.isArray(f.schedule)) {
+    const schedule = f.schedule
+      .filter(x => x && Number.isInteger(x.day) && x.day >= 0 && x.day <= 6)
+      .filter(x => x.shift === 'day' || x.shift === 'night')
+      .map(x => ({ day: x.day, shift: x.shift }));
+
+    const seen = new Set();
+    const uniqueSchedule = schedule.filter(x => {
+      const key = `${x.day}|${x.shift}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    const daysOfWeek = [...new Set(uniqueSchedule.map(x => x.day))];
+    const shifts = [...new Set(uniqueSchedule.map(x => x.shift))];
+
+    return {
+      type,
+      schedule: uniqueSchedule,
+      shifts: shifts.length ? shifts : ['day', 'night'],
+      daysOfWeek,
+      dates
+    };
+  }
+
+  // --- Миграция со старого формата ---
   let shifts = Array.isArray(f.shifts) ? f.shifts : [];
   const legacyShifts = shifts.some(s => ['A','B','C','D'].includes(s));
   if (legacyShifts) {
@@ -2533,16 +2603,78 @@ function normalizeElectronicFrequency(f) {
     if (!shifts.length) shifts = ['day', 'night'];
   }
 
-  return {
-    type,
-    shifts,
-    daysOfWeek: Array.isArray(f.daysOfWeek)
-      ? f.daysOfWeek.filter(d => Number.isInteger(d) && d >= 0 && d <= 6)
-      : [],
-    dates: Array.isArray(f.dates)
-      ? f.dates.filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
-      : []
-  };
+  const daysOfWeek = Array.isArray(f.daysOfWeek)
+    ? f.daysOfWeek.filter(d => Number.isInteger(d) && d >= 0 && d <= 6)
+    : [];
+
+  const schedule = [];
+  daysOfWeek.forEach(day => {
+    shifts.forEach(shift => {
+      schedule.push({ day, shift });
+    });
+  });
+
+  return { type, schedule, shifts, daysOfWeek, dates };
+}
+
+/* Нормализация периодичности механического стандарта
+   (использует тот же формат, что и электронный параметр). */
+function normalizeStandardFrequency(f) {
+  const def = { type: 'weekly', schedule: [], shifts: ['day', 'night'], daysOfWeek: [], dates: [] };
+  if (!f || typeof f !== 'object') return def;
+
+  const type = ['daily', 'weekly', 'once'].includes(f.type) ? f.type : 'weekly';
+
+  // dates: YYYY-MM-DD
+  const dates = Array.isArray(f.dates)
+    ? f.dates.filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
+    : [];
+
+  // --- Новый формат: schedule ---
+  if (Array.isArray(f.schedule)) {
+    const schedule = f.schedule
+      .filter(x => x && Number.isInteger(x.day) && x.day >= 0 && x.day <= 6)
+      .filter(x => x.shift === 'day' || x.shift === 'night')
+      .map(x => ({ day: x.day, shift: x.shift }));
+
+    // Уникализируем
+    const seen = new Set();
+    const uniqueSchedule = schedule.filter(x => {
+      const key = `${x.day}|${x.shift}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    const daysOfWeek = [...new Set(uniqueSchedule.map(x => x.day))];
+    const shifts = [...new Set(uniqueSchedule.map(x => x.shift))];
+
+    return {
+      type,
+      schedule: uniqueSchedule,
+      shifts: shifts.length ? shifts : ['day', 'night'],
+      daysOfWeek,
+      dates
+    };
+  }
+
+  // --- Миграция со старого формата (daysOfWeek + shifts) ---
+  let shifts = Array.isArray(f.shifts) ? f.shifts : [];
+  shifts = shifts.filter(s => s === 'day' || s === 'night');
+  if (!shifts.length) shifts = ['day', 'night'];
+
+  const daysOfWeek = Array.isArray(f.daysOfWeek)
+    ? f.daysOfWeek.filter(d => Number.isInteger(d) && d >= 0 && d <= 6)
+    : [];
+
+  const schedule = [];
+  daysOfWeek.forEach(day => {
+    shifts.forEach(shift => {
+      schedule.push({ day, shift });
+    });
+  });
+
+  return { type, schedule, shifts, daysOfWeek, dates };
 }
 /* Получить параметры конкретной линии */
 function getElectronicParamsForLine(line) {
@@ -3123,284 +3255,12 @@ const elecState = {
   items: [],       // собранные параметры
 };
 
-/* Заполнить вкладку при открытии */
-function fillElectronicTab() {
-  fillElectronicLines();
-  initElectronicOperatorAutocomplete();
 
-  // Сброс
-  const lineEl = $('#elecLine');
-  if (lineEl) lineEl.value = '';
-  $('#elecContextInfo').style.display = 'none';
-  $('#elecSubtabs').style.display = 'none';
-  $('#elecSubtabToday').style.display = 'none';
-  $('#elecSubtabWeek').style.display = 'none';
-}
-
-/* Список линий, у которых есть хотя бы один электронный параметр */
-function fillElectronicLines() {
-  const el = $('#elecLine');
-  if (!el) return;
-
-  const allLines = getLines();
-  const linesWithParams = allLines.filter(l => getElectronicParamsForLine(l).length > 0);
-
-  if (!linesWithParams.length) {
-    el.innerHTML = '<option value="">— нет линий с параметрами —</option>';
-    el.value = '';
-    return;
-  }
-  el.innerHTML = '<option value="">— выберите —</option>' +
-    linesWithParams.map(l => `<option>${escapeHtml(l)}</option>`).join('');
-  el.value = '';
-}
-
-/* Автокомплит оператора — переиспользуем логику Top Losses,
-   но привязываем к #elecOperator / #elecOperatorAutocomplete */
-function initElectronicOperatorAutocomplete() {
-  const input = document.getElementById('elecOperator');
-  const dropdown = document.getElementById('elecOperatorAutocomplete');
-  if (!input || !dropdown) return;
-  if (input.dataset.acReady === '1') return;
-  input.dataset.acReady = '1';
-
-  let activeIndex = -1;
-  let currentMatches = [];
-
-  function highlight(fullText, query) {
-    const idx = fullText.toLowerCase().indexOf(query.toLowerCase());
-    if (idx === -1) return escapeHtml(fullText);
-    return escapeHtml(fullText.slice(0, idx)) +
-      '<strong>' + escapeHtml(fullText.slice(idx, idx + query.length)) + '</strong>' +
-      escapeHtml(fullText.slice(idx + query.length));
-  }
-
-  function render(matches, query) {
-    currentMatches = matches;
-    activeIndex = -1;
-    if (!matches.length) {
-      if (query.length >= 1) {
-        dropdown.innerHTML = '<div class="autocomplete-empty">Ничего не найдено</div>';
-        dropdown.style.display = 'block';
-      } else {
-        dropdown.style.display = 'none';
-      }
-      return;
-    }
-    dropdown.innerHTML = matches.map((n, i) =>
-      `<div class="autocomplete-item" data-index="${i}">${highlight(n, query)}</div>`
-    ).join('');
-    dropdown.style.display = 'block';
-    dropdown.querySelectorAll('.autocomplete-item').forEach(el => {
-      el.addEventListener('mousedown', e => {
-        e.preventDefault();
-        const idx = parseInt(el.dataset.index, 10);
-        if (idx >= 0 && idx < currentMatches.length) {
-          input.value = currentMatches[idx];
-          dropdown.style.display = 'none';
-        }
-      });
-    });
-  }
-
-  function filter(query) {
-    const q = query.toLowerCase();
-    const all = sortOperatorsRus(getOperators());
-    const starts = [], contains = [];
-    all.forEach(op => {
-      const low = op.toLowerCase();
-      if (low.startsWith(q)) starts.push(op);
-      else if (low.includes(q)) contains.push(op);
-    });
-    return [...starts, ...contains];
-  }
-
-  input.addEventListener('input', () => {
-    const query = input.value.trim();
-    if (!getOperators().length) return (dropdown.style.display = 'none');
-    if (!query) return render(sortOperatorsRus(getOperators()).slice(0, 7), '');
-    render(filter(query).slice(0, 15), query);
-  });
-
-  input.addEventListener('focus', () => {
-    if (!input.value.trim() && getOperators().length) {
-      render(sortOperatorsRus(getOperators()).slice(0, 7), '');
-    }
-  });
-
-  input.addEventListener('keydown', e => {
-    if (dropdown.style.display !== 'block') return;
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      activeIndex = Math.min(activeIndex + 1, currentMatches.length - 1);
-      dropdown.querySelectorAll('.autocomplete-item').forEach((el, i) => el.classList.toggle('active', i === activeIndex));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      activeIndex = Math.max(activeIndex - 1, 0);
-      dropdown.querySelectorAll('.autocomplete-item').forEach((el, i) => el.classList.toggle('active', i === activeIndex));
-    } else if (e.key === 'Enter' && activeIndex >= 0) {
-      e.preventDefault();
-      input.value = currentMatches[activeIndex];
-      dropdown.style.display = 'none';
-    } else if (e.key === 'Escape') {
-      dropdown.style.display = 'none';
-    }
-  });
-
-  input.addEventListener('blur', () => {
-    setTimeout(() => { dropdown.style.display = 'none'; }, 150);
-  });
-}
-
-/* Собрать параметры, актуальные на дату/смену/бренд для линии */
-function collectElectronicItemsForDate(line, dateStr, shiftType, brand) {
-  const params = getElectronicParamsForLine(line).filter(p => p.active !== false);
-  const result = [];
-
-  params.forEach(p => {
-    // 1. Периодичность
-    if (!isElectronicParamDue(p, dateStr, shiftType)) return;
-
-    // 2. Бренд: для value_input норма должна быть для этого бренда;
-    //    для ok_not_ok — просто наличие normText
-    let target = null;
-    let tolerance = null;
-    let normText = '';
-
-    if (p.controlType === 'ok_not_ok') {
-      if (!p.normText || !p.normText.trim()) return; // норма не задана → не показываем
-      normText = p.normText.trim();
-    } else {
-      const v = (p.valuesByBrand || []).find(v => v.brand === brand);
-      if (!v) return; // для этого бренда нормы нет → не показываем
-      if (v.target === '' || v.target == null) return;
-      if (v.tolerance === '' || v.tolerance == null) return;
-      target = Number(v.target);
-      tolerance = Number(v.tolerance);
-    }
-
-    result.push({
-      id: p.id,
-      machine: p.machine,
-      paramName: p.paramName,
-      work: p.work,
-      timeFrom: p.timeFrom,
-      timeTo: p.timeTo,
-      controlType: p.controlType,
-      target,
-      tolerance,
-      normText
-    });
-  });
-
-  // Сортировка: по времени проверки, потом по машине, потом по имени
-  result.sort((a, b) => {
-    if (a.timeFrom !== b.timeFrom) return (a.timeFrom || '').localeCompare(b.timeFrom || '');
-    if (a.machine !== b.machine)   return (a.machine || '').localeCompare(b.machine || '', 'ru');
-    return (a.paramName || '').localeCompare(b.paramName || '', 'ru');
-  });
-
-  return result;
-}
-
-/* Пересобрать контекст и отрисовать всё на вкладке */
-function refreshElectronicTab() {
-  const operator = ($('#elecOperator')?.value || '').trim();
-  const line = $('#elecLine')?.value || '';
-  
-  // Показываем подсказку только пока линия не выбрана
-  const hintEmpty = $('#elecHintEmpty');
-  if (hintEmpty) {
-    hintEmpty.style.display = line ? 'none' : 'flex';
-  }
-
-  elecState.operator = operator;
-  elecState.line = line;
-
-  if (!line) {
-    $('#elecContextInfo').style.display = 'none';
-    $('#elecSubtabs').style.display = 'none';
-    $('#elecSubtabToday').style.display = 'none';
-    $('#elecSubtabWeek').style.display = 'none';
-    return;
-  }
-
-  // Дата = сегодня, смена = из графика (день/ночь)
-  const dateStr = todayISO();
-  const shifts = getShiftsForDate(dateStr);   // { day: 'D', night: 'C' }
-  const shiftType = getCurrentShiftType();    // 'day' | 'night' — по времени
-  elecState.date = dateStr;
-  elecState.shiftType = shiftType;
-  elecState.shift = shifts[shiftType];        // буква бригады
-
-  // Бренд: из расписания
-  const brandPlanned = getElectronicBrandForDate(line, dateStr) || '';
-  elecState.brandPlanned = brandPlanned;
-  elecState.brand = brandPlanned; // если оператор не переопределил
-
-  renderElectronicContextInfo();
-
-  // Если бренд не определён — показываем сообщение и не строим чек-лист
-  if (!elecState.brand) {
-    $('#elecSubtabs').style.display = 'flex';
-    restoreElecSubtab();
-
-    $('#elecChecklistContainer').innerHTML = `
-      <div class="empty-state" style="padding:32px 20px">
-        На <strong>${fmtISODate(dateStr)}</strong> бренд в расписании не задан.<br>
-        <span style="color:var(--text-dim);font-size:12px">
-          Обратитесь к техническому специалисту или выберите бренд вручную.
-        </span>
-        <div style="margin-top:14px">
-          <button class="btn btn-secondary" id="elecChooseBrandManuallyBtn" type="button">Выбрать бренд вручную</button>
-        </div>
-      </div>`;
-    $('#elecTodayCount').textContent = '';
-    $('#elecSaveCheckBtn').disabled = true;
-    return;
-  }
-
-  // Собираем параметры
-  const items = collectElectronicItemsForDate(line, dateStr, shiftType, elecState.brand);
-  elecState.items = items;
-
-  renderElectronicChecklist(items);
-
-  // Показываем контекст и под-вкладки
-  $('#elecSubtabs').style.display = 'flex';
-
-  // Восстанавливаем активную под-вкладку
-  restoreElecSubtab();
-}
 /* ============================================================
    CL ELECTRONIC: под-вкладки (Проверка на сегодня / Неделя)
    ============================================================ */
 
 const ELEC_SUBTAB_KEY = 'cl_elec_subtab';   // 'today' | 'week'
-
-/* Переключить под-вкладку */
-function switchElecSubtab(name) {
-  if (name !== 'today' && name !== 'week') name = 'today';
-
-  // Кнопки
-  document.querySelectorAll('#elecSubtabs .elec-subtab-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.subtab === name);
-  });
-
-  // Панели
-  const todayPanel = $('#elecSubtabToday');
-  const weekPanel = $('#elecSubtabWeek');
-  if (todayPanel) todayPanel.style.display = (name === 'today') ? 'block' : 'none';
-  if (weekPanel)  weekPanel.style.display  = (name === 'week')  ? 'block' : 'none';
-
-  // Если перешли на «Неделю» — перерисуем матрицу (свежие данные)
-  if (name === 'week' && typeof renderElectronicWeekMatrix === 'function') {
-    renderElectronicWeekMatrix();
-  }
-
-  // Сохраняем выбор
-  try { localStorage.setItem(ELEC_SUBTAB_KEY, name); } catch (e) {}
-}
 
 /* Обработчики кнопок под-вкладок */
 document.querySelectorAll('#elecSubtabs .elec-subtab-btn').forEach(btn => {
@@ -3409,388 +3269,8 @@ document.querySelectorAll('#elecSubtabs .elec-subtab-btn').forEach(btn => {
   });
 });
 
-/* Восстановить сохранённую под-вкладку */
-function restoreElecSubtab() {
-  let saved = 'today';
-  try { saved = localStorage.getItem(ELEC_SUBTAB_KEY) || 'today'; } catch (e) {}
-  switchElecSubtab(saved);
-}
-/* Контекстная строка */
-function renderElectronicContextInfo() {
-  const box = $('#elecContextInfo');
-  if (!box) return;
-
-  const dateStr = elecState.date;
-  const shiftType = elecState.shiftType;
-  const shift = elecState.shift;   // буква бригады
-  const brand = elecState.brand;
-
-  const shiftLabel = shiftType === 'day' ? 'День' : 'Ночь';
-
-  const brandDisplay = elecState.brandPlanned
-    ? `<span>${escapeHtml(brand)}</span>
-       <button class="elec-edit-brand-btn" id="elecEditBrandBtn" type="button" title="Изменить бренд">
-         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-         </svg>
-       </button>`
-    : `<span>${escapeHtml(brand)}</span>
-       <span style="font-size:11px;color:var(--accent-amber);font-style:italic;margin-left:6px">— вручную</span>`;
-
-  box.innerHTML = `
-    <div class="elec-context-item">
-      <strong>Дата:</strong>
-      <span>${escapeHtml(fmtISODate(dateStr))}</span>
-    </div>
-    <div class="elec-context-item">
-      <strong>Смена:</strong>
-      <span>${shiftLabel} · бригада <span class="elec-shift-${shift}">${shift}</span></span>
-    </div>
-    <div class="elec-context-item">
-      <strong>Бренд:</strong>
-      ${brandDisplay}
-    </div>
-  `;
-
-  box.style.display = 'flex';
-
-  // Обработчик — изменить бренд
-  $('#elecEditBrandBtn')?.addEventListener('click', openElecBrandOverrideDialog);
-  $('#elecChooseBrandManuallyBtn')?.addEventListener('click', () => {
-    elecState.brandPlanned = '';
-    openElecBrandOverrideDialog();
-  });
-}
-
 /* ============================================================
    Чек-лист CL Electronic на сегодня
-   ============================================================ */
-
-function renderElectronicChecklist(items) {
-  const container = $('#elecChecklistContainer');
-  const counter = $('#elecTodayCount');
-  const saveBtn = $('#elecSaveCheckBtn');
-
-  if (!container) return;
-
-  if (!items.length) {
-    container.innerHTML = `
-      <div class="empty-state" style="padding:32px 20px">
-        На <strong>${fmtISODate(elecState.date)}</strong> для бренда
-        <strong>${escapeHtml(elecState.brand)}</strong> нет параметров к проверке.
-      </div>`;
-    if (counter) counter.textContent = '0 параметров';
-    if (saveBtn) saveBtn.disabled = true;
-    return;
-  }
-
-  if (counter) counter.textContent = `${items.length} ${pluralizeParams(items.length)}`;
-  if (saveBtn) saveBtn.disabled = false;
-
-  // --- Первый непроверенный раскроем автоматически ---
-  const firstUncheckedId = items[0]?.id || null;
-
-  container.innerHTML = items.map(it => renderElectronicAccItem(it)).join('');
-
-  // Раскрываем первый
-  if (firstUncheckedId) {
-    const firstItem = container.querySelector(`.elec-acc-item[data-elec-id="${firstUncheckedId}"]`);
-    if (firstItem) expandCoclItem(firstItem, true);
-  }
-
-  bindElectronicAccordionEvents(container);
-  updateElecProgress();
-}
-
-/** Отрисовать один пункт как аккордеон */
-function renderElectronicAccItem(it) {
-  // Мета свёрнутой строки
-  const metaParts = [];
-  if (it.timeFrom) {
-    metaParts.push(`<span class="elec-check-time">${escapeHtml(it.timeFrom)}–${escapeHtml(it.timeTo || '')}</span>`);
-  }
-  if (it.machine) metaParts.push(`<span><strong>Машина:</strong> ${escapeHtml(it.machine)}</span>`);
-  metaParts.push(`<span class="elec-check-work elec-check-work-${it.work.toLowerCase()}">${escapeHtml(it.work)}</span>`);
-
-  const compactMeta = metaParts.join(' · ');
-
-  // Норма
-  let normHtml = '';
-  if (it.controlType === 'ok_not_ok') {
-    normHtml = `<div class="elec-check-norm"><strong>Норма:</strong> <span class="elec-norm-value">${escapeHtml(it.normText)}</span></div>`;
-  } else if (it.controlType === 'value_input') {
-    const min = (it.target - it.tolerance).toFixed(2).replace(/\.00$/, '');
-    const max = (it.target + it.tolerance).toFixed(2).replace(/\.00$/, '');
-    normHtml = `<div class="elec-check-norm">
-      <strong>Норма:</strong>
-      <span class="elec-norm-value">${it.target} ± ${it.tolerance}</span>
-      <span style="color:var(--text-dim);font-size:11px;margin-left:6px">→ [${min}, ${max}]</span>
-    </div>`;
-  }
-
-  // Ответ
-  let answerHtml = '';
-  if (it.controlType === 'ok_not_ok') {
-    answerHtml = `
-      <div class="answer-row">
-        <div class="radio-group">
-          <label><input type="radio" name="elec_ans_${escapeAttr(it.id)}" value="OK" data-elec-ans> ОК</label>
-          <label><input type="radio" name="elec_ans_${escapeAttr(it.id)}" value="FAIL" data-elec-ans> Не ОК</label>
-        </div>
-      </div>`;
-  } else {
-    answerHtml = `
-      <div class="answer-row">
-        <div class="answer-field">
-          <input type="number" step="any" data-elec-value placeholder="0">
-        </div>
-        <span class="elec-answer-status" data-elec-status></span>
-      </div>`;
-  }
-
-  return `
-    <div class="cocl-acc-item elec-acc-item" data-elec-id="${escapeAttr(it.id)}" data-expanded="false">
-      <div class="cocl-acc-header" data-acc-toggle>
-        <span class="cocl-status-dot" data-acc-status="unchecked"></span>
-        <div class="cocl-acc-title-wrap">
-          <div class="cocl-acc-title">${escapeHtml(it.paramName || '')}</div>
-          <div class="cocl-acc-meta">${compactMeta}</div>
-        </div>
-
-        <button type="button" class="cocl-acc-comment-btn" data-comment-btn title="Добавить комментарий">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            <line x1="9" y1="10" x2="15" y2="10"/>
-            <line x1="9" y1="14" x2="13" y2="14"/>
-          </svg>
-        </button>
-
-        <span class="cocl-acc-caret">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px">
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
-        </span>
-      </div>
-
-      <div class="cocl-acc-body">
-        ${normHtml}
-        <div class="elec-check-answer">${answerHtml}</div>
-        <div class="comment-preview" style="display:none" data-comment-preview></div>
-      </div>
-    </div>
-  `;
-}
-
-/** Обработчики аккордеона E-Param */
-function bindElectronicAccordionEvents(container) {
-  if (!container) return;
-
-  // Клик по шапке — раскрыть/свернуть
-  container.querySelectorAll('[data-acc-toggle]').forEach(head => {
-    head.addEventListener('click', (e) => {
-      if (e.target.closest('[data-comment-btn]')) return;
-      const item = head.closest('.elec-acc-item');
-      if (!item) return;
-      const isExpanded = item.dataset.expanded === 'true';
-      if (isExpanded) {
-        collapseCoclItem(item);
-      } else {
-        expandCoclItem(item);
-      }
-    });
-  });
-
-  // Радио ОК / Не ОК
-  container.querySelectorAll('input[data-elec-ans]').forEach(r => {
-    r.addEventListener('change', (e) => {
-      const item = e.target.closest('.elec-acc-item');
-      const val = e.target.value;
-      updateElecItemStatus(item, val === 'OK' ? 'ok' : 'fail');
-      item.classList.remove('answered-ok', 'answered-fail');
-      item.classList.add(val === 'OK' ? 'answered-ok' : 'answered-fail');
-      updateElecProgress();
-    });
-  });
-
-  // Поля ввода значений
-  container.querySelectorAll('input[data-elec-value]').forEach(inp => {
-    inp.addEventListener('input', (e) => {
-      const item = e.target.closest('.elec-acc-item');
-      const it = elecState.items.find(x => x.id === item.dataset.elecId);
-      const statusEl = item.querySelector('[data-elec-status]');
-
-      const v = parseFloat(inp.value);
-      if (isNaN(v) || inp.value === '') {
-        updateElecItemStatus(item, 'unchecked');
-        item.classList.remove('answered-ok', 'answered-fail');
-        if (statusEl) statusEl.textContent = '';
-      } else {
-        const min = it.target - it.tolerance;
-        const max = it.target + it.tolerance;
-        const inRange = v >= min && v <= max;
-        updateElecItemStatus(item, inRange ? 'ok' : 'fail');
-        item.classList.remove('answered-ok', 'answered-fail');
-        item.classList.add(inRange ? 'answered-ok' : 'answered-fail');
-        if (statusEl) {
-          statusEl.textContent = inRange ? '✓ в допуске' : '✕ не в допуске';
-          statusEl.className = 'elec-answer-status ' + (inRange ? 'ok' : 'fail');
-        }
-      }
-      updateElecProgress();
-    });
-  });
-
-  // Комментарии
-  container.querySelectorAll('[data-comment-btn]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const item = e.target.closest('.elec-acc-item');
-      openCommentModalElec(item);
-    });
-  });
-}
-
-/** Обновить статусный кружок в шапке E-Param */
-function updateElecItemStatus(item, status) {
-  item.dataset.status = status;
-  const dot = item.querySelector('[data-acc-status]');
-  if (dot) {
-    dot.classList.remove('cocl-status-unchecked', 'cocl-status-ok', 'cocl-status-fail');
-    dot.classList.add('cocl-status-' + status);
-  }
-}
-function renderElectronicCheckItem(it) {
-  // Мета: время · работа · машина
-  const metaParts = [];
-  if (it.timeFrom) {
-    metaParts.push(`<span class="elec-check-time">${escapeHtml(it.timeFrom)}–${escapeHtml(it.timeTo || '')}</span>`);
-  }
-  if (it.machine) metaParts.push(`<span><strong>Машина:</strong> ${escapeHtml(it.machine)}</span>`);
-  metaParts.push(`<span class="elec-check-work elec-check-work-${it.work.toLowerCase()}">${escapeHtml(it.work)}</span>`);
-
-  // Норма
-  let normHtml = '';
-  if (it.controlType === 'ok_not_ok') {
-    normHtml = `<div class="elec-check-norm"><strong>Норма:</strong> <span class="elec-norm-value">${escapeHtml(it.normText)}</span></div>`;
-  } else if (it.controlType === 'value_input') {
-    const min = (it.target - it.tolerance).toFixed(2).replace(/\.00$/, '');
-    const max = (it.target + it.tolerance).toFixed(2).replace(/\.00$/, '');
-    normHtml = `<div class="elec-check-norm">
-      <strong>Норма:</strong>
-      <span class="elec-norm-value">${it.target} ± ${it.tolerance}</span>
-      <span style="color:var(--text-dim);font-size:11px;margin-left:6px">→ [${min}, ${max}]</span>
-    </div>`;
-  }
-
-  // Поле ответа
-  let answerHtml = '';
-  if (it.controlType === 'ok_not_ok') {
-    answerHtml = `
-      <div class="answer-row">
-        <div class="radio-group">
-          <label><input type="radio" name="elec_ans_${escapeAttr(it.id)}" value="OK" data-elec-ans> ОК</label>
-          <label><input type="radio" name="elec_ans_${escapeAttr(it.id)}" value="FAIL" data-elec-ans> Не ОК</label>
-        </div>
-        <button type="button" class="comment-btn" data-elec-comment-btn title="Добавить комментарий">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            <line x1="9" y1="10" x2="15" y2="10"/>
-            <line x1="9" y1="14" x2="13" y2="14"/>
-          </svg>
-        </button>
-      </div>`;
-  } else {
-    answerHtml = `
-      <div class="answer-row">
-        <div class="answer-field">
-          <input type="number" step="any" data-elec-value placeholder="0">
-        </div>
-        <span class="elec-answer-status" data-elec-status></span>
-        <button type="button" class="comment-btn" data-elec-comment-btn title="Добавить комментарий">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            <line x1="9" y1="10" x2="15" y2="10"/>
-            <line x1="9" y1="14" x2="13" y2="14"/>
-          </svg>
-        </button>
-      </div>`;
-  }
-
-  return `
-    <div class="checklist-item elec-check-item" data-elec-id="${escapeAttr(it.id)}">
-      <div class="elec-check-meta">${metaParts.join('')}</div>
-      <div class="elec-check-name">${escapeHtml(it.paramName || '')}</div>
-      ${normHtml}
-      <div class="elec-check-answer">${answerHtml}</div>
-      <div class="comment-preview" style="display:none" data-elec-comment-preview></div>
-    </div>`;
-}
-
-function bindElectronicChecklistEvents(container) {
-  // Радио ОК/Не ОК
-  container.querySelectorAll('input[data-elec-ans]').forEach(r => {
-    r.addEventListener('change', e => {
-      const item = e.target.closest('.checklist-item');
-      const val = e.target.value;
-      item.classList.remove('answered-ok', 'answered-fail');
-      if (val === 'OK') item.classList.add('answered-ok');
-      if (val === 'FAIL') item.classList.add('answered-fail');
-      updateElecProgress();
-    });
-  });
-
-  // Поле значения
-  container.querySelectorAll('input[data-elec-value]').forEach(inp => {
-    inp.addEventListener('input', e => {
-      const item = e.target.closest('.checklist-item');
-      const it = elecState.items.find(x => x.id === item.dataset.elecId);
-      const statusEl = item.querySelector('[data-elec-status]');
-
-      const v = parseFloat(inp.value);
-      if (isNaN(v) || inp.value === '') {
-        item.classList.remove('answered-ok', 'answered-fail');
-        if (statusEl) statusEl.textContent = '';
-      } else {
-        const min = it.target - it.tolerance;
-        const max = it.target + it.tolerance;
-        const inRange = v >= min && v <= max;
-        item.classList.remove('answered-ok', 'answered-fail');
-        item.classList.add(inRange ? 'answered-ok' : 'answered-fail');
-        if (statusEl) {
-          statusEl.textContent = inRange ? '✓ в допуске' : '✕ не в допуске';
-          statusEl.className = 'elec-answer-status ' + (inRange ? 'ok' : 'fail');
-        }
-      }
-      updateElecProgress();
-    });
-  });
-
-  // Комментарии
-  container.querySelectorAll('[data-elec-comment-btn]').forEach(btn => {
-    btn.addEventListener('click', e => {
-      const item = e.target.closest('.checklist-item');
-      openCommentModalElec(item);
-    });
-  });
-}
-
-/* Прогресс + активность кнопки сохранения */
-function updateElecProgress() {
-  const items = $$('#elecChecklistContainer .elec-acc-item');
-  const saveBtn = $('#elecSaveCheckBtn');
-
-  let filled = 0;
-  items.forEach(item => {
-    const status = item.dataset.status;
-    if (status === 'ok' || status === 'fail') filled++;
-  });
-
-  if (saveBtn) saveBtn.disabled = filled === 0;
-}
-
-/* ============================================================
-   Сохранение проверки CL Electronic
    ============================================================ */
 
 $$('#elecChecklistContainer .elec-acc-item').forEach(item => {
@@ -3890,174 +3370,6 @@ $('#elecOperator')?.addEventListener('input', () => {
 $('#elecLine')?.addEventListener('change', () => {
   refreshElectronicTab();
 });
-
-/* ============================================================
-   Резюме проверки CL Electronic
-   ============================================================ */
-
-function renderElectronicSummary(record) {
-  const container = $('#elecSummaryView');
-  if (!container) return;
-
-  const total = record.items.length;
-  const oks = record.items.filter(x => x.status === 'OK').length;
-  const fails = record.items.filter(x => x.status === 'FAIL').length;
-  const unchecked = record.items.filter(x => x.status === 'UNCHECKED').length;
-  const checkedTotal = oks + fails;
-  const percentOk = checkedTotal > 0 ? Math.round((oks / checkedTotal) * 100) : 0;
-  const allOk = fails === 0 && unchecked === 0;
-
-  const shieldClass = allOk ? 'tl-shield-ok' : 'tl-shield-fail';
-  const shieldTitle = allOk ? 'Всё под контролем' : 'Требует внимания';
-
-  const shieldSubParts = [];
-  if (checkedTotal > 0) shieldSubParts.push(`Проверено: <strong>${checkedTotal}</strong> из ${total}`);
-  if (fails > 0)        shieldSubParts.push(`вне нормы: <strong>${fails}</strong>`);
-  if (unchecked > 0)    shieldSubParts.push(`<span class="tl-shield-sub-unchecked">не проверено: ${unchecked}</span>`);
-
-  // Чипы
-  const chipsHtml = record.items.slice(0, 20).map(it => {
-    let cls;
-    if (it.status === 'OK') cls = 'tl-shield-chip-ok';
-    else if (it.status === 'FAIL') cls = 'tl-shield-chip-fail';
-    else cls = 'tl-shield-chip-unchecked';
-
-    const label = it.machine ? `${it.machine} · ${it.paramName}` : it.paramName;
-    return `<span class="tl-shield-chip ${cls}" title="${escapeAttr(it.paramName || '')}">
-      <span class="tl-shield-chip-dot"></span>
-      ${escapeHtml(label)}
-    </span>`;
-  }).join('');
-  const chipMore = record.items.length > 20
-    ? `<span class="tl-shield-chip">+${record.items.length - 20}</span>` : '';
-
-  const html = `
-    <div class="card tl-summary-card">
-      <div class="tl-summary-head">
-        <div class="tl-summary-icon tl-summary-icon-ok">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-            <polyline points="22 4 12 14.01 9 11.01"/>
-          </svg>
-        </div>
-        <div>
-          <div class="tl-summary-title">Проверка сохранена</div>
-          <div class="tl-summary-sub">
-            Оператор: <strong>${escapeHtml(record.operator)}</strong> ·
-            Линия: <strong>${escapeHtml(record.line)}</strong> ·
-            Смена: <strong>${escapeHtml(record.shift)}</strong> ·
-            Дата: <strong>${escapeHtml(fmtISODate(record.date))}</strong>
-          </div>
-          <div class="tl-summary-sub" style="margin-top:4px">
-            Бренд: <strong>${escapeHtml(record.brandActual)}</strong>
-            ${record.brandPlanned && record.brandPlanned !== record.brandActual
-              ? `<span style="color:var(--accent-amber);font-size:12px;margin-left:8px">
-                   (по расписанию: ${escapeHtml(record.brandPlanned)}${record.brandReason ? ', причина: ' + escapeHtml(record.brandReason) : ''})
-                 </span>`
-              : ''}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="tl-shield ${shieldClass}">
-      <div class="tl-shield-ring" style="--percent: ${percentOk}">
-        <div class="tl-shield-ring-hole">
-          <div class="tl-shield-ring-value">${percentOk}%</div>
-          <div class="tl-shield-ring-label">ОК</div>
-        </div>
-      </div>
-      <div class="tl-shield-info">
-        <div class="tl-shield-title">${shieldTitle}</div>
-        <div class="tl-shield-sub">${shieldSubParts.join(' · ')}</div>
-        ${fails > 0 ? `
-          <div class="tl-shield-journal-warning">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-              <line x1="12" y1="9" x2="12" y2="13"/>
-              <line x1="12" y1="17" x2="12.01" y2="17"/>
-            </svg>
-            <span>Есть отклонения. Зафиксируйте их в <strong>Journal Machines</strong>.</span>
-          </div>
-        ` : ''}
-        <div class="tl-shield-chips">
-          ${chipsHtml}
-          ${chipMore}
-        </div>
-      </div>
-    </div>
-
-    <!-- Матрица недели — чтобы оператор сразу видел, как его проверка легла в общую картину -->
-    <div class="card" id="elecSummaryWeekCard">
-      <div class="elec-week-header expanded" id="elecSummaryWeekHeader">
-        <span class="elec-week-toggle">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
-        </span>
-        <h2 style="margin:0;border:none;padding:0">Неделя целиком</h2>
-      </div>
-      <div id="elecSummaryWeekMatrix" style="display:block"></div>
-    </div>
-
-    <div class="tl-select-footer">
-      <button class="btn btn-secondary" id="elecSummaryBackBtn">← К проверке</button>
-      <button class="btn btn-primary btn-icon-text" id="elecSummaryNewBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="23 4 23 10 17 10"/>
-          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-        </svg>
-        <span>Новая проверка</span>
-      </button>
-    </div>
-  `;
-
-  container.innerHTML = html;
-
-  // Рисуем матрицу недели прямо в резюме
-  renderElectronicSummaryWeekMatrix();
-
-  // Экраны: показываем только резюме
-$('#elecSelectView').style.display = 'none';
-$('#elecSummaryView').style.display = 'block';
-
-  // Обработчики кнопок
-  $('#elecSummaryBackBtn')?.addEventListener('click', () => {
-    refreshElectronicTab();
-    $('#elecSelectView').style.display = 'block';
-    $('#elecSummaryView').style.display = 'none';
-  });
-
-  $('#elecSummaryNewBtn')?.addEventListener('click', () => {
-    // Сброс и возврат к выбору
-    $('#elecOperator').value = '';
-    $('#elecLine').value = '';
-    elecState.operator = '';
-    elecState.line = '';
-    elecState.brand = '';
-    elecState.brandPlanned = '';
-    elecState.items = [];
-
-    $('#elecContextInfo').style.display = 'none';
-    $('#elecSubtabs').style.display = 'none';
-    $('#elecSubtabToday').style.display = 'none';
-    $('#elecSubtabWeek').style.display = 'none';
-    $('#elecChecklistContainer').innerHTML = '';
-    $('#elecWeekMatrix').innerHTML = '';
-
-    $('#elecSelectView').style.display = 'block';
-    $('#elecSummaryView').style.display = 'none';
-  });
-
-  $('#elecSummaryWeekHeader')?.addEventListener('click', () => {
-    const header = $('#elecSummaryWeekHeader');
-    const matrix = $('#elecSummaryWeekMatrix');
-    const expanded = header.classList.toggle('expanded');
-    matrix.style.display = expanded ? 'block' : 'none';
-  });
-
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
 
 /* ============================================================
    COCL: экран резюме после сохранения проверки
@@ -4198,727 +3510,160 @@ function renderCoclSummary(record) {
   });
 }
 
-function renderElectronicWeekMatrix() {
-  const wrap = $('#elecWeekMatrix');
-  if (!wrap) return;
-
-  if (!elecState.line) {
-    wrap.innerHTML = '<div class="empty-state">Выберите линию</div>';
-    return;
-  }
-
-  const allParams = getElectronicParamsForLine(elecState.line).filter(p => p.active !== false);
-
-  const today = todayISO();
-  const days = getCurrentWeekDays();  // 7 дат текущей ISO-недели
-
-  const rows = [];
-
-  // Собираем уже сохранённые проверки в этом диапазоне
-  const history = getHistory().filter(h =>
-    h.mode === 'electronic' &&
-    h.line === elecState.line &&
-    days.includes(h.date)
-  );
-  const savedStatus = {};
-  history.forEach(h => {
-    h.items.forEach(it => {
-      if (it.status === 'OK' || it.status === 'FAIL' || it.status === 'UNCHECKED') {
-        savedStatus[`${h.date}|${h.shift}|${it.standardId}`] = it.status;
-      }
-    });
-  });
-
-  allParams.forEach(p => {
-    const cells = {}; // 'YYYY-MM-DD|day' => true/false
-
-    // Дата создания параметра — раньше неё проверок нет
-    const createdDate = p.createdAt ? p.createdAt.slice(0, 10) : today;
-
-    days.forEach(date => {
-      ['day', 'night'].forEach(shiftType => {
-        const shiftLetter = getShiftsForDate(date)[shiftType];
-        const key = `${date}|${shiftLetter}|${p.id}`;
-        const saved = savedStatus[key];
-
-        let due = false;
-
-        // 1. Если есть сохранённая проверка — показываем всегда
-        if (saved) {
-          cells[`${date}|${shiftType}`] = true;
-          return;
-        }
-
-        // 2. Если день раньше today — не показываем
-        if (date < today) {
-          cells[`${date}|${shiftType}`] = false;
-          return;
-        }
-
-        // 3. Если день раньше даты создания — не показываем
-        if (date < createdDate) {
-          cells[`${date}|${shiftType}`] = false;
-          return;
-        }
-
-        // 4. Проверяем периодичность
-        if (isElectronicParamDue(p, date, shiftType)) {
-          due = true;
-        }
-
-        cells[`${date}|${shiftType}`] = due;
-      });
-    });
-
-    const hasAny = Object.values(cells).some(Boolean);
-    if (!hasAny) return;
-
-    rows.push({ param: p, cells });
-  });
-
-  if (!rows.length) {
-    wrap.innerHTML = '<div class="empty-state" style="padding:24px">На текущую неделю нет запланированных проверок</div>';
-    return;
-  }
-
-  // --- Шапка ---
-  // Верхняя строка: описательные колонки (rowspan=2) + 7 дат (colspan=2)
-  let headerHtml = `<tr>
-    <th class="elec-matrix-th-machine" rowspan="2">Машина</th>
-    <th class="elec-matrix-th-name" rowspan="2">Параметр</th>
-    <th class="elec-matrix-th-time" rowspan="2">Время</th>
-    <th class="elec-matrix-th-work" rowspan="2">Run/Stop</th>
-    <th class="elec-matrix-th-norm" rowspan="2">Норма</th>`;
-
-  days.forEach(date => {
-    headerHtml += `<th colspan="2" class="elec-matrix-th-date">${escapeHtml(fmtISODate(date))}</th>`;
-  });
-  headerHtml += `</tr><tr>`;
-
-  // Нижняя строка: буквы смен (день/ночь)
-  days.forEach(date => {
-    const shifts = getShiftsForDate(date);
-    headerHtml += `<th class="elec-matrix-th-shift elec-matrix-th-shift-day">${shifts.day}</th>`;
-    headerHtml += `<th class="elec-matrix-th-shift elec-matrix-th-shift-night">${shifts.night}</th>`;
-  });
-  headerHtml += `</tr>`;
-
-  // --- Тело ---
-  const bodyHtml = rows.map(({ param, cells }) => {
-
-    // Норма — только для бренда СЕГОДНЯ
-    let normText = '';
-    let normTitle = '';
-    const brandToday = getElectronicBrandForDate(elecState.line, today) || '';
-
-    if (param.controlType === 'ok_not_ok') {
-      normText = param.normText
-        ? escapeHtml(param.normText)
-        : '<span class="elec-matrix-empty">—</span>';
-      normTitle = param.normText || '';
-    } else {
-      if (!brandToday) {
-        normText = '<span class="elec-matrix-empty">нет бренда</span>';
-        normTitle = 'На сегодня бренд не задан в расписании';
-      } else {
-        const v = (param.valuesByBrand || []).find(v => v.brand === brandToday);
-        if (v && v.target !== '' && v.target != null && v.tolerance !== '' && v.tolerance != null) {
-          normText = `<span class="elec-norm-brand">${escapeHtml(v.brand)}:</span> ${v.target}±${v.tolerance}`;
-          normTitle = `${v.brand}: ${v.target}±${v.tolerance}`;
-        } else {
-          normText = '<span class="elec-matrix-empty">—</span>';
-          normTitle = `Для бренда ${brandToday} норма не задана`;
-        }
-      }
-    }
-
-    // Время
-    const timeText = (param.timeFrom && param.timeTo)
-      ? `<span class="elec-time-from">${escapeHtml(param.timeFrom)}</span><span class="elec-time-sep">–</span><span class="elec-time-to">${escapeHtml(param.timeTo)}</span>`
-      : '<span class="elec-matrix-empty">—</span>';
-
-    // Run/Stop
-    const workCls = param.work === 'Run' ? 'elec-check-work-run' : 'elec-check-work-stop';
-    const workText = escapeHtml(param.work || '—');
-
-    // Ячейки по дням
-    let cellsHtml = '';
-    days.forEach(date => {
-      ['day', 'night'].forEach(shiftType => {
-        const due = cells[`${date}|${shiftType}`];
-        const shiftLetter = getShiftsForDate(date)[shiftType];
-        const isToday = (date === today && shiftType === elecState.shiftType);
-        const key = `${date}|${shiftLetter}|${param.id}`;
-        const saved = savedStatus[key];
-
-        let cls = 'elec-matrix-cell';
-        let text = '—';
-
-        if (saved === 'OK') {
-          cls += ' elec-cell-ok';
-          text = '✓';
-        } else if (saved === 'FAIL') {
-          cls += ' elec-cell-fail';
-          text = '✕';
-        } else if (saved === 'UNCHECKED') {
-          cls += ' elec-cell-unchecked';
-          text = '?';
-        } else if (due) {
-          cls += ' elec-cell-due';
-        } else {
-          cls += ' elec-cell-na';
-        }
-        if (isToday) cls += ' elec-cell-today';
-
-        const isClickable = saved || due;
-
-        if (isClickable) {
-          cellsHtml += `<td class="${cls} elec-cell-clickable"
-            data-param-id="${escapeAttr(param.id)}"
-            data-date="${escapeAttr(date)}"
-            data-shift-type="${escapeAttr(shiftType)}"
-            title="Нажмите, чтобы ${saved ? 'посмотреть / изменить' : 'проверить'}">${text}</td>`;
-        } else {
-          cellsHtml += `<td class="${cls}">${text}</td>`;
-        }
-      });
-    });
-
-    return `<tr>
-      <td class="elec-matrix-machine" title="${escapeAttr(param.machine || '')}">${escapeHtml(param.machine || '—')}</td>
-      <td class="elec-matrix-name" title="${escapeAttr(param.paramName || '')}">${escapeHtml(param.paramName || '—')}</td>
-      <td class="elec-matrix-time">${timeText}</td>
-      <td class="elec-matrix-work"><span class="elec-check-work ${workCls}">${workText}</span></td>
-      <td class="elec-matrix-norm" title="${escapeAttr(normTitle)}">${normText}</td>
-      ${cellsHtml}
-    </tr>`;
-  }).join('');
-
-  // --- Считаем счётчики по неделе ---
-  let weekOk = 0;
-  let weekFail = 0;
-  let weekUnchecked = 0;
-  let weekDue = 0;     // всего "запланировано к проверке"
-  let weekNa = 0;      // ячеек "не запланировано"
-
-  days.forEach(date => {
-    ['day', 'night'].forEach(shiftType => {
-      const shiftLetter = getShiftsForDate(date)[shiftType];
-      rows.forEach(({ param, cells }) => {
-        const due = cells[`${date}|${shiftType}`];
-        if (!due) { weekNa++; return; }
-        weekDue++;
-        const key = `${date}|${shiftLetter}|${param.id}`;
-        const saved = savedStatus[key];
-        if (saved === 'OK') weekOk++;
-        else if (saved === 'FAIL') weekFail++;
-        else if (saved === 'UNCHECKED') weekUnchecked++;
-      });
-    });
-  });
-
-  wrap.innerHTML = `
-    <div class="elec-matrix-toolbar">
-      <div class="elec-matrix-legend">
-        <span><span class="elec-matrix-legend-swatch elec-matrix-legend-due"></span>Запланировано</span>
-        <span><span class="elec-matrix-legend-swatch elec-matrix-legend-ok"></span>ОК</span>
-        <span><span class="elec-matrix-legend-swatch elec-matrix-legend-fail"></span>Не ОК</span>
-        <span><span class="elec-matrix-legend-swatch elec-matrix-legend-unchecked"></span>Не проверено</span>
-        <span><span class="elec-matrix-legend-swatch elec-matrix-legend-na"></span>Не запланировано</span>
-      </div>
-
-      <div class="elec-matrix-counters">
-        <span class="elec-counter-chip elec-counter-ok" title="Проверено с результатом ОК">
-          ✓ ОК: <strong>${weekOk}</strong>
-        </span>
-        <span class="elec-counter-chip elec-counter-fail" title="Проверено с отклонением">
-          ✕ Не ОК: <strong>${weekFail}</strong>
-        </span>
-        <span class="elec-counter-chip elec-counter-unchecked" title="Не проверено">
-          ? Не проверено: <strong>${weekUnchecked}</strong>
-        </span>
-        <span class="elec-counter-chip elec-counter-due" title="Всего запланировано за неделю">
-          Всего к проверке: <strong>${weekDue}</strong>
-        </span>
-      </div>
-
-      <button class="btn btn-secondary btn-icon-text elec-export-week-btn"
-              id="elecExportWeekBtn" type="button"
-              title="Скачать отчёт по неделе в Excel">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/>
-          <line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
-        <span>Экспорт недели</span>
-      </button>
-    </div>
-
-    <div class="elec-matrix-wrap">
-      <table class="elec-matrix">
-        <colgroup>
-          <col class="elec-col-machine">
-          <col class="elec-col-name">
-          <col class="elec-col-time">
-          <col class="elec-col-work">
-          <col class="elec-col-norm">
-          ${days.map(() => '<col class="elec-col-day"><col class="elec-col-day">').join('')}
-        </colgroup>
-        <thead>${headerHtml}</thead>
-        <tbody>${bodyHtml}</tbody>
-      </table>
-    </div>
-  `;
-  wrap.querySelector('#elecExportWeekBtn')?.addEventListener('click', () => {
-    exportElectronicWeekToXlsx({
-      line: elecState.line,
-      days,
-      rows,
-      savedStatus
-    });
-  });
-  // Навешиваем клики на все кликабельные ячейки
-  wrap.querySelectorAll('.elec-cell-clickable').forEach(td => {
-    td.addEventListener('click', () => {
-      const paramId = td.dataset.paramId;
-      const date = td.dataset.date;
-      const shiftType = td.dataset.shiftType;
-      if (!paramId || !date || !shiftType) return;
-
-      // Находим параметр
-      const param = getElectronicParamsForLine(elecState.line)
-        .find(p => p.id === paramId);
-      if (!param) return;
-
-      openQuickCheckModal(param, date, shiftType);
-    });
-  });
-}
 /* ============================================================
-   CL ELECTRONIC: экспорт недели в XLSX
-   ============================================================ */
-async function exportElectronicWeekToXlsx({ line, days, rows, savedStatus }) {
-  if (typeof ExcelJS === 'undefined') {
-    return showToast('Библиотека ExcelJS не загружена', true);
-  }
-  if (!line || !days.length || !rows.length) {
-    return showToast('Нет данных для экспорта', true);
-  }
-
-  const wb = new ExcelJS.Workbook();
-  wb.creator = 'Tools CL / SMD Cell2';
-  wb.created = new Date();
-
-  // ---------- Лист 1. Матрица недели ----------
-  const ws = wb.addWorksheet('Неделя', {
-    views: [{ state: 'frozen', xSplit: 5, ySplit: 2 }]
-  });
-
-  // Заголовки — 5 описательных + 14 сменных (7 дней × 2 смены)
-  const header1 = ['Машина', 'Параметр', 'Время', 'Run/Stop', 'Норма'];
-  const header2 = ['', '', '', '', ''];
-
-  days.forEach(date => {
-    // верхняя строка — дата (colspan 2)
-    header1.push(fmtISODate(date), '');
-    // нижняя строка — буквы смен
-    const shifts = getShiftsForDate(date);
-    header2.push(shifts.day, shifts.night);
-  });
-
-  // Добавляем строки заголовков
-  const row1 = ws.addRow(header1);
-  const row2 = ws.addRow(header2);
-
-  // Объединяем 5 описательных колонок вертикально (rowspan=2)
-  for (let col = 1; col <= 5; col++) {
-    ws.mergeCells(1, col, 2, col);
-  }
-  // Объединяем даты (каждая — colspan=2)
-  days.forEach((_, idx) => {
-    const col = 6 + idx * 2;
-    ws.mergeCells(1, col, 1, col + 1);
-  });
-
-  // Стилизация шапки
-  [row1, row2].forEach(r => {
-    r.height = 28;
-    r.eachCell({ includeEmpty: true }, (cell) => {
-      cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4FA8' } };
-      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-      cell.border = {
-        top:    { style: 'thin', color: { argb: 'FF0A4FA8' } },
-        bottom: { style: 'thin', color: { argb: 'FF0A4FA8' } },
-        left:   { style: 'thin', color: { argb: 'FF0A4FA8' } },
-        right:  { style: 'thin', color: { argb: 'FF0A4FA8' } }
-      };
-    });
-  });
-
-  // Ширины колонок
-  ws.getColumn(1).width = 10;   // Машина
-  ws.getColumn(2).width = 28;   // Параметр
-  ws.getColumn(3).width = 13;   // Время
-  ws.getColumn(4).width = 10;   // Run/Stop
-  ws.getColumn(5).width = 18;   // Норма
-  days.forEach((_, idx) => {
-    ws.getColumn(6 + idx * 2).width = 7;      // смена «Д»
-    ws.getColumn(6 + idx * 2 + 1).width = 7;  // смена «Н»
-  });
-
-  // ---------- Данные ----------
-  const COLOR_OK_BG    = 'FFD4F5E0';  // светло-зелёный
-  const COLOR_FAIL_BG  = 'FFFDE0E3';  // светло-красный
-  const COLOR_UNCH_BG  = 'FFFFF3D6';  // светло-амбер
-  const COLOR_NA_BG    = 'FFEDEEF2';  // светло-серый
-  const COLOR_DUE_BG   = 'FFE1F7FF';  // светло-циан
-
-  const COLOR_OK_TX    = 'FF00A862';
-  const COLOR_FAIL_TX  = 'FFC0392B';
-  const COLOR_UNCH_TX  = 'FFE89A00';
-
-  const COLOR_BORDER   = 'FFCBD2D9';
-
-  rows.forEach(({ param, cells }) => {
-    // Норма для бренда сегодня (как в матрице)
-    const brandToday = getElectronicBrandForDate(line, todayISO()) || '';
-    let normText = '';
-    if (param.controlType === 'ok_not_ok') {
-      normText = param.normText || '';
-    } else if (brandToday) {
-      const v = (param.valuesByBrand || []).find(v => v.brand === brandToday);
-      if (v && v.target !== '' && v.target != null && v.tolerance !== '' && v.tolerance != null) {
-        normText = `${v.brand}: ${v.target}±${v.tolerance}`;
-      }
-    }
-
-    // Собираем строку
-    const timeText = (param.timeFrom && param.timeTo)
-      ? `${param.timeFrom}–${param.timeTo}`
-      : '';
-
-    const rowData = [
-      param.machine || '',
-      param.paramName || '',
-      timeText,
-      param.work || '',
-      normText
-    ];
-
-    days.forEach(date => {
-      ['day', 'night'].forEach(shiftType => {
-        const due = cells[`${date}|${shiftType}`];
-        const shiftLetter = getShiftsForDate(date)[shiftType];
-        const key = `${date}|${shiftLetter}|${param.id}`;
-        const saved = savedStatus[key];
-
-        let text = '—';
-        if (!due) text = '—';
-        else if (saved === 'OK') text = '✓';
-        else if (saved === 'FAIL') text = '✕';
-        else if (saved === 'UNCHECKED') text = '?';
-        else text = '';
-
-        rowData.push(text);
-      });
-    });
-
-    const row = ws.addRow(rowData);
-    row.height = 22;
-
-    // Стилизация ячеек данных
-    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-      cell.font = { name: 'Calibri', size: 10 };
-      cell.alignment = { vertical: 'middle', horizontal: colNumber <= 5 ? 'left' : 'center' };
-      cell.border = {
-        top:    { style: 'thin', color: { argb: COLOR_BORDER } },
-        bottom: { style: 'thin', color: { argb: COLOR_BORDER } },
-        left:   { style: 'thin', color: { argb: COLOR_BORDER } },
-        right:  { style: 'thin', color: { argb: COLOR_BORDER } }
-      };
-    });
-
-    // Стилизация 5 описательных ячеек
-    row.getCell(1).font = { name: 'Courier New', size: 10, bold: true, color: { argb: 'FF2E5288' } };
-    row.getCell(2).font = { name: 'Calibri', size: 10, color: { argb: 'FF1A2643' } };
-    row.getCell(3).font = { name: 'Courier New', size: 10, color: { argb: 'FF00A8CC' } };
-    row.getCell(5).font = { name: 'Courier New', size: 10, bold: true, color: { argb: 'FF7B5CFF' } };
-
-    // Стилизация сменных ячеек
-    days.forEach((date, idx) => {
-      ['day', 'night'].forEach((shiftType, s) => {
-        const colNumber = 6 + idx * 2 + s;
-        const cell = row.getCell(colNumber);
-        const due = cells[`${date}|${shiftType}`];
-        const shiftLetter = getShiftsForDate(date)[shiftType];
-        const key = `${date}|${shiftLetter}|${param.id}`;
-        const saved = savedStatus[key];
-
-        if (!due) {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_NA_BG } };
-          cell.font = { name: 'Calibri', size: 10, color: { argb: 'FF8896B0' } };
-        } else if (saved === 'OK') {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_OK_BG } };
-          cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: COLOR_OK_TX } };
-        } else if (saved === 'FAIL') {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_FAIL_BG } };
-          cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: COLOR_FAIL_TX } };
-        } else if (saved === 'UNCHECKED') {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_UNCH_BG } };
-          cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: COLOR_UNCH_TX } };
-        } else {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_DUE_BG } };
-          cell.font = { name: 'Calibri', size: 10, color: { argb: 'FF00A8CC' } };
-        }
-      });
-    });
-  });
-
-  // Автофильтр по шапке
-  ws.autoFilter = {
-    from: { row: 1, column: 1 },
-    to:   { row: 1, column: 5 + days.length * 2 }
-  };
-
-  // ---------- Лист 2. Детали (проверки за неделю) ----------
-  const ws2 = wb.addWorksheet('Детали');
-  ws2.columns = [
-    { header: 'Дата',        width: 12 },
-    { header: 'Смена',       width: 8  },
-    { header: 'Оператор',    width: 25 },
-    { header: 'Машина',      width: 10 },
-    { header: 'Параметр',    width: 30 },
-    { header: 'Время',       width: 13 },
-    { header: 'Норма',       width: 18 },
-    { header: 'Ответ',       width: 18 },
-    { header: 'Статус',      width: 12 },
-    { header: 'Комментарий', width: 40 }
-  ];
-
-  const headerRow2 = ws2.getRow(1);
-  headerRow2.height = 26;
-  headerRow2.eachCell((cell) => {
-    cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4FA8' } };
-    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-    cell.border = {
-      top:    { style: 'thin', color: { argb: 'FF0A4FA8' } },
-      bottom: { style: 'thin', color: { argb: 'FF0A4FA8' } },
-      left:   { style: 'thin', color: { argb: 'FF0A4FA8' } },
-      right:  { style: 'thin', color: { argb: 'FF0A4FA8' } }
-    };
-  });
-
-  // Собираем записи за неделю
-  const history = getHistory().filter(h =>
-    h.mode === 'electronic' &&
-    h.line === line &&
-    days.includes(h.date)
-  );
-
-  const details = [];
-  history.forEach(h => {
-    h.items.forEach(it => {
-      if (it.status === 'UNCHECKED') return; // не показываем непроверенные в деталях
-      const param = getElectronicParamsForLine(line).find(p => p.id === it.standardId);
-      const normText = param ? (param.normText || '') : '';
-      details.push({
-        date: h.date,
-        shift: h.shift,
-        operator: h.operator || '',
-        machine: it.machine || '',
-        paramName: it.paramName || '',
-        time: (it.timeFrom && it.timeTo) ? `${it.timeFrom}–${it.timeTo}` : '',
-        norm: it.normText || normText,
-        answer: it.answer || '',
-        status: it.status,
-        comment: it.comment || ''
-      });
-    });
-  });
-
-  details.sort((a, b) => {
-    if (a.date !== b.date) return a.date.localeCompare(b.date);
-    if (a.shift !== b.shift) return a.shift.localeCompare(b.shift);
-    return a.machine.localeCompare(b.machine, 'ru');
-  });
-
-  details.forEach(d => {
-    const row = ws2.addRow([
-      fmtISODate(d.date),
-      d.shift,
-      d.operator,
-      d.machine,
-      d.paramName,
-      d.time,
-      d.norm,
-      d.answer,
-      d.status === 'OK' ? 'ОК' : 'Не ОК',
-      d.comment
-    ]);
-    row.height = 20;
-
-    row.eachCell({ includeEmpty: true }, (cell) => {
-      cell.font = { name: 'Calibri', size: 10 };
-      cell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: false };
-      cell.border = {
-        top:    { style: 'thin', color: { argb: COLOR_BORDER } },
-        bottom: { style: 'thin', color: { argb: COLOR_BORDER } },
-        left:   { style: 'thin', color: { argb: COLOR_BORDER } },
-        right:  { style: 'thin', color: { argb: COLOR_BORDER } }
-      };
-    });
-
-    // Статус цветом
-    const statusCell = row.getCell(9);
-    if (d.status === 'OK') {
-      statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_OK_BG } };
-      statusCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: COLOR_OK_TX } };
-    } else {
-      statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLOR_FAIL_BG } };
-      statusCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: COLOR_FAIL_TX } };
-    }
-    statusCell.alignment = { vertical: 'middle', horizontal: 'center' };
-
-    // Машина — моно
-    row.getCell(4).font = { name: 'Courier New', size: 10, bold: true, color: { argb: 'FF2E5288' } };
-  });
-
-  // Если нет деталей — добавим надпись
-  if (details.length === 0) {
-    const row = ws2.addRow(['—', '—', '—', '—', 'За эту неделю нет завершённых проверок', '—', '—', '—', '—', '—']);
-    row.height = 20;
-  }
-
-  // ---------- Скачивание ----------
-  const buf = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buf], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-  });
-
-  const firstDay = days[0];
-  const fname = `eparam_week_${line}_${firstDay}.xlsx`;
-  downloadBlob(blob, fname);
-
-  showToast('Отчёт по неделе выгружен');
-}
-/* ============================================================
-   БЫСТРАЯ ПРОВЕРКА ИЗ МАТРИЦЫ НЕДЕЛИ
+   БЫСТРАЯ ПРОВЕРКА — состояние и открытие
    ============================================================ */
 
-// Состояние: что сейчас редактируем
 const quickCheckState = {
-  param: null,       // объект параметра
-  date: '',          // 'YYYY-MM-DD'
-  shiftType: '',     // 'day' | 'night'
-  shiftLetter: '',   // буква бригады 'A'..'D'
-  brand: '',         // бренд на этот день
-  existing: null     // существующая запись истории (если есть)
+  row: null,
+  date: '',
+  shift: '',
+  shiftLetter: '—',
+  brand: '',
+  existing: null,
+  draft: null
 };
 
-/**
- * Открыть модалку быстрой проверки.
- * @param {object} param — объект электронного параметра
- * @param {string} date — 'YYYY-MM-DD'
- * @param {string} shiftType — 'day' | 'night'
- */
-window.openQuickCheckModal = function(param, date, shiftType) {
+function openClCheckModal(rowId, dateStr, shift) {
   const modal = $('#quickCheckModal');
-  if (!modal || !param) return;
+  if (!modal) return;
 
-  // Смена: буква бригады
-  const shifts = getShiftsForDate(date);
-  const shiftLetter = shifts[shiftType] || '—';
+  const row = clState.rows.find(r => r.id === rowId);
+  if (!row) return;
 
-  // Бренд на этот день
-  const brand = getElectronicBrandForDate(elecState.line, date) || '';
+  const isElec = clState.mode === 'elec';
 
-  // Ищем существующую запись в Истории
-  let existing = null;
-  const history = getHistory().filter(h =>
-    h.mode === 'electronic' &&
-    h.line === elecState.line &&
-    h.date === date &&
-    h.shift === shiftLetter
-  );
-  for (const h of history) {
-    const found = h.items.find(it => it.standardId === param.id);
-    if (found) { existing = found; break; }
-  }
+  const shiftLetter = getShiftsForDate(dateStr)[shift] || '—';
+  const brand = clState.brand || '';
 
-  // Сохраняем состояние
-  quickCheckState.param = param;
-  quickCheckState.date = date;
-  quickCheckState.shiftType = shiftType;
+  const existing = findExistingCheck(rowId, dateStr, shiftLetter);
+  const draftKey = `${rowId}|${dateStr}|${shift}`;
+  const draft = clState.quickDraft[draftKey] || null;
+
+  quickCheckState.row = row;
+  quickCheckState.date = dateStr;
+  quickCheckState.shift = shift;
   quickCheckState.shiftLetter = shiftLetter;
   quickCheckState.brand = brand;
   quickCheckState.existing = existing;
+  quickCheckState.draft = draft;
+  quickCheckState.isElec = isElec;
 
-  // Заголовок
-  $('#quickCheckModalTitle').textContent =
-    existing ? 'Просмотр проверки' : 'Быстрая проверка';
+  $('#quickCheckModalTitle').textContent = isElec ? 'Проверка CL (E-Param)' : 'Проверка CL';
 
-  // Контекст
-  $('#qcMachine').textContent = param.machine || '—';
-  $('#qcParamName').textContent = param.paramName || '—';
-  $('#qcTime').textContent = (param.timeFrom && param.timeTo)
-    ? `${param.timeFrom}–${param.timeTo}`
-    : '—';
+  const line = clState.line || '';
+  const machine = row.machine || '';
+  $('#qcMachine').textContent = line + (machine ? ' · ' + machine : '');
+  $('#qcParamName').textContent = isElec ? (row.paramName || '—') : (row.title || '—');
+  $('#qcNode').textContent = isElec ? '—' : (row.node || '—');
+
+  const timeFrom = row.timeFrom || '';
+  const timeTo = row.timeTo || '';
+  $('#qcTime').textContent = (timeFrom && timeTo) ? `${timeFrom}–${timeTo}` : '—';
 
   const workEl = $('#qcWork');
-  workEl.textContent = param.work || '—';
-  workEl.className = 'qc-work-badge ' +
-    (param.work === 'Run' ? 'qc-work-run' : 'qc-work-stop');
+  const workVal = row.work === 'Stop' ? 'Stop' : 'Run';
+  workEl.textContent = workVal;
+  workEl.className = 'qc-work-badge ' + (workVal === 'Run' ? 'qc-work-run' : 'qc-work-stop');
 
-  const shiftLabel = shiftType === 'day' ? 'День' : 'Ночь';
-  $('#qcDateShift').textContent =
-    `${fmtISODate(date)} · ${shiftLabel} · бригада ${shiftLetter}`;
+  const shiftLabel = shift === 'day' ? 'День' : 'Ночь';
+  $('#qcDateShift').textContent = `${fmtISODate(dateStr)} · ${shiftLabel} · бригада ${shiftLetter}`;
 
   $('#qcBrand').textContent = brand || '— не задан —';
 
-  // Норма
-  let normText = '—';
-  if (param.controlType === 'ok_not_ok') {
-    normText = param.normText || '—';
-  } else if (brand) {
-    const v = (param.valuesByBrand || []).find(v => v.brand === brand);
-    if (v && v.target !== '' && v.target != null && v.tolerance !== '' && v.tolerance != null) {
-      const min = (Number(v.target) - Number(v.tolerance));
-      const max = (Number(v.target) + Number(v.tolerance));
-      normText = `${v.target} ± ${v.tolerance}  →  [${min}, ${max}]`;
+  const controlType = row.controlType || 'ok_not_ok';
+
+  // --- Описание контроля (только для механики) ---
+  const ctrlDescBlock = $('#qcControlDescBlock');
+  const ctrlDescBody = $('#qcControlDescBody');
+  const ctrlDescHint = $('#qcControlDescHint');
+  const ctrlDescText = isElec ? '' : (row.controlDescription || '').trim();
+
+  if (ctrlDescBlock && ctrlDescBody) {
+    if (ctrlDescText) {
+      ctrlDescBlock.style.display = 'block';
+      ctrlDescBody.innerHTML = `<div class="qc-control-text">${escapeHtml(ctrlDescText).replace(/\n/g, '<br>')}</div>`;
+      if (ctrlDescHint) {
+        ctrlDescHint.textContent = ctrlDescText.length > 60
+          ? ctrlDescText.substring(0, 60) + '…'
+          : ctrlDescText;
+      }
+      ctrlDescBlock.classList.remove('expanded');
     } else {
-      normText = `Для бренда ${brand} норма не задана`;
+      ctrlDescBlock.style.display = 'none';
     }
-  } else {
-    normText = 'Бренд не задан — норма недоступна';
-  }
-  $('#qcNormValue').textContent = normText;
-
-  // Показать нужный блок ответа
-  const valueBlock = $('#qcAnswerValueInput');
-  const okNotOkBlock = $('#qcAnswerOkNotOk');
-
-  if (param.controlType === 'ok_not_ok') {
-    valueBlock.style.display = 'none';
-    okNotOkBlock.style.display = 'block';
-    $('#qcAnswerOk').checked = false;
-    $('#qcAnswerFail').checked = false;
-    if (existing) {
-      if (existing.status === 'OK') $('#qcAnswerOk').checked = true;
-      if (existing.status === 'FAIL') $('#qcAnswerFail').checked = true;
-    }
-  } else {
-    valueBlock.style.display = 'block';
-    okNotOkBlock.style.display = 'none';
-    $('#qcValueInput').value = existing && existing.value != null ? existing.value : '';
-    updateQcValueStatus();
   }
 
-  // Комментарий
-  $('#qcComment').value = existing && existing.comment ? existing.comment : '';
+  const normBlock = $('#qcNormBlock');
+  const okBlock = $('#qcAnswerOkNotOk');
+  const pointsBlock = $('#qcAnswerPoints');
 
-  // Инфо-плашка для существующих
+  if (controlType === 'ok_not_ok') {
+    // --- ОК / Не ОК ---
+    normBlock.style.display = 'block';
+    const normText = isElec
+      ? ((row.normText || '').trim() || '— проверить визуально —')
+      : ((row.normText || '').trim() || (row.controlDescription || '').trim() || '— проверить визуально —');
+    $('#qcNormValue').textContent = normText;
+
+    okBlock.style.display = 'block';
+    pointsBlock.style.display = 'none';
+
+    const existingVal = draft?.status || existing?.status || '';
+    $('#qcAnswerOk').checked = existingVal === 'OK';
+    $('#qcAnswerFail').checked = existingVal === 'FAIL';
+  } else if (isElec && controlType === 'value_input') {
+    // --- Электронный числовой параметр ---
+    const values = Array.isArray(row.valuesByBrand) ? row.valuesByBrand : [];
+    // Ищем значение для выбранного бренда, иначе первое
+    let entry = brand ? values.find(v => v.brand === brand) : null;
+    if (!entry && values.length) entry = values[0];
+
+    normBlock.style.display = 'block';
+    okBlock.style.display = 'none';
+    pointsBlock.style.display = 'block';
+
+    let normText = '— норма не задана —';
+    if (entry) {
+      const target = entry.target;
+      const tol = entry.tolerance;
+      normText = `${entry.brand || 'Все бренды'}: ${target} ± ${tol}`;
+    }
+    $('#qcNormValue').textContent = normText;
+
+    // Показываем одно поле ввода значения
+    const pointsList = $('#qcPointsList');
+    if (pointsList) {
+      const savedValue = draft?.answer || existing?.answer || '';
+      pointsList.innerHTML = `
+        <div class="qc-point-row" data-index="0">
+          <div class="qc-point-head">
+            <span class="qc-point-num">Значение</span>
+            <span class="qc-point-norm">${entry ? `${entry.target} ± ${entry.tolerance}` : '—'}</span>
+          </div>
+          <div class="qc-point-input-wrap">
+            <input type="number" step="any" class="qc-point-input" data-qc-point="0"
+                   value="${escapeAttr(savedValue)}" placeholder="0">
+          </div>
+        </div>
+      `;
+    }
+  } else {
+    // --- Мех. точки замера (value_input / range_input) ---
+    const block = getRowMeasurementBlock(row, brand);
+    normBlock.style.display = 'block';
+    okBlock.style.display = 'none';
+    pointsBlock.style.display = 'block';
+
+    const points = block?.points || [];
+    const normText = points.map((p, i) => `Т${i + 1}: ${p.value || '—'}`).join(' · ');
+    $('#qcNormValue').textContent = normText || '— точки не заданы —';
+
+    renderQcPointsList(points, existing, draft);
+  }
+
+  $('#qcComment').value = draft?.comment || existing?.comment || '';
+
   const infoEl = $('#qcExistingInfo');
   if (existing) {
     infoEl.style.display = 'flex';
@@ -4930,203 +3675,233 @@ window.openQuickCheckModal = function(param, date, shiftType) {
   }
 
   openModal(modal);
-};
 
-/* Обновить бейдж «в допуске / не в допуске» для поля значения */
-function updateQcValueStatus() {
-  const badge = $('#qcValueStatus');
-  const inp = $('#qcValueInput');
-  if (!badge || !inp) return;
-
-  const param = quickCheckState.param;
-  const brand = quickCheckState.brand;
-  if (!param || param.controlType === 'ok_not_ok') {
-    badge.textContent = '';
-    badge.className = 'qc-status-badge';
-    return;
+  const openStdBtn = $('#qcOpenStandardBtn');
+  if (openStdBtn) {
+    openStdBtn.disabled = !isElec && !row.id;
+    openStdBtn.onclick = () => {
+      if (!isElec && typeof openStandardView === 'function') {
+        openStandardView(row.id);
+      } else {
+        showToast('Полный просмотр доступен только для механических стандартов', true);
+      }
+    };
   }
-
-  const v = (param.valuesByBrand || []).find(v => v.brand === brand);
-  if (!v || v.target === '' || v.tolerance === '') {
-    badge.textContent = '';
-    badge.className = 'qc-status-badge';
-    return;
-  }
-
-  const val = parseFloat(inp.value);
-  if (isNaN(val) || inp.value === '') {
-    badge.textContent = '';
-    badge.className = 'qc-status-badge';
-    return;
-  }
-
-  const min = Number(v.target) - Number(v.tolerance);
-  const max = Number(v.target) + Number(v.tolerance);
-  const inRange = val >= min && val <= max;
-
-  badge.textContent = inRange ? '✓ в допуске' : '✕ не в допуске';
-  badge.className = 'qc-status-badge ' + (inRange ? 'qc-ok' : 'qc-fail');
 }
 
-/* Закрыть модалку */
+/* ============================================================
+   БЫСТРАЯ ПРОВЕРКА — закрытие
+   ============================================================ */
+
 function closeQuickCheckModal() {
   closeModal('#quickCheckModal');
-  quickCheckState.param = null;
+  quickCheckState.row = null;
   quickCheckState.existing = null;
+  quickCheckState.draft = null;
 }
 
-/* Сохранить быструю проверку */
+/* ============================================================
+   БЫСТРАЯ ПРОВЕРКА — сохранение
+   ============================================================ */
+
 function saveQuickCheck() {
-  const param = quickCheckState.param;
-  if (!param) return;
-
-  const { date, shiftLetter, brand } = quickCheckState;
-
-  // Собираем ответ
-  let answer = '—';
-  let status = 'UNCHECKED';
-  let value = null;
-
-  if (param.controlType === 'ok_not_ok') {
-    const r = document.querySelector('input[name="qc_answer"]:checked');
-    if (r) {
-      answer = r.value === 'OK' ? 'ОК' : 'Не ОК';
-      status = r.value;
-    }
-  } else {
-    const inp = $('#qcValueInput');
-    const v = parseFloat(inp.value);
-    if (!isNaN(v) && inp.value !== '') {
-      value = v;
-      const norm = (param.valuesByBrand || []).find(x => x.brand === brand);
-      if (norm && norm.target !== '' && norm.tolerance !== '') {
-        const min = Number(norm.target) - Number(norm.tolerance);
-        const max = Number(norm.target) + Number(norm.tolerance);
-        status = (v >= min && v <= max) ? 'OK' : 'FAIL';
-      } else {
-        status = 'OK';
-      }
-      answer = String(v);
-    }
-  }
-
-  if (status === 'UNCHECKED') {
-    return showToast('Введите значение или отметьте ОК / Не ОК', true);
-  }
-
-  const comment = ($('#qcComment').value || '').trim();
-
-  // Формируем item
-  const newItem = {
-    standardId: param.id,
-    machine: param.machine,
-    paramName: param.paramName,
-    work: param.work,
-    timeFrom: param.timeFrom,
-    timeTo: param.timeTo,
-    controlType: param.controlType,
-    target: null,
-    tolerance: null,
-    normText: param.normText || '',
-    answer,
-    value,
-    status,
-    comment
-  };
-
-  // Ищем существующую запись истории — за эту дату+смену+линию
-  const allHist = getHistory();
-  let record = allHist.find(h =>
-    h.mode === 'electronic' &&
-    h.line === elecState.line &&
-    h.date === date &&
-    h.shift === shiftLetter
-  );
-
-  if (record) {
-    // Обновляем item или добавляем новый
-    const idx = record.items.findIndex(it => it.standardId === param.id);
-    if (idx !== -1) {
-      record.items[idx] = newItem;
-    } else {
-      record.items.push(newItem);
-    }
-  } else {
-    // Создаём новую запись истории
-    record = {
-      id: uid(),
-      timestamp: new Date().toISOString(),
-      mode: 'electronic',
-      operator: (elecState.operator || '—').trim() || '—',
-      line: elecState.line,
-      shift: shiftLetter,
-      date,
-      brandPlanned: brand || null,
-      brandActual: brand || '',
-      brandReason: '',
-      items: [newItem]
-    };
-    allHist.push(record);
-  }
-
-  setHistory(allHist);
-  updateNavHistoryCounter();
-
-  closeQuickCheckModal();
-
-  // Перерисовываем матрицу недели
-  renderElectronicWeekMatrix();
-
-  // Если матрица в резюме — перерисуем и её
-  if (typeof renderElectronicSummaryWeekMatrix === 'function') {
-    const summaryVisible = $('#elecSummaryView')?.style.display !== 'none';
-    if (summaryVisible) renderElectronicSummaryWeekMatrix();
-  }
-
-  showToast(quickCheckState.existing ? 'Проверка обновлена' : 'Проверка сохранена');
-}
-
-/* --- Обработчики модалки --- */
-$('#quickCheckModalClose')?.addEventListener('click', closeQuickCheckModal);
-$('#quickCheckCancelBtn')?.addEventListener('click', closeQuickCheckModal);
-$('#quickCheckModal')?.addEventListener('click', (e) => {
-  if (e.target.id === 'quickCheckModal') closeQuickCheckModal();
-});
-
-$('#quickCheckSaveBtn')?.addEventListener('click', saveQuickCheck);
-
-// Live-обновление статуса при вводе значения
-$('#qcValueInput')?.addEventListener('input', updateQcValueStatus);
-
-/* Матрица недели внутри резюме — рендерится в отдельный контейнер */
-function renderElectronicSummaryWeekMatrix() {
-  const wrap = $('#elecSummaryWeekMatrix');
-  if (!wrap) return;
-
-  if (!elecState.line) {
-    wrap.innerHTML = '<div class="empty-state">Линия не выбрана</div>';
+  const row = quickCheckState.row;
+  if (!row) {
+    showToast('Ошибка: стандарт не найден', true);
     return;
   }
 
-  // Переиспользуем логику: временно подменяем целевой контейнер
-  const originalWrap = $('#elecWeekMatrix');
-  if (!originalWrap) {
-    // Если контейнера нет — создаём временный
-    const temp = document.createElement('div');
-    temp.id = 'elecWeekMatrix';
-    temp.style.display = 'none';
-    document.body.appendChild(temp);
+  const isElec = quickCheckState.isElec === true;
+  const date = quickCheckState.date;
+  const shift = quickCheckState.shift;
+  const brand = quickCheckState.brand || '';
+  const controlType = row.controlType || 'ok_not_ok';
+  const comment = ($('#qcComment')?.value || '').trim();
+
+  let status = 'UNCHECKED';
+  let answer = '';
+  let value = null;
+
+  if (controlType === 'ok_not_ok') {
+    const r = document.querySelector('input[name="qc_answer"]:checked');
+    if (!r) {
+      showToast('Выберите ОК или Не ОК', true);
+      return;
+    }
+    status = r.value === 'OK' ? 'OK' : 'FAIL';
+    answer = r.value === 'OK' ? 'ОК' : 'Не ОК';
+  } else if (isElec) {
+    // --- E-Param: одно числовое значение ---
+    const inp = document.querySelector('.qc-point-input');
+    if (!inp || inp.value === '') {
+      showToast('Введите значение', true);
+      return;
+    }
+    const num = parseFloat(inp.value);
+    if (isNaN(num)) {
+      showToast('Введите число', true);
+      return;
+    }
+
+    // Ищем target/tolerance для бренда
+    const values = Array.isArray(row.valuesByBrand) ? row.valuesByBrand : [];
+    let entry = brand ? values.find(v => v.brand === brand) : null;
+    if (!entry && values.length) entry = values[0];
+
+    let inRange = true;
+    if (entry) {
+      const min = Number(entry.target) - Number(entry.tolerance);
+      const max = Number(entry.target) + Number(entry.tolerance);
+      inRange = num >= min && num <= max;
+    }
+
+    status = inRange ? 'OK' : 'FAIL';
+    answer = String(num);
+    value = num;
+  } else {
+    // --- Мех: точки замера ---
+    const inputs = document.querySelectorAll('.qc-point-input');
+    if (!inputs.length) {
+      showToast('Не найдены поля ввода точек', true);
+      return;
+    }
+
+    const block = getRowMeasurementBlock(row, brand);
+    const points = block?.points || [];
+
+    const values = [];
+    let anyFail = false;
+    let allFilled = true;
+
+    inputs.forEach(inp => {
+      const idx = parseInt(inp.dataset.qcPoint, 10);
+      const v = (inp.value || '').trim();
+      if (v === '') { allFilled = false; values.push(''); return; }
+      const num = parseFloat(v);
+      values.push(isNaN(num) ? v : String(num));
+      const norm = parseNorm(points[idx]?.value);
+      if (norm && !isNaN(num) && (num < norm.min || num > norm.max)) anyFail = true;
+    });
+
+    if (!allFilled) {
+      showToast('Заполните все точки', true);
+      return;
+    }
+
+    status = anyFail ? 'FAIL' : 'OK';
+    answer = values.join(', ');
+    value = values.length === 1 ? parseFloat(values[0]) : null;
   }
 
-  // Вызываем существующую функцию — она заполнит #elecWeekMatrix
-  renderElectronicWeekMatrix();
+  const key = `${row.id}|${date}|${shift}`;
+  clState.quickDraft[key] = { status, answer, value, comment };
 
-  // Переносим HTML из #elecWeekMatrix в наш контейнер
-  const source = $('#elecWeekMatrix');
-  if (source) {
-    wrap.innerHTML = source.innerHTML;
+  renderClMatrix();
+  closeQuickCheckModal();
+  showToast('Отметка сохранена');
+}
+
+/* ============================================================
+   БЫСТРАЯ ПРОВЕРКА — хелперы
+   ============================================================ */
+
+function getRowMeasurementBlock(row, brand) {
+  const measurements = Array.isArray(row.measurements) ? row.measurements : [];
+  if (!measurements.length) return null;
+  if (brand) {
+    const b = measurements.find(x => x.brand === brand);
+    if (b) return b;
+  }
+  return measurements.find(x => !x.brand) || measurements[0];
+}
+
+function renderQcPointsList(points, existing, draft) {
+  const list = $('#qcPointsList');
+  if (!list) return;
+
+  if (!points.length) {
+    list.innerHTML = '<div class="empty-state" style="padding:12px">Точки не заданы</div>';
+    return;
+  }
+
+  const savedValues = [];
+  if (draft?.value != null && draft.value !== '') {
+    savedValues.push(String(draft.value));
+  }
+  if (existing?.answer) {
+    String(existing.answer).split(',').forEach(v => savedValues.push(v.trim()));
+  }
+
+  list.innerHTML = points.map((p, i) => {
+    const norm = parseNorm(p.value);
+    const normStr = norm ? `[${norm.min}…${norm.max}]` : '';
+    const value = savedValues[i] || '';
+
+    return `
+      <div class="qc-point-row" data-index="${i}">
+        <div class="qc-point-head">
+          <span class="qc-point-num">Т${i + 1}</span>
+          <span class="qc-point-norm">${escapeHtml(p.value || '—')}</span>
+          ${normStr ? `<span class="qc-point-range">${escapeHtml(normStr)}</span>` : ''}
+          <span class="qc-point-status" data-qc-status="${i}"></span>
+        </div>
+        <div class="qc-point-input-wrap">
+          <input type="number" step="any" class="qc-point-input" data-qc-point="${i}"
+                 value="${escapeAttr(value)}" placeholder="0">
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  list.querySelectorAll('.qc-point-input').forEach(inp => {
+    updateQcPointStatus(inp);
+    inp.addEventListener('input', () => updateQcPointStatus(inp));
+  });
+}
+
+function updateQcPointStatus(inp) {
+  const row = inp.closest('.qc-point-row');
+  if (!row) return;
+  const idx = parseInt(row.dataset.index, 10);
+  const statusEl = row.querySelector('[data-qc-status]');
+  const points = getRowMeasurementBlock(quickCheckState.row, quickCheckState.brand)?.points || [];
+  const norm = parseNorm(points[idx]?.value);
+
+  row.classList.remove('qc-point-ok', 'qc-point-fail');
+  if (statusEl) { statusEl.textContent = ''; statusEl.className = 'qc-point-status'; }
+
+  if (inp.value === '') return;
+  const v = parseFloat(inp.value);
+  if (isNaN(v)) return;
+  if (!norm) return;
+
+  const inRange = v >= norm.min && v <= norm.max;
+  row.classList.add(inRange ? 'qc-point-ok' : 'qc-point-fail');
+  if (statusEl) {
+    statusEl.textContent = inRange ? '✓' : '✕';
+    statusEl.className = 'qc-point-status ' + (inRange ? 'ok' : 'fail');
   }
 }
+/* --- Быстрая проверка: обработчики через делегирование --- */
+/* Работает всегда, даже если модалка пересоздана */
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#quickCheckModalClose')) {
+    closeQuickCheckModal();
+    return;
+  }
+  if (e.target.closest('#quickCheckCancelBtn')) {
+    closeQuickCheckModal();
+    return;
+  }
+  if (e.target.closest('#quickCheckSaveBtn')) {
+    saveQuickCheck();
+    return;
+  }
+  // Клик по фону модалки
+  if (e.target.id === 'quickCheckModal') {
+    closeQuickCheckModal();
+  }
+});
 
 /* Модалка комментария — переиспользуем существующую, но в неё надо передать dataset.comment */
 function openCommentModalElec(item) {
@@ -9653,6 +8428,8 @@ function calculateDashboardStats() {
   });
     // --- Проверок потерь за неделю ---
   const topLossChecksWeek = checksWeek.filter(h => h.mode === 'toploss').length;
+    // --- Проверок CL Electronic за неделю ---
+  const elecChecksWeek = checksWeek.filter(h => h.mode === 'electronic').length;
 
   // --- Топ-5 потерь по отклонениям (30 дней) ---
   const monthAgoForLosses = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
@@ -9837,23 +8614,23 @@ function calculateDashboardStats() {
   const daysSeriesMax = daysSeries.reduce((max, d) => Math.max(max, d.total), 0) || 1;
 
   // --- Круговая по типам переходов (30 дней) ---
-  const typeCounts = { Minor: 0, Intermediate: 0, Major: 0 };
+  const typeCounts = { ChangeOver: 0, CL_TO: 0, CL_Conversion: 0 };
   monthChecks.forEach(h => {
     if (h.type && typeCounts[h.type] !== undefined) {
       typeCounts[h.type]++;
     }
   });
-  const typesTotal = typeCounts.Minor + typeCounts.Intermediate + typeCounts.Major;
+  const typesTotal = typeCounts.ChangeOver + typeCounts.CL_TO + typeCounts.CL_Conversion;
 
   // Проценты для conic-gradient
   const typeColors = {
-    Minor: '#00d4ff',
-    Intermediate: '#ffa94d',
-    Major: '#ff4d6d'
+    ChangeOver: '#00d4ff',
+    CL_TO: '#7b5cff',
+    CL_Conversion: '#10b981'
   };
   let acc = 0;
   const typeSegments = [];
-  ['Minor', 'Intermediate', 'Major'].forEach(type => {
+  ['ChangeOver', 'CL_TO', 'CL_Conversion'].forEach(type => {
     const count = typeCounts[type];
     const percent = typesTotal > 0 ? (count / typesTotal) * 360 : 0;
     typeSegments.push({
@@ -10089,7 +8866,10 @@ function calculateDashboardStats() {
     topLossChecksWeek,
     topLossStats,
     lossesNeverChecked,
-    standardsWithoutLosses
+    standardsWithoutLosses,
+
+    // --- CL ELECTRONIC ---
+    elecChecksWeek
   };
 }
 
@@ -10148,7 +8928,7 @@ function renderDashboardStats(stats) {
         <div class="dash-stat-sub">за последние 7 дней</div>
       </div>
 
-      <div class="dash-stat dash-stat-amber">
+<div class="dash-stat dash-stat-amber">
         <div class="dash-stat-head">
           <span>Проверок потерь</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -10158,6 +8938,17 @@ function renderDashboardStats(stats) {
           </svg>
         </div>
         <div class="dash-stat-value">${stats.topLossChecksWeek}</div>
+        <div class="dash-stat-sub">за последние 7 дней</div>
+      </div>
+
+      <div class="dash-stat dash-stat-purple">
+        <div class="dash-stat-head">
+          <span>Проверок E-Param</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+        </div>
+        <div class="dash-stat-value">${stats.elecChecksWeek}</div>
         <div class="dash-stat-sub">за последние 7 дней</div>
       </div>
 
@@ -10437,39 +9228,212 @@ $('#checkPhotosCopyBtn')?.addEventListener('click', () => {
   }
 });
 /* ============================================================
-   БЛОКИ ЛИНИЙ
+   БЛОКИ ЛИНИЙ — сворачиваемые группы Цех → Участок
    ============================================================ */
 function renderBlocksSettings() {
-  const blocks = getBlocks();
   const list = $('#blocksList');
   if (!list) return;
 
-  if (!blocks.length) {
-    list.innerHTML = '<div class="empty-state">Блоков нет. Нажмите «Добавить».</div>';
+  const workshops = getWorkshops();
+  if (!workshops.length) {
+    list.innerHTML = '<div class="empty-state">Цехов нет. Структура производства пуста.</div>';
     return;
   }
 
-  const allLines = getLines();
+  // Открытые группы
+  let openIds = getBlOpenGroups();
+  if (openIds === null) {
+    openIds = [];
+    setBlOpenGroups(openIds);
+  }
+  const isOpen = (id) => openIds.includes(id);
 
-  list.innerHTML = blocks.map(b => {
-    const blockLines = (b.lines || []).filter(l => allLines.includes(l));
-    const linesText = blockLines.length
-      ? `${blockLines.length} ${pluralizeLines(blockLines.length)}: ${blockLines.map(escapeHtml).join(', ')}`
-      : '<span style="color:var(--accent-red);font-style:italic">— нет линий</span>';
+  let html = '';
 
-    return `
-      <div class="block-row">
-        <div class="block-row-info">
-          <div class="block-row-name">${escapeHtml(b.name || 'Без названия')}</div>
-          <div class="block-row-lines">${linesText}</div>
+  // --- Тулбар: только кнопка "Развернуть всё" ---
+  const allGroupIds = [];
+  workshops.forEach(w => {
+    allGroupIds.push('ws:' + w.id);
+    (w.areas || []).forEach(a => allGroupIds.push('ar:' + a.id));
+  });
+  const allExpanded = allGroupIds.length > 0 && allGroupIds.every(id => openIds.includes(id));
+
+  html += `
+    <div class="bl-toolbar">
+      <button type="button" class="btn btn-secondary btn-sm bl-toggle-all-btn" id="blToggleAllBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="blToggleAllIcon">
+          ${allExpanded
+            ? '<polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/>'
+            : '<polyline points="7 13 12 18 17 13"/><polyline points="7 6 12 11 17 6"/>'}
+        </svg>
+        <span id="blToggleAllLabel">${allExpanded ? 'Свернуть всё' : 'Развернуть всё'}</span>
+      </button>
+    </div>
+  `;
+
+  html += '<div class="bl-groups">';
+
+  workshops.forEach(workshop => {
+    const areas = (workshop.areas || []);
+    if (!areas.length) return;
+
+    const workshopId = 'ws:' + workshop.id;
+    const workshopOpen = isOpen(workshopId);
+
+    // Считаем общее число блоков и линий в цехе
+    let workshopBlockCount = 0;
+    let workshopLineCount = 0;
+    areas.forEach(a => {
+      if (Array.isArray(a.blocks)) {
+        workshopBlockCount += a.blocks.length;
+        a.blocks.forEach(b => {
+          workshopLineCount += (b.lines || []).length;
+        });
+      } else {
+        workshopLineCount += (a.lines || []).length;
+      }
+    });
+
+    // Итоговая подпись цеха
+    const wsSubtitleParts = [];
+    if (workshopBlockCount > 0) {
+      wsSubtitleParts.push(`${workshopBlockCount} блок.`);
+    }
+    wsSubtitleParts.push(`${workshopLineCount} ${pluralizeLines(workshopLineCount)}`);
+
+    html += `
+      <div class="bl-group bl-group-workshop ${workshopOpen ? 'expanded' : ''}" data-group-id="${escapeAttr(workshopId)}">
+        <div class="bl-group-head" data-group-toggle="${escapeAttr(workshopId)}">
+          <span class="bl-group-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </span>
+          <span class="bl-group-name">${escapeHtml(workshop.name)}</span>
+          <span class="bl-group-count">${wsSubtitleParts.join(' · ')}</span>
         </div>
-        <div class="block-row-actions">
-          <button class="btn btn-secondary btn-sm" onclick="openBlockModal('${b.id}')">Изменить состав</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteBlock('${b.id}')">Удалить</button>
-        </div>
-      </div>
+        <div class="bl-group-body">
     `;
-  }).join('');
+
+    // Внутри цеха — участки
+    areas.forEach(area => {
+      const areaId = 'ar:' + area.id;
+      const areaOpen = isOpen(areaId);
+
+      let areaBlockCount = 0;
+      let areaLineCount = 0;
+      if (Array.isArray(area.blocks)) {
+        areaBlockCount = area.blocks.length;
+        area.blocks.forEach(b => {
+          areaLineCount += (b.lines || []).length;
+        });
+      } else {
+        areaLineCount = (area.lines || []).length;
+      }
+
+      const areaSubtitle = areaBlockCount > 0
+        ? `${areaBlockCount} блок. · ${areaLineCount} ${pluralizeLines(areaLineCount)}`
+        : `${areaLineCount} ${pluralizeLines(areaLineCount)} (без блоков)`;
+
+      html += `
+        <div class="bl-group bl-group-area ${areaOpen ? 'expanded' : ''}" data-group-id="${escapeAttr(areaId)}">
+          <div class="bl-group-head bl-group-area-head" data-group-toggle="${escapeAttr(areaId)}">
+            <span class="bl-group-toggle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </span>
+            <span class="bl-group-name">${escapeHtml(area.name)}</span>
+            <span class="bl-group-count">${areaSubtitle}</span>
+          </div>
+          <div class="bl-group-body">
+      `;
+
+      if (Array.isArray(area.blocks) && area.blocks.length) {
+        // Список блоков (компактные строки)
+        area.blocks.forEach(b => {
+          const blockLines = (b.lines || []).filter(Boolean);
+          const linesText = blockLines.length
+            ? `${blockLines.length} ${pluralizeLines(blockLines.length)}: ${blockLines.map(escapeHtml).join(', ')}`
+            : '<span style="color:var(--accent-red);font-style:italic">— нет линий</span>';
+
+          html += `
+            <div class="block-row">
+              <div class="block-row-info">
+                <div class="block-row-name">${escapeHtml(b.name || 'Без названия')}</div>
+                <div class="block-row-lines">${linesText}</div>
+              </div>
+              <div class="block-row-actions">
+                <button class="btn btn-secondary btn-sm" onclick="openBlockModal('${escapeAttr(b.id)}')">Изменить состав</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteBlock('${escapeAttr(b.id)}')">Удалить</button>
+              </div>
+            </div>
+          `;
+        });
+      } else {
+        // Участок без блоков (PMD)
+        const linesText = (area.lines || []).length
+          ? (area.lines || []).map(escapeHtml).join(', ')
+          : '<span style="color:var(--text-dim);font-style:italic">— нет линий</span>';
+
+        html += `
+          <div class="bl-group-notice">
+            У этого участка нет деления на блоки. Линии: ${linesText}
+          </div>
+        `;
+      }
+
+      html += `</div></div>`; // закрываем участок
+    });
+
+    html += `</div></div>`; // закрываем цех
+  });
+
+  html += '</div>';
+
+  list.innerHTML = html;
+
+  // --- Обработчики: аккордеон ---
+  list.querySelectorAll('[data-group-toggle]').forEach(head => {
+    head.addEventListener('click', () => {
+      const groupId = head.dataset.groupToggle;
+      let open = getBlOpenGroups() || [];
+      if (open.includes(groupId)) {
+        open = open.filter(id => id !== groupId);
+      } else {
+        open.push(groupId);
+      }
+      setBlOpenGroups(open);
+      renderBlocksSettings();
+    });
+  });
+
+  // --- Кнопка "Развернуть всё / Свернуть всё" ---
+  const toggleAllBtn = $('#blToggleAllBtn');
+  if (toggleAllBtn) {
+    toggleAllBtn.addEventListener('click', () => {
+      const open = getBlOpenGroups() || [];
+      const allExpandedNow = allGroupIds.length > 0 && allGroupIds.every(id => open.includes(id));
+      if (allExpandedNow) {
+        setBlOpenGroups([]);
+      } else {
+        setBlOpenGroups(allGroupIds);
+      }
+      renderBlocksSettings();
+    });
+  }
+}
+
+/* --- Хранилище открытых групп для "Блоков линий" --- */
+function getBlOpenGroups() {
+  try {
+    const raw = localStorage.getItem('cl_bl_open_groups');
+    const arr = raw ? JSON.parse(raw) : null;
+    return Array.isArray(arr) ? arr : null;
+  } catch (e) { return null; }
+}
+function setBlOpenGroups(arr) {
+  try { localStorage.setItem('cl_bl_open_groups', JSON.stringify(arr)); } catch (e) {}
 }
 
 function sanitizeCycleArray(arr, def) {
@@ -10843,41 +9807,16 @@ function renderLineMachinesSettings() {
     return;
   }
 
-  // Открытые блоки
-  let openBlocks = getLmOpenBlocks();
+  // Линии, которых нет ни в одном блоке (и в участках без блоков)
+  const allLinesCtx = getAllLinesWithContext();
 
-  // Если не заданы — раскрываем первый блок по умолчанию
-  const blocks = getBlocks();
-  if (openBlocks === null) {
-    openBlocks = blocks.length ? [blocks[0].id] : [];
-    setLmOpenBlocks(openBlocks);
-  }
+  // Группируем по цеху → участку → блокам
+  const workshops = getWorkshops();
 
-  // Дополнительно: линии, которых нет ни в одном блоке
-  const linesInBlocks = new Set();
-  blocks.forEach(b => (b.lines || []).forEach(l => linesInBlocks.add(l)));
-  const orphanLines = lines.filter(l => !linesInBlocks.has(l));
-
-  // Собираем все группы для рендера:
-  //   [{ id, name, lines }, ..., { id: '__orphan', name: 'Без блока', lines: orphanLines }]
-  const groups = blocks.map(b => ({
-    id: b.id,
-    name: b.name || 'Без названия',
-    lines: (b.lines || []).filter(l => lines.includes(l))
-  })).filter(g => g.lines.length > 0);
-
-  if (orphanLines.length) {
-    groups.push({
-      id: '__orphan',
-      name: 'Без блока',
-      lines: orphanLines
-    });
-  }
-
-  // Общий счётчик
+  // Общий счётчик линий
   const totalLineCount = lines.length;
 
-  // --- Верхняя панель: заголовок + счётчик + поиск ---
+  // --- Верхняя панель: поиск + кнопка "Развернуть всё" + счётчик ---
   let html = `
     <div class="lm-toolbar">
       <div class="lm-search-wrap">
@@ -10906,63 +9845,137 @@ function renderLineMachinesSettings() {
     </div>
   `;
 
-  // --- Группы ---
+  // --- Группы по цехам ---
   html += '<div class="lm-groups">';
-  groups.forEach(group => {
-    const isOpen = openBlocks.includes(group.id);
-    const groupLinesHtml = group.lines.map(line => {
-      const machines = Array.isArray(lm[line]) ? lm[line] : [];
-      const count = machines.length;
 
-      const machinesText = count === 0
-        ? '<span class="lm-row-empty">Нет машин — нажмите, чтобы добавить</span>'
-        : `<span class="lm-row-machines" title="${escapeAttr(machines.join(', '))}">${escapeHtml(machines.join(', '))}</span>`;
+  // Собираем плоский список "открытых" идентификаторов (цех/участок/блок)
+  let openIds = getLmOpenBlocks();
+  if (openIds === null) {
+    openIds = [];
+    setLmOpenBlocks(openIds);
+  }
 
-      const countBadge = count === 0
-        ? '<span class="lm-row-count lm-row-count-empty">0</span>'
-        : `<span class="lm-row-count">${count}</span>`;
+  // Функция "открыт ли id"
+  const isOpen = (id) => openIds.includes(id);
 
-      return `
-        <div class="lm-row" data-line="${escapeAttr(line)}" data-machines="${escapeAttr(machines.join(' ').toLowerCase())}">
-          <div class="lm-row-line">${escapeHtml(line)}</div>
-          <div class="lm-row-count-wrap">${countBadge}</div>
-          <div class="lm-row-machines-wrap">${machinesText}</div>
-          <button class="btn btn-primary btn-sm lm-row-btn" type="button">
-            Настроить →
-          </button>
-        </div>
-      `;
-    }).join('');
+  workshops.forEach(workshop => {
+    const workshopLines = allLinesCtx.filter(x => x.workshopId === workshop.id);
 
-    // Считаем общее число машин в блоке
-    const groupMachineCount = group.lines.reduce((sum, line) => {
-      const machines = Array.isArray(lm[line]) ? lm[line] : [];
+    // Если у цеха вообще нет участков — пропускаем
+    const hasAnyAreas = (workshop.areas || []).length > 0;
+    if (!hasAnyAreas) return;
+
+    // Если у цеха нет линий — всё равно показываем, но с пометкой
+    const workshopId = 'ws:' + workshop.id;
+    const workshopOpen = isOpen(workshopId);
+
+    // Считаем общее количество машин в цехе
+    const workshopMachineCount = workshopLines.reduce((sum, x) => {
+      const machines = Array.isArray(lm[x.line]) ? lm[x.line] : [];
       return sum + machines.length;
     }, 0);
 
     html += `
-      <div class="lm-group ${isOpen ? 'expanded' : ''}" data-group-id="${escapeAttr(group.id)}">
-        <div class="lm-group-head" data-group-toggle="${escapeAttr(group.id)}">
+      <div class="lm-group lm-group-workshop ${workshopOpen ? 'expanded' : ''}" data-group-id="${escapeAttr(workshopId)}">
+        <div class="lm-group-head" data-group-toggle="${escapeAttr(workshopId)}">
           <span class="lm-group-toggle">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="9 18 15 12 9 6"/>
             </svg>
           </span>
-          <span class="lm-group-name">${escapeHtml(group.name)}</span>
+          <span class="lm-group-name">${escapeHtml(workshop.name)}</span>
           <span class="lm-group-count">
-            ${group.lines.length} ${pluralizeLines(group.lines.length)}
-            · ${groupMachineCount} ${pluralizeMachines(groupMachineCount)}
+            ${workshopLines.length} ${pluralizeLines(workshopLines.length)}
+            · ${workshopMachineCount} ${pluralizeMachines(workshopMachineCount)}
           </span>
         </div>
-        <div class="lm-group-body">${groupLinesHtml}</div>
-      </div>
+        <div class="lm-group-body">
     `;
+
+    // Если цех пуст (нет линий) — выводим пустое состояние
+    if (!workshopLines.length) {
+      html += `
+        <div class="lm-group-empty">
+          У цеха пока нет линий. Добавьте их через структуру производства.
+        </div>
+      `;
+      html += `</div></div>`; // закрываем цех
+      return;
+    }
+
+    // Внутри цеха — участки
+    (workshop.areas || []).forEach(area => {
+      const areaLines = allLinesCtx.filter(x =>
+        x.workshopId === workshop.id && x.areaId === area.id
+      );
+      if (!areaLines.length) return;
+
+      const areaId = 'ar:' + area.id;
+      const areaOpen = isOpen(areaId);
+
+      const areaMachineCount = areaLines.reduce((sum, x) => {
+        const machines = Array.isArray(lm[x.line]) ? lm[x.line] : [];
+        return sum + machines.length;
+      }, 0);
+
+      html += `
+        <div class="lm-group lm-group-area ${areaOpen ? 'expanded' : ''}" data-group-id="${escapeAttr(areaId)}">
+          <div class="lm-group-head lm-group-area-head" data-group-toggle="${escapeAttr(areaId)}">
+            <span class="lm-group-toggle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </span>
+            <span class="lm-group-name">${escapeHtml(area.name)}</span>
+            <span class="lm-group-count">
+              ${areaLines.length} ${pluralizeLines(areaLines.length)}
+              · ${areaMachineCount} ${pluralizeMachines(areaMachineCount)}
+            </span>
+          </div>
+          <div class="lm-group-body">
+      `;
+
+      // Внутри участка — либо блоки, либо просто линии
+      if (Array.isArray(area.blocks) && area.blocks.length) {
+        // Для каждого блока — отдельная подгруппа (без аккордеона, чтобы не было 3 уровней)
+        area.blocks.forEach(block => {
+          const blockLines = areaLines.filter(x => x.blockId === block.id);
+          if (!blockLines.length) return;
+
+          const blockMachineCount = blockLines.reduce((sum, x) => {
+            const machines = Array.isArray(lm[x.line]) ? lm[x.line] : [];
+            return sum + machines.length;
+          }, 0);
+
+          html += `
+            <div class="lm-block-head">
+              <span class="lm-block-name">${escapeHtml(block.name)}</span>
+              <span class="lm-block-count">${blockLines.length} ${pluralizeLines(blockLines.length)} · ${blockMachineCount} ${pluralizeMachines(blockMachineCount)}</span>
+            </div>
+          `;
+
+          blockLines.forEach(x => {
+            html += renderLmLineRow(x.line, lm);
+          });
+        });
+      } else {
+        // Участок без блоков — просто список линий
+        areaLines.forEach(x => {
+          html += renderLmLineRow(x.line, lm);
+        });
+      }
+
+      html += `</div></div>`; // закрываем участок
+    });
+
+    html += `</div></div>`; // закрываем цех
   });
+
   html += '</div>';
 
   container.innerHTML = html;
 
-  // --- Обработчики: клик по заголовку блока ---
+  // --- Обработчики: аккордеон ---
   container.querySelectorAll('[data-group-toggle]').forEach(head => {
     head.addEventListener('click', () => {
       const groupId = head.dataset.groupToggle;
@@ -10977,16 +9990,15 @@ function renderLineMachinesSettings() {
     });
   });
 
-  // --- Обработчики: клик по строке → открыть модалку машин ---
+  // --- Обработчики: строки линий ---
   container.querySelectorAll('.lm-row').forEach(row => {
     row.addEventListener('click', (e) => {
-      if (e.target.closest('.lm-row-btn')) return;   // кнопка обрабатывается отдельно
+      if (e.target.closest('.lm-row-btn')) return;
       const line = row.dataset.line;
       if (line) openMachinesListModal(line);
     });
   });
 
-  // Кнопка «Настроить →»
   container.querySelectorAll('.lm-row-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -11001,7 +10013,6 @@ function renderLineMachinesSettings() {
   const searchInput = $('#lmSearchInput');
   const searchClear = $('#lmSearchClear');
   if (searchInput) {
-    // Восстанавливаем значение поиска (если было)
     const savedQuery = sessionStorage.getItem('lm_search_query') || '';
     if (savedQuery) {
       searchInput.value = savedQuery;
@@ -11027,22 +10038,18 @@ function renderLineMachinesSettings() {
     });
   }
 
-  // --- Кнопки «Развернуть всё / Свернуть всё» ---
-  // --- Кнопка «Развернуть всё / Свернуть всё» ---
-  updateLmToggleAllBtn(groups);
-
+  // --- Кнопка "Развернуть всё / Свернуть всё" ---
+  updateLmToggleAllBtnMultiLevel();
   const toggleAllBtn = $('#lmToggleAllBtn');
   if (toggleAllBtn) {
     toggleAllBtn.addEventListener('click', () => {
       const open = getLmOpenBlocks() || [];
-      const allIds = groups.map(g => g.id);
+      const allIds = collectAllLmGroupIds();
       const allExpanded = allIds.length > 0 && allIds.every(id => open.includes(id));
 
       if (allExpanded) {
-        // Сворачиваем всё
         setLmOpenBlocks([]);
       } else {
-        // Разворачиваем всё
         setLmOpenBlocks(allIds);
       }
       renderLineMachinesSettings();
@@ -11050,56 +10057,52 @@ function renderLineMachinesSettings() {
   }
 }
 
-/* Применить поиск: показать только совпавшие строки,
-   при активном поиске — раскрыть все блоки. */
-function applyLmSearch(query) {
-  const container = $('#lineMachinesContainer');
-  if (!container) return;
+/* Строка линии внутри машин */
+function renderLmLineRow(line, lm) {
+  const machines = Array.isArray(lm[line]) ? lm[line] : [];
+  const count = machines.length;
 
-  const q = (query || '').trim().toLowerCase();
-  const groups = container.querySelectorAll('.lm-group');
+  const machinesText = count === 0
+    ? '<span class="lm-row-empty">Нет машин — нажмите, чтобы добавить</span>'
+    : `<span class="lm-row-machines" title="${escapeAttr(machines.join(', '))}">${escapeHtml(machines.join(', '))}</span>`;
 
-  if (!q) {
-    // Показываем всё, восстанавливаем состояние accordion
-    const openBlocks = getLmOpenBlocks() || [];
-    groups.forEach(g => {
-      const gid = g.dataset.groupId;
-      g.style.display = '';                                          // ← сброс
-      g.classList.toggle('expanded', openBlocks.includes(gid));
-    });
-    container.querySelectorAll('.lm-row').forEach(r => {
-      r.style.display = '';                                          // ← сброс
-    });
-    return;
-  }
+  const countBadge = count === 0
+    ? '<span class="lm-row-count lm-row-count-empty">0</span>'
+    : `<span class="lm-row-count">${count}</span>`;
 
-  // При активном поиске — все блоки раскрыты, показываем только совпадения
-  groups.forEach(g => {
-    g.classList.add('expanded');
-
-    let visibleInGroup = 0;
-    g.querySelectorAll('.lm-row').forEach(row => {
-      const line = (row.dataset.line || '').toLowerCase();
-      const machines = (row.dataset.machines || '').toLowerCase();
-      const match = line.includes(q) || machines.includes(q);
-      row.style.display = match ? '' : 'none';
-      if (match) visibleInGroup++;
-    });
-
-    // Если в блоке ничего не найдено — скрываем группу
-    g.style.display = visibleInGroup > 0 ? '' : 'none';
-  });
+  return `
+    <div class="lm-row" data-line="${escapeAttr(line)}" data-machines="${escapeAttr(machines.join(' ').toLowerCase())}">
+      <div class="lm-row-line">${escapeHtml(line)}</div>
+      <div class="lm-row-count-wrap">${countBadge}</div>
+      <div class="lm-row-machines-wrap">${machinesText}</div>
+      <button class="btn btn-primary btn-sm lm-row-btn" type="button">
+        Настроить →
+      </button>
+    </div>
+  `;
 }
 
-/* Обновить вид кнопки «Развернуть всё / Свернуть всё» */
-function updateLmToggleAllBtn(groups) {
+/* Собрать все id для кнопки "Развернуть всё" */
+function collectAllLmGroupIds() {
+  const ids = [];
+  getWorkshops().forEach(w => {
+    ids.push('ws:' + w.id);
+    (w.areas || []).forEach(a => {
+      ids.push('ar:' + a.id);
+    });
+  });
+  return ids;
+}
+
+/* Обновить кнопку "Развернуть всё" для многоуровневой структуры */
+function updateLmToggleAllBtnMultiLevel() {
   const btn = $('#lmToggleAllBtn');
   const label = $('#lmToggleAllLabel');
   const icon = $('#lmToggleAllIcon');
   if (!btn || !label || !icon) return;
 
   const open = getLmOpenBlocks() || [];
-  const allIds = groups.map(g => g.id);
+  const allIds = collectAllLmGroupIds();
   const allExpanded = allIds.length > 0 && allIds.every(id => open.includes(id));
 
   if (allExpanded) {
@@ -11117,7 +10120,67 @@ function updateLmToggleAllBtn(groups) {
       <polyline points="7 6 12 11 17 6"/>
     `;
   }
+}
+
+/* Применить поиск: показать только совпавшие строки,
+   при активном поиске — раскрыть все группы. */
+function applyLmSearch(query) {
+  const container = $('#lineMachinesContainer');
+  if (!container) return;
+
+  const q = (query || '').trim().toLowerCase();
+  const groups = container.querySelectorAll('.lm-group');
+
+  if (!q) {
+    // Показываем всё, восстанавливаем состояние accordion
+    const openIds = getLmOpenBlocks() || [];
+    groups.forEach(g => {
+      const gid = g.dataset.groupId;
+      g.style.display = '';
+      g.classList.toggle('expanded', openIds.includes(gid));
+    });
+    container.querySelectorAll('.lm-row').forEach(r => {
+      r.style.display = '';
+    });
+    return;
   }
+
+  // При активном поиске — все группы раскрыты
+  groups.forEach(g => {
+    g.classList.add('expanded');
+    g.style.display = '';
+
+    // Строки — показываем только совпавшие
+    let visibleInGroup = 0;
+    g.querySelectorAll('.lm-row').forEach(row => {
+      const line = (row.dataset.line || '').toLowerCase();
+      const machines = (row.dataset.machines || '').toLowerCase();
+      const match = line.includes(q) || machines.includes(q);
+      row.style.display = match ? '' : 'none';
+      if (match) visibleInGroup++;
+    });
+
+    // Скрываем группы, где нет совпадений (кроме цехов — у них есть подгруппы)
+    // Если это группа-участок — прячем, если внутри нет видимых строк.
+    // Если это группа-цех — прячем, если внутри нет ни одной видимой строки.
+    if (visibleInGroup === 0) {
+      g.style.display = 'none';
+    }
+  });
+
+  // Дополнительно: раскрываем всех родителей для видимых строк
+  container.querySelectorAll('.lm-row').forEach(row => {
+    if (row.style.display === 'none') return;
+    // Раскрываем всех родителей
+    let parent = row.closest('.lm-group');
+    while (parent) {
+      parent.classList.add('expanded');
+      parent.style.display = '';
+      parent = parent.parentElement.closest('.lm-group');
+    }
+  });
+}
+
 /* ============================================================
    TOP LOSSES — категории (аккордеон + inline-потери)
    ============================================================ */
@@ -12555,31 +11618,10 @@ function renderLineBrandsSettings() {
     return;
   }
 
-  // Открытые блоки
-  let openBlocks = getLbOpenBlocks();
-  const blocks = getBlocks();
-  if (openBlocks === null) {
-    openBlocks = blocks.length ? [blocks[0].id] : [];
-    setLbOpenBlocks(openBlocks);
-  }
+  const allLinesCtx = getAllLinesWithContext();
+  const workshops = getWorkshops();
 
-  // Линии без блока
-  const linesInBlocks = new Set();
-  blocks.forEach(b => (b.lines || []).forEach(l => linesInBlocks.add(l)));
-  const orphanLines = lines.filter(l => !linesInBlocks.has(l));
-
-  // Группы
-  const groups = blocks.map(b => ({
-    id: b.id,
-    name: b.name || 'Без названия',
-    lines: (b.lines || []).filter(l => lines.includes(l))
-  })).filter(g => g.lines.length > 0);
-
-  if (orphanLines.length) {
-    groups.push({ id: '__orphan', name: 'Без блока', lines: orphanLines });
-  }
-
-  // Тулбар
+  // --- Тулбар ---
   let html = `
     <div class="lb-toolbar">
       <div class="lb-search-wrap">
@@ -12608,65 +11650,127 @@ function renderLineBrandsSettings() {
     </div>
   `;
 
-  // Группы
   html += '<div class="lb-groups">';
-  groups.forEach(group => {
-    const isOpen = openBlocks.includes(group.id);
 
-    // Общее число брендов в блоке (уникальных)
-    const blockBrandsSet = new Set();
-    group.lines.forEach(line => {
-      (Array.isArray(lb[line]) ? lb[line] : []).forEach(b => blockBrandsSet.add(b));
+  let openIds = getLbOpenBlocks();
+  if (openIds === null) {
+    openIds = [];
+    setLbOpenBlocks(openIds);
+  }
+  const isOpen = (id) => openIds.includes(id);
+
+  workshops.forEach(workshop => {
+    const workshopLines = allLinesCtx.filter(x => x.workshopId === workshop.id);
+
+    // Если у цеха вообще нет участков — пропускаем
+    const hasAnyAreas = (workshop.areas || []).length > 0;
+    if (!hasAnyAreas) return;
+
+    const workshopId = 'ws:' + workshop.id;
+    const workshopOpen = isOpen(workshopId);
+
+    // Уникальные бренды в цехе
+    const workshopBrands = new Set();
+    workshopLines.forEach(x => {
+      (Array.isArray(lb[x.line]) ? lb[x.line] : []).forEach(b => workshopBrands.add(b));
     });
-    const blockBrandsCount = blockBrandsSet.size;
-
-    const groupLinesHtml = group.lines.map(line => {
-      const assigned = Array.isArray(lb[line]) ? lb[line] : [];
-      const count = assigned.length;
-
-      const brandsText = count === 0
-        ? '<span class="lb-row-empty">нет брендов — нажмите, чтобы задать</span>'
-        : `<span class="lb-row-brands" title="${escapeAttr(assigned.join(', '))}">${escapeHtml(assigned.join(', '))}</span>`;
-
-      const countBadge = count === 0
-        ? '<span class="lb-row-count lb-row-count-empty">0</span>'
-        : `<span class="lb-row-count">${count}</span>`;
-
-      return `
-        <div class="lb-row" data-line="${escapeAttr(line)}" data-brands="${escapeAttr(assigned.join(' ').toLowerCase())}">
-          <div class="lb-row-line">${escapeHtml(line)}</div>
-          <div class="lb-row-count-wrap">${countBadge}</div>
-          <div class="lb-row-brands-wrap">${brandsText}</div>
-          <button class="btn btn-primary btn-sm lb-row-btn" type="button">
-            Настроить →
-          </button>
-        </div>
-      `;
-    }).join('');
 
     html += `
-      <div class="lb-group ${isOpen ? 'expanded' : ''}" data-group-id="${escapeAttr(group.id)}">
-        <div class="lb-group-head" data-group-toggle="${escapeAttr(group.id)}">
+      <div class="lb-group lb-group-workshop ${workshopOpen ? 'expanded' : ''}" data-group-id="${escapeAttr(workshopId)}">
+        <div class="lb-group-head" data-group-toggle="${escapeAttr(workshopId)}">
           <span class="lb-group-toggle">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="9 18 15 12 9 6"/>
             </svg>
           </span>
-          <span class="lb-group-name">${escapeHtml(group.name)}</span>
+          <span class="lb-group-name">${escapeHtml(workshop.name)}</span>
           <span class="lb-group-count">
-            ${group.lines.length} ${pluralizeLines(group.lines.length)}
-            · ${blockBrandsCount} ${pluralizeBrandsShort(blockBrandsCount)}
+            ${workshopLines.length} ${pluralizeLines(workshopLines.length)}
+            · ${workshopBrands.size} ${pluralizeBrandsShort(workshopBrands.size)}
           </span>
         </div>
-        <div class="lb-group-body">${groupLinesHtml}</div>
-      </div>
+        <div class="lb-group-body">
     `;
+
+    if (!workshopLines.length) {
+      html += `
+        <div class="lb-group-empty">
+          У цеха пока нет линий. Добавьте их через структуру производства.
+        </div>
+      `;
+      html += `</div></div>`;
+      return;
+    }
+
+    (workshop.areas || []).forEach(area => {
+      const areaLines = allLinesCtx.filter(x =>
+        x.workshopId === workshop.id && x.areaId === area.id
+      );
+      if (!areaLines.length) return;
+
+      const areaId = 'ar:' + area.id;
+      const areaOpen = isOpen(areaId);
+
+      const areaBrands = new Set();
+      areaLines.forEach(x => {
+        (Array.isArray(lb[x.line]) ? lb[x.line] : []).forEach(b => areaBrands.add(b));
+      });
+
+      html += `
+        <div class="lb-group lb-group-area ${areaOpen ? 'expanded' : ''}" data-group-id="${escapeAttr(areaId)}">
+          <div class="lb-group-head lb-group-area-head" data-group-toggle="${escapeAttr(areaId)}">
+            <span class="lb-group-toggle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </span>
+            <span class="lb-group-name">${escapeHtml(area.name)}</span>
+            <span class="lb-group-count">
+              ${areaLines.length} ${pluralizeLines(areaLines.length)}
+              · ${areaBrands.size} ${pluralizeBrandsShort(areaBrands.size)}
+            </span>
+          </div>
+          <div class="lb-group-body">
+      `;
+
+      if (Array.isArray(area.blocks) && area.blocks.length) {
+        area.blocks.forEach(block => {
+          const blockLines = areaLines.filter(x => x.blockId === block.id);
+          if (!blockLines.length) return;
+
+          const blockBrands = new Set();
+          blockLines.forEach(x => {
+            (Array.isArray(lb[x.line]) ? lb[x.line] : []).forEach(b => blockBrands.add(b));
+          });
+
+          html += `
+            <div class="lb-block-head">
+              <span class="lb-block-name">${escapeHtml(block.name)}</span>
+              <span class="lb-block-count">${blockLines.length} ${pluralizeLines(blockLines.length)} · ${blockBrands.size} ${pluralizeBrandsShort(blockBrands.size)}</span>
+            </div>
+          `;
+
+          blockLines.forEach(x => {
+            html += renderLbLineRow(x.line, lb);
+          });
+        });
+      } else {
+        areaLines.forEach(x => {
+          html += renderLbLineRow(x.line, lb);
+        });
+      }
+
+      html += `</div></div>`; // закрываем участок
+    });
+
+    html += `</div></div>`; // закрываем цех
   });
+
   html += '</div>';
 
   container.innerHTML = html;
 
-  // --- Обработчики: аккордеон ---
+  // Обработчики: аккордеон
   container.querySelectorAll('[data-group-toggle]').forEach(head => {
     head.addEventListener('click', () => {
       const groupId = head.dataset.groupToggle;
@@ -12681,7 +11785,7 @@ function renderLineBrandsSettings() {
     });
   });
 
-  // --- Обработчики: клик по строке → модалка брендов ---
+  // Обработчики: строки
   container.querySelectorAll('.lb-row').forEach(row => {
     row.addEventListener('click', (e) => {
       if (e.target.closest('.lb-row-btn')) return;
@@ -12689,8 +11793,6 @@ function renderLineBrandsSettings() {
       if (line) openLineBrandsModal(line);
     });
   });
-
-  // Кнопка «Настроить →»
   container.querySelectorAll('.lb-row-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -12701,14 +11803,13 @@ function renderLineBrandsSettings() {
     });
   });
 
-  // --- Кнопка «Развернуть / Свернуть всё» ---
-  updateLbToggleAllBtn(groups);
-
+  // Кнопка "Развернуть всё"
+  updateLbToggleAllBtnMultiLevel();
   const toggleAllBtn = $('#lbToggleAllBtn');
   if (toggleAllBtn) {
     toggleAllBtn.addEventListener('click', () => {
       const open = getLbOpenBlocks() || [];
-      const allIds = groups.map(g => g.id);
+      const allIds = collectAllLbGroupIds();
       const allExpanded = allIds.length > 0 && allIds.every(id => open.includes(id));
 
       if (allExpanded) {
@@ -12720,7 +11821,7 @@ function renderLineBrandsSettings() {
     });
   }
 
-  // --- Поиск ---
+  // Поиск
   const searchInput = $('#lbSearchInput');
   const searchClear = $('#lbSearchClear');
   if (searchInput) {
@@ -12750,15 +11851,52 @@ function renderLineBrandsSettings() {
   }
 }
 
-/* Обновить вид кнопки «Развернуть / Свернуть всё» */
-function updateLbToggleAllBtn(groups) {
+/* Строка линии внутри брендов */
+function renderLbLineRow(line, lb) {
+  const assigned = Array.isArray(lb[line]) ? lb[line] : [];
+  const count = assigned.length;
+
+  const brandsText = count === 0
+    ? '<span class="lb-row-empty">нет брендов — нажмите, чтобы задать</span>'
+    : `<span class="lb-row-brands" title="${escapeAttr(assigned.join(', '))}">${escapeHtml(assigned.join(', '))}</span>`;
+
+  const countBadge = count === 0
+    ? '<span class="lb-row-count lb-row-count-empty">0</span>'
+    : `<span class="lb-row-count">${count}</span>`;
+
+  return `
+    <div class="lb-row" data-line="${escapeAttr(line)}" data-brands="${escapeAttr(assigned.join(' ').toLowerCase())}">
+      <div class="lb-row-line">${escapeHtml(line)}</div>
+      <div class="lb-row-count-wrap">${countBadge}</div>
+      <div class="lb-row-brands-wrap">${brandsText}</div>
+      <button class="btn btn-primary btn-sm lb-row-btn" type="button">
+        Настроить →
+      </button>
+    </div>
+  `;
+}
+
+/* Собрать все id для кнопки "Развернуть всё" */
+function collectAllLbGroupIds() {
+  const ids = [];
+  getWorkshops().forEach(w => {
+    ids.push('ws:' + w.id);
+    (w.areas || []).forEach(a => {
+      ids.push('ar:' + a.id);
+    });
+  });
+  return ids;
+}
+
+/* Обновить кнопку "Развернуть всё" */
+function updateLbToggleAllBtnMultiLevel() {
   const btn = $('#lbToggleAllBtn');
   const label = $('#lbToggleAllLabel');
   const icon = $('#lbToggleAllIcon');
   if (!btn || !label || !icon) return;
 
   const open = getLbOpenBlocks() || [];
-  const allIds = groups.map(g => g.id);
+  const allIds = collectAllLbGroupIds();
   const allExpanded = allIds.length > 0 && allIds.every(id => open.includes(id));
 
   if (allExpanded) {
@@ -13035,48 +12173,37 @@ $('#resetAllBtn').addEventListener('click', () => {
    ИНИЦИАЛИЗАЦИЯ
    ============================================================ */
 function init() {
+  // Разовые миграции структуры (на случай, если getWorkshops ещё не вызывался)
+  migrateToWorkshopsStructure();
   fillShifts();
   fillLinesForOperator();
   fillHistoryFilters();
   renderSettings();
   fillTopLossTab();
-  fillElectronicTab();
+  /*fillElectronicTab();*/
   initRouter();
   updateNavCounters();
 
-  // ============ ОТЛАДКА АВТО-ОТКРЫТИЯ МОДАЛКИ ============
+  // ============ Восстановление активной линии редактора ============
+  // Читаем сохранённую линию из localStorage и синхронизируем переменную в памяти
+  const savedEditorLine = localStorage.getItem('cl_editor_line');
+  const allLines = typeof getLines === 'function' ? getLines() : [];
+  if (savedEditorLine && allLines.includes(savedEditorLine)) {
+    currentEditorLine = savedEditorLine;
+  } else if (savedEditorLine) {
+    // Линия удалена из структуры — чистим
+    localStorage.removeItem('cl_editor_line');
+    currentEditorLine = null;
+  }
+
+  // Авто-открытие модалки выбора линии, если линия не выбрана и активна вкладка «Редактор»
   setTimeout(() => {
-    console.log('[AUTO-OPEN] setTimeout сработал');
-
     const activeTab = localStorage.getItem('cl_active_tab');
-    console.log('[AUTO-OPEN] activeTab =', activeTab);
+    if (activeTab !== 'editor') return;
 
-    if (activeTab !== 'editor') {
-      console.log('[AUTO-OPEN] activeTab !== editor → выход');
-      return;
-    }
-
-    const savedLine = localStorage.getItem('cl_editor_line');
-    const allLines = typeof getLines === 'function' ? getLines() : [];
-    const hasValidLine = savedLine && allLines.includes(savedLine);
-
-    console.log('[AUTO-OPEN] savedLine =', savedLine);
-    console.log('[AUTO-OPEN] allLines.length =', allLines.length);
-    console.log('[AUTO-OPEN] hasValidLine =', hasValidLine);
-    console.log('[AUTO-OPEN] typeof openLinePickerModal =', typeof openLinePickerModal);
-
-    if (!hasValidLine) {
-      if (savedLine) localStorage.removeItem('cl_editor_line');
-
-      if (typeof openLinePickerModal === 'function') {
-        console.log('[AUTO-OPEN] Вызываю openLinePickerModal...');
-        openLinePickerModal();
-        console.log('[AUTO-OPEN] openLinePickerModal вызвана');
-      } else {
-        console.warn('[AUTO-OPEN] openLinePickerModal НЕ определена!');
-      }
+    if (!currentEditorLine) {
+      if (typeof openLinePickerModal === 'function') openLinePickerModal();
     } else {
-      console.log('[AUTO-OPEN] Линия валидна → обновляю UI');
       if (typeof updateEditorLineContext === 'function') updateEditorLineContext();
       if (typeof updatePartCounters === 'function') updatePartCounters();
     }
@@ -13919,6 +13046,8 @@ $('#editorExportBtn')?.addEventListener('click', async () => {
     ['  • Название — краткое описание.'],
     ['  • Линия — код линии.'],
     ['  • Тип контроля — ok_not_ok / value_input / range_input.'],
+    ['  • Работа — Run или Stop (по умолчанию Run).'],
+    ['  • Время с / Время по — окно проверки (HH:MM), опционально.'],
     ['  • Применять к — ChangeOver, CL_TO, CL_Conversion (через запятую).'],
     ['  • Активен — Да или Нет.'],
     [''],
@@ -14106,16 +13235,19 @@ async function parseStandardsExcelV3(file, targetLine) {
     const node          = get(4);   // Узел
     const title         = get(5);   // Название
     const lineFromExcel = get(6);   // Линия
-    const controlType   = get(7);   // Тип контроля
-    const appliesToRaw  = get(8);   // Применять к
-    const activeRaw     = get(9);   // Активен
-    const problemDesc   = get(10);
-    const controlDesc   = get(11);
-    const purpose       = get(12);
-    const whyCreated    = get(13);
-    const triggersRaw   = get(14);
-    const topLossesRaw  = get(15);
-    const photosRaw     = get(16);
+    const workRaw       = get(7);   // Работа
+    const timeFromRaw   = get(8);   // Время с
+    const timeToRaw     = get(9);   // Время по
+    const controlType   = get(10);  // Тип контроля
+    const appliesToRaw  = get(11);  // Применять к
+    const activeRaw     = get(12);  // Активен
+    const problemDesc   = get(13);
+    const controlDesc   = get(14);
+    const purpose       = get(15);
+    const whyCreated    = get(16);
+    const triggersRaw   = get(17);
+    const topLossesRaw  = get(18);
+    const photosRaw     = get(19);
 
     // Пустая строка
     if (!oplNumber && !machine && !title && !node) {
@@ -14209,6 +13341,9 @@ async function parseStandardsExcelV3(file, targetLine) {
       node,
       nodePart,
       controlType,
+      work: (workRaw === 'Stop') ? 'Stop' : 'Run',
+      timeFrom: timeFromRaw || '',
+      timeTo: timeToRaw || '',
       problemDescription: problemDesc,
       controlDescription: controlDesc,
       purpose: purpose,
@@ -15128,6 +14263,7 @@ function refreshEditorMechTable() {
     <table class="editor-table">
       <thead>
         <tr>
+          <th class="et-col-num">№</th>
           <th class="et-col-check">
             <input type="checkbox" class="et-check-all" id="emCheckAll">
           </th>
@@ -15136,6 +14272,7 @@ function refreshEditorMechTable() {
           <th class="et-col-opl">№ OPL</th>
           <th class="et-col-struct">Структура</th>
           <th class="et-col-part">Часть</th>
+          <th class="et-col-work">Run/Stop</th>
           <th class="et-col-types">Тип</th>
           <th class="et-col-status">Статус</th>
           <th class="et-col-date">Дата</th>
@@ -15144,8 +14281,7 @@ function refreshEditorMechTable() {
       </thead>
       <tbody>
   `;
-
-  pageItems.forEach(st => {
+  pageItems.forEach((st, idx) => {
     const isActive = st.active !== false;
     const isSelected = editorTableState.mechSelected.has(st.id);
 
@@ -15157,8 +14293,17 @@ function refreshEditorMechTable() {
     const typesHtml = renderMechTypeChips(st.appliesTo);
     const partHtml = st.nodePart ? `<span class="et-part-chip et-part-${st.nodePart.toLowerCase()}">${escapeHtml(st.nodePart)}</span>` : '—';
 
+    // Work — чипы как в форме
+    const workVal = (st.work === 'Stop') ? 'Stop' : 'Run';
+    const workCls = workVal === 'Run' ? 'elec-work-chip-run' : 'elec-work-chip-stop';
+    const workHtml = `<span class="et-work-chip ${workCls}">${workVal}</span>`;
+
+    // Порядковый номер: (page - 1) * size + idx + 1
+    const rowNumber = (editorTableState.mechPage - 1) * editorTableState.mechPageSize + idx + 1;
+
     html += `
       <tr data-std-id="${escapeAttr(st.id)}" class="${isSelected ? 'is-selected' : ''}">
+        <td class="et-col-num">${rowNumber}</td>
         <td class="et-col-check">
           <input type="checkbox" class="et-check-row" data-std-id="${escapeAttr(st.id)}" ${isSelected ? 'checked' : ''}>
         </td>
@@ -15173,6 +14318,7 @@ function refreshEditorMechTable() {
         </td>
         <td class="et-col-struct">${contextHtml}</td>
         <td class="et-col-part">${partHtml}</td>
+        <td class="et-col-work">${workHtml}</td>
         <td class="et-col-types"><div class="et-types">${typesHtml}</div></td>
         <td class="et-col-status">
           <span class="et-status ${isActive ? 'et-status-active' : 'et-status-inactive'}"
@@ -15513,21 +14659,24 @@ function refreshEditorElecTable() {
     <table class="editor-table">
       <thead>
         <tr>
+          <th class="et-col-num">№</th>
           <th class="et-col-check"><input type="checkbox" class="et-check-all" id="eeCheckAll"></th>
           <th class="et-col-title">Параметр</th>
           <th class="et-col-machine">Машина</th>
           <th class="et-col-struct">Структура</th>
+          <th class="et-col-part">Часть</th>
+          <th class="et-col-work">Run/Stop</th>
           <th class="et-col-types">Тип</th>
-          <th class="et-col-part">Периодичность</th>
-          <th class="et-col-status">Run/Stop</th>
-          <th class="et-col-date">Статус</th>
+          <th class="et-col-types">Применяемость</th>
+          <th class="et-col-status">Статус</th>
+          <th class="et-col-date">Дата</th>
           <th class="et-col-actions">Действия</th>
         </tr>
       </thead>
       <tbody>
   `;
 
-  pageItems.forEach(p => {
+  pageItems.forEach((p, idx) => {
     const isActive = p.active !== false;
     const isSelected = editorTableState.elecSelected.has(p.id);
 
@@ -15536,14 +14685,29 @@ function refreshEditorElecTable() {
       ? `<div class="et-struct">${escapeHtml(ctx.workshopName)}<br>${escapeHtml([ctx.areaName, ctx.blockName].filter(Boolean).join(' / '))}<br><strong>${escapeHtml(p.line)}</strong></div>`
       : `<div class="et-struct">${escapeHtml(p.line || '—')}</div>`;
 
-    const typeLabel = p.controlType === 'ok_not_ok' ? 'ОК / Не ОК' : 'Числовой';
-    const freqMap = { daily: 'Каждый день', weekly: 'По дням', once: 'Разовые' };
-    const freqLabel = freqMap[p.frequency?.type] || '—';
+    // Часть линии
+    const partHtml = p.nodePart
+      ? `<span class="et-part-chip et-part-${p.nodePart.toLowerCase()}">${escapeHtml(p.nodePart)}</span>`
+      : '—';
 
-    const workCls = p.work === 'Run' ? 'et-part-maker' : 'et-part-packer';
+    // Work — чипы как в форме
+    const workVal = p.work === 'Stop' ? 'Stop' : 'Run';
+    const workCls = workVal === 'Run' ? 'elec-work-chip-run' : 'elec-work-chip-stop';
+    const workHtml = `<span class="et-work-chip ${workCls}">${workVal}</span>`;
+
+    // Тип контроля
+    const typeLabel = p.controlType === 'ok_not_ok' ? 'ОК / Не ОК' : 'Числовой';
+    const typeHtml = `<span class="et-type-chip ${p.controlType === 'ok_not_ok' ? 'et-type-none' : 'et-type-clto'}">${escapeHtml(typeLabel)}</span>`;
+
+    // Применяемость
+    const appliesToHtml = renderMechTypeChips(p.appliesTo);
+
+    // Порядковый номер
+    const rowNumber = (editorTableState.elecPage - 1) * editorTableState.elecPageSize + idx + 1;
 
     html += `
       <tr data-param-id="${escapeAttr(p.id)}" class="${isSelected ? 'is-selected' : ''}">
+        <td class="et-col-num">${rowNumber}</td>
         <td class="et-col-check">
           <input type="checkbox" class="et-check-row" data-param-id="${escapeAttr(p.id)}" ${isSelected ? 'checked' : ''}>
         </td>
@@ -15554,15 +14718,19 @@ function refreshEditorElecTable() {
         </td>
         <td class="et-col-machine"><span class="et-machine">${escapeHtml(p.machine || '—')}</span></td>
         <td class="et-col-struct">${contextHtml}</td>
-        <td class="et-col-types"><span class="et-type-chip et-type-clto">${escapeHtml(typeLabel)}</span></td>
-        <td class="et-col-part"><span style="font-size:12px">${escapeHtml(freqLabel)}</span></td>
-        <td class="et-col-status"><span class="et-part-chip ${workCls}">${escapeHtml(p.work)}</span></td>
-        <td class="et-col-date">
+        <td class="et-col-part">${partHtml}</td>
+        <td class="et-col-work">${workHtml}</td>
+        <td class="et-col-types">${typeHtml}</td>
+        <td class="et-col-types"><div class="et-types">${appliesToHtml}</div></td>
+        <td class="et-col-status">
           <span class="et-status ${isActive ? 'et-status-active' : 'et-status-inactive'}"
                 data-toggle-active-elec="${escapeAttr(p.id)}"
                 title="Клик — переключить активность">
             ${isActive ? 'Активен' : 'Неактивен'}
           </span>
+        </td>
+        <td class="et-col-date">
+          <span class="et-date">${escapeHtml(formatEditorDate(p.updatedAt || p.createdAt))}</span>
         </td>
         <td class="et-col-actions">
           <div class="et-actions">
@@ -16091,6 +15259,7 @@ async function editorDownloadTemplate() {
   const ws = wb.addWorksheet('Стандарты');
   const headers = [
     'Часть линии', 'Машина', 'OPL №', 'Узел', 'Название', 'Линия',
+    'Работа', 'Время с', 'Время по',
     'Тип контроля', 'Применять к', 'Активен',
     'Описание проблемы', 'Описание контроля', 'Цель', 'Почему создан',
     'Триггеры', 'Top Losses', 'Фото'
@@ -16101,6 +15270,7 @@ async function editorDownloadTemplate() {
   ws.addRow([
     'Maker', 'SE', 'OPL-1.1.1', 'Узел передачи',
     'Давление на передающем устройстве (Паук)', line,
+    'Run', '09:10', '10:00',
     'value_input', 'ChangeOver', 'Да',
     'Пример: к чему приводит отклонение',
     'Пример: как проверить',
@@ -16112,7 +15282,7 @@ async function editorDownloadTemplate() {
   ]);
 
   // Ширины
-  const widths = [12, 10, 14, 30, 34, 10, 14, 18, 10, 34, 34, 30, 30, 22, 30, 30];
+  const widths = [12, 10, 14, 30, 34, 10, 10, 12, 12, 14, 18, 10, 34, 34, 30, 30, 22, 30, 30];
   ws.columns.forEach((col, i) => { col.width = widths[i] || 14; });
 
   // Стиль шапки
@@ -16170,6 +15340,10 @@ async function editorDownloadTemplate() {
     ['  • Применять к: ChangeOver, CL_TO, CL_Conversion (через запятую)'],
     ['  • Активен: Да / Нет'],
     [''],
+    ['ОПЦИОНАЛЬНЫЕ ПОЛЯ:'],
+    ['  • Работа: Run или Stop (по умолчанию Run)'],
+    ['  • Время с / Время по: окно проверки в формате HH:MM (например 09:10 и 10:00)'],
+    [''],
     ['ЛИСТ «Точки»:'],
     ['  • Связь со стандартом — по ключу OPL № + Машина'],
     ['  • Бренд — пусто = «Все бренды»'],
@@ -16208,6 +15382,7 @@ async function editorExportLine() {
   const ws = wb.addWorksheet('Стандарты');
   const headers = [
     'Часть линии', 'Машина', 'OPL №', 'Узел', 'Название', 'Линия',
+    'Работа', 'Время с', 'Время по',
     'Тип контроля', 'Применять к', 'Активен',
     'Описание проблемы', 'Описание контроля', 'Цель', 'Почему создан',
     'Триггеры', 'Top Losses', 'Фото'
@@ -16236,6 +15411,9 @@ async function editorExportLine() {
       st.node || '',
       st.title || '',
       st.line || line,
+      (st.work === 'Stop') ? 'Stop' : 'Run',
+      st.timeFrom || '',
+      st.timeTo || '',
       st.controlType || '',
       appliesToText,
       st.active !== false ? 'Да' : 'Нет',
@@ -16249,7 +15427,7 @@ async function editorExportLine() {
     ]);
   });
 
-  const widths = [12, 10, 14, 30, 34, 10, 14, 18, 10, 34, 34, 30, 30, 22, 30, 30];
+  const widths = [12, 10, 14, 30, 34, 10, 10, 12, 12, 14, 18, 10, 34, 34, 30, 30, 22, 30, 30];
   ws.columns.forEach((col, i) => { col.width = widths[i] || 14; });
 
   const headerRow = ws.getRow(1);
@@ -16306,5 +15484,1981 @@ async function editorExportLine() {
   downloadBlob(blob, `standards_${line}_${ts}.xlsx`);
   showToast(`Экспортировано: ${standards.length} стандартов`);
 }
+/* ============================================================
+   РАСПИСАНИЕ CL — вкладка технолога
+   ============================================================ */
 
-init(); 
+/* Состояние вкладки */
+const schState = {
+  line: null,             // выбранная линия
+  mode: 'mech',           // 'mech' | 'elec'
+  part: '',               // '' | 'Maker' | 'Packer'  (только для mech)
+  dirty: false,           // были ли несохранённые изменения
+  rows: [],               // текущие строки матрицы (стандарты/параметры)
+  // Кэш "черновика" изменений: id → { daysOfWeek:[], shifts:[] }
+  draft: {},
+  // Множество id, которые пользователь убрал из расписания (не сохраняя)
+  removedFromSchedule: new Set(),
+  // Множество id, которые пользователь добавил в расписание (не сохраняя)
+  addedToSchedule: new Set(),
+  // Список добавленных "сырых" стандартов (объекты), чтобы показывать до сохранения
+  addedRows: []
+};
+
+/* --- Открытие вкладки --- */
+function openScheduleTab() {
+  // Восстанавливаем сохранённые выборы
+  const savedMode = localStorage.getItem('cl_schedule_mode') || 'mech';
+  const savedLine = localStorage.getItem('cl_schedule_line') || null;
+  const savedPart = localStorage.getItem('cl_schedule_part') || '';
+
+  schState.mode = savedMode;
+  schState.part = savedPart;
+  schState.line = savedLine;
+  schState.dirty = false;
+  schState.draft = {};
+
+  // Обновляем UI переключателей
+  document.querySelectorAll('#schModeSwitch .editor-mode-inline-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === savedMode);
+  });
+  document.querySelectorAll('#schPartSwitch .editor-part-switch-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.part === savedPart);
+  });
+
+  // Обновляем чип линии
+  updateSchLinePill();
+  updateSchPanelCount();
+
+  // Рендер матрицы
+  renderScheduleMatrix();
+
+  // Открываем модалку выбора линии, если линия не выбрана
+  if (!schState.line) {
+    setTimeout(() => {
+      if (typeof openLinePickerModal === 'function') openLinePickerModal();
+    }, 100);
+  }
+}
+
+/* --- Обновление чипа линии --- */
+function updateSchLinePill() {
+  const codeEl = $('#schLinePillCode');
+  if (!codeEl) return;
+  if (schState.line) {
+    const ctx = getBlockForLine(schState.line);
+    const wsName = ctx ? ctx.workshop.name : '';
+    codeEl.textContent = schState.line + (wsName ? ' · ' + wsName : '');
+  } else {
+    codeEl.textContent = 'Выбрать линию';
+  }
+}
+
+/* --- Счётчик в шапке --- */
+function updateSchPanelCount() {
+  const el = $('#schPanelCount');
+  if (!el) return;
+  if (!schState.line) {
+    el.textContent = '';
+    return;
+  }
+
+  const total = schState.rows.length;
+  // Считаем, у скольких есть хоть одна активная ячейка
+  const withSchedule = schState.rows.filter(r => {
+    const f = schState.draft[r.id] || r.frequency || {};
+    return Array.isArray(f.schedule) && f.schedule.length > 0;
+  }).length;
+
+  if (total === 0) {
+    el.textContent = '';
+    return;
+  }
+
+  const label = schState.mode === 'mech' ? 'стандартов' : 'параметров';
+  const labelShort = schState.mode === 'mech' ? 'с расписанием' : 'с расписанием';
+
+  el.textContent = `${total} ${label} · ${withSchedule} ${labelShort}`;
+}
+
+/* --- Получить отфильтрованные строки расписания --- */
+function getFilteredScheduleRows() {
+  const removed = schState.removedFromSchedule || new Set();
+  const added = schState.addedToSchedule || new Set();
+
+  let rows = [];
+  if (schState.mode === 'mech') {
+    rows = getStandards()
+      .filter(s => s.line === schState.line)
+      .filter(s => s.active !== false)
+      .filter(s => !schState.part || s.nodePart === schState.part)
+      .filter(s => {
+        if (removed.has(s.id)) return false;
+        if (added.has(s.id)) return true;
+        return s.inSchedule === true;
+      });
+  } else {
+    rows = getElectronicParamsForLine(schState.line)
+      .filter(p => p.active !== false)
+      .filter(p => {
+        if (removed.has(p.id)) return false;
+        if (added.has(p.id)) return true;
+        return p.inSchedule === true;
+      });
+  }
+
+  // Фильтр по машине
+  const machineFilter = ($('#schFilterMachine')?.value || '').trim();
+  if (machineFilter) {
+    rows = rows.filter(r => (r.machine || '') === machineFilter);
+  }
+
+  // Поиск
+  const search = ($('#schFilterSearch')?.value || '').trim().toLowerCase();
+  if (search) {
+    rows = rows.filter(r => {
+      const hay = [
+        r.oplNumber || '',
+        r.title || r.paramName || '',
+        r.node || '',
+        r.machine || '',
+        r.nodePart || ''
+      ].map(v => String(v || '').toLowerCase()).join(' ');
+      return hay.includes(search);
+    });
+  }
+
+  // Сортируем
+  rows.sort((a, b) => {
+    const oa = String(a.oplNumber || a.paramName || '').toLowerCase();
+    const ob = String(b.oplNumber || b.paramName || '').toLowerCase();
+    return oa.localeCompare(ob, 'ru', { numeric: true });
+  });
+
+  return rows;
+}
+
+/* --- Обновить счётчики над матрицей расписания --- */
+function updateSchMatrixCounters(rows) {
+  const el = $('#schMatrixCounters');
+  if (!el) return;
+
+  const total = rows.length;
+  let withSchedule = 0;
+  let filledCells = 0;
+
+  rows.forEach(row => {
+    const freq = schState.draft[row.id] || row.frequency || { schedule: [] };
+    const schedule = Array.isArray(freq.schedule) ? freq.schedule : [];
+    if (schedule.length > 0) withSchedule++;
+    filledCells += schedule.length;
+  });
+
+  const maxCells = total * 14;
+
+  el.innerHTML = `
+    <span class="sch-counter-chip">
+      Всего: <strong>${total}</strong>
+    </span>
+    <span class="sch-counter-chip sch-counter-chip-with">
+      С расписанием: <strong>${withSchedule}</strong>
+    </span>
+    <span class="sch-counter-chip sch-counter-chip-cells">
+      Заполнено ячеек: <strong>${filledCells}</strong> из ${maxCells}
+    </span>
+  `;
+}
+
+/* --- Заполнить фильтр машин --- */
+function fillSchMachineFilter(rows) {
+  const sel = $('#schFilterMachine');
+  if (!sel) return;
+
+  const current = sel.value;
+  const machines = [...new Set(rows.map(r => r.machine || '').filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ru'));
+
+  sel.innerHTML = '<option value="">Все</option>' +
+    machines.map(m => `<option value="${escapeAttr(m)}">${escapeHtml(m)}</option>`).join('');
+
+  if (current && machines.includes(current)) {
+    sel.value = current;
+  }
+}
+
+/* --- Рендер матрицы расписания --- */
+function renderScheduleMatrix() {
+  const wrap = $('#schMatrixWrap');
+  const toolbar = $('#schMatrixToolbar');
+  if (!wrap) return;
+
+  // Если линия не выбрана — заглушка
+  if (!schState.line) {
+    if (toolbar) toolbar.style.display = 'none';
+    wrap.innerHTML = '<div class="editor-empty">Выберите линию для просмотра расписания</div>';
+    updateSchPanelCount();
+    return;
+  }
+
+  const rows = getFilteredScheduleRows();
+
+  // Список всех строк (без фильтров) — для счётчиков и фильтра машин
+  const allRows = [];
+  if (schState.mode === 'mech') {
+    getStandards()
+      .filter(s => s.line === schState.line && s.active !== false)
+      .filter(s => !schState.part || s.nodePart === schState.part)
+      .filter(s => {
+        const removed = schState.removedFromSchedule || new Set();
+        const added = schState.addedToSchedule || new Set();
+        if (removed.has(s.id)) return false;
+        if (added.has(s.id)) return true;
+        return s.inSchedule === true;
+      })
+      .forEach(s => allRows.push(s));
+  } else {
+    getElectronicParamsForLine(schState.line)
+      .filter(p => p.active !== false)
+      .filter(p => {
+        const removed = schState.removedFromSchedule || new Set();
+        const added = schState.addedToSchedule || new Set();
+        if (removed.has(p.id)) return false;
+        if (added.has(p.id)) return true;
+        return p.inSchedule === true;
+      })
+      .forEach(p => allRows.push(p));
+  }
+
+  schState.rows = rows;
+  updateSchPanelCount();
+  fillSchMachineFilter(allRows);
+  updateSchMatrixCounters(allRows);
+
+  // Показываем тулбар
+  if (toolbar) toolbar.style.display = '';
+
+  // Пусто?
+  if (!allRows.length) {
+    if (toolbar) toolbar.style.display = 'none';
+    wrap.innerHTML = `
+      <div class="sch-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        <div class="sch-empty-title">В расписании пока нет стандартов</div>
+        <div class="sch-empty-sub">
+          Добавьте стандарты, которые должны регулярно проверяться оператором.
+        </div>
+        <button type="button" class="btn btn-primary btn-icon-text" id="schAddStandardsBtnEmpty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span>Добавить стандарты</span>
+        </button>
+      </div>
+    `;
+    $('#schAddStandardsBtnEmpty')?.addEventListener('click', openScheduleAddStandardsModal);
+    return;
+  }
+
+  // Если фильтр ничего не нашёл
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="editor-empty">Ничего не найдено по фильтру</div>';
+    return;
+  }
+
+  // Дни недели
+  const DAYS = [
+    { idx: 1, name: 'Пн' },
+    { idx: 2, name: 'Вт' },
+    { idx: 3, name: 'Ср' },
+    { idx: 4, name: 'Чт' },
+    { idx: 5, name: 'Пт' },
+    { idx: 6, name: 'Сб' },
+    { idx: 0, name: 'Вс' }
+  ];
+
+  const weekDays = getCurrentWeekDays();
+  const dateByDayIdx = {};
+  [1, 2, 3, 4, 5, 6, 0].forEach((dayIdx, i) => {
+    dateByDayIdx[dayIdx] = weekDays[i];
+  });
+
+  let html = '<div class="sch-matrix">';
+
+  // ===== Шапка (с инфо-колонками) =====
+  html += '<div class="sch-head-grid">';
+
+  // Инфо-колонки (9 штук), объединённые в одну ячейку на 2 ряда
+  html += `<div class="sch-head-info" style="grid-column: 1 / 10; grid-row: 1 / 3;">
+    <div style="width:48px;text-align:center">№</div>
+    <div style="width:100px;text-align:center">OPL №</div>
+    <div style="width:80px;text-align:center">Машина</div>
+    <div style="width:180px;text-align:left">Узел</div>
+    <div style="width:280px;text-align:left">Название</div>
+    <div style="width:100px;text-align:center">Время</div>
+    <div style="width:70px;text-align:center">Run/Stop</div>
+    <div style="width:90px;text-align:center">Расписание</div>
+    <div style="width:50px;text-align:center"></div>
+  </div>`;
+
+  // Дни: каждый — span 2 колонки, на 1-й ряд; под ним 2 ячейки смен
+  DAYS.forEach((d, i) => {
+    const dateStr = dateByDayIdx[d.idx];
+    const shortDate = dateStr ? fmtShortDate(dateStr) : '';
+    const colStart = 10 + i * 2;   // 9 инфо + смещение
+
+    // Получаем бригады для этой даты
+    const shifts = dateStr ? getShiftsForDate(dateStr) : { day: '—', night: '—' };
+
+    html += `<div class="sch-head-day" style="grid-column: ${colStart} / ${colStart + 2}; grid-row: 1;">
+      ${d.name} <span style="color:var(--text-dim);font-weight:500">${shortDate}</span>
+    </div>`;
+    html += `<div class="sch-head-shift sch-head-shift-day" style="grid-column: ${colStart}; grid-row: 2;">
+      <span class="sch-head-shift-label">День ·</span> ${escapeHtml(shifts.day)}
+    </div>`;
+    html += `<div class="sch-head-shift sch-head-shift-night" style="grid-column: ${colStart + 1}; grid-row: 2;">
+      <span class="sch-head-shift-label">Ночь ·</span> ${escapeHtml(shifts.night)}
+    </div>`;
+  });
+
+  html += '</div>';
+
+  // Тело — каждая строка (нумеруем)
+  rows.forEach((row, idx) => {
+    row._index = idx + 1;
+    html += renderScheduleRow(row, DAYS);
+  });
+
+  html += '</div>';
+  wrap.innerHTML = html;
+
+  // Обработчики
+  bindScheduleCells();
+
+  // Клик по «×» — убрать из расписания
+  wrap.querySelectorAll('[data-remove-from-schedule]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const rowId = btn.dataset.removeFromSchedule;
+      removeRowFromSchedule(rowId);
+    });
+  });
+
+  // Клик по колонке «Время» — открыть модалку
+  wrap.querySelectorAll('[data-tw-open]').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const rowId = el.dataset.twOpen;
+      if (rowId) openTimeWindowsModal(rowId);
+    });
+  });
+}
+/* ============================================================
+   РАСПИСАНИЕ CL — время проверки (timeWindows)
+   ============================================================ */
+
+/* Состояние модалки */
+let twState = {
+  rowId: null,
+  draft: []   // [{from, to}, ...] — рабочая копия
+};
+/* Определить тип окна времени: 'day' или 'night' */
+function getTimeWindowShift(from) {
+  if (!from) return 'day';
+  const hh = String(from).slice(0, 2);   // '09', '13', '21', '03'
+  // Ночные: >= 21:00 или < 09:00
+  if (hh >= '21' || hh < '09') return 'night';
+  return 'day';
+}
+/* Открыть модалку */
+function openTimeWindowsModal(rowId) {
+  const modal = $('#timeWindowsModal');
+  if (!modal) return;
+
+  const row = schState.rows.find(r => r.id === rowId);
+  if (!row) return;
+
+  // Читаем текущие окна (из draft или из row.frequency)
+  const freq = schState.draft[row.id] || row.frequency || {};
+  const current = Array.isArray(freq.timeWindows) ? freq.timeWindows : [];
+
+  twState.rowId = rowId;
+  twState.draft = current.map(w => ({ from: w.from, to: w.to }));
+
+  // Заголовок
+  const title = row.title || row.paramName || '—';
+  $('#timeWindowsPoint').textContent = 'Стандарт: ' + title;
+
+  renderTimeWindowsList();
+
+  openModal(modal);
+}
+
+/* Закрыть модалку */
+function closeTimeWindowsModal() {
+  closeModal('#timeWindowsModal');
+  twState.rowId = null;
+  twState.draft = [];
+}
+
+/* Отрисовать список окон */
+function renderTimeWindowsList() {
+  const list = $('#twList');
+  if (!list) return;
+
+  if (!twState.draft.length) {
+    list.innerHTML = '<div class="tw-empty">Пока нет окон. Выберите предустановку или добавьте вручную.</div>';
+    return;
+  }
+
+  list.innerHTML = twState.draft.map((w, idx) => {
+    const shift = getTimeWindowShift(w.from);
+    return `
+      <div class="tw-item">
+        <span class="tw-item-text tw-item-text-${shift}">${escapeHtml(w.from)}–${escapeHtml(w.to)}</span>
+        <button type="button" class="tw-item-remove" data-tw-remove="${idx}" title="Удалить">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  // Обработчики удаления
+  list.querySelectorAll('[data-tw-remove]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.twRemove, 10);
+      twState.draft.splice(idx, 1);
+      renderTimeWindowsList();
+    });
+  });
+}
+
+/* Добавить окно в draft (с проверкой на дубли) */
+function addTimeWindow(from, to) {
+  if (!from || !to) return;
+  // Проверка дубля
+  const exists = twState.draft.some(w => w.from === from && w.to === to);
+  if (exists) {
+    showToast('Такое окно уже добавлено', true);
+    return;
+  }
+  twState.draft.push({ from, to });
+  renderTimeWindowsList();
+}
+
+/* Сохранить окна в draft расписания */
+function saveTimeWindows() {
+  if (!twState.rowId) return;
+
+  const rowId = twState.rowId;
+
+  // Инициализируем draft для строки, если его нет
+  if (!schState.draft[rowId]) {
+    const row = schState.rows.find(r => r.id === rowId);
+    const f = row?.frequency || { type: 'weekly', schedule: [], shifts: [], daysOfWeek: [], dates: [] };
+    schState.draft[rowId] = {
+      type: 'weekly',
+      schedule: Array.isArray(f.schedule) ? [...f.schedule.map(x => ({ ...x }))] : [],
+      timeWindows: Array.isArray(f.timeWindows) ? [...f.timeWindows.map(w => ({ ...w }))] : [],
+      shifts: [...(f.shifts || [])],
+      daysOfWeek: [...(f.daysOfWeek || [])],
+      dates: [...(f.dates || [])]
+    };
+  }
+
+  schState.draft[rowId].timeWindows = twState.draft.map(w => ({ from: w.from, to: w.to }));
+
+  schState.dirty = true;
+  updateSchSaveBtn();
+  renderScheduleMatrix();
+  closeTimeWindowsModal();
+  showToast('Время проверки сохранено');
+}
+
+/* --- Обработчики модалки --- */
+
+$('#timeWindowsClose')?.addEventListener('click', closeTimeWindowsModal);
+$('#twCancelBtn')?.addEventListener('click', closeTimeWindowsModal);
+$('#timeWindowsModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'timeWindowsModal') closeTimeWindowsModal();
+});
+
+/* Быстрые предустановки */
+$('#twPresetsList')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.tw-preset-btn');
+  if (!btn) return;
+  const from = btn.dataset.from;
+  const to = btn.dataset.to;
+  addTimeWindow(from, to);
+});
+
+/* Добавить своё окно */
+$('#twAddCustomBtn')?.addEventListener('click', () => {
+  const from = $('#twCustomFrom')?.value || '';
+  const to = $('#twCustomTo')?.value || '';
+  if (!from || !to) {
+    showToast('Укажите время «С» и «По»', true);
+    return;
+  }
+  if (from >= to) {
+    showToast('«С» должно быть раньше «По»', true);
+    return;
+  }
+  addTimeWindow(from, to);
+});
+
+/* Очистить всё */
+$('#twClearAllBtn')?.addEventListener('click', () => {
+  if (!twState.draft.length) return;
+  if (!confirm('Очистить все окна проверки для этой строки?')) return;
+  twState.draft = [];
+  renderTimeWindowsList();
+});
+
+/* Сохранить */
+$('#twSaveBtn')?.addEventListener('click', saveTimeWindows);
+/* Служебная функция форматирования даты (нужна в других модулях) — 
+   сам блок просмотра недели удалён */
+
+/* Формат короткой даты DD.MM */
+function fmtShortDate(dateStr) {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return '';
+  return `${parts[2]}.${parts[1]}`;
+}
+
+/* --- Одна строка матрицы расписания (с инфо-колонками) --- */
+function renderScheduleRow(row, DAYS) {
+  // Получаем актуальную периодичность
+  const freq = schState.draft[row.id] || (row.frequency || { type: 'weekly', schedule: [], shifts: [], daysOfWeek: [], dates: [] });
+  const schedule = Array.isArray(freq.schedule) ? freq.schedule : [];
+  const isOn = (dayIdx, shift) => schedule.some(x => x.day === dayIdx && x.shift === shift);
+
+  const isMech = schState.mode === 'mech';
+
+  // Поля — для мех и электро берём по-разному
+  const oplNumber = isMech ? (row.oplNumber || '—') : '';
+  const machine = row.machine || '';
+  const node = isMech ? (row.node || '') : '';
+  const title = isMech ? (row.title || '—') : (row.paramName || '—');
+  // Время проверки — теперь из frequency.timeWindows
+  const freqFull = schState.draft[row.id] || row.frequency || {};
+  const timeWindows = Array.isArray(freqFull.timeWindows) ? freqFull.timeWindows : [];
+
+  const work = row.work === 'Stop' ? 'Stop' : 'Run';
+
+  // Норма / периодичность — счётчик ячеек
+  const activeCells = schedule.length;
+  const activeLabel = activeCells > 0
+    ? `<span class="sch-row-badge">${activeCells} из 14</span>`
+    : `<span class="sch-row-badge sch-row-badge-empty">0 из 14</span>`;
+
+  let html = `<div class="sch-row" data-row-id="${escapeAttr(row.id)}">`;
+
+  // --- Инфо-колонки ---
+  html += `<div class="sch-info-cell sch-info-num">${row._index || ''}</div>`;
+  html += `<div class="sch-info-cell sch-info-opl">${escapeHtml(oplNumber)}</div>`;
+  html += `<div class="sch-info-cell sch-info-machine">${escapeHtml(machine)}</div>`;
+  html += `<div class="sch-info-cell sch-info-node" title="${escapeAttr(node)}">${escapeHtml(node || '—')}</div>`;
+  html += `<div class="sch-info-cell sch-info-title" title="${escapeAttr(title)}">${escapeHtml(title)}</div>`;
+  // Колонка «Время» — чипы или прочерк
+  let timeHtml = '';
+  if (!timeWindows.length) {
+    timeHtml = '<span class="sch-time-empty">—</span>';
+  } else {
+    timeHtml = timeWindows.map(w => {
+      const shift = getTimeWindowShift(w.from);
+      return `<span class="sch-time-chip sch-time-chip-${shift}">${escapeHtml(w.from)}–${escapeHtml(w.to)}</span>`;
+    }).join('');
+  }
+  html += `<div class="sch-info-cell sch-info-time" data-tw-open="${escapeAttr(row.id)}" title="Кликните, чтобы задать время проверки">${timeHtml}</div>`;
+  html += `<div class="sch-info-cell sch-info-work"><span class="sch-work-badge sch-work-badge-${work.toLowerCase()}">${work}</span></div>`;
+  html += `<div class="sch-info-cell sch-info-schedule">${activeLabel}</div>`;
+  html += `<div class="sch-info-cell sch-info-actions">
+    <button type="button" class="sch-row-remove" data-remove-from-schedule="${escapeAttr(row.id)}" title="Убрать из расписания">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"/>
+        <line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>`;
+
+  // 14 ячеек: 7 дней × 2 смены
+  DAYS.forEach(d => {
+    ['day', 'night'].forEach(shift => {
+      const on = isOn(d.idx, shift);
+      html += `<button type="button"
+        class="sch-cell-cell sch-cell-cell-${shift} ${on ? 'on' : ''}"
+        data-row-id="${escapeAttr(row.id)}"
+        data-day="${d.idx}"
+        data-shift="${shift}"
+        title="${d.name} · ${shift === 'day' ? 'День' : 'Ночь'}">${on ? '✓' : ''}</button>`;
+    });
+  });
+
+  html += '</div>';
+  return html;
+}
+/* --- Убрать стандарт из расписания (в черновике) --- */
+function removeRowFromSchedule(rowId) {
+  if (!rowId) return;
+
+  const removedRow = schState.rows.find(r => r.id === rowId);
+  if (!removedRow) return;
+
+  const title = removedRow.title || removedRow.paramName || 'стандарт';
+  if (!confirm(`Убрать из расписания: "${title}"?`)) return;
+
+  if (!schState.removedFromSchedule) schState.removedFromSchedule = new Set();
+  if (!schState.addedToSchedule) schState.addedToSchedule = new Set();
+
+  if (schState.addedToSchedule.has(rowId)) {
+    schState.addedToSchedule.delete(rowId);
+  } else {
+    schState.removedFromSchedule.add(rowId);
+  }
+
+  delete schState.draft[rowId];
+
+  schState.dirty = true;
+  updateSchSaveBtn();
+  renderScheduleMatrix();
+  updateSchPanelCount();
+}
+/* --- Клики по ячейкам матрицы --- */
+function bindScheduleCells() {
+  const wrap = $('#schMatrixWrap');
+  if (!wrap) return;
+
+  wrap.querySelectorAll('.sch-cell-cell').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const rowId = btn.dataset.rowId;
+      const day = parseInt(btn.dataset.day, 10);
+      const shift = btn.dataset.shift;
+      if (!rowId) return;
+
+      // Инициализация draft для строки
+      if (!schState.draft[rowId]) {
+        const row = schState.rows.find(r => r.id === rowId);
+        const f = row?.frequency || { type: 'weekly', schedule: [], shifts: [], daysOfWeek: [], dates: [] };
+        schState.draft[rowId] = {
+          type: 'weekly',
+          schedule: Array.isArray(f.schedule) ? [...f.schedule.map(x => ({ ...x }))] : [],
+          shifts: [...(f.shifts || [])],
+          daysOfWeek: [...(f.daysOfWeek || [])],
+          dates: [...(f.dates || [])]
+        };
+      }
+      const draft = schState.draft[rowId];
+
+      // Определяем текущее состояние
+      const idx = draft.schedule.findIndex(x => x.day === day && x.shift === shift);
+      const isOn = idx !== -1;
+
+      if (isOn) {
+        // Выключаем — удаляем пару
+        draft.schedule.splice(idx, 1);
+      } else {
+        // Включаем — добавляем пару
+        draft.schedule.push({ day, shift });
+      }
+
+      // Пересчитываем daysOfWeek и shifts (для совместимости)
+      draft.daysOfWeek = [...new Set(draft.schedule.map(x => x.day))]
+        .sort((a, b) => {
+          const av = a === 0 ? 7 : a;
+          const bv = b === 0 ? 7 : b;
+          return av - bv;
+        });
+      draft.shifts = [...new Set(draft.schedule.map(x => x.shift))];
+      if (!draft.shifts.length) draft.shifts = ['day', 'night'];
+
+      schState.dirty = true;
+      updateSchSaveBtn();
+
+      // Обновляем визуально эту ячейку
+      const nowOn = draft.schedule.some(x => x.day === day && x.shift === shift);
+      btn.classList.toggle('on', nowOn);
+      btn.textContent = nowOn ? '✓' : '';
+
+      // Обновляем счётчик «N из 14» в строке
+      const rowEl = btn.closest('.sch-row');
+      if (rowEl) {
+        const badge = rowEl.querySelector('.sch-row-badge');
+        if (badge) {
+          const n = draft.schedule.length;
+          badge.textContent = `${n} из 14`;
+          if (n > 0) {
+            badge.classList.remove('sch-row-badge-empty');
+          } else {
+            badge.classList.add('sch-row-badge-empty');
+          }
+        }
+      }
+
+      // Обновляем счётчики тулбара
+      if (typeof updateSchMatrixCounters === 'function') {
+        updateSchMatrixCounters(schState.rows);
+      }
+    });
+  });
+}
+
+/* --- Обновление состояния кнопки "Сохранить" --- */
+function updateSchSaveBtn() {
+  const btn = $('#schSaveBtn');
+  if (!btn) return;
+  btn.disabled = !schState.dirty || !schState.line;
+}
+
+/* --- Сохранение расписания --- */
+function saveSchedule() {
+  if (!schState.line) return;
+  if (!schState.dirty) return;
+
+  if (schState.mode === 'mech') {
+    saveMechSchedule();
+  } else {
+    saveElecSchedule();
+  }
+
+  schState.dirty = false;
+  schState.draft = {};
+  schState.removedFromSchedule = new Set();
+  schState.addedToSchedule = new Set();
+  schState.addedRows = [];
+  updateSchSaveBtn();
+  renderScheduleMatrix();
+  showToast('Расписание сохранено');
+}
+/* ============================================================
+   РАСПИСАНИЕ CL — модалка добавления стандартов
+   ============================================================ */
+
+/* Состояние модалки */
+const schAddState = {
+  selectedIds: new Set(),   // id, которые пользователь выделил для добавления
+  query: '',
+  collapsedGroups: new Set()   // не используется, но на будущее
+};
+
+/* --- Открытие --- */
+function openScheduleAddStandardsModal() {
+  if (!schState.line) return;
+
+  const modal = $('#schAddStandardsModal');
+  if (!modal) return;
+
+  // Сбрасываем состояние
+  schAddState.selectedIds = new Set();
+  schAddState.query = '';
+  schAddState.collapsedGroups = new Set();
+
+  $('#schAddStandardsSearch').value = '';
+  $('#schAddCheckAll').checked = false;
+
+  renderSchAddList();
+  updateSchAddCounter();
+
+  openModal(modal);
+  setTimeout(() => $('#schAddStandardsSearch')?.focus(), 100);
+}
+
+/* --- Закрытие --- */
+function closeScheduleAddStandardsModal() {
+  closeModal('#schAddStandardsModal');
+  schAddState.selectedIds = new Set();
+  schAddState.query = '';
+}
+
+/* --- Рендер списка --- */
+function renderSchAddList() {
+  const list = $('#schAddStandardsList');
+  if (!list) return;
+
+  const q = (schAddState.query || '').trim().toLowerCase();
+
+  // Собираем все стандарты/параметры линии, кроме тех, что уже inSchedule
+  let allItems = [];
+
+  if (schState.mode === 'mech') {
+    allItems = getStandards()
+      .filter(s => s.line === schState.line)
+      .filter(s => s.active !== false)
+      .filter(s => !schState.part || s.nodePart === schState.part)
+      .map(s => ({
+        id: s.id,
+        title: s.title || '—',
+        oplNumber: s.oplNumber || '',
+        machine: s.machine || '',
+        node: s.node || '',
+        nodePart: s.nodePart || '',
+        inSchedule: s.inSchedule === true,
+        group: s.machine || '— без машины —'
+      }));
+  } else {
+    allItems = getElectronicParamsForLine(schState.line)
+      .filter(p => p.active !== false)
+      .map(p => ({
+        id: p.id,
+        title: p.paramName || '—',
+        oplNumber: '',
+        machine: p.machine || '',
+        node: '',
+        nodePart: '',
+        inSchedule: p.inSchedule === true,
+        group: p.machine || '— без машины —'
+      }));
+  }
+
+  // Фильтр поиска
+  if (q) {
+    allItems = allItems.filter(it => {
+      const hay = [
+        it.title, it.oplNumber, it.machine, it.node, it.nodePart
+      ].map(v => String(v || '').toLowerCase()).join(' ');
+      return hay.includes(q);
+    });
+  }
+
+  if (!allItems.length) {
+    list.innerHTML = '<div class="empty-state" style="padding:24px">Ничего не найдено</div>';
+    return;
+  }
+
+  // Группируем по машине
+  const groups = {};
+  allItems.forEach(it => {
+    const g = it.group;
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(it);
+  });
+
+  // Сортируем группы
+  const sortedGroups = Object.keys(groups).sort((a, b) =>
+    a.localeCompare(b, 'ru', { numeric: true })
+  );
+
+  let html = '';
+  sortedGroups.forEach(groupName => {
+    const items = groups[groupName];
+    // Сортируем внутри группы
+    items.sort((a, b) => {
+      const oa = String(a.oplNumber || a.title || '').toLowerCase();
+      const ob = String(b.oplNumber || b.title || '').toLowerCase();
+      return oa.localeCompare(ob, 'ru', { numeric: true });
+    });
+
+    const itemsHtml = items.map(it => {
+      const isAlready = it.inSchedule;
+      const isChecked = schAddState.selectedIds.has(it.id);
+      const subParts = [];
+      if (it.oplNumber) subParts.push(it.oplNumber);
+      if (it.node) subParts.push(it.node);
+      if (it.nodePart) subParts.push(it.nodePart);
+
+      return `
+        <label class="sch-add-item ${isAlready ? 'is-already' : ''}" data-item-id="${escapeAttr(it.id)}">
+          <input type="checkbox" ${isChecked ? 'checked' : ''} ${isAlready ? 'disabled' : ''}>
+          <div class="sch-add-item-info">
+            <div class="sch-add-item-title">${escapeHtml(it.title)}</div>
+            <div class="sch-add-item-sub">${escapeHtml(subParts.join(' · ') || '—')}</div>
+          </div>
+          ${isAlready ? '<span class="sch-add-item-already">уже добавлен</span>' : ''}
+        </label>
+      `;
+    }).join('');
+
+    html += `
+      <div class="sch-add-group">
+        <div class="sch-add-group-head">
+          <span class="sch-add-group-name">${escapeHtml(groupName)}</span>
+          <span class="sch-add-group-count">${items.length}</span>
+        </div>
+        ${itemsHtml}
+      </div>
+    `;
+  });
+
+  list.innerHTML = html;
+
+  // Обработчики
+  list.querySelectorAll('.sch-add-item').forEach(item => {
+    const id = item.dataset.itemId;
+    const cb = item.querySelector('input');
+    if (!cb || cb.disabled) return;
+
+    // Клик по всему label — toggle
+    item.addEventListener('click', (e) => {
+      // Если клик по input — браузер сам переключит, обработаем через change
+      if (e.target.tagName === 'INPUT') return;
+      e.preventDefault();
+      cb.checked = !cb.checked;
+      toggleSchAddItem(id, cb.checked);
+    });
+
+    cb.addEventListener('change', () => {
+      toggleSchAddItem(id, cb.checked);
+    });
+  });
+}
+
+/* --- Toggle выбора --- */
+function toggleSchAddItem(id, checked) {
+  if (checked) {
+    schAddState.selectedIds.add(id);
+  } else {
+    schAddState.selectedIds.delete(id);
+  }
+  updateSchAddCounter();
+  updateSchAddCheckAllState();
+}
+
+/* --- Счётчик --- */
+function updateSchAddCounter() {
+  const n = schAddState.selectedIds.size;
+  $('#schAddCounter').textContent = `Выбрано: ${n}`;
+
+  const btn = $('#schAddStandardsConfirm');
+  if (btn) {
+    btn.disabled = n === 0;
+    btn.textContent = n === 0 ? 'Добавить' : `Добавить ${n}`;
+  }
+}
+
+/* --- Обновить состояние "Выделить все" --- */
+function updateSchAddCheckAllState() {
+  const cb = $('#schAddCheckAll');
+  if (!cb) return;
+
+  const visibleInputs = [...document.querySelectorAll('#schAddStandardsList .sch-add-item input:not([disabled])')];
+  if (!visibleInputs.length) {
+    cb.checked = false;
+    cb.indeterminate = false;
+    return;
+  }
+
+  const checkedCount = visibleInputs.filter(i => i.checked).length;
+  cb.checked = checkedCount === visibleInputs.length;
+  cb.indeterminate = checkedCount > 0 && checkedCount < visibleInputs.length;
+}
+
+/* --- Подтверждение --- */
+function confirmScheduleAddStandards() {
+  if (!schAddState.selectedIds.size) return;
+
+  const ids = [...schAddState.selectedIds];
+
+  if (!schState.addedToSchedule) schState.addedToSchedule = new Set();
+  if (!schState.removedFromSchedule) schState.removedFromSchedule = new Set();
+
+  ids.forEach(id => {
+    schState.removedFromSchedule.delete(id);
+    schState.addedToSchedule.add(id);
+  });
+
+  schState.dirty = true;
+  updateSchSaveBtn();
+  renderScheduleMatrix();
+  updateSchPanelCount();
+  closeScheduleAddStandardsModal();
+  showToast(`Добавлено: ${ids.length}`);
+}
+
+/* --- Обработчики модалки --- */
+
+$('#schAddStandardsClose')?.addEventListener('click', closeScheduleAddStandardsModal);
+$('#schAddStandardsCancel')?.addEventListener('click', closeScheduleAddStandardsModal);
+$('#schAddStandardsModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'schAddStandardsModal') closeScheduleAddStandardsModal();
+});
+$('#schAddStandardsConfirm')?.addEventListener('click', confirmScheduleAddStandards);
+
+$('#schAddStandardsSearch')?.addEventListener('input', (e) => {
+  schAddState.query = e.target.value;
+  // Сбрасываем "Выделить все"
+  const cbAll = $('#schAddCheckAll');
+  if (cbAll) { cbAll.checked = false; cbAll.indeterminate = false; }
+  renderSchAddList();
+  updateSchAddCheckAllState();
+});
+
+$('#schAddCheckAll')?.addEventListener('change', (e) => {
+  const checked = e.target.checked;
+  document.querySelectorAll('#schAddStandardsList .sch-add-item input:not([disabled])').forEach(cb => {
+    cb.checked = checked;
+    const item = cb.closest('.sch-add-item');
+    if (!item) return;
+    const id = item.dataset.itemId;
+    if (checked) schAddState.selectedIds.add(id);
+    else schAddState.selectedIds.delete(id);
+  });
+  updateSchAddCounter();
+});
+/* Сохранение для механики */
+function saveMechSchedule() {
+  const all = getStandards();
+  let changed = 0;
+
+  // Обновляем frequency
+  Object.entries(schState.draft).forEach(([id, freq]) => {
+    const st = all.find(s => s.id === id);
+    if (!st) return;
+    st.frequency = {
+      type: 'weekly',
+      schedule: Array.isArray(freq.schedule) ? freq.schedule.map(x => ({ ...x })) : [],
+      timeWindows: Array.isArray(freq.timeWindows) ? freq.timeWindows.map(w => ({ from: w.from, to: w.to })) : [],
+      shifts: [...(freq.shifts || [])],
+      daysOfWeek: [...(freq.daysOfWeek || [])],
+      dates: [...(freq.dates || [])]
+    };
+    st.updatedAt = new Date().toISOString();
+    changed++;
+  });
+
+  // Убираем из расписания
+  if (schState.removedFromSchedule) {
+    schState.removedFromSchedule.forEach(id => {
+      const st = all.find(s => s.id === id);
+      if (!st) return;
+      st.inSchedule = false;
+      st.updatedAt = new Date().toISOString();
+      changed++;
+    });
+  }
+
+  // Добавляем в расписание
+  if (schState.addedToSchedule) {
+    schState.addedToSchedule.forEach(id => {
+      const st = all.find(s => s.id === id);
+      if (!st) return;
+      st.inSchedule = true;
+      st.updatedAt = new Date().toISOString();
+      changed++;
+    });
+  }
+
+  if (changed > 0) {
+    setStandards(all);
+  }
+}
+
+/* Сохранение для электроники */
+function saveElecSchedule() {
+  const all = getElectronicParams().map(normalizeElectronicParam);
+  let changed = 0;
+
+  Object.entries(schState.draft).forEach(([id, freq]) => {
+    const p = all.find(x => x.id === id);
+    if (!p) return;
+    p.frequency = {
+      type: 'weekly',
+      schedule: Array.isArray(freq.schedule) ? freq.schedule.map(x => ({ ...x })) : [],
+      timeWindows: Array.isArray(freq.timeWindows) ? freq.timeWindows.map(w => ({ from: w.from, to: w.to })) : [],
+      shifts: [...(freq.shifts || [])],
+      daysOfWeek: [...(freq.daysOfWeek || [])],
+      dates: [...(p.frequency?.dates || [])]
+    };
+    p.updatedAt = new Date().toISOString();
+    changed++;
+  });
+
+  if (schState.removedFromSchedule) {
+    schState.removedFromSchedule.forEach(id => {
+      const p = all.find(x => x.id === id);
+      if (!p) return;
+      p.inSchedule = false;
+      p.updatedAt = new Date().toISOString();
+      changed++;
+    });
+  }
+
+  if (schState.addedToSchedule) {
+    schState.addedToSchedule.forEach(id => {
+      const p = all.find(x => x.id === id);
+      if (!p) return;
+      p.inSchedule = true;
+      p.updatedAt = new Date().toISOString();
+      changed++;
+    });
+  }
+
+  if (changed > 0) {
+    setElectronicParams(all);
+  }
+}
+
+/* --- Обработчики вкладки --- */
+
+/* Чип линии — открыть модалку выбора */
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#schLinePill')) {
+    if (typeof openLinePickerModal === 'function') openLinePickerModal();
+  }
+});
+
+/* Переключатель Механические / Электронные */
+$('#schModeSwitch')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.editor-mode-inline-btn');
+  if (!btn) return;
+  const mode = btn.dataset.mode;
+  if (mode === schState.mode) return;
+
+  if (schState.dirty && !confirm('Есть несохранённые изменения. Продолжить без сохранения?')) return;
+
+  schState.mode = mode;
+  schState.dirty = false;
+  schState.draft = {};
+  schState.removedFromSchedule = new Set();
+  schState.addedToSchedule = new Set();
+
+  try { localStorage.setItem('cl_schedule_mode', mode); } catch (err) {}
+
+  document.querySelectorAll('#schModeSwitch .editor-mode-inline-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+
+  updateSchSaveBtn();
+  renderScheduleMatrix();
+});
+
+/* Переключатель Maker/Packer */
+$('#schPartSwitch')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.editor-part-switch-btn');
+  if (!btn) return;
+  const part = btn.dataset.part || '';
+  if (part === schState.part) return;
+
+  if (schState.dirty && !confirm('Есть несохранённые изменения. Продолжить без сохранения?')) return;
+
+  schState.part = part;
+  schState.dirty = false;
+  schState.draft = {};
+  schState.removedFromSchedule = new Set();
+  schState.addedToSchedule = new Set();
+
+  try { localStorage.setItem('cl_schedule_part', part); } catch (err) {}
+
+  document.querySelectorAll('#schPartSwitch .editor-part-switch-btn').forEach(b => {
+    b.classList.toggle('active', (b.dataset.part || '') === part);
+  });
+
+  updateSchSaveBtn();
+  renderScheduleMatrix();
+});
+
+/* Кнопка "Сохранить" */
+$('#schSaveBtn')?.addEventListener('click', saveSchedule);
+
+/* Массовые операции (прототип — работают со всеми строками) */
+$('#schBulkFillAllBtn')?.addEventListener('click', () => {
+  if (!schState.rows.length) return;
+  if (!confirm('Проставить все дни и смены для всех строк?')) return;
+
+  schState.dirty = true;
+  const allDays = [1, 2, 3, 4, 5, 6, 0];
+  const schedule = [];
+  allDays.forEach(day => {
+    schedule.push({ day, shift: 'day' });
+    schedule.push({ day, shift: 'night' });
+  });
+
+  schState.rows.forEach(row => {
+    schState.draft[row.id] = {
+      type: 'weekly',
+      schedule: schedule.map(x => ({ ...x })),
+      shifts: ['day', 'night'],
+      daysOfWeek: [...allDays],
+      dates: []
+    };
+  });
+
+  updateSchSaveBtn();
+  renderScheduleMatrix();
+});
+
+$('#schBulkClearAllBtn')?.addEventListener('click', () => {
+  if (!schState.rows.length) return;
+  if (!confirm('Очистить расписание для всех строк?')) return;
+
+  schState.dirty = true;
+
+  schState.rows.forEach(row => {
+    schState.draft[row.id] = {
+      type: 'weekly',
+      schedule: [],
+      shifts: ['day', 'night'],
+      daysOfWeek: [],
+      dates: []
+    };
+  });
+
+  updateSchSaveBtn();
+  renderScheduleMatrix();
+});
+
+/* Хук: при выборе линии через модалку — нужно перехватить,
+   чтобы обновить именно Расписание CL, если открыта эта вкладка. */
+const _origSelectLine = selectLine;
+window.selectLine = function(line) {
+  // Вызываем оригинальную функцию
+  _origSelectLine(line);
+
+  const activeTab = localStorage.getItem('cl_active_tab');
+
+  // Если активна вкладка «Расписание CL»
+  if (activeTab === 'schedule') {
+    schState.line = line;
+    try { localStorage.setItem('cl_schedule_line', line); } catch (e) {}
+
+    if (schState.dirty && !confirm('Есть несохранённые изменения. Продолжить без сохранения?')) {
+      return;
+    }
+    schState.dirty = false;
+    schState.draft = {};
+
+    updateSchLinePill();
+    updateSchSaveBtn();
+    renderScheduleMatrix();
+    return;
+  }
+
+  // Если активна вкладка «Проверка CL»
+  if (activeTab === 'electronic') {
+    clState.line = line;
+    try { localStorage.setItem('cl_cl_line', line); } catch (e) {}
+
+    updateClLinePill();
+    updateClContext();
+    updateClCheckButtons();
+    renderClMatrix();
+    return;
+  }
+};
+/* ============================================================
+   РАСПИСАНИЕ CL — обработчики кнопок
+   ============================================================ */
+
+$('#schAddStandardsBtn')?.addEventListener('click', openScheduleAddStandardsModal);
+
+/* Фильтр и поиск */
+$('#schFilterMachine')?.addEventListener('change', () => {
+  renderScheduleMatrix();
+});
+
+$('#schFilterSearch')?.addEventListener('input', () => {
+  renderScheduleMatrix();
+});
+/* ============================================================
+   ПРОВЕРКА CL — логика
+   ============================================================ */
+
+function openClCheckTab() {
+  const savedMode = localStorage.getItem('cl_cl_mode') || 'mech';
+  const savedPart = localStorage.getItem('cl_cl_part') || '';
+  const savedLine = localStorage.getItem('cl_cl_line') || null;
+
+  clState.mode = savedMode;
+  clState.part = savedPart;
+  clState.line = savedLine;
+  clState.checkMode = false;
+  clState.quickDraft = {};
+
+  document.querySelectorAll('#clModeSwitch .editor-mode-inline-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === savedMode);
+  });
+  document.querySelectorAll('#clPartSwitch .editor-part-switch-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.part === savedPart);
+  });
+
+  updateClPartSwitchVisibility();
+  updateClCheckButtons();
+  updateClLinePill();
+  updateClContext();
+  updateClPanelCount();
+  renderClMatrix();
+
+  if (!clState.line) {
+    setTimeout(() => {
+      if (typeof openLinePickerModal === 'function') openLinePickerModal();
+    }, 150);
+  }
+}
+
+function updateClLinePill() {
+  const codeEl = $('#clLinePillCode');
+  if (!codeEl) return;
+  if (clState.line) {
+    const ctx = getBlockForLine(clState.line);
+    const wsName = ctx ? ctx.workshop.name : '';
+    codeEl.textContent = clState.line + (wsName ? ' · ' + wsName : '');
+  } else {
+    codeEl.textContent = 'Выбрать линию';
+  }
+}
+
+function updateClPartSwitchVisibility() {
+  const el = $('#clPartSwitch');
+  if (!el) return;
+  el.style.display = (clState.mode === 'mech') ? 'inline-flex' : 'none';
+}
+
+function updateClCheckButtons() {
+  const startBtn = $('#clStartCheckBtn');
+  const stopBtn = $('#clStopCheckBtn');
+  if (!startBtn || !stopBtn) return;
+
+  const canStart = clState.line && !clState.checkMode;
+  startBtn.disabled = !canStart;
+
+  if (clState.checkMode) {
+    startBtn.style.display = 'none';
+    stopBtn.style.display = 'inline-flex';
+  } else {
+    startBtn.style.display = 'inline-flex';
+    stopBtn.style.display = 'none';
+  }
+}
+
+function updateClContext() {
+  const bar = $('#clContextBar');
+  if (!bar) return;
+
+  if (!clState.line) {
+    bar.style.display = 'none';
+    return;
+  }
+
+  const dateStr = todayISO();
+  clState.todayISO = dateStr;
+  clState.shiftType = getCurrentShiftType();
+
+  const shifts = getShiftsForDate(dateStr);
+  clState.shiftLetter = shifts[clState.shiftType] || '—';
+
+  const brandPlanned = getElectronicBrandForDate(clState.line, dateStr) || '';
+  clState.brandPlanned = brandPlanned;
+  clState.brand = brandPlanned;
+
+  const dateFormatted = fmtISODate(dateStr);
+  const shiftLabel = clState.shiftType === 'day' ? 'День' : 'Ночь';
+
+  bar.innerHTML = `
+    <div class="cl-context-item">
+      <span class="cl-context-label">Дата:</span>
+      <span class="cl-context-value">${escapeHtml(dateFormatted)}</span>
+    </div>
+    <div class="cl-context-item">
+      <span class="cl-context-label">Смена:</span>
+      <span class="cl-context-value">
+        ${shiftLabel} · бригада
+        <span class="cl-shift-badge cl-shift-${clState.shiftLetter}">${escapeHtml(clState.shiftLetter)}</span>
+      </span>
+    </div>
+    <div class="cl-context-item">
+      <span class="cl-context-label">Бренд:</span>
+      <span class="cl-context-value cl-brand-value">${escapeHtml(clState.brand || '— не задан —')}</span>
+      <button type="button" class="cl-brand-edit-btn" id="clEditBrandBtn" title="Изменить бренд">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+      </button>
+    </div>
+  `;
+
+  bar.style.display = 'flex';
+
+  $('#clEditBrandBtn')?.addEventListener('click', openClBrandOverrideDialog);
+}
+
+function openClBrandOverrideDialog() {
+  const brands = getBrandsForLine(clState.line);
+  if (!brands.length) return showToast('На линии нет брендов', true);
+
+  const brandList = brands.join(', ');
+  const current = clState.brand || '';
+  const newBrand = prompt(`Бренд на ${fmtISODate(clState.todayISO)}\nДоступные: ${brandList}`, current);
+  if (newBrand === null) return;
+  const trimmed = newBrand.trim();
+  if (!trimmed) return;
+  if (!brands.includes(trimmed)) return showToast('Бренд не найден на линии', true);
+  if (trimmed === clState.brand) return;
+
+  const reason = prompt('Причина изменения (кратко):', '') || '';
+  clState.brand = trimmed;
+  clState.brandReason = reason.trim();
+
+  updateClContext();
+  renderClMatrix();
+}
+
+function updateClPanelCount() {
+  const el = $('#clPanelCount');
+  if (!el) return;
+  if (!clState.line) {
+    el.textContent = '';
+    return;
+  }
+  const n = clState.rows.length;
+  const label = clState.mode === 'mech' ? 'стандартов' : 'параметров';
+  el.textContent = `${n} ${label}`;
+}
+
+function renderClMatrix() {
+  const wrap = $('#clMatrixWrap');
+  if (!wrap) return;
+
+  // Меняем класс: с .sch-matrix-wrap на .cl-matrix-wrap
+  wrap.className = 'cl-matrix-wrap';
+
+  if (!clState.line) {
+    wrap.innerHTML = '<div class="editor-empty">Выберите линию для начала проверки</div>';
+    updateClPanelCount();
+    return;
+  }
+
+  let rows = [];
+  if (clState.mode === 'mech') {
+    rows = getStandards()
+      .filter(s => s.line === clState.line)
+      .filter(s => s.active !== false)
+      .filter(s => s.inSchedule === true)
+      .filter(s => !clState.part || s.nodePart === clState.part);
+  } else {
+    rows = getElectronicParamsForLine(clState.line)
+      .filter(p => p.active !== false)
+      .filter(p => p.inSchedule === true);
+  }
+
+  rows.sort((a, b) => {
+    const oa = String(a.oplNumber || a.paramName || '').toLowerCase();
+    const ob = String(b.oplNumber || b.paramName || '').toLowerCase();
+    return oa.localeCompare(ob, 'ru', { numeric: true });
+  });
+
+  clState.rows = rows;
+  updateClPanelCount();
+
+  if (!rows.length) {
+    wrap.innerHTML = `
+      <div class="sch-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        <div class="sch-empty-title">На линии нет стандартов в расписании</div>
+        <div class="sch-empty-sub">Обратитесь к техническому специалисту — он должен добавить стандарты в «Расписание CL».</div>
+      </div>
+    `;
+    return;
+  }
+
+  const DAYS = [
+    { idx: 1, name: 'Пн' }, { idx: 2, name: 'Вт' }, { idx: 3, name: 'Ср' },
+    { idx: 4, name: 'Чт' }, { idx: 5, name: 'Пт' }, { idx: 6, name: 'Сб' },
+    { idx: 0, name: 'Вс' }
+  ];
+
+  const weekDays = getCurrentWeekDays();
+  const dateByDayIdx = {};
+  [1, 2, 3, 4, 5, 6, 0].forEach((dayIdx, i) => {
+    dateByDayIdx[dayIdx] = weekDays[i];
+  });
+
+  let html = '<div class="cl-matrix">';
+
+  // ===== Шапка =====
+  html += '<div class="cl-head-grid">';
+
+  // Левая объединённая шапка (8 колонок)
+  html += `<div class="cl-head-info">
+    <div style="width:48px;text-align:center">№</div>
+    <div style="width:100px;text-align:center">OPL №</div>
+    <div style="width:80px;text-align:center">Машина</div>
+    <div style="width:240px;text-align:left">Узел</div>
+    <div style="width:280px;text-align:left">Название</div>
+    <div style="width:100px;text-align:center">Время</div>
+    <div style="width:80px;text-align:center">Работа</div>
+    <div style="width:180px;text-align:center">Норма / точки</div>
+  </div>`;
+
+  // Дни и смены (14 колонок)
+  DAYS.forEach((d, i) => {
+    const dateStr = dateByDayIdx[d.idx];
+    const shortDate = dateStr ? fmtShortDate(dateStr) : '';
+    const colStart = 9 + i * 2;   // 8 колонок инфо + смещение
+
+    // Бригады для этой даты
+    const shifts = dateStr ? getShiftsForDate(dateStr) : { day: '—', night: '—' };
+
+    html += `<div class="sch-head-day" style="grid-column: ${colStart} / ${colStart + 2}; grid-row: 1;">
+      ${d.name} <span style="color:var(--text-dim);font-weight:500">${shortDate}</span>
+    </div>`;
+    html += `<div class="sch-head-shift sch-head-shift-day" style="grid-column: ${colStart}; grid-row: 2;">
+      <span class="sch-head-shift-label">День ·</span> ${escapeHtml(shifts.day)}
+    </div>`;
+    html += `<div class="sch-head-shift sch-head-shift-night" style="grid-column: ${colStart + 1}; grid-row: 2;">
+      <span class="sch-head-shift-label">Ночь ·</span> ${escapeHtml(shifts.night)}
+    </div>`;
+  });
+  html += '</div>';
+
+  // ===== Тело =====
+  rows.forEach((row, idx) => {
+    html += renderClRow(row, idx + 1, DAYS, dateByDayIdx);
+  });
+
+  html += '</div>';
+  wrap.innerHTML = html;
+
+  bindClCells();
+}
+
+function renderClRow(row, num, DAYS, dateByDayIdx) {
+  const freq = row.frequency || { type: 'weekly', schedule: [], shifts: [], daysOfWeek: [], dates: [] };
+  const schedule = Array.isArray(freq.schedule) ? freq.schedule : [];
+  const isInSchedule = (dayIdx, shift) => schedule.some(x => x.day === dayIdx && x.shift === shift);
+
+  const title = row.title || row.paramName || '—';
+  const node = row.node || '';
+  const machine = row.machine || '';
+  const oplNumber = row.oplNumber || '';
+  const work = row.work === 'Stop' ? 'Stop' : 'Run';
+
+  // Время проверки — из frequency.timeWindows
+  const timeWindows = Array.isArray(freq.timeWindows) ? freq.timeWindows : [];
+
+  // Норма/точки
+  const normHtml = renderClRowNorm(row);
+
+  let html = `<div class="cl-row" data-row-id="${escapeAttr(row.id)}">`;
+
+  // №
+  html += `<div class="cl-info-cell" style="justify-content:center;font-family:'Courier New';font-weight:800;color:var(--text-second)">${num}</div>`;
+  // OPL
+  html += `<div class="cl-info-cell cl-info-opl">${escapeHtml(oplNumber)}</div>`;
+  // Машина
+  html += `<div class="cl-info-cell cl-info-machine">${escapeHtml(machine)}</div>`;
+  // Узел
+  html += `<div class="cl-info-cell cl-info-node" title="${escapeAttr(node)}">${escapeHtml(node)}</div>`;
+  // Название
+  html += `<div class="cl-info-cell cl-info-title" title="${escapeAttr(title)}">${escapeHtml(title)}</div>`;
+  // Время — чипы из timeWindows
+  let timeHtml = '';
+  if (!timeWindows.length) {
+    timeHtml = '<span class="cl-time-empty">—</span>';
+  } else {
+    timeHtml = timeWindows.map(w => {
+      const shift = getTimeWindowShift(w.from);
+      return `<span class="cl-time-chip cl-time-chip-${shift}">${escapeHtml(w.from)}–${escapeHtml(w.to)}</span>`;
+    }).join('');
+  }
+  html += `<div class="cl-info-cell cl-info-time">${timeHtml}</div>`;
+  // Run/Stop
+  html += `<div class="cl-info-cell cl-info-work"><span class="cl-work-badge cl-work-badge-${work.toLowerCase()}">${work}</span></div>`;
+  // Норма
+  html += `<div class="cl-info-cell cl-info-norm" title="${escapeAttr(normHtml.title || '')}">${normHtml.text}</div>`;
+
+  // 14 ячеек дней
+  DAYS.forEach(d => {
+    const dateStr = dateByDayIdx[d.idx];
+
+    ['day', 'night'].forEach(shift => {
+      const planned = isInSchedule(d.idx, shift);
+      const shiftLetter = getShiftsForDate(dateStr)[shift];
+      const existing = findExistingCheck(row.id, dateStr, shiftLetter);
+
+      const draftKey = `${row.id}|${dateStr}|${shift}`;
+      const draft = clState.quickDraft[draftKey];
+
+      let status = 'na';
+      if (draft) {
+        status = draft.status;
+      } else if (existing) {
+        status = existing.status;
+      } else if (planned) {
+        status = 'due';
+      }
+
+      const isToday = dateStr === clState.todayISO;
+      const isCurrentShift = shift === clState.shiftType;
+      const isClickable = planned && isToday && isCurrentShift && clState.checkMode;
+
+      let cls = 'cl-cell';
+      let content = '—';
+
+      if (status === 'due') {
+        cls += ' cl-cell-due';
+        content = '';
+      } else if (status === 'OK') {
+        cls += ' cl-cell-ok';
+        content = '✓';
+      } else if (status === 'FAIL') {
+        cls += ' cl-cell-fail';
+        content = '✕';
+      } else if (status === 'UNCHECKED') {
+        cls += ' cl-cell-unchecked';
+        content = '?';
+      } else {
+        cls += ' cl-cell-na';
+        content = '—';
+      }
+
+      if (planned && isToday && isCurrentShift) cls += ' cl-cell-today';
+      if (isClickable) cls += ' cl-cell-clickable';
+
+      html += `<div class="${cls}"
+        data-row-id="${escapeAttr(row.id)}"
+        data-date="${escapeAttr(dateStr)}"
+        data-shift="${escapeAttr(shift)}"
+        data-planned="${planned ? '1' : '0'}"
+        data-clickable="${isClickable ? '1' : '0'}"
+        title="${d.name} · ${shift === 'day' ? 'День' : 'Ночь'}">${content}</div>`;
+    });
+  });
+
+  html += '</div>';
+  return html;
+}
+
+/* Сводка по норме для строки матрицы CL */
+function renderClRowNorm(row) {
+  const controlType = row.controlType;
+  const measurements = Array.isArray(row.measurements) ? row.measurements : [];
+
+  // --- Тип ok_not_ok: всегда галочка, независимо от точек ---
+  if (controlType === 'ok_not_ok') {
+    return {
+      text: '<span class="cl-norm-check">✓</span>',
+      title: 'ОК / Не ОК — проверяется оператором'
+    };
+  }
+
+  // --- Если нет точек — «—» ---
+  if (!measurements.length) {
+    return { text: '<span style="color:var(--text-dim)">—</span>', title: '' };
+  }
+
+  // Берём первый блок (по бренду или "Все бренды")
+  let block = null;
+  if (clState.brand) {
+    block = measurements.find(b => b.brand === clState.brand);
+  }
+  if (!block) block = measurements.find(b => !b.brand) || measurements[0];
+
+  const points = Array.isArray(block.points) ? block.points : [];
+  if (!points.length) {
+    return { text: '<span style="color:var(--text-dim)">—</span>', title: '' };
+  }
+
+  // --- value_input ---
+  if (controlType === 'value_input') {
+    // 1 точка — показываем «target ± tolerance»
+    if (points.length === 1) {
+      const norm = parseNorm(points[0].value);
+      if (norm) {
+        const center = (norm.min + norm.max) / 2;
+        const tol = (norm.max - norm.min) / 2;
+        const text = tol > 0 ? `${center} ± ${tol}` : `${center}`;
+        return { text: escapeHtml(text), title: points[0].value || '' };
+      }
+      return { text: escapeHtml(points[0].value || '—'), title: '' };
+    }
+    // > 1 точки — только количество
+    return {
+      text: `<strong>${points.length} точки</strong>`,
+      title: `${points.length} точек замера — у каждой своя норма`
+    };
+  }
+
+  // --- range_input ---
+  if (controlType === 'range_input') {
+    // 1 точка — показываем интервал
+    if (points.length === 1) {
+      const norm = parseNorm(points[0].value);
+      if (norm) {
+        const text = `${norm.min}…${norm.max}`;
+        return { text: escapeHtml(text), title: points[0].value || '' };
+      }
+      return { text: escapeHtml(points[0].value || '—'), title: '' };
+    }
+    // > 1 точки — количество
+    return {
+      text: `<strong>${points.length} точки</strong>`,
+      title: `${points.length} точек замера — у каждой свой интервал`
+    };
+  }
+
+  // --- Резерв: точки без типа ---
+  if (points.length === 1) {
+    return { text: escapeHtml(points[0].value || '—'), title: '' };
+  }
+  return {
+    text: `<strong>${points.length} точки</strong>`,
+    title: `${points.length} точек замера`
+  };
+}
+
+function findExistingCheck(stdId, dateStr, shiftLetter) {
+  const hist = getHistory();
+  const record = hist.find(h =>
+    (h.mode === 'electronic' || h.mode === 'cl') &&
+    h.line === clState.line &&
+    h.date === dateStr &&
+    h.shift === shiftLetter
+  );
+  if (!record) return null;
+  return record.items.find(it => it.standardId === stdId) || null;
+}
+
+function bindClCells() {
+  const wrap = $('#clMatrixWrap');
+  if (!wrap) return;
+
+  wrap.querySelectorAll('.cl-cell').forEach(cell => {
+    cell.addEventListener('click', (e) => {
+      const clickable = cell.dataset.clickable === '1';
+      if (!clickable) {
+        // Подсказка почему не кликается
+        const planned = cell.dataset.planned === '1';
+        if (!planned) return;
+        if (!clState.checkMode) {
+          showToast('Нажмите «Начать проверку»', true);
+        }
+        return;
+      }
+
+      const rowId = cell.dataset.rowId;
+      const dateStr = cell.dataset.date;
+      const shift = cell.dataset.shift;
+
+      if (e.shiftKey) {
+        e.preventDefault();
+        quickSetClCell(rowId, dateStr, shift, 'OK');
+        return;
+      }
+      if (e.altKey) {
+        e.preventDefault();
+        quickSetClCell(rowId, dateStr, shift, 'FAIL');
+        return;
+      }
+
+      openClCheckModal(rowId, dateStr, shift);
+    });
+  });
+}
+
+function quickSetClCell(rowId, dateStr, shift, status) {
+  const row = clState.rows.find(r => r.id === rowId);
+  if (!row) return;
+
+  const key = `${rowId}|${dateStr}|${shift}`;
+  clState.quickDraft[key] = {
+    status,
+    answer: status === 'OK' ? 'ОК' : 'Не ОК',
+    value: null,
+    comment: ''
+  };
+
+  renderClMatrix();
+}
+
+function startClCheck() {
+  if (!clState.line) return;
+  clState.checkMode = true;
+  clState.quickDraft = {};
+  updateClCheckButtons();
+  renderClMatrix();
+  showToast('Режим проверки активирован. Кликайте по активным ячейкам.');
+}
+
+function stopClCheck() {
+  if (!confirm('Закончить проверку и сохранить результаты?')) return;
+
+  saveClDraftToHistory();
+
+  clState.checkMode = false;
+  clState.quickDraft = {};
+  updateClCheckButtons();
+  renderClMatrix();
+  showToast('Проверка сохранена');
+}
+
+function saveClDraftToHistory() {
+  const drafts = Object.entries(clState.quickDraft);
+  if (!drafts.length) return;
+
+  const groups = {};
+  drafts.forEach(([key, val]) => {
+    const [rowId, dateStr, shift] = key.split('|');
+    const groupKey = `${dateStr}|${shift}`;
+    if (!groups[groupKey]) groups[groupKey] = { date: dateStr, shift, items: [] };
+    const row = clState.rows.find(r => r.id === rowId);
+    if (!row) return;
+
+    groups[groupKey].items.push({
+      standardId: rowId,
+      machine: row.machine || '',
+      title: row.title || row.paramName || '',
+      oplNumber: row.oplNumber || '',
+      node: row.node || '',
+      nodePart: row.nodePart || '',
+      controlType: row.controlType || 'ok_not_ok',
+      answer: val.answer,
+      value: val.value,
+      status: val.status,
+      comment: val.comment || ''
+    });
+  });
+
+  const hist = getHistory();
+  let added = 0;
+
+  Object.entries(groups).forEach(([gk, group]) => {
+    const shiftLetter = getShiftsForDate(group.date)[group.shift];
+    let record = hist.find(h =>
+      (h.mode === 'electronic' || h.mode === 'cl') &&
+      h.line === clState.line &&
+      h.date === group.date &&
+      h.shift === shiftLetter
+    );
+
+    if (!record) {
+      record = {
+        id: uid(),
+        timestamp: new Date().toISOString(),
+        mode: clState.mode === 'mech' ? 'cl' : 'electronic',
+        operator: '—',
+        line: clState.line,
+        shift: shiftLetter,
+        date: group.date,
+        brandPlanned: clState.brandPlanned || null,
+        brandActual: clState.brand || '',
+        brandReason: clState.brandReason || '',
+        items: []
+      };
+      hist.push(record);
+      added++;
+    }
+
+    group.items.forEach(newItem => {
+      const idx = record.items.findIndex(it => it.standardId === newItem.standardId);
+      if (idx !== -1) record.items[idx] = newItem;
+      else record.items.push(newItem);
+    });
+  });
+
+  setHistory(hist);
+  updateNavHistoryCounter();
+
+  if (added > 0) showToast(`Создано записей: ${added}`);
+}
+
+/* ============================================================
+   ПРОВЕРКА CL — обработчики
+   ============================================================ */
+
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#clLinePill')) {
+    if (typeof openLinePickerModal === 'function') openLinePickerModal();
+  }
+});
+
+$('#clModeSwitch')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.editor-mode-inline-btn');
+  if (!btn) return;
+  const mode = btn.dataset.mode;
+  if (mode === clState.mode) return;
+
+  if (clState.checkMode && !confirm('Проверка не закончена. Переключиться?')) return;
+
+  clState.mode = mode;
+  clState.checkMode = false;
+  clState.quickDraft = {};
+
+  try { localStorage.setItem('cl_cl_mode', mode); } catch (err) {}
+
+  document.querySelectorAll('#clModeSwitch .editor-mode-inline-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+
+  updateClPartSwitchVisibility();
+  updateClCheckButtons();
+  renderClMatrix();
+});
+
+$('#clPartSwitch')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.editor-part-switch-btn');
+  if (!btn) return;
+  const part = btn.dataset.part || '';
+  if (part === clState.part) return;
+
+  if (clState.checkMode && !confirm('Проверка не закончена. Переключиться?')) return;
+
+  clState.part = part;
+  clState.checkMode = false;
+  clState.quickDraft = {};
+
+  try { localStorage.setItem('cl_cl_part', part); } catch (err) {}
+
+  document.querySelectorAll('#clPartSwitch .editor-part-switch-btn').forEach(b => {
+    b.classList.toggle('active', (b.dataset.part || '') === part);
+  });
+
+  updateClCheckButtons();
+  renderClMatrix();
+});
+
+$('#clStartCheckBtn')?.addEventListener('click', startClCheck);
+$('#clStopCheckBtn')?.addEventListener('click', stopClCheck);
+/* Сворачивание блока «Как проверять» в модалке быстрой проверки */
+document.addEventListener('click', (e) => {
+  const head = e.target.closest('#qcControlDescToggle');
+  if (!head) return;
+  const block = document.getElementById('qcControlDescBlock');
+  if (block) block.classList.toggle('expanded');
+});
+/* ============================================================
+   БЫСТРАЯ ПРОВЕРКА — обработчики кнопок (делегирование)
+   ============================================================ */
+/* Делегирование — все клики в модалке быстрой проверки */
+document.addEventListener('click', (e) => {
+  const saveBtn = e.target.closest('#quickCheckSaveBtn');
+  if (saveBtn) {
+    try {
+      saveQuickCheck();
+    } catch (err) {
+      console.error('[CL SAVE] Ошибка:', err);
+      showToast('Ошибка сохранения: ' + err.message, true);
+    }
+    return;
+  }
+
+  const closeBtn = e.target.closest('#quickCheckModalClose');
+  if (closeBtn) {
+    closeQuickCheckModal();
+    return;
+  }
+
+  const cancelBtn = e.target.closest('#quickCheckCancelBtn');
+  if (cancelBtn) {
+    closeQuickCheckModal();
+    return;
+  }
+
+  if (e.target.id === 'quickCheckModal') closeQuickCheckModal();
+});
+
+init();
