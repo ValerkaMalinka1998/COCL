@@ -780,6 +780,253 @@
 
 </div>        
 
+<!-- ======================= ВКЛАДКА СТАНДАРТ (полноэкранный просмотр) ======================= -->
+<div class="tab" id="tab-standard-view">
+
+  <!-- ===== Заголовок ===== -->
+  <div class="sv-full-header">
+    <div class="sv-full-header-left">
+      <button type="button" class="sv-full-back-btn" id="svFullBackBtn" title="Назад к редактору">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"/>
+          <polyline points="12 19 5 12 12 5"/>
+        </svg>
+        <span>Назад</span>
+      </button>
+
+      <div class="sv-full-header-title-wrap">
+        <h1 class="sv-full-title" id="svFullTitle">—</h1>
+        <div class="sv-full-crumbs" id="svFullCrumbs"></div>
+      </div>
+    </div>
+
+    <div class="sv-full-header-actions">
+      <button type="button" class="sv-full-action-btn sv-full-action-view" id="svFullViewToggleBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+        <span>Просмотр</span>
+      </button>
+
+      <button type="button" class="sv-full-action-btn sv-full-action-edit" id="svFullEditBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+        <span>Редактировать</span>
+      </button>
+
+      <button type="button" class="sv-full-action-btn sv-full-action-proposal" id="svFullProposalBtn" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span>Предложить изменения</span>
+      </button>
+
+      <button type="button" class="sv-full-action-btn sv-full-action-save" id="svFullSaveBtn" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        <span>Сохранить</span>
+      </button>
+
+      <button type="button" class="sv-full-action-btn sv-full-action-cancel" id="svFullCancelBtn" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+        <span>Отмена</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== Вкладки внутри стандарта ===== -->
+  <div class="sv-full-tabs" id="svFullTabs">
+    <button type="button" class="sv-full-tab-btn active" data-sv-tab="main">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="16" x2="12" y2="12"/>
+        <line x1="12" y1="8" x2="12.01" y2="8"/>
+      </svg>
+      <span>Основное</span>
+    </button>
+    <button type="button" class="sv-full-tab-btn" data-sv-tab="ack">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 0 0 7.75"/>
+      </svg>
+      <span>Ознакомление</span>
+      <span class="sv-full-tab-badge sv-full-tab-badge-new" id="svAckBadge" style="display:none">Новое</span>
+    </button>
+    <button type="button" class="sv-full-tab-btn" data-sv-tab="history">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+      <span>История изменений</span>
+      <span class="sv-full-tab-badge" id="svHistoryCount">0</span>
+    </button>
+    <button type="button" class="sv-full-tab-btn" data-sv-tab="comments">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      <span>Комментарии</span>
+      <span class="sv-full-tab-badge" id="svCommentsCount">0</span>
+    </button>
+  </div>
+
+  <!-- ===== Содержимое вкладок ===== -->
+  <div class="sv-full-content" id="svFullContent">
+
+    <!-- ========== ВКЛАДКА: ОСНОВНОЕ ========== -->
+    <div class="sv-full-pane" id="svPaneMain">
+
+      <!-- Две колонки -->
+      <div class="sv-full-grid">
+
+        <!-- Левая колонка -->
+        <div class="sv-full-col-main">
+
+          <div class="card sv-full-card">
+            <div class="sv-full-card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="16" x2="12" y2="12"/>
+                <line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+              Основная информация
+            </div>
+            <div class="sv-full-fields" id="svMainFields"></div>
+          </div>
+
+          <div class="card sv-full-card">
+            <div class="sv-full-card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 11l3 3L22 4"/>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+              </svg>
+              Точки контроля и описание стандарта
+            </div>
+            <div class="sv-full-content-blocks" id="svContentBlocks"></div>
+          </div>
+
+        </div>
+
+        <!-- Правая колонка -->
+        <div class="sv-full-col-side">
+
+          <div class="card sv-full-card">
+            <div class="sv-full-card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              Изображения
+            </div>
+            <div class="sv-full-photos" id="svFullPhotos"></div>
+          </div>
+
+          <div class="card sv-full-card">
+            <div class="sv-full-card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+              </svg>
+              Связанные объекты
+            </div>
+            <div class="sv-full-related" id="svFullRelated"></div>
+          </div>
+
+          <div class="card sv-full-card">
+            <div class="sv-full-card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Дополнительная информация
+            </div>
+            <div class="sv-full-extra" id="svFullExtra"></div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ========== ВКЛАДКА: ОЗНАКОМЛЕНИЕ ========== -->
+    <div class="sv-full-pane" id="svPaneAck" style="display:none">
+      <div class="card sv-full-card">
+        <div class="sv-full-card-head-row">
+          <div class="sv-full-card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 0 0 7.75"/>
+            </svg>
+            Ознакомление с версиями стандарта
+          </div>
+          <button type="button" class="btn btn-success btn-icon-text" id="svAckMarkBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span id="svAckMarkBtnLabel">Отметить ознакомление</span>
+          </button>
+        </div>
+        <div class="sv-full-table-wrap" id="svAckTableWrap"></div>
+      </div>
+    </div>
+
+    <!-- ========== ВКЛАДКА: ИСТОРИЯ ========== -->
+    <div class="sv-full-pane" id="svPaneHistory" style="display:none">
+      <div class="card sv-full-card">
+        <div class="sv-full-card-head-row">
+          <div class="sv-full-card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            История версий стандарта
+          </div>
+        </div>
+        <div class="sv-full-table-wrap" id="svHistoryTableWrap"></div>
+      </div>
+    </div>
+
+    <!-- ========== ВКЛАДКА: КОММЕНТАРИИ ========== -->
+    <div class="sv-full-pane" id="svPaneComments" style="display:none">
+      <div class="card sv-full-card">
+        <div class="sv-full-card-head-row">
+          <div class="sv-full-card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            Комментарии к стандарту
+          </div>
+          <button type="button" class="btn btn-secondary btn-icon-text" id="svAddCommentBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            <span>Добавить комментарий</span>
+          </button>
+        </div>
+        <div class="sv-full-table-wrap" id="svCommentsTableWrap"></div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+<!-- ======================= /ВКЛАДКА СТАНДАРТ ======================= -->
+
 <!-- ======================= ВКЛАДКА РАСПИСАНИЕ CL ======================= -->
 <div class="tab" id="tab-schedule">
 

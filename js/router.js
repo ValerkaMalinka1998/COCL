@@ -26,7 +26,9 @@ function switchTab(tabName, pushHistory = true) {
   if (pushHistory) {
     history.pushState({ tab: tabName }, '', '#' + tabName);
   }
-
+  if (tabName === 'standard-view') {
+    // Оставляем как есть — данные уже заполнены при openStandardFullView
+  }
   // Специальная логика для вкладок
 if (tabName === 'editor') {
   // Восстановить режим (мех или элек)
@@ -74,6 +76,10 @@ if (tabName === 'editor') {
   }
   if (tabName === 'schedule') {
     if (typeof openScheduleTab === 'function') openScheduleTab();
+  }
+  if (tabName === 'standard-view') {
+    // Не перерисовываем — стандарт уже заполнен при открытии
+    // Просто показываем вкладку
   }
 
   // Сохраняем активную вкладку в localStorage

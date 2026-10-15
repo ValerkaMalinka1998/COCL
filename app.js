@@ -1465,6 +1465,10 @@ function collectMeasurements() {
 
 // Текущий набор выбранных потерь (для формы)
 let sfTopLossesSelected = [];
+// Контекст, откуда открыта модалка выбора потерь:
+// 'standard-form' — из старой модалки #standardFormModal
+// 'sv-full'       — из нового полноэкранного просмотра
+let topLossPickerContext = 'standard-form';
 
 function fillStandardTopLossesGroup(selected = []) {
   // Запоминаем состояние
@@ -1620,12 +1624,31 @@ function updateTopLossPickerCounter() {
 /** Применить выбор из модалки */
 function applyTopLossPicker() {
   sfTopLossesSelected = [...topLossPickerTemp];
-  renderSfTopLossesSelected();
+
+  // Контекст: старая форма
+  if (topLossPickerContext === 'standard-form') {
+    renderSfTopLossesSelected();
+  }
+
+  // Контекст: новый полный просмотр
+  if (topLossPickerContext === 'sv-full') {
+    // Обновляем editingData
+    if (svFullState.editingData) {
+      svFullState.editingData.topLosses = [...sfTopLossesSelected];
+    }
+    // Перерисовываем блок доп. инфо
+    const st = svFullState.editingData;
+    if (st) renderSvFullExtra(st, true);
+  }
+
   closeTopLossPickerModal();
 }
 
 /* --- Обработчики модалки --- */
-$('#sf_addTopLossBtn')?.addEventListener('click', openTopLossPickerModal);
+$('#sf_addTopLossBtn')?.addEventListener('click', () => {
+  topLossPickerContext = 'standard-form';
+  openTopLossPickerModal();
+});
 $('#topLossPickerClose')?.addEventListener('click', closeTopLossPickerModal);
 $('#topLossPickerCancel')?.addEventListener('click', closeTopLossPickerModal);
 $('#topLossPickerApply')?.addEventListener('click', applyTopLossPicker);
@@ -14309,7 +14332,7 @@ function refreshEditorMechTable() {
         </td>
         <td class="et-col-title">
           <div class="et-title">
-            <span class="et-title-text">${escapeHtml(st.title || '—')}</span>
+            <span class="et-title-text" data-open-view="${escapeAttr(st.id)}" style="cursor:pointer">${escapeHtml(st.title || '—')}</span>
           </div>
         </td>
         <td class="et-col-machine"><span class="et-machine">${escapeHtml(st.machine || '—')}</span></td>
@@ -14366,11 +14389,11 @@ function refreshEditorMechTable() {
 
   // --- Обработчики ---
 
-  // Клик по OPL / по названию → просмотр
+  // Клик по OPL / по названию → полный просмотр
   wrap.querySelectorAll('[data-open-view]').forEach(el => {
     el.addEventListener('click', () => {
       const id = el.dataset.openView;
-      if (id) openStandardView(id);
+      if (id) openStandardFullView(id, 'view');
     });
   });
 
@@ -14387,7 +14410,7 @@ function refreshEditorMechTable() {
 
   // Кнопки действий
   wrap.querySelectorAll('[data-edit]').forEach(btn => {
-    btn.addEventListener('click', () => openStandardForm(btn.dataset.edit));
+    btn.addEventListener('click', () => openStandardFullView(btn.dataset.edit, 'edit'));
   });
   wrap.querySelectorAll('[data-copy]').forEach(btn => {
     btn.addEventListener('click', () => copyStandardNew(btn.dataset.copy));
@@ -14807,6 +14830,13 @@ function refreshEditorElecTable() {
       if (cb.checked) editorTableState.elecSelected.add(id);
       else editorTableState.elecSelected.delete(id);
       updateElecSelectionUI();
+    });
+  });
+    // Клик по названию E-Param → полный просмотр
+  wrap.querySelectorAll('[data-open-view-elec]').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = el.dataset.openViewElec;
+      if (id) openStandardFullView(id, 'view');
     });
   });
 
@@ -17431,34 +17461,1272 @@ document.addEventListener('click', (e) => {
   if (block) block.classList.toggle('expanded');
 });
 /* ============================================================
-   БЫСТРАЯ ПРОВЕРКА — обработчики кнопок (делегирование)
+   ПОЛНОЭКРАННЫЙ СТАНДАРТ (sv-full) — открытие и заполнение
    ============================================================ */
-/* Делегирование — все клики в модалке быстрой проверки */
-document.addEventListener('click', (e) => {
-  const saveBtn = e.target.closest('#quickCheckSaveBtn');
-  if (saveBtn) {
-    try {
-      saveQuickCheck();
-    } catch (err) {
-      console.error('[CL SAVE] Ошибка:', err);
-      showToast('Ошибка сохранения: ' + err.message, true);
+
+/* Состояние полноэкранного просмотра */
+const svFullState = {
+  standardId: null,        // id текущего стандарта
+  mode: 'view',            // 'view' | 'edit'
+  originalData: null,      // снимок для отмены редактирования
+  editingData: null        // НОВОЕ: рабочая копия при редактировании
+};
+
+/* Открыть полноэкранный просмотр стандарта */
+function openStandardFullView(id, mode) {
+  const st = getStandards().find(s => s.id === id);
+  if (!st) {
+    showToast('Стандарт не найден', true);
+    return;
+  }
+
+  svFullState.standardId = id;
+  svFullState.mode = mode === 'edit' ? 'edit' : 'view';
+  svFullState.originalData = JSON.parse(JSON.stringify(st));
+
+  // ВАЖНО: если открываем сразу в режиме редактирования —
+  // создаём рабочую копию editingData
+  if (svFullState.mode === 'edit') {
+    svFullState.editingData = JSON.parse(JSON.stringify(st));
+  } else {
+    svFullState.editingData = null;
+  }
+
+  // Открываем таб
+  if (typeof switchTab === 'function') {
+    switchTab('standard-view');
+  }
+
+  // Перерисовываем всё
+  renderStandardFullView();
+
+  // Прокручиваем наверх
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+window.openStandardFullView = openStandardFullView;
+
+/* Закрыть полноэкранный просмотр — вернуться в редактор */
+function closeStandardFullView() {
+  svFullState.standardId = null;
+  svFullState.mode = 'view';
+  svFullState.originalData = null;
+  svFullState.editingData = null;
+
+  if (typeof switchTab === 'function') {
+    switchTab('editor');
+  }
+}
+window.closeStandardFullView = closeStandardFullView;
+
+/* Главный рендер полноэкранного просмотра */
+function renderStandardFullView() {
+  const id = svFullState.standardId;
+  if (!id) return;
+
+  // В режиме редактирования работаем с копией
+  let st;
+  if (svFullState.mode === 'edit' && svFullState.editingData) {
+    st = svFullState.editingData;
+  } else {
+    st = getStandards().find(s => s.id === id);
+  }
+
+  if (!st) {
+    showToast('Стандарт не найден', true);
+    closeStandardFullView();
+    return;
+  }
+
+  const isEdit = svFullState.mode === 'edit';
+
+  // --- Заголовок ---
+  const titleEl = $('#svFullTitle');
+  if (titleEl) titleEl.textContent = st.title || '—';
+
+  // --- Крошки ---
+  renderSvFullCrumbs(st);
+
+  // --- Кнопки ---
+  const viewBtn = $('#svFullViewToggleBtn');
+  const editBtn = $('#svFullEditBtn');
+  const proposalBtn = $('#svFullProposalBtn');
+  const saveBtn = $('#svFullSaveBtn');
+  const cancelBtn = $('#svFullCancelBtn');
+
+  if (isEdit) {
+    if (viewBtn) viewBtn.style.display = 'none';
+    if (editBtn) editBtn.style.display = 'none';
+    if (proposalBtn) proposalBtn.style.display = 'none';
+    if (saveBtn) saveBtn.style.display = 'inline-flex';
+    if (cancelBtn) cancelBtn.style.display = 'inline-flex';
+  } else {
+    if (viewBtn) viewBtn.style.display = 'inline-flex';
+    if (editBtn) editBtn.style.display = 'inline-flex';
+    if (proposalBtn) proposalBtn.style.display = 'none';   // позже
+    if (saveBtn) saveBtn.style.display = 'none';
+    if (cancelBtn) cancelBtn.style.display = 'none';
+  }
+
+  // --- Бейджи вкладок ---
+  const ackCount = Array.isArray(st.acknowledgements) ? st.acknowledgements.length : 0;
+  const versionsCount = Array.isArray(st.versions) ? st.versions.length : 0;
+  const commentsCount = Array.isArray(st.comments) ? st.comments.length : 0;
+
+  const historyBadge = $('#svHistoryCount');
+  if (historyBadge) historyBadge.textContent = versionsCount;
+
+  const commentsBadge = $('#svCommentsCount');
+  if (commentsBadge) commentsBadge.textContent = commentsCount;
+
+  const ackBadge = $('#svAckBadge');
+  if (ackBadge) {
+    // Показываем «Новое» если есть версии и никто не ознакомлен с последней
+    const lastVersion = st.version || 1;
+    const hasAck = Array.isArray(st.acknowledgements) &&
+      st.acknowledgements.some(a => a.version === lastVersion);
+    ackBadge.style.display = (!hasAck && versionsCount > 0) ? 'inline-flex' : 'none';
+  }
+
+  // --- Основная информация ---
+  renderSvMainFields(st, isEdit);
+
+  // --- Точки контроля и описание ---
+  renderSvContentBlocks(st, isEdit);
+
+  // --- Изображения ---
+  renderSvFullPhotos(st, isEdit);
+
+  // --- Связанные объекты ---
+  renderSvFullRelated(st);
+
+  // --- Дополнительная информация ---
+  renderSvFullExtra(st, isEdit);
+
+  // --- Таблицы вкладок (пока заглушки) ---
+  renderSvAckTable(st);
+  renderSvHistoryTable(st);
+  renderSvCommentsTable(st);
+}
+
+/* Крошки в шапке */
+function renderSvFullCrumbs(st) {
+  const el = $('#svFullCrumbs');
+  if (!el) return;
+
+  const ctx = typeof getBlockForLine === 'function' ? getBlockForLine(st.line) : null;
+  if (!ctx) {
+    el.innerHTML = '';
+    return;
+  }
+
+  const parts = [];
+  // ID
+  if (st.oplNumber) {
+    parts.push(`<span class="sv-full-crumb-id">#${escapeHtml(st.oplNumber)}</span>`);
+  }
+  // Цех
+  parts.push(`<span class="sv-full-crumb">${escapeHtml(ctx.workshop.name)}</span>`);
+  // Участок + блок
+  if (ctx.block) {
+    parts.push(`<span class="sv-full-crumb-sep">›</span>`);
+    parts.push(`<span class="sv-full-crumb">${escapeHtml(ctx.area.name)} (${escapeHtml(ctx.block.name)})</span>`);
+  } else {
+    parts.push(`<span class="sv-full-crumb-sep">›</span>`);
+    parts.push(`<span class="sv-full-crumb">${escapeHtml(ctx.area.name)}</span>`);
+  }
+  // Линия
+  parts.push(`<span class="sv-full-crumb-sep">›</span>`);
+  parts.push(`<span class="sv-full-crumb-current">${escapeHtml(st.line || '—')}</span>`);
+  // Машина
+  if (st.machine) {
+    parts.push(`<span class="sv-full-crumb-sep">›</span>`);
+    parts.push(`<span class="sv-full-crumb-current">${escapeHtml(st.machine)}</span>`);
+  }
+
+  el.innerHTML = parts.join(' ');
+}
+
+/* ============================================================
+   Основная информация — поля
+   ============================================================ */
+
+function renderSvMainFields(st, isEdit) {
+  const wrap = $('#svMainFields');
+  if (!wrap) return;
+
+  const isActive = st.active !== false;
+  const statusHtml = isActive
+    ? '<span class="sv-status-chip sv-status-active">Активен</span>'
+    : '<span class="sv-status-chip sv-status-inactive">Неактивен</span>';
+
+  // Формат времени
+  const durationText = formatSvDuration(st.durationSec);
+
+  if (!isEdit) {
+    // --- Режим просмотра ---
+    wrap.innerHTML = `
+      ${svFieldRow('Название', st.title || '')}
+      ${svFieldRow('№ OPL', st.oplNumber || '')}
+      ${svFieldRow('Машина', st.machine || '')}
+      ${svFieldRow('Узел', st.node || '')}
+      ${svFieldRow('Время на проверку', durationText)}
+      ${svFieldRow('Инструмент', st.tool || '')}
+      ${svFieldRow('Тип контроля', controlTypeLabel(st.controlType))}
+      <div class="sv-full-field">
+        <div class="sv-full-field-label">Статус</div>
+        <div class="sv-full-field-value">${statusHtml}</div>
+      </div>
+    `;
+  } else {
+    // --- Режим редактирования ---
+    // Заполняем машины
+    const machines = getMachinesForLine(st.line);
+    const machineOpts = ['<option value="">— выберите —</option>']
+      .concat(machines.map(m => {
+        const sel = (m === st.machine) ? ' selected' : '';
+        return `<option value="${escapeHtml(m)}"${sel}>${escapeHtml(m)}</option>`;
+      }))
+      .join('');
+
+    // Часть линии — только SMD
+    const workshopId = getWorkshopIdForLine(st.line);
+    const showNodePart = (workshopId === 'smd');
+    const nodePartHtml = showNodePart ? `
+      <div class="sv-full-field-edit">
+        <label>Часть линии</label>
+        <select id="svf_nodePart">
+          <option value="">— выберите —</option>
+          <option value="Maker" ${st.nodePart === 'Maker' ? 'selected' : ''}>Maker</option>
+          <option value="Packer" ${st.nodePart === 'Packer' ? 'selected' : ''}>Packer</option>
+        </select>
+      </div>
+    ` : '';
+
+    wrap.innerHTML = `
+      <div class="sv-full-field-edit">
+        <label>Название</label>
+        <input type="text" id="svf_title" value="${escapeAttr(st.title || '')}">
+      </div>
+      <div class="sv-full-field-edit">
+        <label>№ OPL</label>
+        <input type="text" id="svf_oplNumber" value="${escapeAttr(st.oplNumber || '')}">
+      </div>
+      <div class="sv-full-field-edit">
+        <label>Машина</label>
+        <select id="svf_machine">${machineOpts}</select>
+      </div>
+      ${nodePartHtml}
+      <div class="sv-full-field-edit">
+        <label>Узел</label>
+        <input type="text" id="svf_node" value="${escapeAttr(st.node || '')}">
+      </div>
+      <div class="sv-full-field-edit">
+        <label>Время на проверку (секунд)</label>
+        <input type="number" id="svf_durationSec" min="0" step="1"
+               value="${escapeAttr(st.durationSec || 0)}"
+               placeholder="60">
+        <p style="color:var(--text-dim);font-size:11px;margin-top:6px">
+          60 сек = 1 мин, 30 сек = 0.5 мин
+        </p>
+      </div>
+      <div class="sv-full-field-edit">
+        <label>Инструмент</label>
+        <input type="text" id="svf_tool"
+               value="${escapeAttr(st.tool || '')}"
+               placeholder="Штангенциркуль, линейка...">
+      </div>
+      <div class="sv-full-field-edit">
+        <label>Тип контроля</label>
+        <select id="svf_controlType">
+          <option value="">— выберите —</option>
+          <option value="ok_not_ok"    ${st.controlType === 'ok_not_ok'    ? 'selected' : ''}>ОК / Не ОК</option>
+          <option value="value_input"  ${st.controlType === 'value_input'  ? 'selected' : ''}>Число ± допуск</option>
+          <option value="range_input"  ${st.controlType === 'range_input'  ? 'selected' : ''}>Диапазон</option>
+        </select>
+      </div>
+      <div class="sv-full-field-edit">
+        <label>Статус</label>
+        <label style="display:inline-flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-weight:500;font-size:13px;color:var(--text-main)">
+          <input type="checkbox" id="svf_active" ${isActive ? 'checked' : ''}>
+          Активен
+        </label>
+      </div>
+    `;
+  }
+}
+
+/* Строка поля (просмотр) */
+function svFieldRow(label, value) {
+  const isEmpty = !value || !String(value).trim();
+  return `
+    <div class="sv-full-field">
+      <div class="sv-full-field-label">${escapeHtml(label)}</div>
+      <div class="sv-full-field-value ${isEmpty ? 'sv-empty' : ''}">
+        ${isEmpty ? 'Не указано' : escapeHtml(value)}
+      </div>
+    </div>
+  `;
+}
+
+/* Формат длительности */
+function formatSvDuration(sec) {
+  const n = Number(sec) || 0;
+  if (n <= 0) return '';
+  if (n < 60) return `${n} сек`;
+  const min = Math.floor(n / 60);
+  const rest = n % 60;
+  if (rest === 0) return `${min} мин`;
+  return `${min} мин ${rest} сек`;
+}
+
+/* ============================================================
+   Точки контроля и описание — блоки
+   ============================================================ */
+
+function renderSvContentBlocks(st, isEdit) {
+  const wrap = $('#svContentBlocks');
+  if (!wrap) return;
+
+  // 1. Описание — на всю ширину
+  const blockDescription = svContentBlockEditable(
+    'Описание',
+    st.problemDescription,
+    'svf_problemDescription',
+    isEdit,
+    'Опишите: к чему приводит отклонение, какие остановки/потери'
+  );
+
+  // 2. Контроль правильности — на всю ширину
+  const blockControl = renderSvControlSection(st, isEdit);
+
+  // 3. Описание контроля — левая колонка
+  const blockControlDesc = svContentBlockEditable(
+    'Описание контроля',
+    st.controlDescription,
+    'svf_controlDescription',
+    isEdit,
+    'Как проверять: пошаговая инструкция'
+  );
+
+  // 4. Цель — правая колонка
+  const blockPurpose = svContentBlockEditable(
+    'Цель (зачем мы это делаем?)',
+    st.purpose,
+    'svf_purpose',
+    isEdit,
+    'Зачем нужен этот стандарт'
+  );
+
+  // 5. Знаю почему — правая колонка
+  const blockWhy = svContentBlockEditable(
+    'Знаю почему (почему создан стандарт?)',
+    st.whyCreated,
+    'svf_whyCreated',
+    isEdit,
+    'К чему приводит отсутствие контроля'
+  );
+
+  // Компоновка
+  wrap.innerHTML = `
+    ${blockDescription}
+    ${blockControl}
+    ${blockControlDesc}
+    <div class="sv-content-blocks-grid">
+      <div class="sv-content-blocks-col">
+        ${blockPurpose}
+      </div>
+      <div class="sv-content-blocks-col">
+        ${blockWhy}
+      </div>
+    </div>
+  `;
+
+  // Если режим редактирования — навешиваем обработчики на таблицу контроля
+  if (isEdit) {
+    bindSvControlEvents(st);
+  } else {
+    bindSvBrandBlockPhotoEvents(st);
+  }
+}
+
+/* Блок контента — просмотр */
+function svContentBlock(title, value) {
+  const isEmpty = !value || !String(value).trim();
+  return `
+    <div class="sv-content-block">
+      <div class="sv-content-block-title">${escapeHtml(title)}</div>
+      <div class="sv-content-block-text ${isEmpty ? 'sv-empty' : ''}">
+        ${isEmpty ? 'Не указано' : escapeHtml(value).replace(/\n/g, '<br>')}
+      </div>
+    </div>
+  `;
+}
+
+/* Блок контента — просмотр ИЛИ редактирование */
+function svContentBlockEditable(title, value, inputId, isEdit, placeholder) {
+  const isEmpty = !value || !String(value).trim();
+
+  if (!isEdit) {
+    return `
+      <div class="sv-content-block">
+        <div class="sv-content-block-title">${escapeHtml(title)}</div>
+        <div class="sv-content-block-text ${isEmpty ? 'sv-empty' : ''}">
+          ${isEmpty ? 'Не указано' : escapeHtml(value).replace(/\n/g, '<br>')}
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="sv-content-block">
+      <div class="sv-content-block-title">${escapeHtml(title)}</div>
+      <textarea id="${inputId}" rows="3"
+                placeholder="${escapeAttr(placeholder)}"
+                class="sv-content-textarea">${escapeHtml(value || '')}</textarea>
+    </div>
+  `;
+}
+
+function svContentBlock(title, value) {
+  const isEmpty = !value || !String(value).trim();
+  return `
+    <div class="sv-content-block">
+      <div class="sv-content-block-title">${escapeHtml(title)}</div>
+      <div class="sv-content-block-text ${isEmpty ? 'sv-empty' : ''}">
+        ${isEmpty ? 'Не указано' : escapeHtml(value).replace(/\n/g, '<br>')}
+      </div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   Контроль правильности — таблица брендов × точек
+   (просмотр + редактирование)
+   ============================================================ */
+
+/* Секция «Контроль правильности» */
+function renderSvControlSection(st, isEdit) {
+  const typeLabel = controlTypeLabel(st.controlType);
+
+  if (!isEdit) {
+    // --- Просмотр ---
+    return `
+      <div class="sv-content-block">
+        <div class="sv-content-block-title">Контроль правильности</div>
+        <div style="margin-bottom:8px">
+          <span class="sv-chip sv-chip-cyan">${escapeHtml(typeLabel)}</span>
+        </div>
+        ${renderSvBrandBlocksView(st)}
+      </div>
+    `;
+  }
+
+  // --- Редактирование ---
+  return `
+    <div class="sv-content-block">
+      <div class="sv-content-block-title">Контроль правильности</div>
+      <div style="margin-bottom:8px">
+        <span class="sv-chip sv-chip-cyan">${escapeHtml(typeLabel)}</span>
+      </div>
+      <div id="svf_brandBlocksContainer"></div>
+      <button type="button" class="btn btn-secondary btn-sm" id="svf_addBrandBlockBtn" style="margin-top:8px">
+        + Добавить бренд
+      </button>
+    </div>
+  `;
+}
+
+/* Просмотр точек по брендам (компактный) */
+function renderSvBrandBlocksView(st) {
+  const blocks = Array.isArray(st.measurements) ? st.measurements : [];
+  if (!blocks.length) {
+    return '<div class="sv-content-block-text sv-empty">Точки не заданы</div>';
+  }
+
+  const html = blocks.map(block => {
+    const points = Array.isArray(block.points) ? block.points : [];
+    if (!points.length) return '';
+
+    return `
+      <div class="sv-brand-block">
+        <div class="sv-brand-block-head">
+          <span class="sv-brand-badge">${escapeHtml(block.brand || 'Все бренды')}</span>
+        </div>
+        <div class="sv-points-grid">
+          ${points.map((p, i) => `
+            <div class="sv-point-cell">
+              <span class="sv-point-num">${i + 1}</span>
+              <span class="sv-point-value">${escapeHtml(p.value || '—')}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `<div class="sv-brand-blocks">${html}</div>`;
+}
+/* ============================================================
+   Таблица брендов × точек — рендер в новом экране
+   ============================================================ */
+
+/* Отрисовать таблицу в контейнере #svf_brandBlocksContainer */
+function renderSvBrandsTable(measurements) {
+  const container = $('#svf_brandBlocksContainer');
+  if (!container) return;
+
+  const brands = getBrands();
+
+  // Нормализуем
+  const state = (measurements || []).map(b => ({
+    brand: b.brand || '',
+    points: Array.isArray(b.points) ? b.points.map(p => ({ value: p.value || '' })) : []
+  }));
+  const maxPoints = state.reduce((m, b) => Math.max(m, b.points.length), 0);
+  state.forEach(b => {
+    while (b.points.length < maxPoints) b.points.push({ value: '' });
+  });
+
+  // Шапка
+  let headerHtml = `<tr>
+    <th class="bt-th-brand">Бренд</th>`;
+  for (let i = 0; i < maxPoints; i++) {
+    headerHtml += `<th class="bt-th-point">
+      <span>Точка ${i + 1}</span>
+      <button type="button" class="bt-remove-point" data-remove-point-col="${i}" title="Удалить точку у всех брендов">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </th>`;
+  }
+  headerHtml += `<th class="bt-th-actions">
+    <button type="button" class="bt-add-point-btn" data-add-point-col title="Добавить точку">+ Точка</button>
+  </th></tr>`;
+
+  // Тело
+  let bodyHtml = '';
+  if (!state.length) {
+    bodyHtml = `<tr><td colspan="${maxPoints + 2}" class="bt-empty">Нет брендов. Нажмите «+ Добавить бренд».</td></tr>`;
+  } else {
+    bodyHtml = state.map((block, rowIndex) => {
+      let cells = '';
+      for (let i = 0; i < maxPoints; i++) {
+        const val = block.points[i]?.value || '';
+        cells += `<td class="bt-td-value">
+          <input type="text" class="bt-point-input"
+                 data-row="${rowIndex}" data-col="${i}"
+                 value="${escapeAttr(val)}" placeholder="0">
+        </td>`;
+      }
+
+      const brandOptions = ['<option value="">Все бренды</option>']
+        .concat(brands.map(b => {
+          const selected = (b === block.brand) ? ' selected' : '';
+          return `<option value="${escapeHtml(b)}"${selected}>${escapeHtml(b)}</option>`;
+        })).join('');
+
+      return `<tr class="bt-row" data-row="${rowIndex}">
+        <td class="bt-td-brand">
+          <select class="bt-brand-select" data-row="${rowIndex}">${brandOptions}</select>
+          <button type="button" class="bt-remove-brand" data-remove-brand="${rowIndex}" title="Удалить бренд">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <path d="M10 11v6"/><path d="M14 11v6"/>
+            </svg>
+          </button>
+        </td>
+        ${cells}
+        <td class="bt-td-actions"></td>
+      </tr>`;
+    }).join('');
+  }
+
+  container.innerHTML = `
+    <div class="brands-table-wrap">
+      <table class="brands-table">
+        <thead>${headerHtml}</thead>
+        <tbody>${bodyHtml}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+/* Прочитать state из DOM */
+function getSvTableState() {
+  const container = $('#svf_brandBlocksContainer');
+  if (!container) return [];
+  const state = [];
+  container.querySelectorAll('.bt-row').forEach(row => {
+    const brand = row.querySelector('.bt-brand-select')?.value || '';
+    const points = [];
+    row.querySelectorAll('.bt-point-input').forEach(inp => {
+      points.push({ value: inp.value || '' });
+    });
+    state.push({ brand, points });
+  });
+  return state;
+}
+
+/* Отрисовать state обратно в DOM */
+function renderSvBrandsTableFromState(state) {
+  const maxPoints = state.reduce((m, b) => Math.max(m, (b.points || []).length), 0);
+  state.forEach(b => {
+    while (b.points.length < maxPoints) b.points.push({ value: '' });
+  });
+  renderSvBrandsTable(state);
+  bindSvControlEvents(svFullState.originalData);
+}
+
+/* Обработчики событий в таблице контроля */
+function bindSvControlEvents(st) {
+  const container = $('#svf_brandBlocksContainer');
+  if (!container) return;
+
+  // Инициализация — рендерим из st.measurements
+  if (!container.querySelector('.bt-row') && !container.querySelector('.bt-empty')) {
+    renderSvBrandsTable(st.measurements || []);
+    return;
+  }
+
+  // --- Удаление бренда ---
+  container.querySelectorAll('[data-remove-brand]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const rowIndex = parseInt(btn.dataset.removeBrand, 10);
+      const state = getSvTableState();
+      if (!confirm('Удалить бренд со всеми его точками?')) return;
+      state.splice(rowIndex, 1);
+      renderSvBrandsTableFromState(state);
+    });
+  });
+
+  // --- Удаление колонки точки ---
+  container.querySelectorAll('[data-remove-point-col]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const colIndex = parseInt(btn.dataset.removePointCol, 10);
+      const state = getSvTableState();
+      if (!confirm(`Удалить точку ${colIndex + 1} у всех брендов?`)) return;
+      state.forEach(b => b.points.splice(colIndex, 1));
+      renderSvBrandsTableFromState(state);
+    });
+  });
+
+  // --- Добавление колонки точки ---
+  container.querySelectorAll('[data-add-point-col]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const state = getSvTableState();
+      if (!state.length) {
+        state.push({ brand: '', points: [{ value: '' }] });
+      } else {
+        state.forEach(b => b.points.push({ value: '' }));
+      }
+      renderSvBrandsTableFromState(state);
+    });
+  });
+
+  // --- Кнопка «+ Добавить бренд» ---
+  const addBrandBtn = $('#svf_addBrandBlockBtn');
+  if (addBrandBtn && !addBrandBtn.dataset.bound) {
+    addBrandBtn.dataset.bound = '1';
+    addBrandBtn.addEventListener('click', () => {
+      const state = getSvTableState();
+      const maxPoints = state.reduce((m, b) => Math.max(m, (b.points || []).length), 0);
+      const pointsCount = Math.max(maxPoints, 1);
+      const newPoints = [];
+      for (let i = 0; i < pointsCount; i++) newPoints.push({ value: '' });
+      state.push({ brand: '', points: newPoints });
+      renderSvBrandsTableFromState(state);
+    });
+  }
+}
+
+/* Заглушка для совместимости (вызывается в renderSvContentBlocks) */
+function bindSvBrandBlockPhotoEvents(st) {
+  // Пока не нужно — было для старого варианта
+}
+
+/* ============================================================
+   Фото
+   ============================================================ */
+
+function renderSvFullPhotos(st, isEdit) {
+  const wrap = $('#svFullPhotos');
+  if (!wrap) return;
+
+  const photos = Array.isArray(st.photos) ? st.photos : [];
+
+  if (!photos.length && !isEdit) {
+    wrap.innerHTML = '<div class="sv-full-photos-empty">Фотографий пока нет</div>';
+    return;
+  }
+
+  // Сетка миниатюр
+  let gridHtml = '';
+  if (photos.length) {
+    gridHtml = photos.map((name, idx) => {
+      const path = getPhotoPath(st, name);
+      return `
+        <div class="sv-full-photo" data-photo-idx="${idx}" title="${escapeAttr(name)}">
+          <img src="${escapeAttr(path)}" alt="${escapeAttr(name)}"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="photo-missing" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </div>
+          ${isEdit ? `
+            <button type="button" class="sv-full-photo-remove" data-remove-photo="${idx}" title="Удалить фото">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+  } else {
+    gridHtml = '<div class="sv-full-photos-empty">Фотографий пока нет</div>';
+  }
+
+  // Форма добавления
+  const addFormHtml = isEdit ? `
+    <div class="sv-photo-add-form">
+      <textarea id="svf_newPhotoName" rows="2"
+                placeholder="Имена файлов — через запятую или с новой строки:&#10;max-1.jpg, max-2.jpg"
+                class="sv-photo-add-textarea"></textarea>
+      <button type="button" class="btn btn-secondary btn-sm" id="svf_addPhotoBtn">
+        + Добавить
+      </button>
+    </div>
+  ` : '';
+
+  wrap.innerHTML = gridHtml + addFormHtml;
+
+  // === Обработчики ===
+
+  // Открытие лайтбокса (только в режиме просмотра)
+  if (!isEdit) {
+    wrap.querySelectorAll('[data-photo-idx]').forEach(el => {
+      el.addEventListener('click', () => {
+        const idx = parseInt(el.dataset.photoIdx, 10);
+        if (typeof openLightbox === 'function') openLightbox(st, idx);
+      });
+    });
+  }
+
+  // Удаление фото (только в режиме редактирования)
+  if (isEdit) {
+    wrap.querySelectorAll('[data-remove-photo]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = parseInt(btn.dataset.removePhoto, 10);
+        if (!st.photos || idx < 0 || idx >= st.photos.length) return;
+        if (!confirm('Удалить фото "' + st.photos[idx] + '"?')) return;
+        st.photos.splice(idx, 1);
+        renderSvFullPhotos(st, true);
+      });
+    });
+
+    // Добавление фото
+    const addBtn = $('#svf_addPhotoBtn');
+    if (addBtn) {
+      addBtn.addEventListener('click', () => {
+        const input = $('#svf_newPhotoName');
+        if (!input) return;
+        const raw = input.value || '';
+
+        // Разбиваем по запятой / переносам строк
+        const names = raw.split(/[\n,]+/).map(s => s.trim()).filter(s => s.length > 0);
+        if (!names.length) {
+          showToast('Введите хотя бы одно имя файла', true);
+          return;
+        }
+
+        // Инициализируем массив
+        if (!Array.isArray(st.photos)) st.photos = [];
+
+        let added = 0;
+        let skipped = 0;
+        names.forEach(name => {
+          if (st.photos.includes(name)) {
+            skipped++;
+          } else {
+            st.photos.push(name);
+            added++;
+          }
+        });
+
+        input.value = '';
+        renderSvFullPhotos(st, true);
+
+        if (added > 0 && skipped === 0) {
+          showToast('Добавлено: ' + added);
+        } else if (added > 0 && skipped > 0) {
+          showToast('Добавлено: ' + added + ', пропущено дубликатов: ' + skipped);
+        } else if (added === 0 && skipped > 0) {
+          showToast('Все ' + skipped + ' уже добавлены', true);
+        }
+      });
     }
+  }
+}
+
+/* ============================================================
+   Связанные объекты
+   ============================================================ */
+
+function renderSvFullRelated(st) {
+  const wrap = $('#svFullRelated');
+  if (!wrap) return;
+
+  const ctx = typeof getBlockForLine === 'function' ? getBlockForLine(st.line) : null;
+
+  const rows = [];
+  if (ctx) {
+    rows.push(['Цех', ctx.workshop.name]);
+    rows.push(['Участок', ctx.area.name + (ctx.block ? ` (${ctx.block.name})` : '')]);
+  }
+  rows.push(['Линия', st.line]);
+  rows.push(['Рабочий центр', st.nodePart]);
+  rows.push(['Машина', st.machine]);
+  rows.push(['Узел', st.node]);
+  rows.push(['OPL №', st.oplNumber]);
+  rows.push(['Автор', st.author]);
+  rows.push(['Дата создания', formatDateTime(st.createdAt)]);
+  rows.push(['Последнее обновление', formatDateTime(st.updatedAt)]);
+
+  wrap.innerHTML = rows.map(([label, value]) => {
+    const isEmpty = !value || !String(value).trim();
+    return `
+      <div class="sv-full-related-row">
+        <span class="sv-full-related-label">${escapeHtml(label)}</span>
+        <span class="sv-full-related-value ${isEmpty ? 'sv-empty' : ''}">
+          ${isEmpty ? '—' : escapeHtml(value)}
+        </span>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ============================================================
+   Дополнительная информация (Применять к, Триггеры, Top Losses)
+   ============================================================ */
+
+function renderSvFullExtra(st, isEdit) {
+  const wrap = $('#svFullExtra');
+  if (!wrap) return;
+
+  if (!isEdit) {
+    // ===================== ПРОСМОТР =====================
+
+    const appliesToLabels = {
+      ChangeOver: 'Change Over',
+      CL_TO: 'CL в ТО',
+      CL_Conversion: 'CL в Конвертацию'
+    };
+    const appliesToChips = (Array.isArray(st.appliesTo) ? st.appliesTo : [])
+      .map(v => {
+        const cls = v === 'ChangeOver' ? 'et-type-changeover'
+                  : v === 'CL_TO' ? 'et-type-clto'
+                  : 'et-type-clconv';
+        return `<span class="et-type-chip ${cls}">${escapeHtml(appliesToLabels[v] || v)}</span>`;
+      }).join('');
+
+    const triggerChips = (Array.isArray(st.triggers) ? st.triggers : [])
+      .map(t => {
+        const label = String(t).replace(/^node:/, '');
+        return `<span class="sv-trigger-chip">${escapeHtml(label)}</span>`;
+      }).join('');
+
+    const lossChips = (Array.isArray(st.topLosses) ? st.topLosses : [])
+      .map(id => {
+        const l = typeof findLossById === 'function' ? findLossById(id) : null;
+        return l ? `<span class="tl-summary-chip">${escapeHtml(l.name)}</span>` : '';
+      }).filter(Boolean).join('');
+
+    const block = (label, html) => `
+      <div class="sv-full-extra-block">
+        <div class="sv-full-extra-label">${escapeHtml(label)}</div>
+        <div class="sv-full-extra-chips">
+          ${html || '<span class="sv-full-extra-empty">Не задано</span>'}
+        </div>
+      </div>
+    `;
+
+    wrap.innerHTML = `
+      ${block('Применять к', appliesToChips)}
+      ${block('Триггеры Change Over', triggerChips)}
+      ${block('Top Losses', lossChips)}
+    `;
     return;
   }
 
-  const closeBtn = e.target.closest('#quickCheckModalClose');
-  if (closeBtn) {
-    closeQuickCheckModal();
-    return;
+  // ===================== РЕДАКТИРОВАНИЕ =====================
+
+  const appliesToArr = Array.isArray(st.appliesTo) ? st.appliesTo : [];
+  const triggersArr = Array.isArray(st.triggers) ? st.triggers : [];
+  const topLossesArr = Array.isArray(st.topLosses) ? st.topLosses : [];
+
+  // Применяемость — чекбоксы
+  const appliesToHtml = `
+    <div class="sv-edit-chips-group" id="svf_appliesToGroup">
+      <label class="type-checkbox type-checkbox-changeover ${appliesToArr.includes('ChangeOver') ? 'checked' : ''}">
+        <input type="checkbox" value="ChangeOver" ${appliesToArr.includes('ChangeOver') ? 'checked' : ''}>
+        <span>Change Over</span>
+      </label>
+      <label class="type-checkbox type-checkbox-clto ${appliesToArr.includes('CL_TO') ? 'checked' : ''}">
+        <input type="checkbox" value="CL_TO" ${appliesToArr.includes('CL_TO') ? 'checked' : ''}>
+        <span>CL в ТО</span>
+      </label>
+      <label class="type-checkbox type-checkbox-clconv ${appliesToArr.includes('CL_Conversion') ? 'checked' : ''}">
+        <input type="checkbox" value="CL_Conversion" ${appliesToArr.includes('CL_Conversion') ? 'checked' : ''}>
+        <span>CL в Конвертацию</span>
+      </label>
+    </div>
+  `;
+
+  // Триггеры — соберём из справочника материалов + узлов
+  const materials = MATERIAL_CHANGES.map(m => ({
+    value: m.value,
+    label: m.label,
+    group: 'Материалы'
+  }));
+  const nodes = (typeof getNodes === 'function' ? getNodes() : []).map(n => ({
+    value: 'node:' + n.name,
+    label: n.name + ' [' + n.part + ']',
+    group: 'Узлы'
+  }));
+  const allTriggers = [...materials, ...nodes];
+
+  let triggersHtml = '';
+  let lastGroup = '';
+  allTriggers.forEach(t => {
+    if (t.group !== lastGroup) {
+      if (lastGroup) triggersHtml += '</div>';
+      triggersHtml += `<div class="sv-edit-trigger-group-title">${escapeHtml(t.group)}:</div><div class="sv-edit-trigger-group">`;
+      lastGroup = t.group;
+    }
+    const checked = triggersArr.includes(t.value);
+    triggersHtml += `
+      <label class="trigger-checkbox ${checked ? 'checked' : ''}">
+        <input type="checkbox" value="${escapeHtml(t.value)}" ${checked ? 'checked' : ''}>
+        <span>${escapeHtml(t.label)}</span>
+      </label>
+    `;
+  });
+  if (lastGroup) triggersHtml += '</div>';
+
+  // Top Losses — чипы + кнопка
+  const lossChips = topLossesArr
+    .map(id => {
+      const l = typeof findLossById === 'function' ? findLossById(id) : null;
+      if (!l) return '';
+      return `
+        <div class="sv-toploss-item" data-toploss-id="${escapeAttr(id)}" title="${escapeAttr(l.categoryName + ': ' + l.name)}">
+          <span>${escapeHtml(l.name)}</span>
+          <button type="button" class="sv-toploss-remove" data-remove-toploss="${escapeAttr(id)}" title="Убрать">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:10px;height:10px">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      `;
+    })
+    .filter(Boolean)
+    .join('');
+
+  wrap.innerHTML = `
+    <div class="sv-full-extra-block">
+      <div class="sv-full-extra-label">Применять к</div>
+      <div class="sv-full-extra-chips">
+        ${appliesToHtml}
+      </div>
+    </div>
+
+    <div class="sv-full-extra-block">
+      <div class="sv-full-extra-label">Триггеры Change Over</div>
+      <div class="sv-full-extra-chips" id="svf_triggersGroup">
+        ${triggersHtml || '<span class="sv-full-extra-empty">Нет доступных триггеров</span>'}
+      </div>
+    </div>
+
+    <div class="sv-full-extra-block">
+      <div class="sv-full-extra-label">Top Losses</div>
+      <div class="sv-full-extra-chips" id="svf_topLossesSelected">
+        ${lossChips || '<span class="sv-full-extra-empty">Потери не заданы</span>'}
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" id="svf_addTopLossBtn" style="margin-top:8px">
+        + Добавить потерю
+      </button>
+    </div>
+  `;
+
+  // ==== Обработчики ====
+
+  // Применяемость
+  $$('#svf_appliesToGroup input').forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      e.target.closest('label').classList.toggle('checked', e.target.checked);
+
+      // Обновляем st.appliesTo в памяти
+      const allChecked = [...$$('#svf_appliesToGroup input:checked')].map(x => x.value);
+      st.appliesTo = allChecked;
+    });
+  });
+
+  // Триггеры
+  $$('#svf_triggersGroup input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      e.target.closest('label').classList.toggle('checked', e.target.checked);
+
+      // Обновляем st.triggers в памяти
+      const allChecked = [...$$('#svf_triggersGroup input[type="checkbox"]:checked')].map(x => x.value);
+      st.triggers = allChecked;
+    });
+  });
+
+  // Top Losses — удаление
+  wrap.querySelectorAll('[data-remove-toploss]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const id = btn.dataset.removeToploss;
+      // Убираем из st напрямую (не из массива, а из объекта)
+      const idx = st.topLosses.indexOf(id);
+      if (idx !== -1) st.topLosses.splice(idx, 1);
+      renderSvFullExtra(st, true);
+    });
+  });
+
+  // Кнопка «+ Добавить потерю» — открываем модалку выбора
+  const addLossBtn = $('#svf_addTopLossBtn');
+  if (addLossBtn) {
+    addLossBtn.addEventListener('click', () => {
+      // Синхронизируем глобальный массив с текущим состоянием
+      sfTopLossesSelected = [...st.topLosses];
+
+      // ВАЖНО: выставляем контекст, чтобы applyTopLossPicker знал куда возвращать
+      topLossPickerContext = 'sv-full';
+
+      openTopLossPickerModal();
+    });
+  }
+}
+
+/* ============================================================
+   Заглушки для таблиц вкладок
+   ============================================================ */
+
+function renderSvAckTable(st) {
+  const wrap = $('#svAckTableWrap');
+  if (!wrap) return;
+  wrap.innerHTML = `
+    <div class="sv-full-empty-table">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+      </svg>
+      <div>Раздел «Ознакомление» в разработке</div>
+    </div>
+  `;
+}
+
+function renderSvHistoryTable(st) {
+  const wrap = $('#svHistoryTableWrap');
+  if (!wrap) return;
+  wrap.innerHTML = `
+    <div class="sv-full-empty-table">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+      <div>Раздел «История изменений» в разработке</div>
+    </div>
+  `;
+}
+
+function renderSvCommentsTable(st) {
+  const wrap = $('#svCommentsTableWrap');
+  if (!wrap) return;
+  wrap.innerHTML = `
+    <div class="sv-full-empty-table">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      <div>Раздел «Комментарии» в разработке</div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   Переключение вкладок внутри просмотра
+   ============================================================ */
+
+function switchSvFullTab(tabName) {
+  // Подсветка кнопок
+  document.querySelectorAll('#svFullTabs .sv-full-tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.svTab === tabName);
+  });
+
+  // Показ/скрытие панелей
+  const panes = {
+    main: 'svPaneMain',
+    ack: 'svPaneAck',
+    history: 'svPaneHistory',
+    comments: 'svPaneComments'
+  };
+  Object.entries(panes).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = (key === tabName) ? '' : 'none';
+  });
+}
+window.switchSvFullTab = switchSvFullTab;
+
+/* ============================================================
+   Обработчики кнопок
+   ============================================================ */
+
+$('#svFullBackBtn')?.addEventListener('click', closeStandardFullView);
+
+$('#svFullEditBtn')?.addEventListener('click', () => {
+  if (!svFullState.standardId) return;
+
+  const current = getStandards().find(s => s.id === svFullState.standardId);
+  if (!current) return;
+
+  svFullState.originalData = JSON.parse(JSON.stringify(current));
+  svFullState.editingData = JSON.parse(JSON.stringify(current));   // НОВОЕ
+  svFullState.mode = 'edit';
+  renderStandardFullView();
+});
+
+$('#svFullCancelBtn')?.addEventListener('click', () => {
+  if (!confirm('Отменить изменения?')) return;
+  svFullState.mode = 'view';
+  svFullState.editingData = null;
+  renderStandardFullView();
+});
+
+$('#svFullViewToggleBtn')?.addEventListener('click', () => {
+  svFullState.mode = 'view';
+  renderStandardFullView();
+});
+
+/* Переключение вкладок */
+$('#svFullTabs')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.sv-full-tab-btn');
+  if (!btn) return;
+  switchSvFullTab(btn.dataset.svTab);
+});
+
+$('#svAckMarkBtn')?.addEventListener('click', () => {
+  showToast('Функция «Ознакомление» в разработке', true);
+});
+
+$('#svAddCommentBtn')?.addEventListener('click', () => {
+  showToast('Функция «Комментарии» в разработке', true);
+});
+/* ============================================================
+   СОХРАНЕНИЕ СТАНДАРТА ИЗ ПОЛНОЭКРАННОГО ПРОСМОТРА
+   ============================================================ */
+
+$('#svFullSaveBtn')?.addEventListener('click', () => {
+  const id = svFullState.standardId;
+  if (!id) return;
+
+  // Защита: если editingData нет — берём текущий стандарт как копию
+  if (!svFullState.editingData) {
+    const fallback = getStandards().find(s => s.id === id);
+    if (!fallback) return;
+    svFullState.editingData = JSON.parse(JSON.stringify(fallback));
   }
 
-  const cancelBtn = e.target.closest('#quickCheckCancelBtn');
-  if (cancelBtn) {
-    closeQuickCheckModal();
-    return;
+  const all = getStandards();
+  const stOriginal = all.find(s => s.id === id);
+  if (!stOriginal) return;
+
+  // Работаем с копией
+  const st = svFullState.editingData;
+  // Считываем поля (если они есть — редактирование)
+  const titleEl = $('#svf_title');
+  const oplEl = $('#svf_oplNumber');
+  const machineEl = $('#svf_machine');
+  const nodeEl = $('#svf_node');
+  const durationEl = $('#svf_durationSec');
+  const toolEl = $('#svf_tool');
+  const controlEl = $('#svf_controlType');
+  const activeEl = $('#svf_active');
+  const nodePartEl = $('#svf_nodePart');
+
+  // Валидация
+  const title = titleEl ? titleEl.value.trim() : st.title;
+  const oplNumber = oplEl ? oplEl.value.trim() : st.oplNumber;
+  const machine = machineEl ? machineEl.value.trim() : st.machine;
+  const node = nodeEl ? nodeEl.value.trim() : st.node;
+
+  if (!title)     return showToast('Укажите название', true);
+  if (!oplNumber) return showToast('Укажите OPL №', true);
+  if (!machine)   return showToast('Выберите машину', true);
+  if (!node)      return showToast('Укажите узел', true);
+
+  // Проверка дубликата OPL № на линии + машине (кроме текущего)
+  const dup = all.find(s =>
+    s.id !== id &&
+    s.line === st.line &&
+    s.machine === machine &&
+    (s.oplNumber || '').toLowerCase() === oplNumber.toLowerCase()
+  );
+  if (dup) {
+    return showToast(`OPL № "${oplNumber}" уже есть на машине ${machine}`, true);
   }
 
-  if (e.target.id === 'quickCheckModal') closeQuickCheckModal();
+  // Часть линии — обязательна для SMD
+  const workshopId = getWorkshopIdForLine(st.line);
+  const nodePart = (workshopId === 'smd')
+    ? (nodePartEl ? nodePartEl.value.trim() : st.nodePart)
+    : '';
+  if (workshopId === 'smd' && !nodePart) {
+    return showToast('Выберите часть линии', true);
+  }
+
+  // Собираем обновлённый объект
+  const updated = {
+    ...st,
+    title,
+    oplNumber,
+    machine,
+    node,
+    nodePart,
+    durationSec: durationEl ? Math.max(0, parseInt(durationEl.value, 10) || 0) : st.durationSec,
+    tool: toolEl ? toolEl.value.trim() : st.tool,
+    controlType: controlEl ? controlEl.value : st.controlType,
+    active: activeEl ? activeEl.checked : st.active,
+    updatedAt: new Date().toISOString()
+  };
+
+  // Сохраняем в массив
+  const idx = all.findIndex(s => s.id === id);
+  if (idx !== -1) all[idx] = updated;
+
+  setStandards(all);
+
+  // Обновляем UI
+  if (typeof refreshEditorMechTable === 'function') refreshEditorMechTable();
+  if (typeof refreshEditorElecTable === 'function') refreshEditorElecTable();
+  if (typeof updatePartCounters === 'function') updatePartCounters();
+  if (typeof fillEditorFilters === 'function') fillEditorFilters();
+
+  // Возвращаемся в режим просмотра
+  svFullState.mode = 'view';
+  svFullState.originalData = JSON.parse(JSON.stringify(updated));
+  renderStandardFullView();
+
+  showToast('Стандарт обновлён');
 });
 
 init();
