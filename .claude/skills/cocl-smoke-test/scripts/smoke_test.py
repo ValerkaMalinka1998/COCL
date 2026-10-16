@@ -141,45 +141,47 @@ def main():
         page.click('nav a[data-tab="editor"]')
         time.sleep(0.3)
         # Формы открываются так же, как у пользователя — кнопками редактора.
-        for name, js, modal in [
-            ('форма мех-стандарта (новый)',
-             "switchEditorModeInline('mech'); document.querySelector('#editorMechAddBtn').click()",
-             'standardFormModal'),
-            ('форма E-Param (новый)',
-             "switchEditorModeInline('elec'); document.querySelector('#editorElecAddBtn').click()",
-             'electronicParamModal'),
-            ('модалка выбора линии', 'openLinePickerModal()', 'linePickerModal'),
-        ]:
+        # (имя шага, JS-действие, CSS-селектор, который должен появиться, файл скриншота)
+        sid = page.evaluate(f"(typeof getStandards === 'function' ? getStandards() : []).find(s => s.line === '{args.line}')?.id || null")
+        pid = page.evaluate(f"(typeof getElectronicParams === 'function' ? getElectronicParams() : []).find(p => p.line === '{args.line}')?.id || null")
+        steps_forms = [
+            ('создание мех-стандарта (страница)',
+             "closeStandardFullView(); switchEditorModeInline('mech'); document.querySelector('#editorMechAddBtn').click()",
+             '#tab-standard-view.active', 'page-standard-new'),
+            ('редактирование мех-стандарта (страница)',
+             f"openStandardFullView('{sid}', 'edit')" if sid else None,
+             '#tab-standard-view.active #svf_title', 'page-standard-edit'),
+            ('просмотр стандарта (окно)',
+             f"openStandardView('{sid}')" if sid else None,
+             '#standardViewModal.active', 'modal-standard-view'),
+            ('создание E-Param (страница)',
+             "switchTab('editor'); switchEditorModeInline('elec'); document.querySelector('#editorElecAddBtn').click()",
+             '#tab-eparam-edit.active', 'page-eparam-new'),
+            ('редактирование E-Param (страница)',
+             f"openEparamPage('{pid}')" if pid else None,
+             '#tab-eparam-edit.active', 'page-eparam-edit'),
+            ('модалка выбора линии', "switchTab('editor'); openLinePickerModal()", '#linePickerModal.active', 'modal-line-picker'),
+        ]
+        for name, js, sel, shot in steps_forms:
             current['where'] = name
+            if js is None:
+                step(name, True, f'пропущено: нет данных на линии {args.line}')
+                continue
             if args.no_seed and 'E-Param' in name:
-                # Без данных у линии нет машин — форма штатно не открывается (тост).
+                # Без данных у линии нет машин — страница штатно не открывается (тост).
                 step(name, True, 'пропущено: нет машин без данных')
                 continue
             page.evaluate(CLOSE_ALL_MODALS_JS)
             try:
                 page.evaluate(js)
-                time.sleep(0.3)
-                shown = page.evaluate(f"!!document.querySelector('#{modal}.active')")
-                page.screenshot(path=os.path.join(out, f'modal-{modal}.png'))
-                step(name, shown, '' if shown else f'#{modal} не открылась')
+                time.sleep(0.4)
+                shown = page.evaluate(f"!!document.querySelector({json.dumps(sel)})")
+                page.screenshot(path=os.path.join(out, f'{shot}.png'), full_page=True)
+                step(name, shown, '' if shown else f'{sel} не появился')
             except Exception as e:  # noqa: BLE001
                 step(name, False, str(e).splitlines()[0])
-
-        # Редактирование первого стандарта линии, если есть
-        current['where'] = 'форма мех-стандарта (редактирование)'
         page.evaluate(CLOSE_ALL_MODALS_JS)
-        sid = page.evaluate(f"(getStandards ? getStandards() : []).find(s => s.line === '{args.line}')?.id || null") \
-            if page.evaluate("typeof getStandards === 'function'") else None
-        if sid:
-            try:
-                page.evaluate(f"openStandardForm('{sid}')")
-                time.sleep(0.3)
-                shown = page.evaluate("!!document.querySelector('#standardFormModal.active')")
-                step('форма мех-стандарта (редактирование)', shown)
-            except Exception as e:  # noqa: BLE001
-                step('форма мех-стандарта (редактирование)', False, str(e).splitlines()[0])
-        else:
-            step('форма мех-стандарта (редактирование)', True, f'пропущено: нет стандартов на {args.line}')
+        page.evaluate("typeof closeStandardFullView === 'function' && closeStandardFullView()")
 
         # --- Экспорт XLSX ---
         page.evaluate(CLOSE_ALL_MODALS_JS)

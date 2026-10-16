@@ -381,288 +381,535 @@ $('#editorBlocksBackBtn')?.addEventListener('click', () => {
   renderEditorBlocksView();
 });
 
-/* ============================================================
-   РЕДАКТОР — ЭЛЕКТРОННЫЙ РЕЖИМ
-   ============================================================ */
+/* ============================================================ */
+/* === СТРАНИЦА ЭЛЕКТРОННОГО ПАРАМЕТРА ======================== */
+/* ============================================================ */
+/* Создание и редактирование E-Param — полная страница в том же
+   стиле, что и страница механического стандарта (#tab-eparam-edit).
+   В хранилище параметр попадает только по «Сохранить». */
 
-/* Текущее состояние электронного редактора */
-let currentElectronicLine = null;   // выбранная линия
-let currentElectronicMachine = null; // выбранная машина
+const epPageState = {
+  isNew: false,     // параметр ещё не сохранён
+  data: null,       // рабочая копия параметра
+  dirty: false      // есть несохранённые правки
+};
 
-
-function pluralizeParams(n) {
-  const m10 = n % 10, m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return 'параметр';
-  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'параметра';
-  return 'параметров';
+/* Диапазон нормы бренда: для интервала — min/max, иначе target ± tolerance */
+function getEparamNormRange(entry) {
+  if (!entry) return null;
+  const hasMinMax = entry.min !== '' && entry.min != null && entry.max !== '' && entry.max != null;
+  if (hasMinMax) return { min: Number(entry.min), max: Number(entry.max) };
+  const t = Number(entry.target), tol = Number(entry.tolerance);
+  if (isNaN(t) || isNaN(tol)) return null;
+  return { min: t - tol, max: t + tol };
 }
-function pluralizeDays(n) {
-  const m10 = n % 10, m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return 'день';
-  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'дня';
-  return 'дней';
+
+/* Подпись нормы бренда для оператора */
+function getEparamNormLabel(entry, controlType) {
+  if (!entry) return '— норма не задана —';
+  const brand = entry.brand || 'Все бренды';
+  if (controlType === 'interval') {
+    const r = getEparamNormRange(entry);
+    return r ? `${brand}: ${r.min} … ${r.max}` : `${brand}: —`;
+  }
+  return `${brand}: ${entry.target} ± ${entry.tolerance}`;
 }
 
-/* ============================================================
-   ФОРМА ЭЛЕКТРОННОГО ПАРАМЕТРА
-   ============================================================ */
-
-function openElectronicParamForm(id) {
-  const modal = $('#electronicParamModal');
-  if (!modal) return;
-  if (!currentElectronicLine) return showToast('Сначала выберите линию', true);
-  if (!currentElectronicMachine) return showToast('Сначала выберите машину', true);
-
-  const title = $('#electronicParamTitle');
+/* Открыть страницу: id — редактирование, без id — новый параметр линии редактора */
+function openEparamPage(id) {
   let p;
-
   if (id) {
-    p = getElectronicParams().map(normalizeElectronicParam).find(x => x.id === id);
-    if (!p) return;
-    title.textContent = 'Изменить параметр: ' + (p.paramName || '');
+    const found = getElectronicParams().find(x => x.id === id);
+    if (!found) return showToast('Параметр не найден', true);
+    p = normalizeElectronicParam(found);
+    epPageState.isNew = false;
   } else {
-    p = {
-      id: '',
-      active: true,
-      line: currentElectronicLine,
-      machine: currentElectronicMachine,
-      paramName: '',
-      work: 'Run',
-      timeFrom: '09:10',
-      timeTo: '10:00',
-      controlType: 'variable',
-      normText: '',
-      valuesByBrand: [],
-      frequency: { type: 'weekly', schedule: [], shifts: ['day','night'], daysOfWeek: [], dates: [] },
-      inSchedule: false
-    };
-    title.textContent = 'Добавить электронный параметр — ' + currentElectronicMachine;
+    const line = localStorage.getItem('cl_editor_line');
+    if (!line) return showToast('Сначала выберите линию', true);
+    p = normalizeElectronicParam({ line, controlType: 'variable' });
+    p.createdAt = null;
+    epPageState.isNew = true;
   }
-
-  // Основные
-  $('#ep_id').value = id || '';
-  $('#ep_line').value = currentElectronicLine;
-
-  // Часть линии — только для SMD
-  const ep_nodePartField = $('#ep_nodePartField');
-  const ep_nodePartSelect = $('#ep_nodePart');
-  if (ep_nodePartField) {
-    const workshopId = getWorkshopIdForLine(currentElectronicLine);
-    if (workshopId === 'smd') {
-      ep_nodePartField.style.display = '';
-    } else {
-      ep_nodePartField.style.display = 'none';
-    }
-  }
-  if (ep_nodePartSelect) {
-    ep_nodePartSelect.value = p.nodePart || '';
-  }
-
-  // Машина — выпадающий список
-  fillElectronicMachineSelect(currentElectronicLine, p.machine);
-  $('#ep_paramName').value = p.paramName || '';
-
-  // Работа — чипы
-  $('#ep_workChips')?.querySelectorAll('.elec-work-chip').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.work === p.work);
+  // Для интервала показываем «от / до» — восстанавливаем их из target ± tolerance
+  p.valuesByBrand = p.valuesByBrand.map(v => {
+    const r = getEparamNormRange(v);
+    return { ...v, min: r ? r.min : '', max: r ? r.max : '' };
   });
-
-  // Тип контроля
-  const epControlTypeEl = $('#ep_controlType');
-  if (epControlTypeEl) epControlTypeEl.value = p.controlType;
-  $('#ep_controlTypeSelector')?.querySelectorAll('.type-option').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.value === p.controlType);
-  });
-  updateElectronicFormVisibility();
-
-  // Текстовая норма
-  const epNormTextEl = $('#ep_normText');
-  if (epNormTextEl) epNormTextEl.value = p.normText || '';
-
-  // Применяемость — чипы
-  const appliesToArr = Array.isArray(p.appliesTo) ? p.appliesTo : [];
-  $$('#ep_appliesToGroup input').forEach(cb => {
-    cb.checked = appliesToArr.includes(cb.value);
-    cb.closest('label').classList.toggle('checked', cb.checked);
-    cb.onchange = (e) => {
-      e.target.closest('label').classList.toggle('checked', e.target.checked);
-    };
-  });
-
-  // Триггеры Change Over
-  fillElectronicTriggersGroup(Array.isArray(p.triggers) ? p.triggers : []);
-
-  // Таблица брендов
-  renderElectronicBrandsTable(p.valuesByBrand || []);
-
-  // Периодичность — скрываем, теперь она настраивается в «Расписании CL»
-  p.frequency = p.frequency || { type: 'weekly', schedule: [], shifts: ['day','night'], daysOfWeek: [], dates: [] };
-
-  openModal(modal);
-}
-window.openElectronicParamForm = openElectronicParamForm;
-
-function closeElectronicParamForm() {
-  closeModal('#electronicParamModal');
-}
-
-/* Заполнить выпадающий список машин для линии */
-function fillElectronicMachineSelect(line, currentValue) {
-  const select = $('#ep_machine');
-  if (!select) return;
-
-  const machines = getMachinesForLine(line);
-  let html = '<option value="">— выберите —</option>';
-  if (currentValue && !machines.includes(currentValue)) {
-    html += `<option value="${escapeHtml(currentValue)}">${escapeHtml(currentValue)} (не в списке)</option>`;
-  }
-  html += machines.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
-  select.innerHTML = html;
-  if (currentValue) select.value = currentValue;
-}
-
-/* Заполнить группу триггеров электронного параметра */
-function fillElectronicTriggersGroup(selected = []) {
-  const g = $('#ep_triggersGroup');
-  if (!g) return;
-
-  const all = getCustomTriggers().map(t => ({
-    value: t.value,
-    label: t.label + ' [' + (getWorkshopName(t.workshop) || '—') + ']'
-  }));
-
-  if (!all.length) {
-    g.innerHTML = '<span style="color:var(--text-dim);font-size:12px">Триггеры не настроены</span>';
-    return;
+  if (!p.valuesByBrand.length && p.controlType !== 'fixed') {
+    p.valuesByBrand = [{ brand: '', target: '', tolerance: '', min: '', max: '' }];
   }
 
-  g.innerHTML = '<div class="checkbox-group">' + all.map(t => {
-    const checked = selected.includes(t.value);
-    return `<label class="${checked ? 'checked' : ''}"><input type="checkbox" value="${escapeHtml(t.value)}" ${checked ? 'checked' : ''}> ${escapeHtml(t.label)}</label>`;
-  }).join('') + '</div>';
+  epPageState.data = p;
+  epPageState.dirty = false;
 
-  g.querySelectorAll('input').forEach(cb => {
-    cb.addEventListener('change', e => {
-      e.target.closest('label').classList.toggle('checked', e.target.checked);
-    });
-  });
+  if (typeof switchTab === 'function') switchTab('eparam-edit');
+  renderEparamPage();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+window.openEparamPage = openEparamPage;
+
+/* Закрыть страницу и вернуться к таблице параметров */
+function closeEparamPage(force) {
+  if (!force && epPageState.dirty &&
+      !confirm('Выйти без сохранения? Изменения не будут сохранены.')) return;
+  epPageState.data = null;
+  epPageState.isNew = false;
+  epPageState.dirty = false;
+  if (typeof switchTab === 'function') switchTab('editor');
+  if (typeof switchEditorModeInline === 'function') switchEditorModeInline('elec');
 }
 
-/* Показать/скрыть блоки в зависимости от controlType */
-function updateElectronicFormVisibility() {
-  const ct = $('#ep_controlType')?.value || 'variable';
+/* Главный рендер страницы */
+function renderEparamPage() {
+  const p = epPageState.data;
+  if (!p) return;
 
-  const normBlock = $('#ep_normTextBlock');
-  const brandsBlock = $('#ep_brandsBlock');
-
-  if (normBlock)   normBlock.style.display   = (ct === 'fixed')    ? 'block' : 'none';
-  if (brandsBlock) brandsBlock.style.display = (ct === 'variable' || ct === 'interval')  ? 'block' : 'none';
-}
-
-/* ============================================================
-   Таблица брендов
-   ============================================================ */
-
-function renderElectronicBrandsTable(rows) {
-  const tbody = $('#ep_brandsTbody');
-  if (!tbody) return;
-
-  const lineBrands = getBrandsForLine(currentElectronicLine);
-
-  if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-dim);font-style:italic;padding:14px">Нет строк. Нажмите «Добавить бренд».</td></tr>';
-    return;
+  const titleEl = $('#epPageTitle');
+  if (titleEl) {
+    titleEl.textContent = epPageState.isNew
+      ? (p.paramName || 'Новый электронный параметр')
+      : (p.paramName || 'Электронный параметр');
   }
 
-  tbody.innerHTML = rows.map((r, idx) => {
-    const brandOpts = ['<option value="">— выберите —</option>']
-      .concat(lineBrands.map(b => {
-        const selected = (b === r.brand) ? ' selected' : '';
-        return `<option value="${escapeHtml(b)}"${selected}>${escapeHtml(b)}</option>`;
-      })).join('');
+  // Крошки: Цех › Участок (Блок) › Линия
+  const crumbs = $('#epPageCrumbs');
+  if (crumbs) {
+    const ctx = getBlockForLine(p.line);
+    const parts = [];
+    if (ctx?.workshop) parts.push(`<span class="sv-full-crumb">${escapeHtml(ctx.workshop.name)}</span>`);
+    if (ctx?.area) parts.push(`<span class="sv-full-crumb">${escapeHtml(ctx.area.name + (ctx.block ? ` (${ctx.block.name})` : ''))}</span>`);
+    parts.push(`<span class="sv-full-crumb-current">${escapeHtml(p.line)}</span>`);
+    if (p.machine) parts.push(`<span class="sv-full-crumb-current">${escapeHtml(p.machine)}</span>`);
+    crumbs.innerHTML = parts.join('<span class="sv-full-crumb-sep">›</span>');
+  }
 
-    return `
-      <tr data-row-idx="${idx}">
-        <td><select data-brand>${brandOpts}</select></td>
-        <td><input type="number" step="any" data-target value="${escapeAttr(r.target != null ? r.target : '')}" placeholder="0"></td>
-        <td><input type="number" step="any" data-tolerance value="${escapeAttr(r.tolerance != null ? r.tolerance : '')}" placeholder="0"></td>
-        <td>
-          <button type="button" class="elec-brands-remove" data-remove-row title="Удалить">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </td>
-      </tr>
+  renderEparamMainFields(p);
+  renderEparamNorm(p);
+  renderEparamRelated(p);
+  renderEparamExtra(p);
+}
+
+/* Основная информация */
+function renderEparamMainFields(p) {
+  const wrap = $('#epMainFields');
+  if (!wrap) return;
+
+  const machines = getMachinesForLine(p.line);
+  const machineOpts = ['<option value="">— выберите —</option>']
+    .concat(p.machine && !machines.includes(p.machine)
+      ? [`<option value="${escapeAttr(p.machine)}" selected>${escapeHtml(p.machine)} (не в списке)</option>`]
+      : [])
+    .concat(machines.map(m =>
+      `<option value="${escapeAttr(m)}"${m === p.machine ? ' selected' : ''}>${escapeHtml(m)}</option>`))
+    .join('');
+
+  const isSmd = getWorkshopIdForLine(p.line) === 'smd';
+  const partHtml = isSmd ? `
+    <div class="sv-full-field-edit">
+      <label class="required">Часть линии</label>
+      <select id="epf_nodePart">
+        <option value="">— выберите —</option>
+        <option value="Maker" ${p.nodePart === 'Maker' ? 'selected' : ''}>Maker</option>
+        <option value="Packer" ${p.nodePart === 'Packer' ? 'selected' : ''}>Packer</option>
+      </select>
+    </div>` : '';
+
+  wrap.innerHTML = `
+    <div class="sv-full-field-edit">
+      <label class="required">Описание параметра</label>
+      <input type="text" id="epf_paramName" value="${escapeAttr(p.paramName || '')}"
+             placeholder="Например: Давление клея, бар">
+    </div>
+    <div class="sv-full-field-edit">
+      <label class="required">Машина</label>
+      <div class="sv-field-with-btn">
+        <select id="epf_machine">${machineOpts}</select>
+        <button type="button" class="btn btn-secondary btn-sm" id="epf_addMachineBtn" title="Добавить машину в список линии">+</button>
+      </div>
+    </div>
+    ${partHtml}
+    <div class="sv-full-field-edit">
+      <label class="required">Тип контроля</label>
+      <select id="epf_controlType">
+        <option value="fixed"    ${p.controlType === 'fixed'    ? 'selected' : ''}>Фиксированный — ОК / Не ОК</option>
+        <option value="variable" ${p.controlType === 'variable' ? 'selected' : ''}>Вариабельный — норма ± допуск</option>
+        <option value="interval" ${p.controlType === 'interval' ? 'selected' : ''}>Контролируемый интервал — от … до</option>
+      </select>
+    </div>
+    <div class="sv-full-field-edit">
+      <label>Статус</label>
+      <label class="sv-force-co">
+        <input type="checkbox" id="epf_active" ${p.active !== false ? 'checked' : ''}>
+        <span>Активен</span>
+      </label>
+    </div>
+  `;
+}
+
+/* Блок «Норма»: текст для fixed, таблица брендов для variable / interval */
+function renderEparamNorm(p) {
+  const wrap = $('#epNormBlock');
+  if (!wrap) return;
+
+  if (p.controlType === 'fixed') {
+    wrap.innerHTML = `
+      <div class="sv-content-block">
+        <div class="sv-content-block-title">Что считается «ОК»</div>
+        <textarea id="epf_normText" rows="3" class="sv-content-textarea"
+                  placeholder="Например: индикатор горит зелёным, ошибок на панели нет">${escapeHtml(p.normText || '')}</textarea>
+      </div>
     `;
+    return;
+  }
+
+  const isInterval = p.controlType === 'interval';
+  const lineBrands = getBrandsForLine(p.line);
+  const rows = p.valuesByBrand.length ? p.valuesByBrand : [];
+
+  const brandSelect = (value) => {
+    const opts = ['<option value="">— бренд —</option>']
+      .concat(value && !lineBrands.includes(value)
+        ? [`<option value="${escapeAttr(value)}" selected>${escapeHtml(value)}</option>`]
+        : [])
+      .concat(lineBrands.map(b =>
+        `<option value="${escapeAttr(b)}"${b === value ? ' selected' : ''}>${escapeHtml(b)}</option>`));
+    return `<select data-ep-brand>${opts.join('')}</select>`;
+  };
+
+  const head = isInterval
+    ? '<th>Бренд</th><th>От</th><th>До</th><th></th>'
+    : '<th>Бренд</th><th>Норма</th><th>Допуск ±</th><th>Диапазон</th><th></th>';
+
+  const body = rows.map((r, idx) => {
+    const removeBtn = `
+      <button type="button" class="ep-row-remove" data-ep-remove="${idx}" title="Удалить бренд">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>`;
+    if (isInterval) {
+      return `
+        <tr data-ep-row="${idx}">
+          <td>${brandSelect(r.brand)}</td>
+          <td><input type="number" step="any" data-ep-min value="${escapeAttr(r.min ?? '')}" placeholder="от"></td>
+          <td><input type="number" step="any" data-ep-max value="${escapeAttr(r.max ?? '')}" placeholder="до"></td>
+          <td class="ep-row-actions">${removeBtn}</td>
+        </tr>`;
+    }
+    const range = getEparamNormRange(r);
+    const rangeText = (r.target !== '' && r.tolerance !== '' && range) ? `${range.min} … ${range.max}` : '—';
+    return `
+      <tr data-ep-row="${idx}">
+        <td>${brandSelect(r.brand)}</td>
+        <td><input type="number" step="any" data-ep-target value="${escapeAttr(r.target ?? '')}" placeholder="норма"></td>
+        <td><input type="number" step="any" min="0" data-ep-tolerance value="${escapeAttr(r.tolerance ?? '')}" placeholder="±"></td>
+        <td class="ep-range" data-ep-range>${escapeHtml(rangeText)}</td>
+        <td class="ep-row-actions">${removeBtn}</td>
+      </tr>`;
   }).join('');
 
-  tbody.querySelectorAll('[data-remove-row]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tr = btn.closest('tr');
-      if (tr) tr.remove();
-      if (!tbody.querySelector('tr')) {
-        renderElectronicBrandsTable([]);
+  const emptyRow = `<tr><td colspan="${isInterval ? 4 : 5}" class="ep-table-empty">Добавьте бренд, для которого задана норма</td></tr>`;
+
+  wrap.innerHTML = `
+    <div class="sv-content-block">
+      <div class="sv-content-block-title">${isInterval ? 'Интервал по брендам' : 'Норма и допуск по брендам'}</div>
+      ${lineBrands.length ? '' : '<p class="ep-hint">У линии нет брендов — добавьте их в «Настройки → Бренды для каждой линии».</p>'}
+      <div class="ep-table-wrap">
+        <table class="ep-table">
+          <thead><tr>${head}</tr></thead>
+          <tbody>${body || emptyRow}</tbody>
+        </table>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm ep-add-row" id="epf_addBrandRow">+ Добавить бренд</button>
+    </div>
+  `;
+}
+
+/* Снять строки таблицы брендов из DOM в рабочую копию */
+function syncEparamRowsFromDom() {
+  const p = epPageState.data;
+  if (!p) return;
+  const tbody = $('#epNormBlock tbody');
+  if (!tbody) return;
+  const rows = [];
+  tbody.querySelectorAll('tr[data-ep-row]').forEach(tr => {
+    const val = (sel) => {
+      const el = tr.querySelector(sel);
+      return el ? el.value.trim() : '';
+    };
+    rows.push({
+      brand: val('[data-ep-brand]'),
+      target: val('[data-ep-target]'),
+      tolerance: val('[data-ep-tolerance]'),
+      min: val('[data-ep-min]'),
+      max: val('[data-ep-max]')
+    });
+  });
+  // Строки одного типа хранят только свои поля — остальные сохраняем из прошлой копии
+  p.valuesByBrand = rows.map((r, i) => {
+    const prev = p.valuesByBrand[i] || {};
+    if (p.controlType === 'interval') return { ...prev, brand: r.brand, min: r.min, max: r.max };
+    return { ...prev, brand: r.brand, target: r.target, tolerance: r.tolerance };
+  });
+}
+
+/* Связанные объекты */
+function renderEparamRelated(p) {
+  const wrap = $('#epRelated');
+  if (!wrap) return;
+  const ctx = getBlockForLine(p.line);
+  const row = (label, value) => {
+    const isEmpty = !value || !String(value).trim();
+    return `
+      <div class="sv-full-related-row">
+        <span class="sv-full-related-label">${escapeHtml(label)}</span>
+        <span class="sv-full-related-value ${isEmpty ? 'sv-empty' : ''}">${isEmpty ? '—' : escapeHtml(value)}</span>
+      </div>`;
+  };
+  wrap.innerHTML = `
+    ${row('Цех', ctx?.workshop?.name)}
+    ${row('Участок', ctx?.area ? ctx.area.name + (ctx.block ? ` (${ctx.block.name})` : '') : '')}
+    ${row('Линия', p.line)}
+    ${row('Автор', p.author)}
+    ${row('Дата создания', formatDateTime(p.createdAt))}
+    ${row('Последнее обновление', formatDateTime(p.updatedAt))}
+  `;
+}
+
+/* Применяемость и триггеры — как на странице стандарта */
+function renderEparamExtra(p) {
+  const wrap = $('#epExtra');
+  if (!wrap) return;
+  const applies = Array.isArray(p.appliesTo) ? p.appliesTo : [];
+  const chip = (value, cls, label) => `
+    <label class="type-checkbox ${cls} ${applies.includes(value) ? 'checked' : ''}">
+      <input type="checkbox" value="${value}" ${applies.includes(value) ? 'checked' : ''}>
+      <span>${label}</span>
+    </label>`;
+  const triggersHtml = renderTriggerChipsEditable(p.triggers || []);
+
+  wrap.innerHTML = `
+    <div class="sv-full-extra-block">
+      <div class="sv-full-extra-label">Применять к</div>
+      <div class="sv-full-extra-chips">
+        <div class="sv-edit-chips-group" id="epf_appliesToGroup">
+          ${chip('ChangeOver', 'type-checkbox-changeover', 'Change Over')}
+          ${chip('CL_TO', 'type-checkbox-clto', 'CL в ТО')}
+          ${chip('CL_Conversion', 'type-checkbox-clconv', 'CL в Конвертацию')}
+        </div>
+      </div>
+      <p class="ep-hint">Если ничего не выбрано — параметр хранится, но в проверках COCL не показывается.</p>
+    </div>
+    <div class="sv-full-extra-block">
+      <div class="sv-full-extra-label">Триггеры Change Over</div>
+      <div class="sv-full-extra-chips">
+        ${triggersHtml || '<span class="sv-full-extra-empty">Триггеры не заданы</span>'}
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" id="epf_addTriggerBtn" style="margin-top:8px">
+        + Добавить триггер
+      </button>
+    </div>
+  `;
+}
+
+/* --- Ввод на странице: всё сразу в рабочую копию --- */
+$('#tab-eparam-edit')?.addEventListener('input', (e) => {
+  const p = epPageState.data;
+  if (!p) return;
+  epPageState.dirty = true;
+  const t = e.target;
+  if (t.id === 'epf_paramName') {
+    p.paramName = t.value;
+    const titleEl = $('#epPageTitle');
+    if (titleEl) titleEl.textContent = t.value || (epPageState.isNew ? 'Новый электронный параметр' : 'Электронный параметр');
+  }
+  if (t.id === 'epf_normText') p.normText = t.value;
+  // Живой пересчёт диапазона «норма ± допуск»
+  const tr = t.closest('tr[data-ep-row]');
+  if (tr && tr.querySelector('[data-ep-range]')) {
+    const target = tr.querySelector('[data-ep-target]')?.value;
+    const tol = tr.querySelector('[data-ep-tolerance]')?.value;
+    const r = getEparamNormRange({ target, tolerance: tol });
+    tr.querySelector('[data-ep-range]').textContent =
+      (target !== '' && tol !== '' && r) ? `${r.min} … ${r.max}` : '—';
+  }
+});
+
+$('#tab-eparam-edit')?.addEventListener('change', (e) => {
+  const p = epPageState.data;
+  if (!p) return;
+  epPageState.dirty = true;
+  const t = e.target;
+  if (t.id === 'epf_machine') p.machine = t.value;
+  if (t.id === 'epf_nodePart') p.nodePart = t.value;
+  if (t.id === 'epf_active') p.active = t.checked;
+  if (t.id === 'epf_controlType') {
+    syncEparamRowsFromDom();
+    p.controlType = t.value;
+    // При смене типа переносим норму: «норма ± допуск» ↔ «от … до»
+    const empty = (v) => v === '' || v == null;
+    p.valuesByBrand = p.valuesByBrand.map(r => {
+      if (p.controlType === 'interval' && empty(r.min) && empty(r.max) &&
+          !empty(r.target) && !empty(r.tolerance)) {
+        const range = getEparamNormRange({ target: r.target, tolerance: r.tolerance });
+        return range ? { ...r, min: range.min, max: range.max } : r;
+      }
+      if (p.controlType === 'variable' && empty(r.target) && empty(r.tolerance) &&
+          !empty(r.min) && !empty(r.max)) {
+        const min = Number(r.min), max = Number(r.max);
+        return { ...r, target: (min + max) / 2, tolerance: (max - min) / 2 };
+      }
+      return r;
+    });
+    if (p.controlType !== 'fixed' && !p.valuesByBrand.length) {
+      p.valuesByBrand = [{ brand: '', target: '', tolerance: '', min: '', max: '' }];
+    }
+    renderEparamNorm(p);
+  }
+  if (t.closest('#epf_appliesToGroup')) {
+    t.closest('label')?.classList.toggle('checked', t.checked);
+    p.appliesTo = [...$$('#epf_appliesToGroup input:checked')].map(x => x.value);
+  }
+});
+
+$('#tab-eparam-edit')?.addEventListener('click', (e) => {
+  const p = epPageState.data;
+  if (!p) return;
+
+  if (e.target.closest('#epf_addBrandRow')) {
+    syncEparamRowsFromDom();
+    p.valuesByBrand.push({ brand: '', target: '', tolerance: '', min: '', max: '' });
+    epPageState.dirty = true;
+    renderEparamNorm(p);
+    return;
+  }
+  const removeBtn = e.target.closest('[data-ep-remove]');
+  if (removeBtn) {
+    syncEparamRowsFromDom();
+    p.valuesByBrand.splice(Number(removeBtn.dataset.epRemove), 1);
+    epPageState.dirty = true;
+    renderEparamNorm(p);
+    return;
+  }
+  if (e.target.closest('#epf_addMachineBtn')) {
+    openQuickAddMachineModal({
+      line: p.line,
+      onAdded: (name) => {
+        p.machine = name;
+        epPageState.dirty = true;
+        renderEparamMainFields(p);
       }
     });
-  });
-}
-
-/* ============================================================
-   Периодичность: чек-боксы смен и дней недели
-   ============================================================ */
-
-function renderFreqShiftsCheckboxes(containerId, selectedShifts) {
-  const c = document.getElementById(containerId);
-  if (!c) return;
-  c.innerHTML = ['A','B','C','D'].map(s => {
-    const checked = selectedShifts.includes(s) ? 'checked' : '';
-    const cls = checked ? 'checked' : '';
-    return `<label class="${cls}"><input type="checkbox" value="${s}" ${checked}> ${s}</label>`;
-  }).join('');
-  c.querySelectorAll('input').forEach(cb => {
-    cb.addEventListener('change', e => {
-      e.target.closest('label').classList.toggle('checked', e.target.checked);
+    return;
+  }
+  const removeTrigger = e.target.closest('[data-remove-trigger]');
+  if (removeTrigger) {
+    e.preventDefault();
+    p.triggers = (p.triggers || []).filter(v => v !== removeTrigger.dataset.removeTrigger);
+    epPageState.dirty = true;
+    renderEparamExtra(p);
+    return;
+  }
+  if (e.target.closest('#epf_addTriggerBtn')) {
+    openTriggerPickerModal({
+      workshopId: getWorkshopIdForLine(p.line),
+      part: p.nodePart || '',
+      selected: p.triggers || [],
+      onApply: (values) => {
+        p.triggers = values;
+        epPageState.dirty = true;
+        renderEparamExtra(p);
+      }
     });
-  });
-}
+  }
+});
 
-function renderFreqDaysCheckboxes(containerId, selectedDays) {
-  const c = document.getElementById(containerId);
-  if (!c) return;
+$('#epPageBackBtn')?.addEventListener('click', () => closeEparamPage(false));
+$('#epPageCancelBtn')?.addEventListener('click', () => closeEparamPage(false));
 
-  // Отображение — Пн..Вс (как в недельной матрице),
-  // но value остаётся совместим с getDay(): 0=Вс, 1=Пн, ..., 6=Сб.
-  const days = [
-    { idx: 1, name: 'Пн' },
-    { idx: 2, name: 'Вт' },
-    { idx: 3, name: 'Ср' },
-    { idx: 4, name: 'Чт' },
-    { idx: 5, name: 'Пт' },
-    { idx: 6, name: 'Сб' },
-    { idx: 0, name: 'Вс' }
-  ];
+/* --- Сохранение --- */
+$('#epPageSaveBtn')?.addEventListener('click', () => {
+  const p = epPageState.data;
+  if (!p) return;
+  syncEparamRowsFromDom();
 
-  c.innerHTML = days.map(({ idx, name }) => {
-    const checked = selectedDays.includes(idx) ? 'checked' : '';
-    const cls = checked ? 'checked' : '';
-    return `<label class="${cls}"><input type="checkbox" value="${idx}" ${checked}> ${name}</label>`;
-  }).join('');
+  const paramName = (p.paramName || '').trim();
+  const machine = (p.machine || '').trim();
+  const isSmd = getWorkshopIdForLine(p.line) === 'smd';
 
-  c.querySelectorAll('input').forEach(cb => {
-    cb.addEventListener('change', e => {
-      e.target.closest('label').classList.toggle('checked', e.target.checked);
+  if (!paramName) return showToast('Укажите описание параметра', true);
+  if (!machine)   return showToast('Выберите машину', true);
+  if (isSmd && !p.nodePart) return showToast('Выберите часть линии', true);
+
+  let valuesByBrand = [];
+  if (p.controlType === 'fixed') {
+    if (!(p.normText || '').trim()) return showToast('Опишите, что считается «ОК»', true);
+  } else {
+    const filled = p.valuesByBrand.filter(r =>
+      r.brand || r.target !== '' || r.tolerance !== '' || r.min !== '' || r.max !== '');
+    for (const r of filled) {
+      if (!r.brand) return showToast('Выберите бренд в каждой строке нормы', true);
+      if (p.controlType === 'interval') {
+        if (r.min === '' || r.max === '') return showToast(`Бренд ${r.brand}: укажите «от» и «до»`, true);
+        if (Number(r.min) > Number(r.max)) return showToast(`Бренд ${r.brand}: «от» больше, чем «до»`, true);
+      } else {
+        if (r.target === '' || r.tolerance === '') return showToast(`Бренд ${r.brand}: укажите норму и допуск`, true);
+        if (Number(r.tolerance) < 0) return showToast(`Бренд ${r.brand}: допуск не может быть отрицательным`, true);
+      }
+    }
+    if (!filled.length) return showToast('Добавьте хотя бы один бренд с нормой', true);
+    const brands = filled.map(r => r.brand);
+    const dupBrand = brands.find((b, i) => brands.indexOf(b) !== i);
+    if (dupBrand) return showToast(`Бренд ${dupBrand} указан дважды`, true);
+
+    // Интервал хранится и как min/max, и как target ± tolerance —
+    // так его понимают проверка, Чек-лист и экспорт в Excel.
+    valuesByBrand = filled.map(r => {
+      if (p.controlType === 'interval') {
+        const min = Number(r.min), max = Number(r.max);
+        return { brand: r.brand, min, max, target: (min + max) / 2, tolerance: (max - min) / 2 };
+      }
+      return { brand: r.brand, target: Number(r.target), tolerance: Number(r.tolerance) };
     });
-  });
-}
+  }
 
-function updateFreqBlocksVisibility() {
-  const type = $('#ep_freqType').value;
-  $('#ep_freqDailyBlock').style.display  = (type === 'daily')  ? 'block' : 'none';
-  $('#ep_freqWeeklyBlock').style.display = (type === 'weekly') ? 'block' : 'none';
-  $('#ep_freqOnceBlock').style.display   = (type === 'once')   ? 'block' : 'none';
-}
+  const all = getElectronicParams().map(normalizeElectronicParam);
+  const dup = all.find(x =>
+    x.id !== p.id &&
+    x.line === p.line &&
+    x.machine === machine &&
+    (x.paramName || '').toLowerCase() === paramName.toLowerCase());
+  if (dup) return showToast(`Параметр «${paramName}» уже есть на машине ${machine}`, true);
+
+  const now = new Date().toISOString();
+  const existing = all.find(x => x.id === p.id);
+  // Всё, что задаётся в других местах (расписание, работа, автор), берём из
+  // сохранённой версии — правка на странице не должна их сбрасывать.
+  const obj = {
+    ...(existing || p),
+    machine,
+    nodePart: isSmd ? p.nodePart : '',
+    paramName,
+    controlType: p.controlType,
+    normText: p.controlType === 'fixed' ? p.normText.trim() : '',
+    valuesByBrand,
+    appliesTo: p.appliesTo || [],
+    triggers: p.triggers || [],
+    active: p.active !== false,
+    createdAt: existing?.createdAt || now,
+    updatedAt: now
+  };
+
+  const idx = all.findIndex(x => x.id === p.id);
+  if (idx !== -1) all[idx] = obj;
+  else all.push(obj);
+  setElectronicParams(all);
+
+  const wasNew = epPageState.isNew;
+  closeEparamPage(true);
+  if (typeof refreshEditorElecTable === 'function') refreshEditorElecTable();
+  showToast(wasNew ? 'Параметр добавлен' : 'Параметр обновлён');
+});
 
 /* Пагинация истории — отдельные переменные, чтобы не конфликтовать с редактором */
 let historyPage = 1;
@@ -785,702 +1032,13 @@ $('#deactivationClearBtn')?.addEventListener('click', () => {
 });
 
 /* ============================================================
-   ФОРМА СТАНДАРТА — заполнение выпадающего списка машин
-   ============================================================ */
-function fillStandardMachineSelect(line, currentValue) {
-  const select = $('#sf_machine');
-  if (!select) return;
-
-  const machines = typeof getMachinesForLine === 'function'
-    ? getMachinesForLine(line)
-    : [];
-
-  let html = '<option value="">— выберите —</option>';
-
-  // Если у текущего стандарта машина НЕ из списка — добавим её в options с пометкой
-  const needAddCurrent = currentValue &&
-                         currentValue.trim() !== '' &&
-                         !machines.includes(currentValue);
-
-  if (needAddCurrent) {
-    html += `<option value="${escapeHtml(currentValue)}">${escapeHtml(currentValue)} (не в списке)</option>`;
-  }
-
-  html += machines.map(m =>
-    `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`
-  ).join('');
-
-  select.innerHTML = html;
-
-  if (currentValue) {
-    select.value = currentValue;
-  }
-}
-
-function updateStandardPointsVisibility() {
-  const ct = $('#sf_controlType')?.value || '';
-  const section = $('#sf_pointsSection');
-  if (!section) return;
-
-  // Все три типа могут иметь точки: fixed — опционально (без точек → ОК/НеОК),
-  // variable и interval — обязательно. Поэтому блок точек показываем всегда.
-  section.style.display = 'block';
-}
-
-function openStandardForm(id) {
-  // Восстанавливаем из localStorage, если переменная пусто
-  if (!currentEditorLine) {
-    const saved = localStorage.getItem('cl_editor_line');
-    if (saved) currentEditorLine = saved;
-  }
-  if (!currentEditorLine) return showToast('Сначала откройте линию', true);
-
-  const modal = $('#standardFormModal');
-  const title = $('#standardFormTitle');
-  if (!modal) return;
-
-  // Создание/редактирование стандарта — полноэкранная рабочая форма
-  // (как редактор), а не маленькое модальное окно.
-  modal.classList.add('sf-page-mode');
-
-  // Если id передан — редактируем, иначе создаём новый
-  let st;
-  if (id) {
-    st = getStandards().find(s => s.id === id);
-    if (!st) return;
-    title.textContent = 'Изменить стандарт: ' + (st.oplNumber || st.title || '');
-  } else {
-    st = createEmptyStandard();
-    st.line = currentEditorLine;
-    title.textContent = 'Новый стандарт — ' + currentEditorLine;
-  }
-
-  // Заполняем поля
-  $('#sf_id').value = id || '';
-  $('#sf_oplNumber').value = st.oplNumber || '';
-  // Машина — выпадающий список из машин линии
-  const standardLine = st.line || currentEditorLine;
-  fillStandardMachineSelect(standardLine, st.machine || '');
-  $('#sf_line').value = st.line || currentEditorLine;
-  $('#sf_title').value = st.title || '';
-  $('#sf_node').value = st.node || '';
-  $('#sf_nodePart').value = st.nodePart || '';
-    // Часть линии — показываем ТОЛЬКО для SMD
-  (function updateNodePartVisibility() {
-    const lineForCheck = st.line || currentEditorLine || '';
-    const workshopId = getWorkshopIdForLine(lineForCheck);
-    const nodePartSelect = document.getElementById('sf_nodePart');
-    const nodePartField = nodePartSelect ? nodePartSelect.closest('.field') : null;
-    const nodePartLabel = nodePartField ? nodePartField.querySelector('label') : null;
-
-    if (!nodePartField) return;
-
-    if (workshopId === 'smd') {
-      nodePartField.style.display = '';
-      if (nodePartLabel) {
-        nodePartLabel.classList.add('required');
-      }
-    } else {
-      nodePartField.style.display = 'none';
-      if (nodePartLabel) {
-        nodePartLabel.classList.remove('required');
-      }
-      // Значение оставляем (для существующих), но для новых оно пустое
-      if (nodePartSelect) {
-        // не обнуляем — вдруг у стандарта уже была часть
-      }
-    }
-  })();
-    // Часть линии показываем только для SMD
-  const workshopId = getWorkshopIdForLine(st.line || currentEditorLine);
-  const nodePartField = $('#sf_nodePart')?.closest('.field');
-  if (nodePartField) {
-    if (workshopId === 'smd') {
-      nodePartField.style.display = '';
-    } else {
-      nodePartField.style.display = 'none';
-      // Очищаем значение, чтобы не сохранилось случайно
-      $('#sf_nodePart').value = '';
-    }
-  }
-  $('#sf_problemDescription').value = st.problemDescription || '';
-  $('#sf_controlDescription').value = st.controlDescription || '';
-  $('#sf_purpose').value = st.purpose || '';
-  $('#sf_whyCreated').value = st.whyCreated || '';
-  $('#sf_controlType').value = st.controlType || '';
-
-  // --- НОВОЕ: работа и время проверки ---
-  const workVal = (st.work === 'Stop') ? 'Stop' : 'Run';
-  $('#sf_workChips')?.querySelectorAll('.elec-work-chip').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.work === workVal);
-  });
-
-  // Показ/скрытие блока точек в зависимости от типа контроля
-  updateStandardPointsVisibility();
-
-  // Точки замера
-  renderBrandBlocks(st.measurements || []);
-
-  // Применять к
-  $$('#sf_appliesToGroup input').forEach(cb => {
-    cb.checked = (st.appliesTo || []).includes(cb.value);
-    cb.closest('label').classList.toggle('checked', cb.checked);
-    // Снимаем старые обработчики и навешиваем заново
-    cb.onchange = (e) => {
-      e.target.closest('label').classList.toggle('checked', e.target.checked);
-    };
-  });
-
-  // Триггеры
-  fillStandardTriggersGroup(st.triggers || []);
-    // Top Losses
-  fillStandardTopLossesGroup(st.topLosses || []);
-
-  // Принудительный показ в смене сорта
-  $('#sf_forceChangeOver').checked = !!st.forceInChangeOver;
-
-  // --- НОВОЕ: фотографии ---
-  formPhotos = Array.isArray(st.photos) ? [...st.photos] : [];
-  renderPhotosInForm();
-  updatePhotoPathHint();
-  const photoInput = $('#sf_newPhotoName');
-  if (photoInput) photoInput.value = '';
-
-  // Инициализация автокомплита узлов
-  initNodeAutocomplete();
-
-  openModal(modal);
-}
-window.openStandardForm = openStandardForm;
-
-function closeStandardForm() {
-  // Возвращаем обычный (не полноэкранный) режим окна
-  $('#standardFormModal')?.classList.remove('sf-page-mode');
-  closeModal('#standardFormModal');
-}
-/* ============================================================
-   ФОТОГРАФИИ В ФОРМЕ СТАНДАРТА
+   TOP LOSSES стандарта — выбор через окно
    ============================================================ */
 
-/* Текущий список имён фото (до сохранения) */
-let formPhotos = [];
-
-/* Отрисовать сетку фото в форме */
-function renderPhotosInForm() {
-  const grid = $('#sf_photosGrid');
-  const empty = $('#sf_photosEmpty');
-  if (!grid || !empty) return;
-
-  const line = $('#sf_line').value || '';
-  const part = $('#sf_nodePart').value || '';
-
-  if (!formPhotos.length) {
-    grid.innerHTML = '';
-    empty.style.display = 'block';
-    return;
-  }
-
-  empty.style.display = 'none';
-  grid.innerHTML = formPhotos.map((name, idx) => {
-    const path = (line && part) ? `photos/${line}/${part}/${name}` : '';
-    return `
-      <div class="photo-card" data-photo-index="${idx}" title="${escapeAttr(name)}">
-        <img src="${escapeAttr(path)}" alt="${escapeAttr(name)}"
-             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-        <div class="photo-missing" style="display:none">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          <span>Файл не найден</span>
-        </div>
-        <div class="photo-name">${escapeHtml(name)}</div>
-        <button type="button" class="photo-remove"
-                onclick="event.stopPropagation();removePhotoFromForm(${idx})"
-                title="Удалить">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
-    `;
-  }).join('');
-}
-
-/* Добавить фото в форму (поддерживает список через запятую/новую строку) */
-function addPhotoFromInput() {
-  const input = $('#sf_newPhotoName');
-  if (!input) return;
-
-  const raw = input.value || '';
-
-  // Разбиваем по запятой и по переносам строки
-  const names = raw
-    .split(/[\n,]+/)              // запятая или перенос строки
-    .map(s => s.trim())           // обрезаем пробелы
-    .filter(s => s.length > 0);   // убираем пустые
-
-  if (!names.length) {
-    return showToast('Введите хотя бы одно имя файла', true);
-  }
-
-  let added = 0;
-  let skipped = 0;
-
-  names.forEach(name => {
-    if (formPhotos.includes(name)) {
-      skipped++;
-      return;
-    }
-    formPhotos.push(name);
-    added++;
-  });
-
-  input.value = '';
-  renderPhotosInForm();
-
-  // Сообщение о результате
-  if (added > 0 && skipped === 0) {
-    showToast(`Добавлено: ${added}`);
-  } else if (added > 0 && skipped > 0) {
-    showToast(`Добавлено: ${added}, пропущено (дубликаты): ${skipped}`);
-  } else if (added === 0 && skipped > 0) {
-    showToast(`Все ${skipped} уже добавлены`, true);
-  }
-
-  input.focus();
-}
-
-/* Удалить фото из формы */
-window.removePhotoFromForm = function(idx) {
-  if (idx < 0 || idx >= formPhotos.length) return;
-  formPhotos.splice(idx, 1);
-  renderPhotosInForm();
-};
-
-/* Обновление подсказки пути при смене линии/части */
-function updatePhotoPathHint() {
-  const hint = $('#sf_photoPathHint');
-  if (!hint) return;
-  const line = $('#sf_line').value || '<line>';
-  const part = $('#sf_nodePart').value || '<Maker|Packer>';
-  hint.textContent = `photos/${line}/${part}/`;
-}
-
-/* Просмотр одного фото из формы (лайтбокс-заглушка, полноценный лайтбокс — на этапе 4) */
-window.openPhotoLightboxSimple = function(idx) {
-  if (idx < 0 || idx >= formPhotos.length) return;
-  const line = $('#sf_line').value;
-  const part = $('#sf_nodePart').value;
-  if (!line || !part) return;
-
-  const name = formPhotos[idx];
-  const path = `photos/${line}/${part}/${name}`;
-  const w = window.open(path, '_blank');
-  if (!w) showToast('Не удалось открыть фото', true);
-};
-/* ============================================================
-   АВТОКОМПЛИТ УЗЛОВ
-   ============================================================ */
-function getNodeSuggestions() {
-  const set = new Set();
-  // Узлы из стандартов
-  getStandards().forEach(s => {
-    if (s.node && s.node.trim()) set.add(s.node.trim());
-  });
-  // Узлы из настроек
-  if (typeof getNodes === 'function') {
-    getNodes().forEach(n => { if (n && n.name) set.add(n.name); });
-  }
-  return [...set].sort((a, b) => a.localeCompare(b, 'ru'));
-}
-
-function initNodeAutocomplete() {
-  const input = document.getElementById('sf_node');
-  const dropdown = document.getElementById('sf_nodeDropdown');
-  if (!input || !dropdown) return;
-
-  // Защита от повторной инициализации
-  if (input.dataset.acReady === '1') return;
-  input.dataset.acReady = '1';
-
-  let activeIndex = -1;
-  let currentMatches = [];
-
-  function renderMatches(query) {
-    const all = getNodeSuggestions();
-    const q = (query || '').toLowerCase();
-
-    let matches = all;
-    if (q) {
-      matches = all.filter(n => n.toLowerCase().includes(q));
-    }
-    matches = matches.slice(0, 8); // максимум 8
-    currentMatches = matches;
-    activeIndex = -1;
-
-    if (!matches.length) {
-      dropdown.style.display = 'none';
-      return;
-    }
-
-    dropdown.innerHTML = matches.map((n, i) => {
-      let display = escapeHtml(n);
-      if (q) {
-        const idx = n.toLowerCase().indexOf(q);
-        if (idx !== -1) {
-          display = escapeHtml(n.slice(0, idx)) +
-                    '<strong>' + escapeHtml(n.slice(idx, idx + q.length)) + '</strong>' +
-                    escapeHtml(n.slice(idx + q.length));
-        }
-      }
-      return `<div class="autocomplete-item" data-index="${i}">${display}</div>`;
-    }).join('');
-
-    dropdown.style.display = 'block';
-
-    dropdown.querySelectorAll('.autocomplete-item').forEach(el => {
-      el.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        input.value = currentMatches[parseInt(el.dataset.index)];
-        dropdown.style.display = 'none';
-      });
-    });
-  }
-
-  input.addEventListener('input', () => renderMatches(input.value.trim()));
-  input.addEventListener('focus', () => renderMatches(input.value.trim()));
-
-  input.addEventListener('keydown', (e) => {
-    if (dropdown.style.display !== 'block') return;
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      activeIndex = Math.min(activeIndex + 1, currentMatches.length - 1);
-      dropdown.querySelectorAll('.autocomplete-item').forEach((el, i) => {
-        el.classList.toggle('active', i === activeIndex);
-      });
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      activeIndex = Math.max(activeIndex - 1, 0);
-      dropdown.querySelectorAll('.autocomplete-item').forEach((el, i) => {
-        el.classList.toggle('active', i === activeIndex);
-      });
-    } else if (e.key === 'Enter' && activeIndex >= 0) {
-      e.preventDefault();
-      input.value = currentMatches[activeIndex];
-      dropdown.style.display = 'none';
-    } else if (e.key === 'Escape') {
-      dropdown.style.display = 'none';
-    }
-  });
-
-  input.addEventListener('blur', () => {
-    setTimeout(() => { dropdown.style.display = 'none'; }, 150);
-  });
-}
-/* ============================================================
-   ТРИГГЕРЫ СТАНДАРТА — группы чекбоксов
-   ============================================================ */
-function fillStandardTriggersGroup(selected = []) {
-  const g = $('#sf_triggersGroup');
-  if (!g) return;
-
-  // Триггеры из настроек, сгруппированы по цехам
-  const all = getCustomTriggers().map(t => ({
-    value: t.value,
-    label: t.label + (t.part ? ' [' + t.part + ']' : ''),
-    group: getWorkshopName(t.workshop) || 'Без цеха'
-  }));
-
-  let html = '';
-  let lastGroup = '';
-
-  all.forEach(t => {
-    if (t.group !== lastGroup) {
-      if (lastGroup) html += '</div>';
-      html += `<div style="width:100%;font-size:12px;color:var(--text-second);margin-top:8px;margin-bottom:4px"><strong>${t.group}:</strong></div><div class="checkbox-group">`;
-      lastGroup = t.group;
-    }
-    const checked = selected.includes(t.value) ? 'checked' : '';
-    const cls = selected.includes(t.value) ? 'checked' : '';
-    html += `<label class="${cls}"><input type="checkbox" value="${escapeHtml(t.value)}" ${checked}> ${escapeHtml(t.label)}</label>`;
-  });
-
-  if (lastGroup) html += '</div>';
-
-  g.innerHTML = html;
-
-  g.querySelectorAll('input').forEach(cb => {
-    cb.addEventListener('change', e => {
-      e.target.closest('label').classList.toggle('checked', e.target.checked);
-    });
-  });
-}
-
-/* ============================================================
-   ТОЧКИ ЗАМЕРА — динамический список
-   ============================================================ */
-/**
- * Отрисовать одну строку точки в форме стандарта.
- * @param {object} point — объект точки { value, brand }
- * @param {number} index — индекс (для data-атрибутов)
- * Отрисовать ВСЕ точки замера в форме.
- * @param {Array} points — массив объектов точек
-*/
-
-
-function renderBrandBlocks(measurements) {
-  const container = $('#sf_brandBlocksContainer');
-  if (!container) return;
-
-  const brands = getBrands();
-
-  // Нормализуем: число точек = максимум по всем брендам
-  const state = (measurements || []).map(b => ({
-    brand: b.brand || '',
-    points: Array.isArray(b.points) ? b.points.map(p => ({ value: p.value || '' })) : []
-  }));
-  const maxPoints = state.reduce((m, b) => Math.max(m, b.points.length), 0);
-  state.forEach(b => {
-    while (b.points.length < maxPoints) b.points.push({ value: '' });
-  });
-
-  // Шапка
-  let headerHtml = `<tr>
-    <th class="bt-th-brand">Бренд</th>`;
-
-  for (let i = 0; i < maxPoints; i++) {
-    headerHtml += `<th class="bt-th-point">
-      <span>Точка ${i + 1}</span>
-      <button type="button" class="bt-remove-point" data-remove-point-col="${i}" title="Удалить точку у всех брендов">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px">
-          <line x1="18" y1="6" x2="6" y2="18"/>
-          <line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
-    </th>`;
-  }
-
-  headerHtml += `<th class="bt-th-actions">
-    <button type="button" class="bt-add-point-btn" data-add-point-col title="Добавить точку ко всем брендам">+ Точка</button>
-  </th></tr>`;
-
-  // Тело
-  let bodyHtml = '';
-  if (!state.length) {
-    bodyHtml = `<tr><td colspan="${maxPoints + 2}" class="bt-empty">
-      Нет брендов. Нажмите «+ Добавить бренд».
-    </td></tr>`;
-  } else {
-    bodyHtml = state.map((block, rowIndex) => {
-      let cells = '';
-      for (let i = 0; i < maxPoints; i++) {
-        const val = block.points[i]?.value || '';
-        cells += `<td class="bt-td-value">
-          <input type="text" class="bt-point-input"
-                 data-row="${rowIndex}" data-col="${i}"
-                 value="${escapeAttr(val)}" placeholder="0">
-        </td>`;
-      }
-
-      const brandOptions = ['<option value="">Все бренды</option>']
-        .concat(brands.map(b => {
-          const selected = (b === block.brand) ? ' selected' : '';
-          return `<option value="${escapeHtml(b)}"${selected}>${escapeHtml(b)}</option>`;
-        })).join('');
-
-      return `<tr class="bt-row" data-row="${rowIndex}">
-        <td class="bt-td-brand">
-          <select class="bt-brand-select" data-row="${rowIndex}">${brandOptions}</select>
-          <button type="button" class="bt-remove-brand" data-remove-brand="${rowIndex}" title="Удалить бренд">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-              <path d="M10 11v6"/><path d="M14 11v6"/>
-            </svg>
-          </button>
-        </td>
-        ${cells}
-        <td class="bt-td-actions"></td>
-      </tr>`;
-    }).join('');
-  }
-
-  container.innerHTML = `
-    <div class="brands-table-wrap">
-      <table class="brands-table">
-        <thead>${headerHtml}</thead>
-        <tbody>${bodyHtml}</tbody>
-      </table>
-    </div>
-  `;
-
-  bindBrandsTableEvents();
-}
-
-function bindBrandsTableEvents() {
-  const container = $('#sf_brandBlocksContainer');
-  if (!container) return;
-
-  // --- Смена бренда ---
-  container.querySelectorAll('.bt-brand-select').forEach(sel => {
-    sel.addEventListener('change', () => {
-      // Изменение сохраняется при следующем сборе через collectMeasurements
-    });
-  });
-
-  // --- Удаление бренда ---
-  container.querySelectorAll('[data-remove-brand]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const rowIndex = parseInt(btn.dataset.removeBrand, 10);
-      const state = getTableState();
-      if (!confirm('Удалить бренд со всеми его точками?')) return;
-      state.splice(rowIndex, 1);
-      renderBrandsTableFromState(state);
-    });
-  });
-
-  // --- Удаление колонки точки (у всех брендов) ---
-  container.querySelectorAll('[data-remove-point-col]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const colIndex = parseInt(btn.dataset.removePointCol, 10);
-      const state = getTableState();
-      if (!confirm(`Удалить точку ${colIndex + 1} у всех брендов?`)) return;
-      state.forEach(b => {
-        b.points.splice(colIndex, 1);
-      });
-      renderBrandsTableFromState(state);
-    });
-  });
-
-  // --- Добавление колонки точки (у всех брендов) ---
-  container.querySelectorAll('[data-add-point-col]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const state = getTableState();
-      if (!state.length) {
-        // Нет брендов — создаём универсальный "Все бренды" с одной точкой
-        state.push({ brand: '', points: [{ value: '' }] });
-      } else {
-        state.forEach(b => b.points.push({ value: '' }));
-      }
-      renderBrandsTableFromState(state);
-    });
-  });
-}
-
-/**
- * Прочитать текущее состояние таблицы из DOM и вернуть как массив блоков.
- */
-function getTableState() {
-  const container = $('#sf_brandBlocksContainer');
-  if (!container) return [];
-  const state = [];
-
-  container.querySelectorAll('.bt-row').forEach(row => {
-    const brand = row.querySelector('.bt-brand-select')?.value || '';
-    const points = [];
-    row.querySelectorAll('.bt-point-input').forEach(inp => {
-      points.push({ value: inp.value || '' });
-    });
-    state.push({ brand, points });
-  });
-
-  return state;
-}
-
-/** Отрисовать таблицу из state (массива блоков) */
-function renderBrandsTableFromState(state) {
-  // Нормализуем: выравниваем число точек по максимуму
-  const maxPoints = state.reduce((m, b) => Math.max(m, (b.points || []).length), 0);
-  state.forEach(b => {
-    while (b.points.length < maxPoints) b.points.push({ value: '' });
-  });
-
-  renderBrandBlocks(state);
-}
-
-function collectMeasurements() {
-  const container = $('#sf_brandBlocksContainer');
-  if (!container) return [];
-
-  const result = [];
-  container.querySelectorAll('.bt-row').forEach(row => {
-    const brand = row.querySelector('.bt-brand-select')?.value || '';
-    const points = [];
-    row.querySelectorAll('.bt-point-input').forEach(inp => {
-      points.push({ value: (inp.value || '').trim() });
-    });
-    // Обрезаем пустые точки в конце
-    while (points.length && points[points.length - 1].value === '') {
-      points.pop();
-    }
-    // Сохраняем бренд, только если есть хотя бы одна заполненная точка
-    if (points.some(p => p.value !== '')) {
-      result.push({ brand, points });
-    }
-  });
-
-  return result;
-}
-
-/* ============================================================
-   TOP LOSSES в форме стандарта — только выбранные + кнопка
-   ============================================================ */
-
-// Текущий набор выбранных потерь (для формы)
+// Выбранные потери стандарта, который редактируется на полной странице
 let sfTopLossesSelected = [];
-// Контекст, откуда открыта модалка выбора потерь:
-// 'standard-form' — из старой модалки #standardFormModal
-// 'sv-full'       — из нового полноэкранного просмотра
-let topLossPickerContext = 'standard-form';
-
-function fillStandardTopLossesGroup(selected = []) {
-  // Запоминаем состояние
-  sfTopLossesSelected = Array.isArray(selected) ? [...selected] : [];
-  renderSfTopLossesSelected();
-}
-
-/** Отрисовать список выбранных потерь в форме */
-function renderSfTopLossesSelected() {
-  const container = $('#sf_topLossesSelected');
-  const counter = $('#sf_topLossesCount');
-  if (!container) return;
-
-  if (counter) counter.textContent = sfTopLossesSelected.length;
-
-  if (!sfTopLossesSelected.length) {
-    container.innerHTML = '<div class="empty-state" style="padding:12px;font-size:13px">Потери не применены</div>';
-    return;
-  }
-
-  container.innerHTML = sfTopLossesSelected.map(id => {
-    const l = findLossById(id);
-    if (!l) return '';
-    return `
-      <div class="sf-toploss-item" data-toploss-id="${escapeAttr(id)}" title="${escapeAttr(l.categoryName + ': ' + l.name)}">
-        <span class="sf-toploss-name">${escapeHtml(l.name)}</span>
-        <button type="button" class="sf-toploss-remove" data-remove-toploss="${escapeAttr(id)}" title="Убрать">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
-    `;
-  }).join('');
-
-  // Обработчики удаления
-  container.querySelectorAll('[data-remove-toploss]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const id = btn.dataset.removeToploss;
-      sfTopLossesSelected = sfTopLossesSelected.filter(x => x !== id);
-      renderSfTopLossesSelected();
-    });
-  });
-}
+// Откуда открыто окно выбора потерь ('sv-full' — полная страница стандарта)
+let topLossPickerContext = 'sv-full';
 
 /* ============================================================
    Модалка выбора потерь
@@ -1517,9 +1075,7 @@ function closeTopLossPickerModal() {
 /** Отрисовать список категорий и потерь в модалке */
 /* Цех линии, для которой выбираем потери (форма или полная страница) */
 function getTopLossPickerWorkshop() {
-  const line = topLossPickerContext === 'sv-full'
-    ? ((svFullState.editingData || {}).line || '')
-    : ($('#sf_line')?.value || '');
+  const line = (svFullState.editingData || {}).line || '';
   return line ? getWorkshopIdForLine(line) : null;
 }
 
@@ -1600,11 +1156,6 @@ function updateTopLossPickerCounter() {
 function applyTopLossPicker() {
   sfTopLossesSelected = [...topLossPickerTemp];
 
-  // Контекст: старая форма
-  if (topLossPickerContext === 'standard-form') {
-    renderSfTopLossesSelected();
-  }
-
   // Контекст: новый полный просмотр
   if (topLossPickerContext === 'sv-full') {
     // Обновляем editingData
@@ -1620,10 +1171,6 @@ function applyTopLossPicker() {
 }
 
 /* --- Обработчики модалки --- */
-$('#sf_addTopLossBtn')?.addEventListener('click', () => {
-  topLossPickerContext = 'standard-form';
-  openTopLossPickerModal();
-});
 $('#topLossPickerClose')?.addEventListener('click', closeTopLossPickerModal);
 $('#topLossPickerCancel')?.addEventListener('click', closeTopLossPickerModal);
 $('#topLossPickerApply')?.addEventListener('click', applyTopLossPicker);
@@ -1757,405 +1304,6 @@ function renderTriggerChipsEditable(values) {
     </div>`).join('');
 }
 
-/* --- Чипы Run/Stop в форме стандарта --- */
-$('#sf_workChips')?.addEventListener('click', (e) => {
-  const btn = e.target.closest('.elec-work-chip');
-  if (!btn) return;
-  $('#sf_workChips').querySelectorAll('.elec-work-chip').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-});
-/* --- Обработчики блока «Фотографии» --- */
-$('#sf_addPhotoBtn')?.addEventListener('click', addPhotoFromInput);
-/* --- Кнопка «+ Добавить блок бренда» --- */
-$('#sf_addBrandBlockBtn')?.addEventListener('click', () => {
-  const state = getTableState();
-
-  // Определяем число точек в текущей таблице
-  const maxPoints = state.reduce((m, b) => Math.max(m, (b.points || []).length), 0);
-  const pointsCount = Math.max(maxPoints, 1); // минимум 1 точка
-
-  // Новый бренд с пустыми значениями для всех точек
-  const newPoints = [];
-  for (let i = 0; i < pointsCount; i++) newPoints.push({ value: '' });
-
-  state.push({ brand: '', points: newPoints });
-  renderBrandsTableFromState(state);
-}); 
-
-  /* --- Смена типа контроля: показ/скрытие блока точек --- */
-  $('#sf_controlType')?.addEventListener('change', () => {
-    updateStandardPointsVisibility();
-  }); 
-
-$('#sf_newPhotoName')?.addEventListener('keydown', (e) => {
-  // Ctrl+Enter или Enter без Shift → добавить
-  // Shift+Enter → перенос строки (для списка с новой строки)
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    addPhotoFromInput();
-  }
-});
-
-$('#sf_photosGrid')?.addEventListener('click', (e) => {
-  const card = e.target.closest('.photo-card');
-  if (!card) return;
-  if (e.target.closest('.photo-remove')) return;
-  const idx = parseInt(card.dataset.photoIndex, 10);
-  openPhotoLightboxSimple(idx);
-});
-
-/* Перерисовываем подсказку пути при смене части */
-$('#sf_nodePart')?.addEventListener('change', updatePhotoPathHint);
-$('#standardFormModal')?.addEventListener('click', (e) => {
-  if (e.target.id === 'standardFormModal') closeStandardForm();
-});
-/* ============================================================
-   СОХРАНЕНИЕ СТАНДАРТА
-   ============================================================ */
-$('#standardFormSave')?.addEventListener('click', () => {
-  const id = $('#sf_id').value;
-
-  // Собираем значения
-  const number = '';   // поле № убрано
-  const oplNumber = $('#sf_oplNumber').value.trim();
-  const machine = ($('#sf_machine').value || '').trim();
-  const title = $('#sf_title').value.trim();
-  let line = $('#sf_line').value;
-  const node = $('#sf_node').value.trim();
-  const nodePart = $('#sf_nodePart').value;
-  const controlType = $('#sf_controlType').value;
-
-  // --- НОВОЕ: работа и время ---
-  const work = $('#sf_workChips')?.querySelector('.elec-work-chip.active')?.dataset.work || 'Run';
-
-  // Валидация обязательных полей
-if (!oplNumber)   return showToast('Укажите OPL №', true);
-if (!machine)     return showToast('Укажите машину', true);
-if (!title)       return showToast('Укажите название', true);
-if (!line) {
-  // Пробуем восстановить из localStorage или currentEditorLine
-  const fallback = localStorage.getItem('cl_editor_line') || currentEditorLine;
-  if (fallback) {
-    $('#sf_line').value = fallback;
-    line = fallback;  // ← но line объявлен как const — надо поменять на let
-  } else {
-    return showToast('Линия не определена. Выберите линию заново.', true);
-  }
-}
-if (!node)        return showToast('Укажите узел', true);
-const workshopIdForSave = getWorkshopIdForLine(line);
-if (workshopIdForSave === 'smd' && !nodePart) {
-  return showToast('Выберите часть линии', true);
-}
-if (!controlType) return showToast('Выберите тип контроля', true);
-
-  // Проверка дубликата OPL № на этой линии + машине
-  const all = getStandards();
-  const dup = all.find(s =>
-    s.id !== id &&
-    s.line === line &&
-    s.machine === machine &&
-    (s.oplNumber || '').toLowerCase() === oplNumber.toLowerCase()
-  );
-  if (dup) {
-    return showToast(
-      `OPL № "${oplNumber}" уже есть на машине ${machine} линии ${line}`,
-      true
-    );
-  }
-
-  // Точки замера
-  const measurements = collectMeasurements();
-
-  // Применять к (типы переходов)
-  const appliesTo = [...$$('#sf_appliesToGroup input:checked')].map(c => c.value);
-
-  // Триггеры
-  const triggers = [...$$('#sf_triggersGroup input:checked')].map(c => c.value);
-  // Top Losses — берём из глобального состояния
-  const topLosses = [...sfTopLossesSelected];
-
-  const obj = {
-    id: id || uid(),
-    active: id
-      ? (getStandards().find(s => s.id === id) || {}).active !== false
-      : true,
-    number,
-    oplNumber,
-    machine,
-    title,
-    line,
-    node,
-    nodePart,
-    controlType,
-    // --- НОВОЕ: работа и время ---
-    work,
-    timeFrom: '',
-    timeTo: '',
-    problemDescription: $('#sf_problemDescription').value.trim(),
-    controlDescription: $('#sf_controlDescription').value.trim(),
-    purpose: $('#sf_purpose').value.trim(),
-    whyCreated: $('#sf_whyCreated').value.trim(),
-    measurements,
-    appliesTo,
-    triggers,
-    topLosses,
-    forceInChangeOver: $('#sf_forceChangeOver').checked,
-    photos: [...formPhotos],
-    // --- НОВОЕ: история ---
-    author: id
-      ? (getStandards().find(s => s.id === id) || {}).author || ''
-      : (getCurrentUser() || '—'),
-    createdAt: id
-      ? (getStandards().find(s => s.id === id) || {}).createdAt || new Date().toISOString()
-      : new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-
-  if (id) {
-    const idx = all.findIndex(s => s.id === id);
-    if (idx !== -1) all[idx] = obj;
-  } else {
-    all.push(obj);
-  }
-
-  setStandards(all);
-
-  refreshEditorMechTable();
-  if (typeof updatePartCounters === 'function') updatePartCounters();
-  closeStandardForm();
-  showToast(id ? 'Стандарт обновлён' : 'Стандарт добавлен');
-});
-/* ============================================================
-   ФОРМА СТАНДАРТА — отмена и закрытие
-   ============================================================ */
-$('#standardFormClose')?.addEventListener('click', () => {
-  closeStandardForm();
-});
-
-$('#standardFormCancel')?.addEventListener('click', () => {
-  closeStandardForm();
-});
-
-$('#standardFormModal')?.addEventListener('click', (e) => {
-  if (e.target.id === 'standardFormModal') closeStandardForm();
-});
-
-/* ============================================================
-   ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМА РЕДАКТОРА (Механический / Электронный)
-   ============================================================ */
-
-function switchEditorMode(mode) {
-  // Подсветка кнопок
-  document.querySelectorAll('#editorModeSwitch .editor-mode-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.mode === mode);
-  });
-
-  // Показ/скрытие блоков
-  const mechView = $('#editorMechView');
-  const elecView = $('#editorElecView');
-  if (mechView) mechView.style.display = (mode === 'elec') ? 'none' : 'block';
-  if (elecView) elecView.style.display = (mode === 'elec') ? 'block' : 'none';
-
-  // Сохраняем выбор
-  try { localStorage.setItem('cl_editor_mode', mode); } catch (e) {}
-
-  // Обновить UI и таблицу
-  if (typeof updateActiveLineUI === 'function') updateActiveLineUI();
-  if (mode === 'elec') {
-    if (typeof refreshEditorElecTable === 'function') refreshEditorElecTable();
-  } else {
-    if (typeof refreshEditorMechTable === 'function') refreshEditorMechTable();
-  }
-}
-/* Обработчики кнопок переключателя */
-document.querySelectorAll('#editorModeSwitch .editor-mode-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    switchEditorMode(btn.dataset.mode);
-  });
-});
-
-/* ============================================================
-   ОБРАБОТЧИКИ ФОРМЫ ЭЛЕКТРОННОГО ПАРАМЕТРА
-   ============================================================ */
-
-// Закрытие
-$('#electronicParamClose')?.addEventListener('click', closeElectronicParamForm);
-$('#electronicParamCancel')?.addEventListener('click', closeElectronicParamForm);
-$('#electronicParamModal')?.addEventListener('click', (e) => {
-  if (e.target.id === 'electronicParamModal') closeElectronicParamForm();
-});
-
-// Работа — чипы Run/Stop
-$('#ep_workChips')?.addEventListener('click', (e) => {
-  const btn = e.target.closest('.elec-work-chip');
-  if (!btn) return;
-  $('#ep_workChips').querySelectorAll('.elec-work-chip').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-});
-
-// Тип контроля — чипы
-$('#ep_controlTypeSelector')?.addEventListener('click', (e) => {
-  const btn = e.target.closest('.type-option');
-  if (!btn) return;
-  $('#ep_controlType').value = btn.dataset.value;
-  $('#ep_controlTypeSelector').querySelectorAll('.type-option').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  updateElectronicFormVisibility();
-});
-
-// Тип периодичности
-$('#ep_freqType')?.addEventListener('change', updateFreqBlocksVisibility);
-
-// Быстрое добавление машины (через общую модалку, как в форме стандарта)
-$('#ep_addMachineBtn')?.addEventListener('click', () => {
-  quickAddMachineContext = 'electronic';
-  openQuickAddMachineModal();
-});
-
-// Добавить строку бренда
-$('#ep_addBrandRowBtn')?.addEventListener('click', () => {
-  const tbody = $('#ep_brandsTbody');
-  if (!tbody) return;
-
-  // Если сейчас показывается "Нет строк" — очищаем
-  if (tbody.querySelector('td[colspan]')) tbody.innerHTML = '';
-
-  const lineBrands = getBrandsForLine(currentElectronicLine);
-  const brandOpts = ['<option value="">— выберите —</option>']
-    .concat(lineBrands.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`))
-    .join('');
-
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td><select data-brand>${brandOpts}</select></td>
-    <td><input type="number" step="any" data-target placeholder="0"></td>
-    <td><input type="number" step="any" data-tolerance placeholder="0"></td>
-    <td>
-      <button type="button" class="elec-brands-remove" data-remove-row title="Удалить">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px">
-          <line x1="18" y1="6" x2="6" y2="18"/>
-          <line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
-    </td>
-  `;
-  tbody.appendChild(tr);
-
-  tr.querySelector('[data-remove-row]').addEventListener('click', () => {
-    tr.remove();
-    if (!tbody.querySelector('tr')) renderElectronicBrandsTable([]);
-  });
-});
-
-// Сохранение
-$('#electronicParamSave')?.addEventListener('click', () => {
-  const id = $('#ep_id').value;
-  const machine = ($('#ep_machine')?.value || '').trim();
-  const paramName = ($('#ep_paramName')?.value || '').trim();
-  const controlType = $('#ep_controlType').value;
-  const normText = ($('#ep_normText')?.value || '').trim();
-  const work = $('#ep_workChips')?.querySelector('.elec-work-chip.active')?.dataset.work || 'Run';
-
-  // Часть линии — только для SMD
-  const lineForPart = currentElectronicLine;
-  const workshopId = getWorkshopIdForLine(lineForPart);
-  const nodePart = (workshopId === 'smd') ? ($('#ep_nodePart')?.value || '').trim() : '';
-    // Применяемость
-  const appliesTo = [...$$('#ep_appliesToGroup input:checked')].map(cb => cb.value);
-  // Триггеры Change Over
-  const triggers = [...$$('#ep_triggersGroup input:checked')].map(cb => cb.value);
-  // Валидация
-  if (!machine)     return showToast('Выберите машину', true);
-  if (!paramName)   return showToast('Укажите название параметра', true);
-  if (workshopId === 'smd' && !nodePart) {
-    return showToast('Выберите часть линии', true);
-  }
-  if (controlType === 'fixed' && !normText) {
-    return showToast('Для «Фиксированный» укажите текст нормы (ОК/Не ОК)', true);
-  }
-
-  // Собираем значения по брендам
-  const valuesByBrand = [];
-  if (controlType === 'variable' || controlType === 'interval') {
-    const tbody = $('#ep_brandsTbody');
-    tbody?.querySelectorAll('tr').forEach(tr => {
-      const brand = tr.querySelector('[data-brand]')?.value;
-      const target = tr.querySelector('[data-target]')?.value;
-      const tolerance = tr.querySelector('[data-tolerance]')?.value;
-      if (brand && target !== '' && tolerance !== '') {
-        valuesByBrand.push({
-          brand,
-          target: Number(target),
-          tolerance: Number(tolerance)
-        });
-      }
-    });
-
-    if (!valuesByBrand.length) {
-      return showToast('Добавьте хотя бы один бренд с нормой', true);
-    }
-  }
-
-  // Проверка дубликата (line + machine + paramName)
-  const all = getElectronicParams().map(normalizeElectronicParam);
-  const dup = all.find(p =>
-    p.id !== id &&
-    p.line === currentElectronicLine &&
-    p.machine === machine &&
-    (p.paramName || '').toLowerCase() === paramName.toLowerCase()
-  );
-  if (dup) {
-    return showToast(`Параметр «${paramName}» уже есть на машине ${machine}`, true);
-  }
-
-  // Периодичность — берём существующую или дефолтную
-  // (настраивается в «Расписании CL»)
-  const existingParam = id ? all.find(p => p.id === id) : null;
-  const frequency = existingParam?.frequency
-    || { type: 'weekly', schedule: [], shifts: ['day','night'], daysOfWeek: [], dates: [] };
-
-  // Формируем объект
-  const obj = {
-    id: id || makeElectronicParamId(),
-    active: id ? (all.find(p => p.id === id)?.active !== false) : true,
-    line: currentElectronicLine,
-    machine,
-    nodePart,
-    paramName,
-    work,
-    timeFrom: '',
-    timeTo: '',
-    controlType,
-    normText: controlType === 'fixed' ? normText : '',
-    valuesByBrand: (controlType === 'variable' || controlType === 'interval') ? valuesByBrand : [],
-    appliesTo,
-    triggers,
-    frequency,
-    author: id ? (all.find(p => p.id === id)?.author || '') : '',
-    createdAt: id ? (all.find(p => p.id === id)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-
-  if (id) {
-    const idx = all.findIndex(p => p.id === id);
-    if (idx !== -1) all[idx] = obj;
-  } else {
-    all.push(obj);
-  }
-
-  setElectronicParams(all);
-  closeElectronicParamForm();
-
-  // Перерисовываем таблицу параметров
-  refreshEditorElecTable();
-
-  showToast(id ? 'Параметр обновлён' : 'Параметр добавлен');
-});
-/* Контекст для модалки быстрого добавления машины:
-   'standard' — из формы механического стандарта (читаем #sf_line)
-   'electronic' — из формы электронного параметра (читаем currentElectronicLine) */
-let quickAddMachineContext = 'standard';
 /* ============================================================
    УТИЛИТЫ
    ============================================================ */
@@ -3901,13 +3049,7 @@ function openClCheckModal(rowId, dateStr, shift) {
     okBlock.style.display = 'none';
     pointsBlock.style.display = 'block';
 
-    let normText = '— норма не задана —';
-    if (entry) {
-      const target = entry.target;
-      const tol = entry.tolerance;
-      normText = `${entry.brand || 'Все бренды'}: ${target} ± ${tol}`;
-    }
-    $('#qcNormValue').textContent = normText;
+    $('#qcNormValue').textContent = getEparamNormLabel(entry, controlType);
 
     // Показываем одно поле ввода значения
     const pointsList = $('#qcPointsList');
@@ -4030,11 +3172,8 @@ function saveQuickCheck() {
     if (!entry && values.length) entry = values[0];
 
     let inRange = true;
-    if (entry) {
-      const min = Number(entry.target) - Number(entry.tolerance);
-      const max = Number(entry.target) + Number(entry.tolerance);
-      inRange = num >= min && num <= max;
-    }
+    const range = getEparamNormRange(entry);
+    if (range) inRange = num >= range.min && num <= range.max;
 
     status = inRange ? 'OK' : 'FAIL';
     answer = String(num);
@@ -11758,18 +10897,17 @@ window.openMachineModal = function(line, oldName) {
   }, 100);
 };
 /* ============================================================
-   БЫСТРОЕ ДОБАВЛЕНИЕ МАШИНЫ ИЗ ФОРМЫ СТАНДАРТА
+   БЫСТРОЕ ДОБАВЛЕНИЕ МАШИНЫ (страницы стандарта и параметра)
    ============================================================ */
-window.openQuickAddMachineModal = function() {
+/* Кому добавляем машину: { line, onAdded(name) } — вызывающая страница
+   сама решает, как показать новую машину в своём списке. */
+let quickAddMachineTarget = null;
+
+window.openQuickAddMachineModal = function(target) {
   const modal = $('#quickAddMachineModal');
-  if (!modal) return;
-
-  // Линия зависит от контекста
-  const line = (quickAddMachineContext === 'electronic')
-    ? currentElectronicLine
-    : ($('#sf_line')?.value);
-
-  if (!line) return;
+  if (!modal || !target || !target.line) return;
+  quickAddMachineTarget = target;
+  const line = target.line;
 
   $('#quickAddMachineLineLabel').textContent = 'Линия: ' + line;
   $('#quickAddMachineName').value = '';
@@ -11804,12 +10942,8 @@ $('#quickAddMachineName')?.addEventListener('keydown', (e) => {
 });
 
 /* Сохранить */
-/* Сохранить */
 $('#quickAddMachineSaveBtn')?.addEventListener('click', () => {
-  // Линия зависит от контекста
-  const line = (quickAddMachineContext === 'electronic')
-    ? currentElectronicLine
-    : ($('#sf_line')?.value);
+  const line = quickAddMachineTarget?.line;
 
   const name = $('#quickAddMachineName')?.value.trim();
   if (!line) return;
@@ -11826,12 +10960,8 @@ $('#quickAddMachineSaveBtn')?.addEventListener('click', () => {
   lm[line].push(name);
   setLineMachines(lm);
 
-  // Обновляем тот селект, который открыт в текущем контексте
-  if (quickAddMachineContext === 'electronic') {
-    fillElectronicMachineSelect(line, name);
-  } else {
-    fillStandardMachineSelect(line, name);
-  }
+  // Страница, открывшая окно, подставляет новую машину у себя
+  if (typeof quickAddMachineTarget.onAdded === 'function') quickAddMachineTarget.onAdded(name);
 
   // Обновляем настройки (если они сейчас открыты — пользователь увидит новую машину)
   if (typeof renderLineMachinesSettings === 'function') renderLineMachinesSettings();
@@ -11840,11 +10970,6 @@ $('#quickAddMachineSaveBtn')?.addEventListener('click', () => {
   showToast('Машина добавлена на линию ' + line);
 });
 
-/* Кнопка «+» в форме стандарта */
-$('#sf_addMachineBtn')?.addEventListener('click', () => {
-  quickAddMachineContext = 'standard';
-  openQuickAddMachineModal();
-});
 function closeMachineModal() {
   closeModal('#machineModal');
 }
@@ -14394,16 +13519,6 @@ async function parseStandardsExcelV3(file, targetLine) {
 }
 
 /* ============================================================
-   Форма стандарта: сворачиваемые блоки Триггеры / Top Losses
-   ============================================================ */
-document.addEventListener('click', (e) => {
-  const head = e.target.closest('.sf-collapsible-header');
-  if (!head) return;
-  const parent = head.closest('.sf-collapsible');
-  if (!parent) return;
-  parent.classList.toggle('expanded');
-});
-/* ============================================================
    ВЫБОР ЛИНИИ — компактный dropdown (#linePickerModal)
    ============================================================ */
 
@@ -15691,14 +14806,7 @@ function refreshEditorElecTable() {
   // Обработчики
   wrap.querySelectorAll('[data-edit-elec]').forEach(btn => {
     btn.addEventListener('click', () => {
-      const id = btn.dataset.editElec;
-      const p = getElectronicParams().find(x => x.id === id);
-      if (!p) return;
-
-      // Устанавливаем контекст для формы
-      currentElectronicLine = p.line;
-      currentElectronicMachine = p.machine;
-      openElectronicParamForm(id);
+      openEparamPage(btn.dataset.editElec);
     });
   });
 
@@ -15905,37 +15013,13 @@ $('#eeFilterResetBtn')?.addEventListener('click', resetElecFilters);
    РЕДАКТОР: кнопки «Создать»
    ============================================================ */
 
-$('#editorMechAddBtn')?.addEventListener('click', () => {
-  const line = localStorage.getItem('cl_editor_line');
-  if (!line) {
-    showToast('Сначала выберите линию', true);
-    return;
-  }
-  // Устанавливаем контекст как раньше — currentEditorLine
-  currentEditorLine = line;
-  openStandardForm(null);
-});
+$('#editorMechAddBtn')?.addEventListener('click', openStandardCreatePage);
 
-$('#editorElecAddBtn')?.addEventListener('click', () => {
-  const line = localStorage.getItem('cl_editor_line');
-  if (!line) {
-    showToast('Сначала выберите линию', true);
-    return;
-  }
-  currentElectronicLine = line;
-  // Машина — первая из линии
-  const machines = getMachinesForLine(line);
-  if (!machines.length) {
-    showToast('Сначала добавьте машину для линии', true);
-    return;
-  }
-  currentElectronicMachine = machines[0];
-  openElectronicParamForm(null);
-});
+$('#editorElecAddBtn')?.addEventListener('click', () => openEparamPage(null));
 
 /* --- Электронные параметры: Импорт --- */
 $('#editorElecUploadBtn')?.addEventListener('click', () => {
-  const line = currentElectronicLine || localStorage.getItem('cl_editor_line');
+  const line = localStorage.getItem('cl_editor_line');
   if (!line) return showToast('Сначала выберите линию', true);
   $('#editorElecUploadInput').click();
 });
@@ -15944,7 +15028,7 @@ $('#editorElecUploadInput')?.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   e.target.value = '';
   if (!file) return;
-  const line = currentElectronicLine || localStorage.getItem('cl_editor_line');
+  const line = localStorage.getItem('cl_editor_line');
   if (!line) return;
   try {
     const count = await parseElectronicParamsExcel(file, line);
@@ -16002,7 +15086,7 @@ function parseValuesByBrand(str) {
 
 async function editorElecDownloadTemplate() {
   if (typeof ExcelJS === 'undefined') return showToast('Библиотека ExcelJS не загружена', true);
-  const line = currentElectronicLine || localStorage.getItem('cl_editor_line');
+  const line = localStorage.getItem('cl_editor_line');
   if (!line) return showToast('Сначала выберите линию', true);
 
   const wb = new ExcelJS.Workbook();
@@ -16059,7 +15143,7 @@ async function editorElecDownloadTemplate() {
 
 async function editorElecExport() {
   if (typeof ExcelJS === 'undefined') return showToast('Библиотека ExcelJS не загружена', true);
-  const line = currentElectronicLine || localStorage.getItem('cl_editor_line');
+  const line = localStorage.getItem('cl_editor_line');
   if (!line) return showToast('Сначала выберите линию', true);
 
   const params = getElectronicParams().filter(p => p.line === line);
@@ -16314,7 +15398,7 @@ function copyStandardNew(id) {
   if (typeof updatePartCounters === 'function') updatePartCounters();
 
   showToast('Стандарт скопирован');
-  openStandardForm(copy.id);
+  openStandardFullView(copy.id, 'edit');
 }
 
 /* ============================================================
@@ -16339,13 +15423,6 @@ function deleteStandardNew(id) {
    РЕДАКТОР: обработчики шапки (мех. режим)
    ============================================================ */
 
-/* Создать стандарт */
-$('#editorMechAddBtn')?.addEventListener('click', () => {
-  const line = localStorage.getItem('cl_editor_line');
-  if (!line) return showToast('Сначала выберите линию', true);
-  currentEditorLine = line;
-  openStandardForm(null);
-});
 
 /* Импорт из Excel — открыть диалог выбора файла */
 $('#editorMechUploadBtn')?.addEventListener('click', () => {
@@ -18933,7 +18010,8 @@ const svFullState = {
   standardId: null,        // id текущего стандарта
   mode: 'view',            // 'view' | 'edit'
   originalData: null,      // снимок для отмены редактирования
-  editingData: null        // НОВОЕ: рабочая копия при редактировании
+  editingData: null,       // НОВОЕ: рабочая копия при редактировании
+  isNew: false             // создаётся новый стандарт (ещё не в хранилище)
 };
 
 /* Открыть полноэкранный просмотр стандарта */
@@ -18945,6 +18023,7 @@ function openStandardFullView(id, mode) {
   }
 
   svFullState.standardId = id;
+  svFullState.isNew = false;
   svFullState.mode = mode === 'edit' ? 'edit' : 'view';
   svFullState.originalData = JSON.parse(JSON.stringify(st));
 
@@ -18969,9 +18048,45 @@ function openStandardFullView(id, mode) {
 }
 window.openStandardFullView = openStandardFullView;
 
+/* ============================================================ */
+/* === СОЗДАНИЕ МЕХАНИЧЕСКОГО СТАНДАРТА ======================= */
+/* ============================================================ */
+/* Новый стандарт открывается на той же полной странице, что и
+   редактирование существующего, — в режиме редактирования.
+   В хранилище он попадает только после «Сохранить». */
+function openStandardCreatePage() {
+  const line = localStorage.getItem('cl_editor_line');
+  if (!line) return showToast('Сначала выберите линию', true);
+
+  const st = createEmptyStandard();
+  st.id = uid();
+  st.line = line;
+  st.controlType = 'variable';
+  // Часть линии подставляем из фильтра редактора (только SMD)
+  if (getWorkshopIdForLine(line) === 'smd') {
+    const part = $('#emFilterPart')?.value || '';
+    if (part === 'Maker' || part === 'Packer') st.nodePart = part;
+  }
+  // Одна пустая строка точек, чтобы было куда вводить значения
+  st.measurements = [{ brand: '', points: [{ value: '' }] }];
+
+  svFullState.standardId = st.id;
+  svFullState.isNew = true;
+  svFullState.mode = 'edit';
+  svFullState.originalData = JSON.parse(JSON.stringify(st));
+  svFullState.editingData = st;
+
+  if (typeof switchTab === 'function') switchTab('standard-view');
+  switchSvFullTab('main');
+  renderStandardFullView();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+window.openStandardCreatePage = openStandardCreatePage;
+
 /* Закрыть полноэкранный просмотр — вернуться в редактор */
 function closeStandardFullView() {
   svFullState.standardId = null;
+  svFullState.isNew = false;
   svFullState.mode = 'view';
   svFullState.originalData = null;
   svFullState.editingData = null;
@@ -19005,7 +18120,14 @@ function renderStandardFullView() {
 
   // --- Заголовок ---
   const titleEl = $('#svFullTitle');
-  if (titleEl) titleEl.textContent = st.title || '—';
+  if (titleEl) {
+    titleEl.textContent = svFullState.isNew
+      ? (st.title || 'Новый стандарт')
+      : (st.title || '—');
+  }
+  // У нового стандарта ещё нет ознакомлений, истории и комментариев
+  const svTabs = $('#svFullTabs');
+  if (svTabs) svTabs.style.display = svFullState.isNew ? 'none' : '';
 
   // --- Крошки ---
   renderSvFullCrumbs(st);
@@ -19157,7 +18279,7 @@ function renderSvMainFields(st, isEdit) {
     const showNodePart = (workshopId === 'smd');
     const nodePartHtml = showNodePart ? `
       <div class="sv-full-field-edit">
-        <label>Часть линии</label>
+        <label class="required">Часть линии</label>
         <select id="svf_nodePart">
           <option value="">— выберите —</option>
           <option value="Maker" ${st.nodePart === 'Maker' ? 'selected' : ''}>Maker</option>
@@ -19168,20 +18290,23 @@ function renderSvMainFields(st, isEdit) {
 
     wrap.innerHTML = `
       <div class="sv-full-field-edit">
-        <label>Название</label>
+        <label class="required">Название</label>
         <input type="text" id="svf_title" value="${escapeAttr(st.title || '')}">
       </div>
       <div class="sv-full-field-edit">
-        <label>№ OPL</label>
+        <label class="required">№ OPL</label>
         <input type="text" id="svf_oplNumber" value="${escapeAttr(st.oplNumber || '')}">
       </div>
       <div class="sv-full-field-edit">
-        <label>Машина</label>
-        <select id="svf_machine">${machineOpts}</select>
+        <label class="required">Машина</label>
+        <div class="sv-field-with-btn">
+          <select id="svf_machine">${machineOpts}</select>
+          <button type="button" class="btn btn-secondary btn-sm" id="svf_addMachineBtn" title="Добавить машину в список линии">+</button>
+        </div>
       </div>
       ${nodePartHtml}
       <div class="sv-full-field-edit">
-        <label>Узел</label>
+        <label class="required">Узел</label>
         <input type="text" id="svf_node" value="${escapeAttr(st.node || '')}">
       </div>
       <div class="sv-full-field-edit">
@@ -19200,7 +18325,7 @@ function renderSvMainFields(st, isEdit) {
                placeholder="Штангенциркуль, линейка...">
       </div>
       <div class="sv-full-field-edit">
-        <label>Тип контроля</label>
+        <label class="required">Тип контроля</label>
         <select id="svf_controlType">
           <option value="">— выберите —</option>
           <option value="fixed"     ${st.controlType === 'fixed'    ? 'selected' : ''}>Фиксированный</option>
@@ -19809,8 +18934,11 @@ function renderSvFullExtra(st, isEdit) {
       </div>
     `;
 
+    const forceChip = st.forceInChangeOver
+      ? '<span class="et-type-chip et-type-changeover">Всегда в Change Over</span>'
+      : '';
     wrap.innerHTML = `
-      ${block('Применять к', appliesToChips)}
+      ${block('Применять к', appliesToChips + forceChip)}
       ${block('Триггеры Change Over', triggerChips)}
       ${block('Top Losses', lossChips)}
     `;
@@ -19870,6 +18998,10 @@ function renderSvFullExtra(st, isEdit) {
       <div class="sv-full-extra-chips">
         ${appliesToHtml}
       </div>
+      <label class="sv-force-co" title="Показывать в смене сорта, даже если точки брендов одинаковые">
+        <input type="checkbox" id="svf_forceInChangeOver" ${st.forceInChangeOver ? 'checked' : ''}>
+        <span>Всегда показывать в Change Over, даже если точки брендов совпадают</span>
+      </label>
     </div>
 
     <div class="sv-full-extra-block">
@@ -19904,6 +19036,10 @@ function renderSvFullExtra(st, isEdit) {
       const allChecked = [...$$('#svf_appliesToGroup input:checked')].map(x => x.value);
       st.appliesTo = allChecked;
     });
+  });
+
+  $('#svf_forceInChangeOver')?.addEventListener('change', (e) => {
+    st.forceInChangeOver = e.target.checked;
   });
 
   // Триггеры — удаление чипа и выбор через модалку
@@ -20026,7 +19162,37 @@ window.switchSvFullTab = switchSvFullTab;
    Обработчики кнопок
    ============================================================ */
 
-$('#svFullBackBtn')?.addEventListener('click', closeStandardFullView);
+/* Машина и часть линии сразу попадают в рабочую копию:
+   от части зависит список триггеров в окне выбора. */
+/* «+» у машины — добавить машину в список линии и сразу выбрать её */
+$('#svMainFields')?.addEventListener('click', (e) => {
+  if (!e.target.closest('#svf_addMachineBtn')) return;
+  const st = svFullState.editingData;
+  if (!st) return;
+  openQuickAddMachineModal({
+    line: st.line,
+    onAdded: (name) => {
+      const sel = $('#svf_machine');
+      if (sel) {
+        sel.insertAdjacentHTML('beforeend', `<option value="${escapeAttr(name)}">${escapeHtml(name)}</option>`);
+        sel.value = name;
+      }
+      st.machine = name;
+    }
+  });
+});
+
+$('#svMainFields')?.addEventListener('change', (e) => {
+  const st = svFullState.editingData;
+  if (!st) return;
+  if (e.target.id === 'svf_nodePart') st.nodePart = e.target.value;
+  if (e.target.id === 'svf_machine') st.machine = e.target.value;
+});
+
+$('#svFullBackBtn')?.addEventListener('click', () => {
+  if (svFullState.isNew && !confirm('Выйти без сохранения? Новый стандарт не будет создан.')) return;
+  closeStandardFullView();
+});
 
 $('#svFullEditBtn')?.addEventListener('click', () => {
   if (!svFullState.standardId) return;
@@ -20041,6 +19207,11 @@ $('#svFullEditBtn')?.addEventListener('click', () => {
 });
 
 $('#svFullCancelBtn')?.addEventListener('click', () => {
+  if (svFullState.isNew) {
+    if (!confirm('Отменить создание стандарта? Введённые данные не сохранятся.')) return;
+    closeStandardFullView();
+    return;
+  }
   if (!confirm('Отменить изменения?')) return;
   svFullState.mode = 'view';
   svFullState.editingData = null;
@@ -20082,8 +19253,9 @@ $('#svFullSaveBtn')?.addEventListener('click', () => {
   }
 
   const all = getStandards();
+  const isNew = svFullState.isNew;
   const stOriginal = all.find(s => s.id === id);
-  if (!stOriginal) return;
+  if (!stOriginal && !isNew) return;
 
   // Работаем с копией
   const st = svFullState.editingData;
@@ -20108,6 +19280,31 @@ $('#svFullSaveBtn')?.addEventListener('click', () => {
   if (!oplNumber) return showToast('Укажите OPL №', true);
   if (!machine)   return showToast('Выберите машину', true);
   if (!node)      return showToast('Укажите узел', true);
+
+  // Описания и таблица точек живут только в полях страницы —
+  // забираем их отсюда (раньше правки этих блоков терялись при сохранении).
+  const textOf = (sel, fallback) => {
+    const el = $(sel);
+    return el ? el.value.trim() : (fallback || '');
+  };
+  const problemDescription = textOf('#svf_problemDescription', st.problemDescription);
+  const controlDescription = textOf('#svf_controlDescription', st.controlDescription);
+  const purpose = textOf('#svf_purpose', st.purpose);
+  const whyCreated = textOf('#svf_whyCreated', st.whyCreated);
+  const measurements = $('#svf_brandBlocksContainer')
+    ? getSvTableState()
+        .map(m => ({ brand: m.brand, points: m.points.map(pt => ({ value: String(pt.value || '').trim() })) }))
+        .filter(m => m.brand || m.points.some(pt => pt.value))
+    : (st.measurements || []);
+
+  const controlType = controlEl ? controlEl.value : st.controlType;
+  if (!controlType) return showToast('Выберите тип контроля', true);
+  // Вариабельный и интервал без точек проверить нечем
+  const hasPoints = measurements.some(m =>
+    (m.points || []).some(pt => String(pt.value || '').trim()));
+  if ((controlType === 'variable' || controlType === 'interval') && !hasPoints) {
+    return showToast('Заполните хотя бы одну точку контроля', true);
+  }
 
   // Проверка дубликата OPL № на линии + машине (кроме текущего)
   const dup = all.find(s =>
@@ -20137,16 +19334,23 @@ $('#svFullSaveBtn')?.addEventListener('click', () => {
     machine,
     node,
     nodePart,
+    problemDescription,
+    controlDescription,
+    purpose,
+    whyCreated,
+    measurements,
     durationSec: durationEl ? Math.max(0, parseInt(durationEl.value, 10) || 0) : st.durationSec,
     tool: toolEl ? toolEl.value.trim() : st.tool,
-    controlType: migrateControlType(controlEl ? controlEl.value : st.controlType, st.measurements),
+    controlType: migrateControlType(controlType, measurements),
     active: activeEl ? activeEl.checked : st.active,
     updatedAt: new Date().toISOString()
   };
+  if (isNew) updated.createdAt = updated.updatedAt;
 
   // Сохраняем в массив
   const idx = all.findIndex(s => s.id === id);
   if (idx !== -1) all[idx] = updated;
+  else all.push(updated);
 
   setStandards(all);
 
@@ -20158,10 +19362,12 @@ $('#svFullSaveBtn')?.addEventListener('click', () => {
 
   // Возвращаемся в режим просмотра
   svFullState.mode = 'view';
+  svFullState.isNew = false;
   svFullState.originalData = JSON.parse(JSON.stringify(updated));
+  svFullState.editingData = null;
   renderStandardFullView();
 
-  showToast('Стандарт обновлён');
+  showToast(isNew ? 'Стандарт создан' : 'Стандарт обновлён');
 });
 
 init();

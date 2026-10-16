@@ -1287,6 +1287,97 @@
 
 </div>
 
+<!-- ======================= ВКЛАДКА: ЭЛЕКТРОННЫЙ ПАРАМЕТР (создание / редактирование) ======================= -->
+<div class="tab" id="tab-eparam-edit">
+
+  <div class="sv-full-header">
+    <div class="sv-full-header-left">
+      <button type="button" class="sv-full-back-btn" id="epPageBackBtn" title="Назад к параметрам">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"/>
+          <polyline points="12 19 5 12 12 5"/>
+        </svg>
+        <span>Назад</span>
+      </button>
+      <div class="sv-full-header-title-wrap">
+        <h1 class="sv-full-title" id="epPageTitle">—</h1>
+        <div class="sv-full-crumbs" id="epPageCrumbs"></div>
+      </div>
+    </div>
+    <div class="sv-full-header-actions">
+      <button type="button" class="sv-full-action-btn sv-full-action-save" id="epPageSaveBtn">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        <span>Сохранить</span>
+      </button>
+      <button type="button" class="sv-full-action-btn sv-full-action-cancel" id="epPageCancelBtn">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+        <span>Отмена</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="sv-full-content">
+    <div class="sv-full-grid">
+
+      <div class="sv-full-col-main">
+        <div class="card sv-full-card">
+          <div class="sv-full-card-title">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="16" x2="12" y2="12"/>
+              <line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+            Основная информация
+          </div>
+          <div class="sv-full-fields" id="epMainFields"></div>
+        </div>
+
+        <div class="card sv-full-card">
+          <div class="sv-full-card-title">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 11l3 3L22 4"/>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+            Норма
+          </div>
+          <div class="sv-full-content-blocks" id="epNormBlock"></div>
+        </div>
+      </div>
+
+      <div class="sv-full-col-side">
+        <div class="card sv-full-card">
+          <div class="sv-full-card-title">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+            </svg>
+            Связанные объекты
+          </div>
+          <div class="sv-full-related" id="epRelated"></div>
+        </div>
+
+        <div class="card sv-full-card">
+          <div class="sv-full-card-title">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Дополнительная информация
+          </div>
+          <div class="sv-full-extra" id="epExtra"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <!-- ======================= ВКЛАДКА НАСТРОЙКИ ======================= -->
 <div class="tab" id="tab-settings">
 
@@ -1969,357 +2060,6 @@
   </div>
 </div>
 
-<!-- ======================= МОДАЛЬНОЕ ОКНО: СТАНДАРТ ======================= -->
-<div class="modal-overlay" id="standardFormModal">
-  <div class="modal modal-wide">
-    <div class="modal-header">
-      <h3 id="standardFormTitle">Добавить стандарт</h3>
-      <button class="modal-close" id="standardFormClose">✕</button>
-    </div>
-    <div class="modal-body">
-
-      <input type="hidden" id="sf_id">
-
-      <p class="sf-required-hint">
-        Поля со звёздочкой <span class="sf-req-star">*</span> обязательны для заполнения.
-      </p>
-
-    <h4 class="form-section-title">Основные</h4>
-      <div class="row">
-        <div class="field" style="max-width:200px">
-          <label class="required">OPL №</label>
-          <input type="text" id="sf_oplNumber" placeholder="OPL-4.2.1">
-        </div>
-        <div class="field" style="max-width:260px">
-          <label class="required">Машина</label>
-          <div class="field-with-btn">
-            <select id="sf_machine"></select>
-            <button type="button" class="btn btn-secondary btn-sm" id="sf_addMachineBtn" title="Добавить машину в список линии">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-        <div class="field">
-          <label class="required">Линия</label>
-          <input type="text" id="sf_line" readonly style="background:var(--bg-hover)">
-        </div>
-      </div>
-
-      <h4 class="form-section-title">Оборудование</h4>
-      <div class="row">
-        <div class="field" style="position:relative">
-          <label class="required">Узел</label>
-          <input type="text" id="sf_node" placeholder="Узел передачи табачных палочек" autocomplete="off">
-          <div class="autocomplete-dropdown" id="sf_nodeDropdown" style="display:none"></div>
-        </div>
-        <div class="field" style="max-width:200px">
-          <label class="required">Часть линии</label>
-          <select id="sf_nodePart">
-            <option value="">— выберите —</option>
-            <option value="Maker">Maker</option>
-            <option value="Packer">Packer</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="field">
-        <label class="required">Название</label>
-        <input type="text" id="sf_title" placeholder="Давление на передающем устройстве (Паук)">
-      </div>
-
-      <h4 class="form-section-title">Описания</h4>
-      <div class="field">
-        <label>Описание проблемы</label>
-        <textarea id="sf_problemDescription" rows="2" placeholder="Что происходит при отклонении"></textarea>
-      </div>
-      <div class="field">
-        <label>Описание контроля</label>
-        <textarea id="sf_controlDescription" rows="2" placeholder="Как проверять, что должно быть"></textarea>
-      </div>
-      <div class="field">
-        <label>Цель (зачем мы это делаем?)</label>
-        <textarea id="sf_purpose" rows="2" placeholder="Для чего создан стандарт"></textarea>
-      </div>
-      <div class="field">
-        <label>Почему создан</label>
-        <textarea id="sf_whyCreated" rows="2" placeholder="К чему приводит отсутствие контроля"></textarea>
-      </div>
-
-      <h4 class="form-section-title">Работа</h4>
-      <div class="row">
-        <div class="field" style="flex:0 0 auto;min-width:auto">
-          <div class="elec-work-chips" id="sf_workChips">
-            <button type="button" class="elec-work-chip elec-work-chip-run active" data-work="Run">Run</button>
-            <button type="button" class="elec-work-chip elec-work-chip-stop" data-work="Stop">Stop</button>
-          </div>
-        </div>
-      </div>
-      <p style="color:var(--text-second);font-size:12px;margin-top:-6px;margin-bottom:10px">
-        Время проверки задаётся в «Расписании CL».
-      </p>
-
-      <h4 class="form-section-title">Тип контроля</h4>
-      <div class="field">
-        <select id="sf_controlType">
-          <option value="">— выберите —</option>
-          <option value="fixed">Фиксированный (точное значение / ОК-НеОК)</option>
-          <option value="variable">Вариабельный (значение ± допуск)</option>
-          <option value="interval">Контролируемый интервал (от … до …)</option>
-        </select>
-      </div>
-
-      <div id="sf_pointsSection">
-        <h4 class="form-section-title">Точки замера</h4>
-        <p style="color:var(--text-second);font-size:12px;margin-bottom:10px">
-          Для каждого бренда задайте свой набор точек замера. У всех брендов одинаковое число точек.
-          Добавление/удаление точки применяется ко всем брендам.
-        </p>
-        <div id="sf_brandBlocksContainer"></div>
-        <button type="button" class="btn btn-secondary btn-sm" id="sf_addBrandBlockBtn" style="margin-top:10px">
-          + Добавить бренд
-        </button>
-      </div>
-
-      <h4 class="form-section-title">Применять к</h4>
-      <div class="checkbox-group type-checkbox-group" id="sf_appliesToGroup">
-        <label class="type-checkbox type-checkbox-changeover">
-          <input type="checkbox" value="ChangeOver"> <span>Change Over</span>
-        </label>
-        <label class="type-checkbox type-checkbox-clto">
-          <input type="checkbox" value="CL_TO"> <span>CL в ТО</span>
-        </label>
-        <label class="type-checkbox type-checkbox-clconv">
-          <input type="checkbox" value="CL_Conversion"> <span>CL в Конвертацию</span>
-        </label>
-      </div>
-      <p style="color:var(--text-second);font-size:12px;margin-top:8px">
-        Если ничего не выбрано — стандарт хранится в системе, но оператору не показывается.
-      </p>
-
-      <div class="field" id="sf_forceChangeOverField" style="margin-top:10px">
-        <label class="sf-switch-label">
-          <input type="checkbox" id="sf_forceChangeOver">
-          <span>
-            <strong>Показывать в смене сорта всегда</strong>
-            <em>По умолчанию стандарт попадает в проверку смены сорта только если точки
-            целевого бренда отличаются от исходного.</em>
-          </span>
-        </label>
-      </div>
-
-      <div class="sf-collapsible" id="sf_triggersCollapsible">
-        <div class="sf-collapsible-header" data-sf-toggle="triggers">
-          <span class="sf-collapsible-toggle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"/>
-            </svg>
-          </span>
-          <span class="sf-collapsible-title">Триггеры Change Over (опционально)</span>
-          <span class="sf-collapsible-hint">Материалы и узлы, при которых показывать стандарт</span>
-        </div>
-        <div class="sf-collapsible-body">
-          <div id="sf_triggersGroup"></div>
-        </div>
-      </div>
-
-      <div class="sf-collapsible" id="sf_topLossesCollapsible">
-        <div class="sf-collapsible-header" data-sf-toggle="toplosses">
-          <span class="sf-collapsible-toggle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"/>
-            </svg>
-          </span>
-          <span class="sf-collapsible-title">Top Losses</span>
-          <span class="sf-collapsible-hint">
-            Применено: <strong id="sf_topLossesCount">0</strong>
-          </span>
-        </div>
-        <div class="sf-collapsible-body">
-          <p style="color:var(--text-second);font-size:12px;margin-bottom:10px">
-            Отметьте потери, которые этот стандарт помогает контролировать.
-            Оператор увидит его на вкладке «TOP Losses», когда выберет эти потери.
-          </p>
-          <div id="sf_topLossesSelected"></div>
-          <button type="button" class="btn btn-secondary btn-sm" id="sf_addTopLossBtn" style="margin-top:10px">
-            + Добавить потерю
-          </button>
-        </div>
-      </div>
-
-      <h4 class="form-section-title">Фотографии</h4>
-      <p style="color:var(--text-second);font-size:12px;margin-bottom:10px">
-        Укажите имена файлов из папки
-        <code id="sf_photoPathHint" style="background:var(--bg-hover);padding:1px 6px;border-radius:3px">photos/&lt;line&gt;/&lt;Maker|Packer&gt;/</code>.
-        Файлы должны лежать там заранее.
-      </p>
-
-      <div class="photo-add-row">
-        <div class="photo-add-input">
-          <label style="font-size:11px;text-transform:none;letter-spacing:0;color:var(--text-dim);margin-bottom:4px;display:block">
-            Имена файлов — через запятую или с новой строки
-          </label>
-          <textarea id="sf_newPhotoName" rows="2"
-                    placeholder="max-1.jpg, max-2.jpg&#10;drum-front.jpg"
-                    autocomplete="off" spellcheck="false"></textarea>
-        </div>
-        <button type="button" class="btn btn-secondary btn-icon-text" id="sf_addPhotoBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          <span>Добавить</span>
-        </button>
-      </div>
-
-      <div id="sf_photosGrid" class="photos-grid"></div>
-      <div id="sf_photosEmpty" class="photos-empty">Фотографий пока нет</div>
-
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" id="standardFormCancel">Отмена</button>
-      <button class="btn btn-primary" id="standardFormSave">Сохранить</button>
-    </div>
-  </div>
-</div>
-<!-- ======================= МОДАЛЬНОЕ ОКНО: ЭЛЕКТРОННЫЙ ПАРАМЕТР ======================= -->
-<div class="modal-overlay" id="electronicParamModal">
-  <div class="modal modal-wide">
-    <div class="modal-header">
-      <h3 id="electronicParamTitle">Добавить электронный параметр</h3>
-      <button class="modal-close" id="electronicParamClose">✕</button>
-    </div>
-    <div class="modal-body">
-
-      <input type="hidden" id="ep_id">
-
-      <h4 class="form-section-title">Основные</h4>
-      <div class="row">
-        <div class="field">
-          <label class="required">Линия</label>
-          <input type="text" id="ep_line" readonly style="background:var(--bg-hover)">
-        </div>
-        <div class="field">
-          <label class="required">Машина</label>
-          <div class="field-with-btn">
-            <select id="ep_machine"></select>
-            <button type="button" class="btn btn-secondary btn-sm" id="ep_addMachineBtn" title="Добавить машину">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-        <div class="field" id="ep_nodePartField" style="max-width:180px">
-          <label class="required">Часть линии</label>
-          <select id="ep_nodePart">
-            <option value="">— выберите —</option>
-            <option value="Maker">Maker</option>
-            <option value="Packer">Packer</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="field">
-        <label class="required">Описание параметра</label>
-        <input type="text" id="ep_paramName" placeholder="Пуск клина шва, м">
-      </div>
-
-      <div class="row">
-        <div class="field" style="flex:0 0 auto;min-width:auto">
-          <label class="required">Работа</label>
-          <div class="elec-work-chips" id="ep_workChips">
-            <button type="button" class="elec-work-chip elec-work-chip-run active" data-work="Run">Run</button>
-            <button type="button" class="elec-work-chip elec-work-chip-stop" data-work="Stop">Stop</button>
-          </div>
-        </div>
-      </div>
-      <p style="color:var(--text-second);font-size:12px;margin-top:-6px;margin-bottom:10px">
-        Время проверки задаётся в «Расписании CL».
-      </p>
-
-      <h4 class="form-section-title">Тип контроля</h4>
-      <div class="field" style="flex-basis:100%">
-        <input type="hidden" id="ep_controlType" value="variable">
-          <div class="type-selector" id="ep_controlTypeSelector">
-            <button type="button" class="type-option type-option-changeover active" data-value="fixed">
-              <span class="type-option-title">Фиксированный</span>
-              <span class="type-option-time">точное значение / ОК-НеОК</span>
-            </button>
-            <button type="button" class="type-option type-option-clto" data-value="variable">
-              <span class="type-option-title">Вариабельный</span>
-              <span class="type-option-time">target ± tolerance</span>
-            </button>
-            <button type="button" class="type-option type-option-changeover" data-value="interval">
-              <span class="type-option-title">Контролируемый интервал</span>
-              <span class="type-option-time">от … до …</span>
-            </button>
-          </div>
-      </div>
-
-      <div id="ep_normTextBlock" style="display:none">
-        <h4 class="form-section-title">Текст нормы (ОК / Не ОК)</h4>
-        <div class="field">
-          <input type="text" id="ep_normText" placeholder="Например: проверить визуально, что плёнка без повреждений">
-        </div>
-        <p style="color:var(--text-second);font-size:12px;margin-top:-4px;margin-bottom:12px">
-          Для типа «Фиксированный» без числовой нормы оператор отмечает ОК / Не ОК.
-        </p>
-      </div>
-
-      <h4 class="form-section-title">Применять к</h4>
-      <div class="checkbox-group type-checkbox-group" id="ep_appliesToGroup">
-        <label class="type-checkbox type-checkbox-changeover">
-          <input type="checkbox" value="ChangeOver"> <span>Change Over</span>
-        </label>
-        <label class="type-checkbox type-checkbox-clto">
-          <input type="checkbox" value="CL_TO"> <span>CL в ТО</span>
-        </label>
-        <label class="type-checkbox type-checkbox-clconv">
-          <input type="checkbox" value="CL_Conversion"> <span>CL в Конвертацию</span>
-        </label>
-      </div>
-      <p style="color:var(--text-second);font-size:12px;margin-top:8px;margin-bottom:12px">
-        Если ничего не выбрано — параметр хранится, но оператору не показывается.
-      </p>
-
-      <h4 class="form-section-title">Триггеры Change Over</h4>
-      <div id="ep_triggersGroup"></div>
-      <p style="color:var(--text-second);font-size:12px;margin-top:6px;margin-bottom:12px">
-        Показывать этот параметр только при выбранном «Что меняется».
-      </p>
-
-      <div id="ep_brandsBlock">
-        <h4 class="form-section-title">Значения по брендам</h4>
-        <p style="color:var(--text-second);font-size:12px;margin-bottom:10px">
-          Добавьте строку для каждого бренда, у которого есть своя норма.
-          Бренды, для которых норма не задана, не будут показаны оператору.
-        </p>
-        <table class="elec-brands-table">
-          <thead>
-            <tr>
-              <th style="width:40%">Бренд</th>
-              <th>Target</th>
-              <th>Tolerance ±</th>
-              <th style="width:50px"></th>
-            </tr>
-          </thead>
-          <tbody id="ep_brandsTbody"></tbody>
-        </table>
-        <button type="button" class="btn btn-secondary btn-sm" id="ep_addBrandRowBtn" style="margin-top:10px">
-          + Добавить бренд
-        </button>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" id="electronicParamCancel">Отмена</button>
-      <button class="btn btn-primary" id="electronicParamSave">Сохранить</button>
-    </div>
-  </div>
-</div>
 <!-- ======================= МОДАЛЬНОЕ ОКНО: РАСПИСАНИЕ БРЕНДОВ ======================= -->
 <div class="modal-overlay" id="electronicBrandScheduleModal">
   <div class="modal modal-wide">
