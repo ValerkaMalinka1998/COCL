@@ -877,7 +877,7 @@ tr:hover td { background: var(--bg-hover); }
 .cocl-step.is-done .cocl-step-num {
   background: var(--accent-cyan);
   border-color: var(--accent-cyan);
-  color: #ffffff;
+  color: var(--on-accent);
 }
 .cocl-step.is-done .cocl-step-num::before {
   content: '✓';

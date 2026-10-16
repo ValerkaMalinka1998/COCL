@@ -38,6 +38,8 @@
   --part-maker-fg:   #ffffff;
   --part-packer-bg:  #4b5568;
   --part-packer-fg:  #ffffff;
+  /* Текст на заливке акцентным цветом (номер шага, активная кнопка) */
+  --on-accent:       #ffffff;
 
   /* Текст */
   --text-main:    #1a2643;
@@ -98,6 +100,8 @@
   --part-maker-fg:   #ffffff;
   --part-packer-bg:  #5d6880;
   --part-packer-fg:  #ffffff;
+  /* Текст на заливке акцентным цветом (номер шага, активная кнопка) */
+  --on-accent:       #ffffff;
 
   /* Текст — светлый */
   --text-main:    #e0e7ff;
