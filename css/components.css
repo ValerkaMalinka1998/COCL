@@ -1498,7 +1498,7 @@ tr:hover td { background: var(--bg-hover); }
   display: block;
   pointer-events: none;
 }
-.lb-group.expanded .lb-group-toggle {
+.lb-group.expanded > .lb-group-head .lb-group-toggle {
   transform: rotate(90deg);
   color: var(--accent-cyan);
 }
@@ -3552,7 +3552,7 @@ header,
   display: block;
   pointer-events: none;
 }
-.bl-group.expanded .bl-group-toggle {
+.bl-group.expanded > .bl-group-head .bl-group-toggle {
   transform: rotate(90deg);
   color: var(--accent-cyan);
 }
@@ -3832,7 +3832,7 @@ header,
   display: block;
   pointer-events: none;
 }
-.tl-cat-group.expanded .tl-cat-group-toggle {
+.tl-cat-group.expanded > .tl-cat-group-head .tl-cat-group-toggle {
   transform: rotate(90deg);
   color: var(--accent-amber);
 }
@@ -4158,7 +4158,7 @@ header,
   display: block;
   pointer-events: none;
 }
-.lm-group.expanded .lm-group-toggle {
+.lm-group.expanded > .lm-group-head .lm-group-toggle {
   transform: rotate(90deg);
   color: var(--accent-cyan);
 }
