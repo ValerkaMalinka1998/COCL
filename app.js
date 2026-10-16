@@ -3352,8 +3352,7 @@ function setElectronicBrandScheduleBulk(line, entries) {
 }
 
 /* Утилита: сегодняшняя дата в формате 'YYYY-MM-DD' */
-function todayISO() {
-  const d = new Date();
+function todayISO(d = new Date()) {
   const dd = String(d.getDate()).padStart(2, '0');
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const yyyy = d.getFullYear();
@@ -3371,8 +3370,9 @@ function addDaysISO(dateStr, n) {
 }
 
 /* Утилита: 7 дат ISO-недели (Пн..Вс) со сдвигом offset недель */
-function getWeekDays(offset = 0) {
-  const now = new Date();
+/* base — дата, от которой считается «текущая» неделя (по умолчанию сейчас) */
+function getWeekDays(offset = 0, base = new Date()) {
+  const now = new Date(base);
   const jsDay = now.getDay();
   const isoDay = jsDay === 0 ? 7 : jsDay;
 
@@ -3389,6 +3389,13 @@ function getWeekDays(offset = 0) {
     days.push(`${yyyy}-${mm}-${dd}`);
   }
   return days;
+}
+
+/* Неделя Чек-листа CL считается от даты ТЕКУЩЕЙ СМЕНЫ, а не от календаря:
+   в понедельник 00:00–08:59 ещё идёт ночная смена воскресенья, и оператор
+   должен видеть ту неделю, где эта смена находится. */
+function getClWeekDays(offset = 0) {
+  return getWeekDays(offset, new Date(getCurrentShiftPeriod().date + 'T12:00:00'));
 }
 
 /* Текущая неделя (offset = 0) */
@@ -10433,11 +10440,6 @@ function getShiftsForDate(date) {
   };
 }
 
-function getCurrentShiftType() {
-  const h = new Date().getHours();
-  return (h >= 9 && h < 21) ? 'day' : 'night';
-}
-
 /* Текущий период смены: тип + ДАТА НАЧАЛА смены.
    Ночная смена 21:00 → 09:00 переходит через полночь:
    в интервале 00:00–08:59 активна ночная смена, которая
@@ -10445,14 +10447,17 @@ function getCurrentShiftType() {
    Пример: в 06:00 в пятницу активна «Чт · ночь», а не «Пт · ночь». */
 function getCurrentShiftPeriod(now = new Date()) {
   const h = now.getHours();
+  // Дата берётся из переданного now, а не из системных часов,
+  // чтобы функцию можно было проверить на любом времени.
+  const today = todayISO(now);
   if (h >= 9 && h < 21) {
-    return { shiftType: 'day', date: todayISO() };
+    return { shiftType: 'day', date: today };
   }
   if (h >= 21) {
-    return { shiftType: 'night', date: todayISO() };
+    return { shiftType: 'night', date: today };
   }
   // 00:00 – 08:59 → ночная смена, стартовавшая вчера в 21:00
-  return { shiftType: 'night', date: addDaysISO(todayISO(), -1) };
+  return { shiftType: 'night', date: addDaysISO(today, -1) };
 }
 
 /* Обёртка для совместимости со старым кодом */
@@ -17276,7 +17281,7 @@ function getClRowFreq(row) {
   if (!row) return base;
 
   // Правки просматриваемой недели (в т.ч. когда неделя уже стала текущей)
-  const ov = getScheduleWeekOverride(getWeekDays(clState.weekOffset || 0)[0], clState.line) || {};
+  const ov = getScheduleWeekOverride(getClWeekDays(clState.weekOffset || 0)[0], clState.line) || {};
   const snap = ov.rows && ov.rows[row.id];
   if (snap) {
     return {
@@ -18326,7 +18331,7 @@ function renderClMatrix() {
   }
 
   // --- Расписание для просматриваемой недели + уже проверенные стандарты ---
-  const weekDaysForRows = getWeekDays(clState.weekOffset);
+  const weekDaysForRows = getClWeekDays(clState.weekOffset);
   const weekStartForRows = weekDaysForRows[0];
 
   // Правки, сделанные в «Расписании CL» именно для этой недели
@@ -18391,14 +18396,14 @@ function renderClMatrix() {
     { idx: 0, name: 'Вс' }
   ];
 
-  const weekDays = getWeekDays(clState.weekOffset);
+  const weekDays = getClWeekDays(clState.weekOffset);
   const dateByDayIdx = {};
   [1, 2, 3, 4, 5, 6, 0].forEach((dayIdx, i) => {
     dateByDayIdx[dayIdx] = weekDays[i];
   });
 
   // Панель навигации по неделям
-  const weekLabel = getWeekLabel(clState.weekOffset);
+  const weekLabel = `${fmtShortDate(weekDays[0])} – ${fmtShortDate(weekDays[6])}`;
   const isCurrentWeek = clState.weekOffset === 0;
   let html = `
     <div class="cl-week-nav">
