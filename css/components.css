@@ -3748,18 +3748,6 @@ header,
   color: var(--accent-cyan);
   border: 1px solid rgba(0, 212, 255, 0.4);
 }
-.tl-workshop-filter {
-  flex-shrink: 0;
-  padding: 6px 10px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-main);
-  background: var(--bg-card);
-  border: 1px solid var(--border-hi);
-  border-radius: 6px;
-  cursor: pointer;
-}
-
 .tl-loss-inline-actions {
   display: flex;
   gap: 4px;

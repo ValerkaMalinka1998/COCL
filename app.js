@@ -1526,11 +1526,20 @@ function closeTopLossPickerModal() {
 }
 
 /** Отрисовать список категорий и потерь в модалке */
+/* Цех линии, для которой выбираем потери (форма или полная страница) */
+function getTopLossPickerWorkshop() {
+  const line = topLossPickerContext === 'sv-full'
+    ? ((svFullState.editingData || {}).line || '')
+    : ($('#sf_line')?.value || '');
+  return line ? getWorkshopIdForLine(line) : null;
+}
+
 function renderTopLossPickerList(query) {
   const list = $('#topLossPickerList');
   if (!list) return;
 
-  const cats = getTopLosses();
+  const pickerWs = getTopLossPickerWorkshop();
+  const cats = pickerWs ? getTopLossesForWorkshop(pickerWs) : getTopLosses();
   const q = (query || '').trim().toLowerCase();
 
   if (!cats.length) {
@@ -4129,6 +4138,54 @@ function makeLossId(name) {
     candidate = base + '_' + (++n);
   }
   return candidate;
+}
+
+/* Канонические категории Top Losses — у каждого цеха свой набор */
+const TOP_LOSS_CATEGORY_NAMES = ['Увеличенные остановки', 'Дефекты по качеству', 'Повышенные выбросы'];
+
+/* Категории одного цеха (после миграции у каждой категории есть workshop) */
+function getTopLossesForWorkshop(workshopId) {
+  if (!workshopId) return [];
+  return getTopLosses().filter(c => c.workshop === workshopId);
+}
+
+/* Разовая миграция: общие категории → по три категории на каждый цех.
+   Потеря уходит в цех из item.workshop, без цеха — в SMD (сегодняшние
+   данные — SMD Cell 2). ID потерь сохраняются, поэтому привязки
+   стандартов (standard.topLosses) не теряются. */
+function migrateTopLossesByWorkshop() {
+  const FLAG = 'cl_toploss_ws_split_v1';
+  try { if (localStorage.getItem(FLAG)) return; } catch (e) { return; }
+
+  const workshops = getWorkshops();
+  const wsIds = workshops.map(w => w.id);
+  const fallbackWs = wsIds.includes('smd') ? 'smd' : wsIds[0];
+  const src = getTopLosses();
+  const result = src.filter(c => c.workshop && wsIds.includes(c.workshop));
+  const shared = src.filter(c => !(c.workshop && wsIds.includes(c.workshop)));
+
+  wsIds.forEach(ws => {
+    shared.forEach(cat => {
+      const items = (cat.items || []).filter(it => {
+        const itWs = wsIds.includes(it.workshop) ? it.workshop : fallbackWs;
+        return itWs === ws;
+      }).map(it => ({ id: it.id, name: it.name }));
+      result.push({
+        id: ws === fallbackWs ? cat.id : cat.id + '_' + ws,
+        name: cat.name,
+        workshop: ws,
+        items
+      });
+    });
+    // У каждого цеха — все три канонические категории
+    TOP_LOSS_CATEGORY_NAMES.forEach(name => {
+      const has = result.some(c => c.workshop === ws && c.name.toLowerCase() === name.toLowerCase());
+      if (!has) result.push({ id: makeCategoryId(name) + '_' + ws, name, workshop: ws, items: [] });
+    });
+  });
+
+  setTopLosses(result);
+  try { localStorage.setItem(FLAG, '1'); } catch (e) {}
 }
 
 /* Сгенерировать id для новой категории */
@@ -7161,10 +7218,17 @@ function renderTopLossCategories() {
   const container = $('#tlCategoriesContainer');
   if (!container) return;
 
-  const cats = getTopLosses();
+  // Потери зависят от цеха линии: у каждого цеха свой справочник
+  const selLine = ($('#tlLine')?.value || '').trim();
+  if (!selLine) {
+    container.innerHTML = '<div class="tl-empty">Выберите линию — список потерь зависит от цеха.</div>';
+    return;
+  }
+  const lineWs = getWorkshopIdForLine(selLine);
+  const cats = getTopLossesForWorkshop(lineWs);
 
   if (!cats.length) {
-    container.innerHTML = '<div class="tl-empty">Справочник Top Losses пуст. Добавьте категории в Настройках.</div>';
+    container.innerHTML = `<div class="tl-empty">Для цеха ${escapeHtml(getWorkshopName(lineWs) || '')} потери не заданы. Добавьте их в Настройках.</div>`;
     return;
   }
 
@@ -11059,11 +11123,6 @@ function renderTopLossesSettings() {
         </button>
       </div>
 
-      <select id="tlWorkshopFilter" class="tl-workshop-filter" title="Фильтр по цеху">
-        <option value="">Все цеха</option>
-        ${workshops.map(w => `<option value="${escapeAttr(w.id)}">${escapeHtml(w.name)}</option>`).join('')}
-      </select>
-
       <button type="button" class="btn btn-secondary btn-sm tl-cat-toggle-all-btn" id="tlCatToggleAllBtn" title="Развернуть или свернуть все категории">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="tlCatToggleAllIcon">
           <polyline points="7 13 12 18 17 13"/>
@@ -11084,7 +11143,6 @@ function renderTopLossesSettings() {
       ? items.map(it => `
           <div class="tl-loss-inline-row" data-loss-id="${escapeAttr(it.id)}" data-cat-id="${escapeAttr(catId)}">
             <span class="tl-loss-inline-name">${escapeHtml(it.name)}</span>
-            ${it.workshop ? `<span class="tl-loss-ws-chip" title="Цех">${escapeHtml(getWorkshopName(it.workshop))}</span>` : ''}
             <div class="tl-loss-inline-actions">
               <button type="button" class="tl-row-action-btn tl-row-edit-btn" data-tl-edit="${escapeAttr(it.id)}" title="Изменить">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -11139,38 +11197,17 @@ function renderTopLossesSettings() {
     `;
   };
 
-  // --- Группируем категории по цехам ---
-  const catWorkshop = (cat) => {
-    // Цех категории: поле workshop, иначе — по общему цеху её потерь
-    if (cat.workshop) return cat.workshop;
-    const items = Array.isArray(cat.items) ? cat.items : [];
-    const wsSet = new Set(items.map(i => i.workshop).filter(Boolean));
-    if (wsSet.size === 1) return [...wsSet][0];
-    return '';
-  };
-
-  const byWs = new Map();
-  workshops.forEach(w => byWs.set(w.id, []));
-  const shared = [];
-  cats.forEach(cat => {
-    const ws = catWorkshop(cat);
-    if (ws && byWs.has(ws)) byWs.get(ws).push(cat);
-    else shared.push(cat);
-  });
-
+  // --- Блоки цехов: в каждом свои категории ---
   html += '<div class="tl-cat-groups">';
-
   workshops.forEach(w => {
-    const list = byWs.get(w.id) || [];
-    if (!list.length) return;
+    const list = cats.filter(c => c.workshop === w.id);
     const isOpen = wsOpen(w.id);
-    const lossCount = list.reduce((s, c) => s + ((c.items || []).length), 0);
-
+    const lossCount = list.reduce((sum, c) => sum + ((c.items || []).length), 0);
     html += `
       <div class="bl-group bl-group-workshop ${isOpen ? 'expanded' : ''}" data-ws-id="${escapeAttr(w.id)}">
         <div class="bl-group-head" data-ws-toggle="${escapeAttr(w.id)}">
           <span class="bl-group-toggle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="9 18 15 12 9 6"/>
             </svg>
           </span>
@@ -11178,32 +11215,11 @@ function renderTopLossesSettings() {
           <span class="bl-group-count">${list.length} кат. · ${lossCount} ${pluralizeLosses(lossCount)}</span>
         </div>
         <div class="bl-group-body">
-          <div class="tl-cat-groups">${list.map(renderCat).join('')}</div>
+          <div class="tl-cat-groups">${list.length ? list.map(renderCat).join('') : '<div class="tl-cat-empty">Категорий нет</div>'}</div>
         </div>
       </div>
     `;
   });
-
-  if (shared.length) {
-    const isOpen = wsOpen('__shared__');
-    const lossCount = shared.reduce((s, c) => s + ((c.items || []).length), 0);
-    html += `
-      <div class="bl-group bl-group-workshop ${isOpen ? 'expanded' : ''}" data-ws-id="__shared__">
-        <div class="bl-group-head" data-ws-toggle="__shared__">
-          <span class="bl-group-toggle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"/>
-            </svg>
-          </span>
-          <span class="bl-group-name">Общие (все цеха)</span>
-          <span class="bl-group-count">${shared.length} кат. · ${lossCount} ${pluralizeLosses(lossCount)}</span>
-        </div>
-        <div class="bl-group-body">
-          <div class="tl-cat-groups">${shared.map(renderCat).join('')}</div>
-        </div>
-      </div>
-    `;
-  }
 
   html += '</div>';
   container.innerHTML = html;
@@ -11278,6 +11294,7 @@ function renderTopLossesSettings() {
         setTlOpenCats([]);
       } else {
         setTlOpenCats(allIds);
+        setTlOpenWorkshops(workshops.map(w => w.id));
       }
       renderTopLossesSettings();
     });
@@ -11312,19 +11329,6 @@ function renderTopLossesSettings() {
     });
   }
 
-  // --- Фильтр по цеху ---
-  const wsFilter = $('#tlWorkshopFilter');
-  if (wsFilter) {
-    const savedWs = sessionStorage.getItem('tl_workshop_filter') || '';
-    wsFilter.value = savedWs;
-    if (savedWs) applyTlWorkshopFilter(savedWs);
-
-    wsFilter.addEventListener('change', () => {
-      const val = wsFilter.value;
-      sessionStorage.setItem('tl_workshop_filter', val);
-      applyTlWorkshopFilter(val);
-    });
-  }
 }
 
 function getTlOpenWorkshops() {
@@ -11332,54 +11336,6 @@ function getTlOpenWorkshops() {
 }
 function setTlOpenWorkshops(arr) {
   try { localStorage.setItem('cl_tl_open_ws', JSON.stringify(arr)); } catch(e) {}
-}
-
-/* Показать только потери выбранного цеха.
-   Работает и как «фильтр по цеху-блоку»: при выборе цеха показываем
-   только его блок, пряча остальные. */
-function applyTlWorkshopFilter(workshopId) {
-  const container = $('#topLossesContainer');
-  if (!container) return;
-
-  // 1) Блоки цехов: при выборе конкретного цеха — показываем только его
-  container.querySelectorAll('[data-ws-id]').forEach(block => {
-    const id = block.dataset.wsId;
-    if (!workshopId) {
-      block.style.display = '';
-      return;
-    }
-    block.style.display = (id === workshopId || id === '__shared__') ? '' : 'none';
-  });
-
-  // 2) Потери: показываем нужный цех и универсальные
-  const cats = getTopLosses();
-  container.querySelectorAll('.tl-loss-inline-row').forEach(row => {
-    const lossId = row.dataset.lossId;
-    const catId = row.dataset.catId;
-    if (!workshopId) {
-      row.style.display = '';
-      return;
-    }
-    const cat = cats.find(c => c.id === catId);
-    const item = cat && Array.isArray(cat.items) ? cat.items.find(i => i.id === lossId) : null;
-    const ws = item ? (item.workshop || '') : '';
-    row.style.display = (!ws || ws === workshopId) ? '' : 'none';
-  });
-
-  // 3) Скрываем категории, где не осталось видимых потерь
-  container.querySelectorAll('.tl-cat-group').forEach(group => {
-    const rows = group.querySelectorAll('.tl-loss-inline-row');
-    if (!rows.length) return;
-    const anyVisible = [...rows].some(r => r.style.display !== 'none');
-    group.style.display = anyVisible ? '' : 'none';
-  });
-
-  // 4) Раскрываем цех, чтобы сразу были видны его категории
-  if (workshopId) {
-    container.querySelectorAll('[data-ws-id]').forEach(block => {
-      if (block.style.display !== 'none') block.classList.add('expanded');
-    });
-  }
 }
 
 /* Обновить вид кнопки «Развернуть / Свернуть всё» */
@@ -11426,8 +11382,6 @@ function applyTlCatSearch(query) {
     });
     container.querySelectorAll('.tl-loss-inline-row').forEach(r => r.style.display = '');
     container.querySelectorAll('[data-ws-id]').forEach(b => b.style.display = '');
-    const wsFilter = sessionStorage.getItem('tl_workshop_filter') || '';
-    if (wsFilter) applyTlWorkshopFilter(wsFilter);
     return;
   }
 
@@ -11464,9 +11418,6 @@ function applyTlCatSearch(query) {
     block.style.display = visibleCats.length > 0 ? '' : 'none';
   });
 
-  // Повторно применим фильтр по цеху поверх поиска
-  const wsFilter = sessionStorage.getItem('tl_workshop_filter') || '';
-  if (wsFilter) applyTlWorkshopFilter(wsFilter);
 }
 
 /* Склонение: 1 потеря / 2 потери / 5 потерь */
@@ -12346,9 +12297,9 @@ $('#topLossCategoryModalName')?.addEventListener('keydown', (e) => {
     if (!cat) return;
 
     $('#topLossItemModalCategoryId').value = catId;
-    $('#topLossItemModalCategoryLabel').textContent = 'Категория: ' + (cat.name || '—');
+    $('#topLossItemModalCategoryLabel').textContent = 'Категория: ' + (cat.name || '—') +
+      (cat.workshop ? ' · ' + getWorkshopName(cat.workshop) : '');
 
-    let currentWorkshop = '';
     if (itemId) {
       const item = (cat.items || []).find(i => i.id === itemId);
       if (!item) return;
@@ -12356,16 +12307,12 @@ $('#topLossCategoryModalName')?.addEventListener('keydown', (e) => {
       saveBtn.textContent = 'Сохранить';
       $('#topLossItemModalId').value = itemId;
       $('#topLossItemModalName').value = item.name || '';
-      currentWorkshop = item.workshop || '';
     } else {
       title.textContent = 'Добавить потерю';
       saveBtn.textContent = 'Добавить';
       $('#topLossItemModalId').value = '';
       $('#topLossItemModalName').value = '';
     }
-
-    const wsEl = $('#topLossItemModalWorkshop');
-    if (wsEl) wsEl.innerHTML = workshopOptionsHtml(currentWorkshop);
 
     openModal(modal);
     setTimeout(() => $('#topLossItemModalName').focus(), 100);
@@ -12393,7 +12340,6 @@ $('#topLossItemModalSave')?.addEventListener('click', () => {
   const catId = $('#topLossItemModalCategoryId').value;
   const itemId = $('#topLossItemModalId').value;
   const name = ($('#topLossItemModalName').value || '').trim();
-  const workshop = ($('#topLossItemModalWorkshop')?.value || '').trim();
   if (!catId) return;
   if (!name) return showToast('Введите название потери', true);
 
@@ -12410,13 +12356,9 @@ $('#topLossItemModalSave')?.addEventListener('click', () => {
     const item = cat.items.find(i => i.id === itemId);
     if (!item) return;
     item.name = name;
-    item.workshop = workshop;
+    delete item.workshop;
   } else {
-    cat.items.push({
-      id: makeLossId(name),
-      name,
-      workshop
-    });
+    cat.items.push({ id: makeLossId(name), name });
   }
 
   setTopLosses(cats);
@@ -13082,6 +13024,7 @@ function init() {
   // Разовые миграции структуры (на случай, если getWorkshops ещё не вызывался)
   migrateToWorkshopsStructure();
   migrateBrandWorkshopsFromLines();
+  migrateTopLossesByWorkshop();
   fillLinesForOperator();
   renderCoclPartStep('');     // начальное состояние шага «Часть»
   renderCoclLineContext('');  // начальное состояние контекста линии
@@ -13204,15 +13147,16 @@ $('#downloadTopLossesTemplateBtn')?.addEventListener('click', async () => {
   const ws = wb.addWorksheet('Top Losses');
 
   ws.columns = [
+    { header: 'Цех',       key: 'workshop', width: 12 },
     { header: 'Категория', key: 'category', width: 40 },
     { header: 'Потеря',    key: 'loss',     width: 50 }
   ];
 
   // Примеры
-  ws.addRow(['Увеличенные остановки', 'Остановки по хопперу']);
-  ws.addRow(['Увеличенные остановки', 'Обрыв штранга']);
-  ws.addRow(['Дефекты по качеству',   'Замятие сигарет']);
-  ws.addRow(['Повышенные выбросы',    'Выбросы по LES']);
+  ws.addRow(['SMD', 'Увеличенные остановки', 'Остановки по хопперу']);
+  ws.addRow(['SMD', 'Увеличенные остановки', 'Обрыв штранга']);
+  ws.addRow(['SMD', 'Дефекты по качеству',   'Замятие сигарет']);
+  ws.addRow(['PMD', 'Повышенные выбросы',    'Выбросы по LES']);
 
   // Шапка
   const headerRow = ws.getRow(1);
@@ -13230,8 +13174,9 @@ $('#downloadTopLossesTemplateBtn')?.addEventListener('click', async () => {
     ['📋 Шаблон Top Losses'],
     [''],
     ['КАК ПОЛЬЗОВАТЬСЯ:'],
-    ['1. Заполните столбцы «Категория» и «Потеря». Одна потеря = одна строка.'],
-    ['2. Категория может повторяться в нескольких строках — тогда потери добавятся в одну категорию.'],
+    ['1. Заполните столбцы «Цех» (SMD, PMD или FMD), «Категория» и «Потеря». Одна потеря = одна строка.'],
+    ['2. Категория может повторяться — потери добавятся в категорию этого цеха.'],
+    ['   Если столбца «Цех» нет (старый шаблон) — потери попадут в SMD.'],
     ['3. Сохраните файл и загрузите через кнопку «Загрузить из Excel».'],
     [''],
     ['ПРАВИЛА ИМПОРТА:'],
@@ -13292,12 +13237,19 @@ async function parseTopLossesExcel(file) {
     errors: []
   };
 
+  // Новый шаблон: «Цех | Категория | Потеря», старый: «Категория | Потеря»
+  const hasWsColumn = String(ws.getRow(1).getCell(1).value || '').trim().toLowerCase() === 'цех';
+  const workshops = getWorkshops();
+  const defaultWs = workshops.some(w => w.id === 'smd') ? 'smd' : (workshops[0] || {}).id;
+
   for (let i = 2; i <= ws.rowCount; i++) {
     const row = ws.getRow(i);
-    const catName = String(row.getCell(1).value || '').trim();
-    const itemName = String(row.getCell(2).value || '').trim();
+    const off = hasWsColumn ? 1 : 0;
+    const wsName = hasWsColumn ? String(row.getCell(1).value || '').trim() : '';
+    const catName = String(row.getCell(1 + off).value || '').trim();
+    const itemName = String(row.getCell(2 + off).value || '').trim();
 
-    if (!catName && !itemName) {
+    if (!wsName && !catName && !itemName) {
       result.empty++;
       continue;
     }
@@ -13306,10 +13258,20 @@ async function parseTopLossesExcel(file) {
       continue;
     }
 
-    // Найти или создать категорию
-    let cat = cats.find(c => c.name.toLowerCase() === catName.toLowerCase());
+    let wsId = defaultWs;
+    if (hasWsColumn) {
+      const w = workshops.find(x => x.name.toLowerCase() === wsName.toLowerCase() || x.id === wsName.toLowerCase());
+      if (!w) {
+        result.errors.push({ row: i, message: `неизвестный цех «${wsName}»` });
+        continue;
+      }
+      wsId = w.id;
+    }
+
+    // Найти или создать категорию этого цеха
+    let cat = cats.find(c => c.workshop === wsId && c.name.toLowerCase() === catName.toLowerCase());
     if (!cat) {
-      cat = { id: makeCategoryId(catName), name: catName, items: [] };
+      cat = { id: makeCategoryId(catName) + '_' + wsId, name: catName, workshop: wsId, items: [] };
       cats.push(cat);
     }
     if (!Array.isArray(cat.items)) cat.items = [];
