@@ -71,6 +71,10 @@ if (tabName === 'editor') {
     if (typeof renderTopLossCategories === 'function') renderTopLossCategories();
   }
 
+  if (tabName === 'check') {
+    if (typeof openCoclTab === 'function') openCoclTab();
+  }
+
   if (tabName === 'electronic') {
     if (typeof openClCheckTab === 'function') openClCheckTab();
   }
@@ -139,7 +143,7 @@ function initRouter() {
     const tab = (e.state && e.state.tab)
       || location.hash.replace('#', '')
       || localStorage.getItem('cl_active_tab')
-      || 'check';
+      || 'electronic';
     switchTab(tab, false);
   });
 

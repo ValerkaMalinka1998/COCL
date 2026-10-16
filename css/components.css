@@ -79,6 +79,28 @@
   border-color: var(--accent-cyan);
   box-shadow: var(--glow-cyan-sm);
 }
+.checkbox-group label.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.checkbox-group label.is-disabled:hover {
+  background: inherit;
+}
+
+/* Модалка блока/участка: где сейчас чужая линия + поле новой линии */
+.block-modal-line-where {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-left: 4px;
+}
+.block-modal-newline {
+  display: flex;
+  gap: 8px;
+}
+.block-modal-newline input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
 
 /* ============ Кнопки ============ */
 button.btn {
@@ -601,37 +623,6 @@ tr:hover td { background: var(--bg-hover); }
   max-height: 78vh;
   padding: 24px 28px;
 }
-#standardFormModal .modal {
-  max-width: 1200px;
-  width: 95vw;
-  max-height: 95vh;
-}
-/* Модалка стандарта в режиме «полной страницы» (как редактор):
-   используется большой формой создания/редактирования стандарта */
-#standardFormModal.sf-page-mode {
-  padding: 0;
-  align-items: stretch;
-  justify-content: stretch;
-}
-#standardFormModal.sf-page-mode .modal {
-  width: 100vw !important;
-  max-width: 100vw !important;
-  height: 100vh !important;
-  max-height: 100vh !important;
-  border-radius: 0 !important;
-  margin: 0 !important;
-}
-
-/* Подсказка об обязательных полях и звёздочка в форме стандарта */
-.sf-required-hint {
-  font-size: 12.5px;
-  color: var(--text-second);
-  margin: 0 0 10px;
-}
-.sf-req-star {
-  color: var(--accent-red);
-  font-weight: 800;
-}
 .modal-header {
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
@@ -768,39 +759,118 @@ tr:hover td { background: var(--bg-hover); }
   font-variant-numeric: tabular-nums;
 }
 
-/* ============ COCL: пошаговая сетка «Проверка» ============ */
-.cocl-steps-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  align-items: start;
-  margin-bottom: 20px;
-}
-.cocl-step-card h2 {
+/* ============ COCL: панель условий проверки ============ */
+/* Шаги идут сверху вниз; номер — CSS-счётчик, поэтому скрытые шаги
+   (часть линии вне SMD, бренды вне Change Over) не ломают нумерацию.
+   Рейка слева связывает шаги, выполненный шаг отмечается галочкой. */
+.cocl-setup-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 16px;
-  margin-bottom: 16px;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 14px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.cocl-setup-head h2 {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 18px;
+}
+.cocl-steps {
+  counter-reset: cocl-step;
+}
+.cocl-step {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+  padding: 16px 0;
+  position: relative;
+  counter-increment: cocl-step;
+}
+.cocl-step + .cocl-step {
+  border-top: 1px dashed var(--border);
+}
+/* Рейка между номерами */
+.cocl-step::before {
+  content: '';
+  position: absolute;
+  left: 13px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--border);
+}
+.cocl-steps > .cocl-step:first-child::before { top: 30px; }
+.cocl-steps > .cocl-step:last-child::before { bottom: calc(100% - 30px); }
+.cocl-step.is-done::before { background: var(--accent-cyan); }
+
+.cocl-step-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  min-height: 28px;
+  position: relative;
+}
+.cocl-step-label small {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-dim);
 }
 .cocl-step-num {
   flex: 0 0 auto;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent-cyan), #0891b2);
-  color: #fff;
+  background: var(--bg-card);
+  border: 2px solid var(--border-hi);
+  color: var(--text-second);
   font-size: 13px;
   font-weight: 800;
+  position: relative;
+  z-index: 1;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
 }
+.cocl-step-num::before {
+  content: counter(cocl-step);
+}
+.cocl-step.is-done .cocl-step-num {
+  background: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+  color: var(--on-accent);
+}
+.cocl-step.is-done .cocl-step-num::before {
+  content: '✓';
+}
+.cocl-step-optional:not(.is-done) .cocl-step-num {
+  border-style: dashed;
+}
+.cocl-step-body {
+  min-width: 0;
+}
+
+/* Линия: компактная кнопка, не на всю ширину */
+.cocl-line-pill {
+  min-width: 220px;
+  justify-content: flex-start;
+}
+
+/* Контекст линии в шапке: цех · участок · блок + смена справа */
 .cocl-line-context {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
-  margin-top: 12px;
+  flex: 1 1 auto;
 }
 .cocl-ctx-chip {
   padding: 3px 10px;
@@ -814,11 +884,11 @@ tr:hover td { background: var(--bg-hover); }
   color: var(--accent-cyan);
 }
 .cocl-ctx-area {
-  background: rgba(139, 92, 246, 0.14);
-  color: #a78bfa;
+  background: rgba(123, 92, 255, 0.14);
+  color: var(--accent-purple);
 }
 .cocl-ctx-block {
-  background: rgba(52, 211, 153, 0.14);
+  background: rgba(0, 196, 122, 0.14);
   color: var(--accent-green);
 }
 /* Автовход: оператор + активная смена (без ручного ввода) */
@@ -832,14 +902,102 @@ tr:hover td { background: var(--bg-hover); }
   background: var(--bg-hover);
   white-space: nowrap;
 }
-/* Кнопка-чип выбора линии в COCL занимает всю ширину поля */
-.cocl-line-pill {
-  width: 100%;
-  justify-content: flex-start;
+
+/* Часть линии: две большие кнопки в цветах частей */
+.cocl-part-seg {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 220px));
+  gap: 12px;
 }
-@media (max-width: 1100px) {
-  .cocl-steps-grid {
+.cocl-part-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 2px solid var(--border-hi);
+  background: var(--bg-input);
+  color: var(--text-main);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.cocl-part-name {
+  font-size: 15px;
+  font-weight: 700;
+}
+.cocl-part-hint {
+  font-size: 12px;
+  color: var(--text-second);
+}
+.cocl-part-maker:hover { border-color: var(--part-maker-bg); }
+.cocl-part-packer:hover { border-color: var(--part-packer-bg); }
+.cocl-part-maker.active {
+  background: var(--part-maker-bg);
+  border-color: var(--part-maker-bg);
+  color: var(--part-maker-fg);
+}
+.cocl-part-packer.active {
+  background: var(--part-packer-bg);
+  border-color: var(--part-packer-bg);
+  color: var(--part-packer-fg);
+}
+.cocl-part-btn.active .cocl-part-hint {
+  color: inherit;
+  opacity: 0.8;
+}
+
+/* Бренды: «с бренда → на бренд» в одну строку */
+.cocl-brands {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: end;
+  max-width: 720px;
+}
+.cocl-brands .field {
+  margin: 0;
+}
+.cocl-brands-arrow {
+  display: inline-flex;
+  align-items: center;
+  height: 42px;
+  color: var(--accent-cyan);
+}
+
+/* Итог: сколько стандартов найдено + кнопка */
+.cocl-build {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: rgba(0, 212, 255, 0.06);
+  border: 1px solid rgba(0, 212, 255, 0.35);
+}
+.cocl-build.is-empty {
+  background: rgba(232, 154, 0, 0.07);
+  border-color: rgba(232, 154, 0, 0.4);
+}
+.cocl-build.is-empty .build-checklist-info svg {
+  color: var(--accent-amber);
+}
+
+@media (max-width: 900px) {
+  .cocl-step {
     grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .cocl-step::before { display: none; }
+  .cocl-brands {
+    grid-template-columns: 1fr;
+  }
+  .cocl-brands-arrow {
+    display: none;
   }
 }
 
@@ -923,41 +1081,6 @@ tr:hover td { background: var(--bg-hover); }
 }
 
 /* ============ Компактные чекбоксы типов (Редактор) ============ */
-.type-checkbox-group { gap: 8px !important; }
-.sf-switch-label {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  cursor: pointer;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-input);
-  transition: border-color 0.15s, background 0.15s;
-}
-.sf-switch-label:hover { border-color: var(--border-hi); }
-.sf-switch-label input[type="checkbox"] {
-  margin-top: 2px;
-  flex-shrink: 0;
-  accent-color: var(--accent-cyan);
-  cursor: pointer;
-}
-.sf-switch-label > span {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.sf-switch-label strong {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-main);
-}
-.sf-switch-label em {
-  font-style: normal;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--text-second);
-}
 .type-checkbox {
   display: inline-flex !important;
   align-items: center;
@@ -1049,21 +1172,6 @@ tr:hover td { background: var(--bg-hover); }
 }
 
 /* ============ Автокомплит ============ */
-.autocomplete-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: var(--bg-card);
-  border: 1px solid var(--accent-cyan);
-  border-top: none;
-  border-radius: 0 0 6px 6px;
-  max-height: 240px;
-  overflow-y: auto;
-  z-index: 1000;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
-  margin-top: -1px;
-}
 .autocomplete-item {
   padding: 10px 14px;
   cursor: pointer;
@@ -1309,7 +1417,7 @@ tr:hover td { background: var(--bg-hover); }
   display: block;
   pointer-events: none;
 }
-.lb-group.expanded .lb-group-toggle {
+.lb-group.expanded > .lb-group-head .lb-group-toggle {
   transform: rotate(90deg);
   color: var(--accent-cyan);
 }
@@ -1646,10 +1754,6 @@ input.input-error {
   transform: scale(1.1);
 }
 /* ============ Опция «не в списке» в выпадающем списке машин ============ */
-#sf_machine option[value="__not_in_list__"] {
-  color: var(--accent-amber);
-  font-style: italic;
-}
 .measurements-table {
   width: 100%;
   border-collapse: collapse;
@@ -1687,23 +1791,11 @@ input.input-error {
 /* === Точки замера — динамический список ===================== */
 /* ============================================================ */
 
-#sf_pointsContainer {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 6px;
-}
 
 /* ============================================================ */
 /* === Точки замера: блоки по брендам ========================= */
 /* ============================================================ */
 
-#sf_brandBlocksContainer {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 6px;
-}
 
 /* ============================================================ */
 /* === Чек-лист: сетка точек замера ========================== */
@@ -2734,12 +2826,6 @@ input.input-error {
   }
 }
 /* ============ Фотографии в форме стандарта ============ */
-.photos-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 10px;
-  margin-top: 8px;
-}
 .photo-card {
   position: relative;
   aspect-ratio: 1 / 1;
@@ -2841,29 +2927,6 @@ input.input-error {
   border-radius: 8px;
 }
 /* ============ Строка добавления фото (textarea + кнопка) ============ */
-.photo-add-row {
-  display: flex;
-  gap: 10px;
-  align-items: flex-end;
-  margin-bottom: 12px;
-}
-.photo-add-input {
-  flex: 1;
-  min-width: 0;
-}
-.photo-add-input textarea {
-  width: 100%;
-  font-family: 'Courier New', Consolas, monospace;
-  font-size: 13px;
-  resize: vertical;
-  min-height: 52px;
-  line-height: 1.4;
-}
-.photo-add-row .btn {
-  flex-shrink: 0;
-  height: 52px;
-  padding: 0 18px;
-}
 /* ============================================================ */
 /* === МОДАЛКА ПРОСМОТРА СТАНДАРТА ============================= */
 /* ============================================================ */
@@ -2947,73 +3010,6 @@ input.input-error {
 .sv-chip-purple { background: rgba(123, 92, 255, 0.1); color: var(--accent-purple); border-color: rgba(123, 92, 255, 0.4); }
 .sv-chip-amber { background: rgba(232, 154, 0, 0.1); color: var(--accent-amber); border-color: rgba(232, 154, 0, 0.4); }
 .sv-chip-green { background: rgba(0, 196, 122, 0.1); color: var(--accent-green); border-color: rgba(0, 196, 122, 0.4); }
-
-/* Блоки */
-.sv-section {
-  margin-bottom: 20px;
-}
-.sv-section:last-child {
-  margin-bottom: 0;
-}
-.sv-section-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--accent-cyan);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-}
-.sv-section-text {
-  font-size: 14px;
-  color: var(--text-main);
-  line-height: 1.55;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
-.sv-section-text.sv-empty {
-  color: var(--text-dim);
-  font-style: italic;
-}
-
-/* Точки замера */
-.sv-points {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-.sv-points th {
-  background: var(--bg-input);
-  color: var(--text-second);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  padding: 6px 10px;
-  text-align: left;
-  border: 1px solid var(--border);
-}
-.sv-points td {
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  color: var(--text-main);
-}
-.sv-points td:first-child {
-  font-weight: 700;
-  color: var(--accent-cyan);
-  width: 90px;
-}
-
-/* Тип контроля */
-.sv-control-type {
-  display: inline-block;
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  background: var(--bg-input);
-  border: 1px solid var(--border-hi);
-  color: var(--text-main);
-}
 
 /* Боковая колонка: мини-карточки */
 .sv-side-card {
@@ -3289,7 +3285,6 @@ header,
 .empty-state,
 .badge,
 .import-report,
-.autocomplete-dropdown,
 .autocomplete-item,
 .brand-check-row,
 .card-actions-bar,
@@ -3430,7 +3425,7 @@ header,
   display: block;
   pointer-events: none;
 }
-.bl-group.expanded .bl-group-toggle {
+.bl-group.expanded > .bl-group-head .bl-group-toggle {
   transform: rotate(90deg);
   color: var(--accent-cyan);
 }
@@ -3710,7 +3705,7 @@ header,
   display: block;
   pointer-events: none;
 }
-.tl-cat-group.expanded .tl-cat-group-toggle {
+.tl-cat-group.expanded > .tl-cat-group-head .tl-cat-group-toggle {
   transform: rotate(90deg);
   color: var(--accent-amber);
 }
@@ -3793,18 +3788,6 @@ header,
   color: var(--accent-cyan);
   border: 1px solid rgba(0, 212, 255, 0.4);
 }
-.tl-workshop-filter {
-  flex-shrink: 0;
-  padding: 6px 10px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-main);
-  background: var(--bg-card);
-  border: 1px solid var(--border-hi);
-  border-radius: 6px;
-  cursor: pointer;
-}
-
 .tl-loss-inline-actions {
   display: flex;
   gap: 4px;
@@ -4048,7 +4031,7 @@ header,
   display: block;
   pointer-events: none;
 }
-.lm-group.expanded .lm-group-toggle {
+.lm-group.expanded > .lm-group-head .lm-group-toggle {
   transform: rotate(90deg);
   color: var(--accent-cyan);
 }
@@ -6348,83 +6331,6 @@ header,
   flex-shrink: 0;
 }
 
-/* Мини-таблица значений по брендам */
-.elec-brands-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-  margin-top: 6px;
-}
-.elec-brands-table th {
-  background: var(--bg-hover);
-  color: var(--text-second);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  padding: 6px 10px;
-  text-align: left;
-  border: 1px solid var(--border);
-}
-.elec-brands-table td {
-  padding: 6px;
-  border: 1px solid var(--border);
-  vertical-align: middle;
-}
-.elec-brands-table td input,
-.elec-brands-table td select {
-  width: 100%;
-  padding: 6px 8px;
-  font-size: 13px;
-}
-.elec-brands-table .elec-brands-remove {
-  background: none;
-  border: none;
-  color: var(--accent-red);
-  cursor: pointer;
-  padding: 6px;
-  font-size: 16px;
-  line-height: 1;
-}
-
-/* Чипы Run/Stop */
-.elec-work-chips {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.elec-work-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 18px;
-  border-radius: 20px;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  background: var(--bg-input);
-  border: 2px solid var(--border-hi);
-  color: var(--text-second);
-  transition: all 0.15s ease;
-  text-transform: uppercase;
-}
-.elec-work-chip:hover {
-  transform: translateY(-1px);
-}
-.elec-work-chip-run.active {
-  background: linear-gradient(135deg, #00a865, #00c47a);
-  border-color: #00c47a;
-  color: #ffffff;
-  box-shadow: 0 0 14px rgba(0, 196, 122, 0.5);
-}
-.elec-work-chip-stop.active {
-  background: linear-gradient(135deg, #e08a2e, #ffa94d);
-  border-color: #ffa94d;
-  color: #ffffff;
-  box-shadow: 0 0 14px rgba(255, 169, 77, 0.5);
-}
 /* ============================================================ */
 /* === CL ELECTRONIC: расписание брендов ====================== */
 /* ============================================================ */
@@ -7564,16 +7470,23 @@ header,
 }
 
 /* ============================================================ */
-/* === ОБЩИЙ СПИСОК БРЕНДОВ — строки + inline + пагинация ===== */
+/* === ОБЩИЙ СПИСОК БРЕНДОВ — группы по цехам ================= */
 /* ============================================================ */
 
-.brands-list {
+.brands-group-list {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-input);
-  overflow: hidden;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+}
+.brands-group-add {
+  margin-left: 8px;
+  padding: 3px 10px;
+  font-size: 11px;
+}
+.brands-empty {
+  padding: 12px 14px;
+  font-size: 12px;
 }
 
 .brands-row {
@@ -7611,19 +7524,6 @@ header,
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.brands-row-ws-chip {
-  flex-shrink: 0;
-  padding: 1px 8px;
-  border-radius: 9px;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  background: rgba(0, 212, 255, 0.1);
-  color: var(--accent-cyan);
-  border: 1px solid rgba(0, 212, 255, 0.4);
-}
-
 .brands-row-actions {
   display: flex;
   gap: 4px;
@@ -8105,20 +8005,6 @@ header,
 /* === COCL: карточка «Сформировать проверку» ================= */
 /* ============================================================ */
 
-#buildChecklistCard {
-  background: linear-gradient(135deg, rgba(0, 212, 255, 0.05), rgba(0, 212, 255, 0.02));
-  border: 2px solid rgba(0, 212, 255, 0.3);
-  border-left: 4px solid var(--accent-cyan);
-}
-
-.build-checklist-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
 .build-checklist-info {
   display: flex;
   align-items: center;
@@ -8143,9 +8029,14 @@ header,
   font-size: 14px;
   box-shadow: 0 0 16px rgba(0, 212, 255, 0.35);
 }
+#buildChecklistBtn:disabled {
+  box-shadow: none;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 @media (max-width: 640px) {
-  .build-checklist-row {
+  .cocl-build {
     flex-direction: column;
     align-items: stretch;
   }
@@ -8470,198 +8361,6 @@ header,
   font-size: 12px;
   color: var(--accent-amber);
   font-style: italic;
-}
-
-/* ============================================================ */
-/* === Форма стандарта: сворачиваемые блоки ==================== */
-/* ============================================================ */
-
-.sf-collapsible {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-input);
-  margin: 12px 0;
-  overflow: hidden;
-  transition: border-color 0.15s;
-}
-.sf-collapsible:hover {
-  border-color: var(--border-hi);
-}
-
-.sf-collapsible-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-  cursor: pointer;
-  user-select: none;
-  background: var(--bg-hover);
-  transition: background 0.15s;
-  flex-wrap: wrap;
-}
-.sf-collapsible-header:hover {
-  background: rgba(0, 212, 255, 0.06);
-}
-
-/* Иконка-стрелка слева */
-.sf-collapsible-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  color: var(--text-second);
-  transition: transform 0.2s ease, color 0.15s;
-}
-.sf-collapsible-toggle svg {
-  width: 14px;              /* ← КЛЮЧЕВОЕ: фиксированная ширина */
-  height: 14px;             /* ← КЛЮЧЕВОЕ: фиксированная высота */
-  max-width: 14px;
-  max-height: 14px;
-  display: block;
-  pointer-events: none;
-}
-.sf-collapsible.expanded .sf-collapsible-toggle {
-  transform: rotate(90deg);
-  color: var(--accent-cyan);
-}
-
-/* Заголовок */
-.sf-collapsible-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--accent-cyan);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  flex-shrink: 0;
-}
-
-/* Подсказка справа */
-.sf-collapsible-hint {
-  font-size: 11px;
-  color: var(--text-dim);
-  font-style: italic;
-  flex: 1;
-  min-width: 0;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-/* Тело — показывается только при .expanded */
-.sf-collapsible-body {
-  display: none;
-  padding: 12px 14px 14px;
-  border-top: 1px solid var(--border);
-}
-.sf-collapsible.expanded .sf-collapsible-body {
-  display: block;
-}
-
-/* ============================================================ */
-/* === Сворачиваемый блок: Top Losses (амберная подсветка) ===== */
-/* ============================================================ */
-
-#sf_topLossesCollapsible {
-  border-color: rgba(232, 154, 0, 0.4);
-  border-left: 3px solid var(--accent-amber);
-}
-#sf_topLossesCollapsible:hover {
-  border-color: rgba(232, 154, 0, 0.65);
-}
-
-#sf_topLossesCollapsible .sf-collapsible-header:hover {
-  background: rgba(232, 154, 0, 0.08);
-}
-
-#sf_topLossesCollapsible .sf-collapsible-title {
-  color: var(--accent-amber);
-}
-
-#sf_topLossesCollapsible.expanded .sf-collapsible-toggle {
-  color: var(--accent-amber);
-}
-
-#sf_triggersCollapsible {
-  border-left: 3px solid var(--accent-cyan);
-}
-
-/* ============================================================ */
-/* === Форма стандарта: Top Losses (компактно, чипы) ========== */
-/* ============================================================ */
-
-#sf_topLossesSelected {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 4px;
-}
-
-.sf-toploss-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 6px 5px 12px;
-  background: rgba(232, 154, 0, 0.08);
-  border: 1px solid rgba(232, 154, 0, 0.45);
-  border-radius: 16px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--accent-amber);
-  max-width: 100%;
-  transition: background 0.15s, border-color 0.15s;
-}
-.sf-toploss-item:hover {
-  background: rgba(232, 154, 0, 0.14);
-  border-color: var(--accent-amber);
-}
-
-.sf-toploss-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-/* Категорию скрываем — она видна только в тултипе */
-.sf-toploss-category {
-  display: none;
-}
-
-.sf-toploss-remove {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: 50%;
-  color: var(--accent-amber);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.15s, color 0.15s;
-}
-.sf-toploss-remove:hover {
-  background: rgba(232, 154, 0, 0.25);
-  color: #ffffff;
-}
-.sf-toploss-remove svg { display: block; pointer-events: none; }
-
-/* Если чипов больше 15 — контейнер со скроллом */
-#sf_topLossesSelected {
-  max-height: 140px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-#sf_topLossesSelected::-webkit-scrollbar {
-  width: 6px;
-}
-#sf_topLossesSelected::-webkit-scrollbar-thumb {
-  background: rgba(232, 154, 0, 0.5);
-  border-radius: 3px;
 }
 
 /* ============================================================ */
@@ -9298,31 +8997,6 @@ header,
   color: var(--accent-red);
 }
 /* RUN/STOP в таблице редактора — компактные чипы */
-.editor-table .et-work-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 3px 12px;
-  border-radius: 12px;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  font-family: inherit;
-  white-space: nowrap;
-  border: 1px solid;
-  color: #ffffff;
-}
-.editor-table .et-work-chip.elec-work-chip-run {
-  background: linear-gradient(135deg, #00a865, #00c47a);
-  border-color: #00c47a;
-  box-shadow: 0 0 8px rgba(0, 196, 122, 0.35);
-}
-.editor-table .et-work-chip.elec-work-chip-stop {
-  background: linear-gradient(135deg, #e08a2e, #ffa94d);
-  border-color: #ffa94d;
-  box-shadow: 0 0 8px rgba(255, 169, 77, 0.35);
-}
 /* Пустое состояние */
 .editor-empty {
   text-align: center;
@@ -9381,14 +9055,14 @@ header,
   white-space: nowrap;
 }
 .et-part-maker {
-  background: rgba(59, 130, 246, 0.12);
-  color: #3b82f6;
-  border: 1px solid rgba(59, 130, 246, 0.45);
+  background: var(--part-maker-bg);
+  color: var(--part-maker-fg);
+  border: 1px solid var(--part-maker-bg);
 }
 .et-part-packer {
-  background: rgba(123, 92, 255, 0.12);
-  color: var(--accent-purple);
-  border: 1px solid rgba(123, 92, 255, 0.45);
+  background: var(--part-packer-bg);
+  color: var(--part-packer-fg);
+  border: 1px solid var(--part-packer-bg);
 }
 
 /* ============================================================ */
@@ -10085,6 +9759,82 @@ header,
   position: sticky;
   left: 0;
   z-index: 2;
+}
+
+/* Расписание CL: подпись недели слева, быстрые кнопки недель и
+   выбор «как сохранить» — справа */
+.sch-week-nav .cl-week-nav-label {
+  min-width: 260px;
+  text-align: left;
+}
+.sch-week-nav .cl-week-nav-sub {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12px;
+}
+.sch-week-quick {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  margin-left: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-input);
+}
+.sch-week-chip,
+.sch-scope-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  color: var(--text-second);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.sch-week-chip:hover,
+.sch-scope-btn:hover {
+  color: var(--text-main);
+  background: var(--bg-hover);
+}
+.sch-week-chip.active {
+  color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.12);
+  border-color: var(--accent-cyan);
+}
+.sch-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 3px 3px 10px;
+  margin-left: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-input);
+}
+.sch-scope-label {
+  margin-right: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.sch-scope-btn.active {
+  color: var(--text-main);
+  background: var(--bg-card);
+  border-color: var(--border-hi);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+/* Прошедшая неделя: только просмотр */
+.sch-matrix-readonly .sch-info-time,
+.sch-matrix-readonly .sch-info-work,
+.sch-matrix-readonly .sch-row-remove {
+  pointer-events: none;
+  opacity: 0.6;
 }
 
 .sch-matrix {
@@ -11305,28 +11055,6 @@ header,
   background: rgba(0, 212, 255, 0.12);
 }
 
-/* --- Жёсткая фиксация модалки стандарта --- */
-#standardFormModal .modal {
-  max-width: 1200px;
-  width: 95vw;
-  max-height: 95vh;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-}
-
-#standardFormModal .modal-body {
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  overflow-y: auto !important;
-  max-height: none !important;
-}
-
-#standardFormModal .modal-footer {
-  flex-shrink: 0 !important;
-  border-top: 1px solid var(--border);
-  background: var(--bg-hover);
-}
 /* ============================================================ */
 /* === БЫСТРАЯ ПРОВЕРКА: точки замера ========================= */
 /* ============================================================ */
@@ -12153,6 +11881,21 @@ header,
 .sv-full-field-edit:last-child {
   border-bottom: none;
 }
+/* Поле со списком и кнопкой «+» справа */
+.sv-field-with-btn {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.sv-field-with-btn select {
+  flex: 1;
+  min-width: 0;
+}
+.sv-field-with-btn .btn {
+  flex-shrink: 0;
+  min-width: 40px;
+  font-size: 16px;
+}
 .sv-full-field-edit label {
   display: block;
   font-size: 10px;
@@ -12336,6 +12079,33 @@ header,
   font-size: 12px;
   color: var(--text-dim);
   font-style: italic;
+}
+/* Флажок «Всегда показывать в Change Over» */
+.sv-force-co {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-second);
+  cursor: pointer;
+}
+.sv-force-co input {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+/* Флажок внутри поля формы: не наследует вид подписи поля */
+.sv-full-field-edit label.sv-force-co {
+  display: flex;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-main);
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 /* ===== Таблицы внутри вкладок ===== */
@@ -12554,53 +12324,13 @@ header,
   gap: 6px;
 }
 
-/* Группы триггеров */
-.sv-edit-trigger-group-title {
-  width: 100%;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  margin: 6px 0 4px;
-}
-
-.sv-edit-trigger-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.trigger-checkbox {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  border-radius: 14px;
+.trigger-picker-hint {
   font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  background: var(--bg-card);
-  border: 1px solid var(--border-hi);
-  color: var(--text-main);
-  transition: all 0.15s;
-  user-select: none;
-}
-.trigger-checkbox:hover {
-  border-color: var(--accent-cyan);
-}
-.trigger-checkbox input {
-  margin: 0;
-  accent-color: var(--accent-cyan);
-  cursor: pointer;
-}
-.trigger-checkbox.checked {
-  background: rgba(0, 212, 255, 0.1);
-  border-color: var(--accent-cyan);
-  color: var(--accent-cyan);
+  color: var(--text-second);
+  margin: 0 0 10px;
 }
 
-/* Top Losses — чипы в редактировании */
+/* Top Losses и триггеры — чипы в редактировании */
 .sv-toploss-item {
   display: inline-flex;
   align-items: center;
@@ -12770,4 +12500,103 @@ header,
 /* Убеждаемся, что sv-content-block внутри grid не растягивается */
 .sv-content-blocks-col .sv-content-block {
   margin: 0;
+}
+
+/* ============================================================ */
+/* === СТРАНИЦА ЭЛЕКТРОННОГО ПАРАМЕТРА ======================== */
+/* ============================================================ */
+.ep-hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-dim);
+}
+.ep-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-top: 8px;
+}
+.ep-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.ep-table th {
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-second);
+  background: var(--bg-hover);
+  border-bottom: 1px solid var(--border);
+}
+.ep-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.ep-table tr:last-child td { border-bottom: none; }
+.ep-table select,
+.ep-table input {
+  width: 100%;
+  min-width: 80px;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-main);
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
+  border-radius: 6px;
+}
+.ep-table input {
+  font-family: 'Courier New', Consolas, monospace;
+  font-weight: 600;
+  text-align: center;
+}
+.ep-table select:focus,
+.ep-table input:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.15);
+}
+.ep-range {
+  font-family: 'Courier New', Consolas, monospace;
+  font-weight: 600;
+  color: var(--text-second);
+  white-space: nowrap;
+  text-align: center;
+}
+.ep-row-actions {
+  width: 40px;
+  text-align: center;
+}
+.ep-row-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.ep-row-remove:hover {
+  color: var(--accent-red);
+  border-color: var(--accent-red);
+}
+.ep-table-empty {
+  padding: 14px !important;
+  text-align: center;
+  font-style: italic;
+  color: var(--text-dim);
+}
+.ep-add-row {
+  margin-top: 10px;
+  width: 100%;
 }
