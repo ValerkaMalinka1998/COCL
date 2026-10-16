@@ -4839,7 +4839,7 @@ function renderCoclLineContext(line) {
 
 /* --- Шаг «Часть линии»: активен только для SMD, иначе скрыт --- */
 function renderCoclPartStep(line) {
-  const partField = $('#partSelect')?.closest('.field');
+  const partField = $('#partSelectField');
   const partSelect = $('#partSelect');
   if (!partField || !partSelect) return;
 
@@ -4856,8 +4856,48 @@ function renderCoclPartStep(line) {
 
 /* --- Обновление чек-листа при изменении условий --- */
 $('#partSelect')?.addEventListener('change', () => {
+  // Триггеры «Что меняется» зависят от части линии
+  if ($('#transitionType').value === 'ChangeOver') renderMaterialChanges();
   updateChecklist();
 });
+
+/* Кнопки Maker / Packer → скрытый #partSelect */
+$('#coclPartSeg')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-part]');
+  if (!btn) return;
+  const sel = $('#partSelect');
+  sel.value = btn.dataset.part;
+  sel.dispatchEvent(new Event('change'));
+});
+
+/* Состояние шагов COCL: выполненный шаг — галочка, кнопки части — по select */
+function updateCoclStepStates() {
+  const line = $('#lineSelect')?.value || '';
+  const type = $('#transitionType')?.value || '';
+  const part = $('#partSelect')?.value || '';
+  const done = {
+    coclStepLine: !!line,
+    coclStepType: !!type,
+    partSelectField: !!part,
+    brandsCard: !!($('#brandFrom')?.value && $('#brandTo')?.value),
+    changesCard: $$('#changesContainer input[data-change]:checked').length > 0
+  };
+  Object.entries(done).forEach(([id, isDone]) => {
+    $('#' + id)?.classList.toggle('is-done', isDone);
+  });
+  $$('#coclPartSeg [data-part]').forEach(b => b.classList.toggle('active', b.dataset.part === part));
+}
+
+/* Вход на вкладку: без линии — сразу окно выбора линии, как в Чек-листе CL */
+function openCoclTab() {
+  updateCoclStepStates();
+  if ($('#lineSelect')?.value) return;
+  if (($('#checklistCard')?.style.display || 'none') !== 'none') return;
+  setTimeout(() => {
+    linePickerOnSelect = (line) => setCoclLine(line);
+    openLinePickerModal();
+  }, 150);
+}
 
 /* Клик по кнопке-чипу типа перехода (только в блоке «Проверка») */
 $('#typeSelector')?.querySelectorAll('.type-option').forEach(btn => {
@@ -4881,14 +4921,14 @@ function onTransitionTypeChange() {
     $('#brandsCard').style.display = 'none';
     $('#changesCard').style.display = 'none';
     $('#checklistCard').style.display = 'none';
+    updateCoclStepStates();
     return;
   }
 
   // Бренды и триггеры — ТОЛЬКО для Change Over
   if (type === 'ChangeOver') {
-    $('#brandsCard').style.display = 'block';
-    $('#changesCard').style.display = 'block';
-    $('#changesTitle').textContent = '4. Что меняется';
+    $('#brandsCard').style.display = '';
+    $('#changesCard').style.display = '';
     renderMaterialChanges();
   } else {
     $('#brandsCard').style.display = 'none';
@@ -5007,6 +5047,7 @@ function updateChecklist() {
 
   const buildCard = $('#buildChecklistCard');
   const checklistCard = $('#checklistCard');
+  updateCoclStepStates();
 
   // --- Если не заполнены основные поля — ничего не показываем ---
   const workshopId = line ? getWorkshopIdForLine(line) : null;
@@ -5067,14 +5108,22 @@ function updateChecklist() {
     return true;
   });
 
-  // --- Показываем «Сформировать проверку», скрываем чек-лист ---
-  if (relevant.length > 0) {
-    if (buildCard) buildCard.style.display = 'block';
-    if (checklistCard) checklistCard.style.display = 'none';
-  } else {
-    if (buildCard) buildCard.style.display = 'none';
-    if (checklistCard) checklistCard.style.display = 'none';
+  // --- Панель «Сформировать чек-лист»: сколько стандартов найдено ---
+  if (buildCard) {
+    buildCard.style.display = '';
+    buildCard.classList.toggle('is-empty', relevant.length === 0);
+    const info = $('#coclBuildInfo');
+    if (info) {
+      info.textContent = relevant.length
+        ? `Найдено ${relevant.length} ${pluralizeStandards(relevant.length)} — можно формировать чек-лист.`
+        : (type === 'ChangeOver'
+            ? 'Для этих брендов нет стандартов с отличающимися точками — проверять нечего.'
+            : 'Под эти условия стандартов нет.');
+    }
+    const btn = $('#buildChecklistBtn');
+    if (btn) btn.disabled = relevant.length === 0;
   }
+  if (checklistCard) checklistCard.style.display = 'none';
 
   renderChecklist(relevant);
 }
@@ -5923,20 +5972,16 @@ function resetCheckForm() {
   const summary = $('#coclSummaryView');
   if (summary) summary.style.display = 'none';
 
-  // ⚠ ГЛАВНОЕ: восстановить все карточки настройки в #tab-check
-  document.querySelectorAll('#tab-check > .card').forEach(card => {
-    const id = card.id;
-    // Показываем все основные карточки (1. Оператор, 2. Линия, 3. Тип)
-    if (!id) {
-      card.style.display = '';
-    } else if (id === 'brandsCard' || id === 'changesCard' ||
-               id === 'buildChecklistCard' || id === 'checklistCard') {
-      // Эти скрыты, пока не выбран тип/бренды
-      card.style.display = 'none';
-    } else {
-      card.style.display = '';
-    }
+  // Панель условий — снова видна, шаги по типу/цеху — скрыты
+  $('#coclSetupCard').style.display = '';
+  $('#checklistCard').style.display = 'none';
+  ['#brandsCard', '#changesCard', '#buildChecklistCard'].forEach(sel => {
+    const el = $(sel);
+    if (el) el.style.display = 'none';
   });
+  renderCoclLineContext('');
+  renderCoclPartStep('');
+  updateCoclStepStates();
 }
 
 /* ============================================================

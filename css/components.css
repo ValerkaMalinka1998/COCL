@@ -790,39 +790,118 @@ tr:hover td { background: var(--bg-hover); }
   font-variant-numeric: tabular-nums;
 }
 
-/* ============ COCL: пошаговая сетка «Проверка» ============ */
-.cocl-steps-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  align-items: start;
-  margin-bottom: 20px;
-}
-.cocl-step-card h2 {
+/* ============ COCL: панель условий проверки ============ */
+/* Шаги идут сверху вниз; номер — CSS-счётчик, поэтому скрытые шаги
+   (часть линии вне SMD, бренды вне Change Over) не ломают нумерацию.
+   Рейка слева связывает шаги, выполненный шаг отмечается галочкой. */
+.cocl-setup-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 16px;
-  margin-bottom: 16px;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 14px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.cocl-setup-head h2 {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 18px;
+}
+.cocl-steps {
+  counter-reset: cocl-step;
+}
+.cocl-step {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+  padding: 16px 0;
+  position: relative;
+  counter-increment: cocl-step;
+}
+.cocl-step + .cocl-step {
+  border-top: 1px dashed var(--border);
+}
+/* Рейка между номерами */
+.cocl-step::before {
+  content: '';
+  position: absolute;
+  left: 13px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--border);
+}
+.cocl-steps > .cocl-step:first-child::before { top: 30px; }
+.cocl-steps > .cocl-step:last-child::before { bottom: calc(100% - 30px); }
+.cocl-step.is-done::before { background: var(--accent-cyan); }
+
+.cocl-step-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  min-height: 28px;
+  position: relative;
+}
+.cocl-step-label small {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-dim);
 }
 .cocl-step-num {
   flex: 0 0 auto;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent-cyan), #0891b2);
-  color: #fff;
+  background: var(--bg-card);
+  border: 2px solid var(--border-hi);
+  color: var(--text-second);
   font-size: 13px;
   font-weight: 800;
+  position: relative;
+  z-index: 1;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
 }
+.cocl-step-num::before {
+  content: counter(cocl-step);
+}
+.cocl-step.is-done .cocl-step-num {
+  background: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+  color: #ffffff;
+}
+.cocl-step.is-done .cocl-step-num::before {
+  content: '✓';
+}
+.cocl-step-optional:not(.is-done) .cocl-step-num {
+  border-style: dashed;
+}
+.cocl-step-body {
+  min-width: 0;
+}
+
+/* Линия: компактная кнопка, не на всю ширину */
+.cocl-line-pill {
+  min-width: 220px;
+  justify-content: flex-start;
+}
+
+/* Контекст линии в шапке: цех · участок · блок + смена справа */
 .cocl-line-context {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
-  margin-top: 12px;
+  flex: 1 1 auto;
 }
 .cocl-ctx-chip {
   padding: 3px 10px;
@@ -836,11 +915,11 @@ tr:hover td { background: var(--bg-hover); }
   color: var(--accent-cyan);
 }
 .cocl-ctx-area {
-  background: rgba(139, 92, 246, 0.14);
-  color: #a78bfa;
+  background: rgba(123, 92, 255, 0.14);
+  color: var(--accent-purple);
 }
 .cocl-ctx-block {
-  background: rgba(52, 211, 153, 0.14);
+  background: rgba(0, 196, 122, 0.14);
   color: var(--accent-green);
 }
 /* Автовход: оператор + активная смена (без ручного ввода) */
@@ -854,14 +933,102 @@ tr:hover td { background: var(--bg-hover); }
   background: var(--bg-hover);
   white-space: nowrap;
 }
-/* Кнопка-чип выбора линии в COCL занимает всю ширину поля */
-.cocl-line-pill {
-  width: 100%;
-  justify-content: flex-start;
+
+/* Часть линии: две большие кнопки в цветах частей */
+.cocl-part-seg {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 220px));
+  gap: 12px;
 }
-@media (max-width: 1100px) {
-  .cocl-steps-grid {
+.cocl-part-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 2px solid var(--border-hi);
+  background: var(--bg-input);
+  color: var(--text-main);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.cocl-part-name {
+  font-size: 15px;
+  font-weight: 700;
+}
+.cocl-part-hint {
+  font-size: 12px;
+  color: var(--text-second);
+}
+.cocl-part-maker:hover { border-color: var(--part-maker-bg); }
+.cocl-part-packer:hover { border-color: var(--part-packer-bg); }
+.cocl-part-maker.active {
+  background: var(--part-maker-bg);
+  border-color: var(--part-maker-bg);
+  color: var(--part-maker-fg);
+}
+.cocl-part-packer.active {
+  background: var(--part-packer-bg);
+  border-color: var(--part-packer-bg);
+  color: var(--part-packer-fg);
+}
+.cocl-part-btn.active .cocl-part-hint {
+  color: inherit;
+  opacity: 0.8;
+}
+
+/* Бренды: «с бренда → на бренд» в одну строку */
+.cocl-brands {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: end;
+  max-width: 720px;
+}
+.cocl-brands .field {
+  margin: 0;
+}
+.cocl-brands-arrow {
+  display: inline-flex;
+  align-items: center;
+  height: 42px;
+  color: var(--accent-cyan);
+}
+
+/* Итог: сколько стандартов найдено + кнопка */
+.cocl-build {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: rgba(0, 212, 255, 0.06);
+  border: 1px solid rgba(0, 212, 255, 0.35);
+}
+.cocl-build.is-empty {
+  background: rgba(232, 154, 0, 0.07);
+  border-color: rgba(232, 154, 0, 0.4);
+}
+.cocl-build.is-empty .build-checklist-info svg {
+  color: var(--accent-amber);
+}
+
+@media (max-width: 900px) {
+  .cocl-step {
     grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .cocl-step::before { display: none; }
+  .cocl-brands {
+    grid-template-columns: 1fr;
+  }
+  .cocl-brands-arrow {
+    display: none;
   }
 }
 
@@ -8042,20 +8209,6 @@ header,
 /* === COCL: карточка «Сформировать проверку» ================= */
 /* ============================================================ */
 
-#buildChecklistCard {
-  background: linear-gradient(135deg, rgba(0, 212, 255, 0.05), rgba(0, 212, 255, 0.02));
-  border: 2px solid rgba(0, 212, 255, 0.3);
-  border-left: 4px solid var(--accent-cyan);
-}
-
-.build-checklist-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
 .build-checklist-info {
   display: flex;
   align-items: center;
@@ -8080,9 +8233,14 @@ header,
   font-size: 14px;
   box-shadow: 0 0 16px rgba(0, 212, 255, 0.35);
 }
+#buildChecklistBtn:disabled {
+  box-shadow: none;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 @media (max-width: 640px) {
-  .build-checklist-row {
+  .cocl-build {
     flex-direction: column;
     align-items: stretch;
   }

@@ -71,6 +71,10 @@ if (tabName === 'editor') {
     if (typeof renderTopLossCategories === 'function') renderTopLossCategories();
   }
 
+  if (tabName === 'check') {
+    if (typeof openCoclTab === 'function') openCoclTab();
+  }
+
   if (tabName === 'electronic') {
     if (typeof openClCheckTab === 'function') openClCheckTab();
   }
