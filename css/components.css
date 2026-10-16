@@ -742,6 +742,65 @@ tr:hover td { background: var(--bg-hover); }
   font-variant-numeric: tabular-nums;
 }
 
+/* ============ COCL: пошаговая сетка «Проверка» ============ */
+.cocl-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 20px;
+}
+.cocl-step-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  margin-bottom: 16px;
+}
+.cocl-step-num {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-cyan), #0891b2);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+}
+.cocl-line-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+.cocl-ctx-chip {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+.cocl-ctx-workshop {
+  background: rgba(0, 212, 255, 0.14);
+  color: var(--accent-cyan);
+}
+.cocl-ctx-area {
+  background: rgba(139, 92, 246, 0.14);
+  color: #a78bfa;
+}
+.cocl-ctx-block {
+  background: rgba(52, 211, 153, 0.14);
+  color: var(--accent-green);
+}
+@media (max-width: 1100px) {
+  .cocl-steps-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ============ Селектор типа перехода — чипы ============ */
 .type-selector {
   display: flex;
@@ -823,6 +882,40 @@ tr:hover td { background: var(--bg-hover); }
 
 /* ============ Компактные чекбоксы типов (Редактор) ============ */
 .type-checkbox-group { gap: 8px !important; }
+.sf-switch-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  transition: border-color 0.15s, background 0.15s;
+}
+.sf-switch-label:hover { border-color: var(--border-hi); }
+.sf-switch-label input[type="checkbox"] {
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: var(--accent-cyan);
+  cursor: pointer;
+}
+.sf-switch-label > span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.sf-switch-label strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+.sf-switch-label em {
+  font-style: normal;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-second);
+}
 .type-checkbox {
   display: inline-flex !important;
   align-items: center;
@@ -1799,6 +1892,34 @@ input.input-error {
 /* ============================================================ */
 /* === ДАШБОРД: карточки-счётчики ============================== */
 /* ============================================================ */
+
+.dash-workshop-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.dash-ws-tab {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-hi);
+  background: var(--bg-card);
+  color: var(--text-second);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.dash-ws-tab:hover {
+  border-color: var(--accent-cyan);
+  color: var(--text-main);
+}
+.dash-ws-tab.active {
+  border-color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.12);
+  color: var(--accent-cyan);
+  font-weight: 700;
+}
 
 .dash-stats {
   display: grid;
@@ -3138,8 +3259,7 @@ header,
 #historyList,
 #linesList,
 #shiftsList,
-#changesContainer,
-#nodesContainer {
+#changesContainer {
   transition:
     background 0.35s ease,
     color 0.35s ease,
@@ -3614,6 +3734,29 @@ header,
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.tl-loss-ws-chip {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  background: rgba(0, 212, 255, 0.1);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0, 212, 255, 0.4);
+}
+.tl-workshop-filter {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
+  border-radius: 6px;
+  cursor: pointer;
 }
 
 .tl-loss-inline-actions {
@@ -5215,6 +5358,11 @@ header,
   background: rgba(232, 154, 0, 0.1);
   color: var(--accent-amber);
   border: 1px solid rgba(232, 154, 0, 0.45);
+}
+.badge-mode-cl {
+  background: rgba(0, 212, 255, 0.12);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0, 212, 255, 0.55);
 }
 .tl-history-losses {
   font-size: 12px;
@@ -7416,6 +7564,18 @@ header,
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.brands-row-ws-chip {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  background: rgba(0, 212, 255, 0.1);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0, 212, 255, 0.4);
+}
 
 .brands-row-actions {
   display: flex;
@@ -9008,6 +9168,15 @@ header,
   color: var(--text-dim);
   border: 1px solid var(--border-hi);
 }
+/* Неактивные строки — приглушаем, чтобы отличались от активных */
+.editor-table tbody tr.et-row-inactive td {
+  opacity: 0.55;
+  filter: grayscale(0.4);
+}
+.editor-table tbody tr.et-row-inactive:hover td {
+  opacity: 0.8;
+  filter: grayscale(0.15);
+}
 .et-status::before {
   content: '';
   width: 6px;
@@ -10135,6 +10304,14 @@ header,
 
 .sch-info-work {
   justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.sch-info-work:hover {
+  background: rgba(0, 212, 255, 0.06);
+}
+.sch-info-work:hover .sch-work-badge {
+  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.25);
 }
 
 .sch-work-badge {
@@ -10734,6 +10911,66 @@ header,
   overflow-x: auto;
 }
 
+.cl-week-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  min-width: max-content;
+}
+.cl-week-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border-hi);
+  background: var(--bg-card);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cl-week-nav-btn svg { width: 18px; height: 18px; }
+.cl-week-nav-btn:hover {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.08);
+}
+.cl-week-nav-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+  text-align: center;
+}
+.cl-week-nav-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: 0.3px;
+}
+.cl-week-nav-sub {
+  font-size: 11px;
+  color: var(--accent-cyan);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.cl-week-nav-today {
+  margin-left: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.1);
+  color: var(--accent-cyan);
+  cursor: pointer;
+}
+.cl-week-nav-today:hover {
+  background: rgba(0, 212, 255, 0.18);
+}
+
 .cl-matrix {
   display: flex;
   flex-direction: column;
@@ -10976,6 +11213,13 @@ header,
   background: rgba(255, 184, 0, 0.15);
   border-color: rgba(255, 184, 0, 0.5);
   color: var(--accent-amber);
+}
+
+.cl-cell-missed {
+  background: rgba(255, 170, 0, 0.2);
+  border-color: rgba(255, 170, 0, 0.65);
+  color: var(--accent-amber);
+  font-weight: 900;
 }
 
 .cl-cell-clickable {
@@ -12423,7 +12667,7 @@ header,
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  align-items: stretch;
+  align-items: start;
 }
 @media (max-width: 700px) {
   .sv-content-blocks-grid {
@@ -12436,7 +12680,6 @@ header,
   flex-direction: column;
   gap: 10px;
   min-width: 0;
-  height: 100%;
 }
 
 /* Убеждаемся, что sv-content-block внутри grid не растягивается */

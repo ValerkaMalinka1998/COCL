@@ -8,6 +8,7 @@ const STORAGE_KEYS = {
   lines: 'cl_lines_v2',
   shifts: 'cl_shifts_v2',
   brands: 'cl_brands_v2',
+  brandWorkshops: 'cl_brandWorkshops_v1',
   lineBrands: 'cl_lineBrands_v2',
   operators: 'cl_operators_v2',
   workshops: 'cl_workshops_v1',   // ← НОВОЕ (заменяет blocks)
@@ -16,7 +17,8 @@ const STORAGE_KEYS = {
   topLosses: 'cl_toplosses_v1',
   electronicShiftCfg: 'cl_electronic_shiftcfg_v1',
   electronicParams: 'cl_electronic_params_v1',
-  electronicBrandSchedule: 'cl_electronic_brandschedule_v1'
+  electronicBrandSchedule: 'cl_electronic_brandschedule_v1',
+  customTriggers: 'cl_custom_triggers_v1'
 };
 
 /* ============================================================
@@ -24,6 +26,7 @@ const STORAGE_KEYS = {
    ============================================================ */
 
 let currentEditorLine = null;
+let dashboardWorkshop = '';   // '' = все цеха, иначе id цеха
 
 /* ============================================================
    ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
@@ -123,6 +126,7 @@ const clState = {
   checkMode: false,
   rows: [],
   todayISO: '',
+  weekOffset: 0,
   shiftType: 'day',
   shiftLetter: '—',
   brand: '',
@@ -481,7 +485,7 @@ function openElectronicParamForm(id) {
       work: 'Run',
       timeFrom: '09:10',
       timeTo: '10:00',
-      controlType: 'value_input',
+      controlType: 'variable',
       normText: '',
       valuesByBrand: [],
       frequency: { type: 'weekly', schedule: [], shifts: ['day','night'], daysOfWeek: [], dates: [] },
@@ -540,6 +544,9 @@ function openElectronicParamForm(id) {
     };
   });
 
+  // Триггеры Change Over
+  fillElectronicTriggersGroup(Array.isArray(p.triggers) ? p.triggers : []);
+
   // Таблица брендов
   renderElectronicBrandsTable(p.valuesByBrand || []);
 
@@ -569,15 +576,44 @@ function fillElectronicMachineSelect(line, currentValue) {
   if (currentValue) select.value = currentValue;
 }
 
+/* Заполнить группу триггеров электронного параметра */
+function fillElectronicTriggersGroup(selected = []) {
+  const g = $('#ep_triggersGroup');
+  if (!g) return;
+
+  const custom = getCustomTriggers().map(t => ({ value: t.value, label: t.label }));
+  const nodes = (typeof getNodes === 'function' ? getNodes() : []).map(n => ({
+    value: 'node:' + n.name,
+    label: n.name + ' [' + n.part + ']'
+  }));
+  const all = [...custom, ...nodes];
+
+  if (!all.length) {
+    g.innerHTML = '<span style="color:var(--text-dim);font-size:12px">Триггеры не настроены</span>';
+    return;
+  }
+
+  g.innerHTML = '<div class="checkbox-group">' + all.map(t => {
+    const checked = selected.includes(t.value);
+    return `<label class="${checked ? 'checked' : ''}"><input type="checkbox" value="${escapeHtml(t.value)}" ${checked ? 'checked' : ''}> ${escapeHtml(t.label)}</label>`;
+  }).join('') + '</div>';
+
+  g.querySelectorAll('input').forEach(cb => {
+    cb.addEventListener('change', e => {
+      e.target.closest('label').classList.toggle('checked', e.target.checked);
+    });
+  });
+}
+
 /* Показать/скрыть блоки в зависимости от controlType */
 function updateElectronicFormVisibility() {
-  const ct = $('#ep_controlType')?.value || 'value_input';
+  const ct = $('#ep_controlType')?.value || 'variable';
 
   const normBlock = $('#ep_normTextBlock');
   const brandsBlock = $('#ep_brandsBlock');
 
-  if (normBlock)   normBlock.style.display   = (ct === 'ok_not_ok')    ? 'block' : 'none';
-  if (brandsBlock) brandsBlock.style.display = (ct === 'value_input')  ? 'block' : 'none';
+  if (normBlock)   normBlock.style.display   = (ct === 'fixed')    ? 'block' : 'none';
+  if (brandsBlock) brandsBlock.style.display = (ct === 'variable' || ct === 'interval')  ? 'block' : 'none';
 }
 
 /* ============================================================
@@ -685,12 +721,6 @@ function updateFreqBlocksVisibility() {
   $('#ep_freqOnceBlock').style.display   = (type === 'once')   ? 'block' : 'none';
 }
 
-/* ============================================================
-   СПИСОК СТАНДАРТОВ — таблица + пагинация + сортировка
-   ============================================================ */
-   
-let currentPage = 1;   // текущая страница пагинации
-let pageSize = 10;     // размер страницы
 /* Пагинация истории — отдельные переменные, чтобы не конфликтовать с редактором */
 let historyPage = 1;
 let historyPageSize = 10;
@@ -810,11 +840,6 @@ $('#deactivationClearBtn')?.addEventListener('click', () => {
   closeDeactivationCommentModal();
   showToast('Комментарий удалён');
 });
-/* Обработчики поиска/фильтров — со сбросом пагинации */
-const resetPageAndRender = () => {
-  currentPage = 1;
-  refreshEditorMechTable();
-};
 
 /* ============================================================
    ФОРМА СТАНДАРТА — заполнение выпадающего списка машин
@@ -854,11 +879,9 @@ function updateStandardPointsVisibility() {
   const section = $('#sf_pointsSection');
   if (!section) return;
 
-  if (ct === 'ok_not_ok') {
-    section.style.display = 'none';
-  } else {
-    section.style.display = 'block';
-  }
+  // Все три типа могут иметь точки: fixed — опционально (без точек → ОК/НеОК),
+  // variable и interval — обязательно. Поэтому блок точек показываем всегда.
+  section.style.display = 'block';
 }
 
 function openStandardForm(id) {
@@ -965,6 +988,9 @@ function openStandardForm(id) {
   fillStandardTriggersGroup(st.triggers || []);
     // Top Losses
   fillStandardTopLossesGroup(st.topLosses || []);
+
+  // Принудительный показ в смене сорта
+  $('#sf_forceChangeOver').checked = !!st.forceInChangeOver;
 
   // --- НОВОЕ: фотографии ---
   formPhotos = Array.isArray(st.photos) ? [...st.photos] : [];
@@ -1212,11 +1238,11 @@ function fillStandardTriggersGroup(selected = []) {
   const g = $('#sf_triggersGroup');
   if (!g) return;
 
-  // Материалы — из актуального списка
-  const materials = MATERIAL_CHANGES.map(m => ({
-    value: m.value,
-    label: m.label,
-    group: 'Материалы'
+  // Пользовательские триггеры (дефолт — прежние материалы)
+  const custom = getCustomTriggers().map(t => ({
+    value: t.value,
+    label: t.label,
+    group: 'Пользовательские'
   }));
 
   // Узлы — из настроек (если функция getNodes доступна)
@@ -1226,7 +1252,7 @@ function fillStandardTriggersGroup(selected = []) {
     group: 'Узлы'
   }));
 
-  const all = [...materials, ...nodes];
+  const all = [...custom, ...nodes];
 
   let html = '';
   let lastGroup = '';
@@ -1802,6 +1828,7 @@ if (!controlType) return showToast('Выберите тип контроля', t
     appliesTo,
     triggers,
     topLosses,
+    forceInChangeOver: $('#sf_forceChangeOver').checked,
     photos: [...formPhotos],
     // --- НОВОЕ: история ---
     author: id
@@ -1964,19 +1991,21 @@ $('#electronicParamSave')?.addEventListener('click', () => {
   const nodePart = (workshopId === 'smd') ? ($('#ep_nodePart')?.value || '').trim() : '';
     // Применяемость
   const appliesTo = [...$$('#ep_appliesToGroup input:checked')].map(cb => cb.value);
+  // Триггеры Change Over
+  const triggers = [...$$('#ep_triggersGroup input:checked')].map(cb => cb.value);
   // Валидация
   if (!machine)     return showToast('Выберите машину', true);
   if (!paramName)   return showToast('Укажите название параметра', true);
   if (workshopId === 'smd' && !nodePart) {
     return showToast('Выберите часть линии', true);
   }
-  if (controlType === 'ok_not_ok' && !normText) {
-    return showToast('Укажите текст нормы', true);
+  if (controlType === 'fixed' && !normText) {
+    return showToast('Для «Фиксированный» укажите текст нормы (ОК/Не ОК)', true);
   }
 
   // Собираем значения по брендам
   const valuesByBrand = [];
-  if (controlType === 'value_input') {
+  if (controlType === 'variable' || controlType === 'interval') {
     const tbody = $('#ep_brandsTbody');
     tbody?.querySelectorAll('tr').forEach(tr => {
       const brand = tr.querySelector('[data-brand]')?.value;
@@ -2026,9 +2055,10 @@ $('#electronicParamSave')?.addEventListener('click', () => {
     timeFrom: '',
     timeTo: '',
     controlType,
-    normText: controlType === 'ok_not_ok' ? normText : '',
-    valuesByBrand: controlType === 'value_input' ? valuesByBrand : [],
+    normText: controlType === 'fixed' ? normText : '',
+    valuesByBrand: (controlType === 'variable' || controlType === 'interval') ? valuesByBrand : [],
     appliesTo,
+    triggers,
     frequency,
     author: id ? (all.find(p => p.id === id)?.author || '') : '',
     createdAt: id ? (all.find(p => p.id === id)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
@@ -2150,6 +2180,7 @@ function createEmptyStandard() {
 
     appliesTo: [],
     triggers: [],
+    forceInChangeOver: false,   // принудительно показывать в смене сорта (игнорировать сравнение точек)
 
     // --- НОВОЕ: история ---
     author: '',
@@ -2262,6 +2293,52 @@ function parseNorm(normStr) {
   return null;
 }
 
+/* ============================================================
+   ТИПЫ КОНТРОЛЯ — миграция на 3 канонических типа
+   fixed       — Фиксированный (жёсткое значение без допуска; точки опциональны)
+   variable    — Вариабельный (всегда точки, target ± tolerance)
+   interval    — Контролируемый интервал (например 100…150)
+   ============================================================ */
+
+/* Есть ли хотя бы одна точка с допуском (min !== max) */
+function hasToleranceInMeasurements(measurements) {
+  const arr = Array.isArray(measurements) ? measurements : [];
+  for (const b of arr) {
+    if (!b) continue;
+    // Новый формат: блок с points
+    const points = Array.isArray(b.points) ? b.points : [];
+    for (const p of points) {
+      const norm = parseNorm(p && p.value);
+      if (norm && norm.min !== norm.max) return true;
+    }
+    // Legacy плоский формат: b.value напрямую
+    if (!points.length && b.value != null) {
+      const norm = parseNorm(b.value);
+      if (norm && norm.min !== norm.max) return true;
+    }
+  }
+  return false;
+}
+
+/* Приводит legacy-тип к каноническому (с учётом точек) */
+function migrateControlType(type, measurements) {
+  if (type === 'fixed' || type === 'variable' || type === 'interval') return type;
+  if (type === 'range_input') return 'interval';
+  if (type === 'ok_not_ok') return 'fixed';
+  if (type === 'tolerance') return 'variable';
+  if (type === 'value_input') {
+    // Только для мех-стандартов (передан массив measurements) проверяем допуск точек:
+    // жёсткое значение (без допуска) → fixed, иначе → variable.
+    // Без measurements (электроника, история) value_input = ввод значения → variable.
+    if (Array.isArray(measurements) && !hasToleranceInMeasurements(measurements)) {
+      return 'fixed';
+    }
+    return 'variable';
+  }
+  // Неизвестный / пустой — по умолчанию «Фиксированный» (с точками или ОК/НеОК)
+  return 'fixed';
+}
+
 function normalizeStandard(st) {
   const empty = createEmptyStandard();
   return {
@@ -2269,9 +2346,11 @@ function normalizeStandard(st) {
     ...st,
     id: st.id || empty.id,
     active: st.active !== undefined ? st.active : true,
+    controlType: migrateControlType(st.controlType, st.measurements),
     measurements: normalizeMeasurements(st.measurements),
     appliesTo: normalizeAppliesTo(st.appliesTo),
     triggers: Array.isArray(st.triggers) ? st.triggers : [],
+    forceInChangeOver: st.forceInChangeOver === true,
     photos: Array.isArray(st.photos)
       ? st.photos.filter(p => typeof p === 'string' && p.trim() !== '')
       : [],
@@ -2362,6 +2441,21 @@ function setWorkshops(v) {
 /* --- Найти цех по id --- */
 function getWorkshop(workshopId) {
   return getWorkshops().find(w => w.id === workshopId) || null;
+}
+
+/* --- Название цеха по id (пусто → «все цеха») --- */
+function getWorkshopName(workshopId) {
+  if (!workshopId) return '';
+  const w = getWorkshop(workshopId);
+  return w ? w.name : workshopId;
+}
+
+/* --- HTML-опции цехов для селекта (первый — «все цеха») --- */
+function workshopOptionsHtml(selected) {
+  return ['<option value="">— все цеха —</option>']
+    .concat(getWorkshops().map(w =>
+      `<option value="${escapeAttr(w.id)}"${w.id === selected ? ' selected' : ''}>${escapeHtml(w.name)}</option>`
+    )).join('');
 }
 
 /* --- Найти участок по id (поиск по всем цехам) --- */
@@ -2553,7 +2647,7 @@ function normalizeElectronicParam(p) {
     timeFrom: p.timeFrom || '',
     timeTo: p.timeTo || '',
 
-    controlType: (p.controlType === 'ok_not_ok') ? 'ok_not_ok' : 'value_input',
+    controlType: migrateControlType(p.controlType, null),
     normText: typeof p.normText === 'string' ? p.normText : '',
 
     valuesByBrand: Array.isArray(p.valuesByBrand)
@@ -2564,6 +2658,9 @@ function normalizeElectronicParam(p) {
     appliesTo: Array.isArray(p.appliesTo) ? p.appliesTo.filter(v =>
       ['ChangeOver', 'CL_TO', 'CL_Conversion'].includes(v)
     ) : [],
+
+    // --- Триггеры Change Over ---
+    triggers: Array.isArray(p.triggers) ? p.triggers.filter(t => typeof t === 'string') : [],
 
     frequency: normalizeElectronicFrequency(p.frequency),
 
@@ -2720,8 +2817,8 @@ function getElectronicBrandsForLine(line) {
   const result = new Set();
 
   params.forEach(p => {
-    if (p.controlType === 'ok_not_ok') {
-      // Для ok_not_ok достаточно, чтобы normText был заполнен —
+    if (p.controlType === 'fixed') {
+      // Для «Фиксированный» (ОК/Не ОК) достаточно, чтобы normText был заполнен —
       // но у него нет привязки к бренду. Значит, он доступен всем брендам линии.
       if (p.normText && p.normText.trim()) {
         lineBrands.forEach(b => result.add(b));
@@ -3201,16 +3298,14 @@ function addDaysISO(dateStr, n) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-/* Утилита: 7 дат текущей ISO-недели (Пн..Вс) в формате 'YYYY-MM-DD' */
-function getCurrentWeekDays() {
+/* Утилита: 7 дат ISO-недели (Пн..Вс) со сдвигом offset недель */
+function getWeekDays(offset = 0) {
   const now = new Date();
-  // JS: 0 = Вс, 1 = Пн, ... 6 = Сб. Переводим в ISO: Пн = 1, Вс = 7.
   const jsDay = now.getDay();
   const isoDay = jsDay === 0 ? 7 : jsDay;
 
-  // Находим понедельник
   const monday = new Date(now);
-  monday.setDate(now.getDate() - (isoDay - 1));
+  monday.setDate(now.getDate() - (isoDay - 1) + (offset * 7));
 
   const days = [];
   for (let i = 0; i < 7; i++) {
@@ -3222,6 +3317,19 @@ function getCurrentWeekDays() {
     days.push(`${yyyy}-${mm}-${dd}`);
   }
   return days;
+}
+
+/* Текущая неделя (offset = 0) */
+function getCurrentWeekDays() {
+  return getWeekDays(0);
+}
+
+/* Название недели: «16–22.06» */
+function getWeekLabel(offset = 0) {
+  const days = getWeekDays(offset);
+  const first = fmtShortDate(days[0]);
+  const last = fmtShortDate(days[6]);
+  return `${first} – ${last}`;
 }
 
 /* Утилита: человекочитаемая дата 'YYYY-MM-DD' → '28.09.2026' */
@@ -3317,7 +3425,7 @@ $$('#elecChecklistContainer .elec-acc-item').forEach(item => {
     let status = 'UNCHECKED';
     let value = null;
 
-    if (it.controlType === 'ok_not_ok') {
+    if (it.controlType === 'fixed') {
       const r = item.querySelector('input[data-elec-ans]:checked');
       if (r) {
         answer = r.value === 'OK' ? 'ОК' : 'Не ОК';
@@ -3594,7 +3702,10 @@ function openClCheckModal(rowId, dateStr, shift) {
 
   $('#qcBrand').textContent = brand || '— не задан —';
 
-  const controlType = row.controlType || 'ok_not_ok';
+  const controlType = migrateControlType(row.controlType, row.measurements);
+  const hasPointsMech = !isElec &&
+    Array.isArray(row.measurements) &&
+    row.measurements.some(b => b && Array.isArray(b.points) && b.points.length > 0);
 
   // --- Описание контроля (только для механики) ---
   const ctrlDescBlock = $('#qcControlDescBlock');
@@ -3621,8 +3732,8 @@ function openClCheckModal(rowId, dateStr, shift) {
   const okBlock = $('#qcAnswerOkNotOk');
   const pointsBlock = $('#qcAnswerPoints');
 
-  if (controlType === 'ok_not_ok') {
-    // --- ОК / Не ОК ---
+  if (controlType === 'fixed' && (isElec || !hasPointsMech)) {
+    // --- Фиксированный без точек → ОК / Не ОК ---
     normBlock.style.display = 'block';
     const normText = isElec
       ? ((row.normText || '').trim() || '— проверить визуально —')
@@ -3635,7 +3746,7 @@ function openClCheckModal(rowId, dateStr, shift) {
     const existingVal = draft?.status || existing?.status || '';
     $('#qcAnswerOk').checked = existingVal === 'OK';
     $('#qcAnswerFail').checked = existingVal === 'FAIL';
-  } else if (isElec && controlType === 'value_input') {
+  } else if (isElec && (controlType === 'variable' || controlType === 'interval')) {
     // --- Электронный числовой параметр ---
     const values = Array.isArray(row.valuesByBrand) ? row.valuesByBrand : [];
     // Ищем значение для выбранного бренда, иначе первое
@@ -3738,14 +3849,17 @@ function saveQuickCheck() {
   const date = quickCheckState.date;
   const shift = quickCheckState.shift;
   const brand = quickCheckState.brand || '';
-  const controlType = row.controlType || 'ok_not_ok';
+  const controlType = migrateControlType(row.controlType, row.measurements);
+  const hasPointsMech = !isElec &&
+    Array.isArray(row.measurements) &&
+    row.measurements.some(b => b && Array.isArray(b.points) && b.points.length > 0);
   const comment = ($('#qcComment')?.value || '').trim();
 
   let status = 'UNCHECKED';
   let answer = '';
   let value = null;
 
-  if (controlType === 'ok_not_ok') {
+  if (controlType === 'fixed' && (isElec || !hasPointsMech)) {
     const r = document.querySelector('input[name="qc_answer"]:checked');
     if (!r) {
       showToast('Выберите ОК или Не ОК', true);
@@ -4050,8 +4164,202 @@ function setShifts(v) {
 function getBrands() { return load(STORAGE_KEYS.brands, [...DEFAULT_BRANDS]); }
 function setBrands(v) { save(STORAGE_KEYS.brands, v); }
 
+/* Цех для каждого бренда: { [brandName]: workshopId } */
+function getBrandWorkshops() { return load(STORAGE_KEYS.brandWorkshops, {}); }
+function setBrandWorkshops(v) { save(STORAGE_KEYS.brandWorkshops, v); }
+function getBrandWorkshop(brandName) { return getBrandWorkshops()[brandName] || ''; }
+function setBrandWorkshop(brandName, workshopId) {
+  const m = getBrandWorkshops();
+  if (workshopId) m[brandName] = workshopId;
+  else delete m[brandName];
+  setBrandWorkshops(m);
+}
+
 function getLineBrands() { return load(STORAGE_KEYS.lineBrands, {}); }
 function setLineBrands(v) { save(STORAGE_KEYS.lineBrands, v); }
+
+/* --- Пользовательские триггеры Change Over (мех + электро) --- */
+function getCustomTriggers() {
+  const raw = load(STORAGE_KEYS.customTriggers, null);
+  if (!Array.isArray(raw)) {
+    // Дефолт — прежние фиксированные опции как стартовый набор
+    const def = MATERIAL_CHANGES.map(m => ({
+      id: 'ct_' + m.value,
+      label: m.label,
+      value: m.value,
+      workshop: '',
+      part: ''
+    }));
+    save(STORAGE_KEYS.customTriggers, def);
+    return def;
+  }
+  return raw.filter(t => t && typeof t.label === 'string' && t.label.trim());
+}
+function setCustomTriggers(v) { save(STORAGE_KEYS.customTriggers, v); }
+function getCustomTriggersForPart(part) {
+  return getCustomTriggers().filter(t => !t.part || t.part === part);
+}
+
+/* ============================================================
+   НАСТРОЙКИ: пользовательские триггеры Change Over
+   ============================================================ */
+
+function renderCustomTriggersSettings() {
+  const container = $('#customTriggersContainer');
+  if (!container) return;
+
+  const list = getCustomTriggers();
+
+  if (!list.length) {
+    container.innerHTML = '<div class="empty-state">Триггеров нет. Нажмите «Добавить триггер».</div>';
+    return;
+  }
+
+  container.innerHTML = '<div class="tl-cat-losses">' + list.map(t => {
+    const wsName = t.workshop ? getWorkshopName(t.workshop) : '';
+    const meta = [t.part || 'любая часть', wsName || 'все цеха'].join(' · ');
+    return `
+      <div class="tl-loss-inline-row" data-trigger-id="${escapeAttr(t.id)}">
+        <span class="tl-loss-inline-name">${escapeHtml(t.label)}</span>
+        <span class="tl-loss-ws-chip">${escapeHtml(meta)}</span>
+        <div class="tl-loss-inline-actions">
+          <button type="button" class="tl-row-action-btn tl-row-edit-btn" data-ct-edit="${escapeAttr(t.id)}" title="Изменить">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </button>
+          <button type="button" class="tl-row-action-btn tl-row-delete-btn" data-ct-delete="${escapeAttr(t.id)}" title="Удалить">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('') + '</div>';
+
+  container.querySelectorAll('[data-ct-edit]').forEach(btn => {
+    btn.addEventListener('click', () => openCustomTriggerModal(btn.dataset.ctEdit));
+  });
+  container.querySelectorAll('[data-ct-delete]').forEach(btn => {
+    btn.addEventListener('click', () => deleteCustomTrigger(btn.dataset.ctDelete));
+  });
+}
+
+let currentEditingTriggerId = null;
+
+function openCustomTriggerModal(id) {
+  const modal = $('#customTriggerModal');
+  if (!modal) return;
+
+  currentEditingTriggerId = id || null;
+
+  const titleEl = $('#customTriggerModalTitle');
+  const saveBtn = $('#customTriggerModalSave');
+  const wsEl = $('#customTriggerModalWorkshop');
+  if (wsEl) wsEl.innerHTML = workshopOptionsHtml('');
+
+  if (id) {
+    const t = getCustomTriggers().find(x => x.id === id);
+    if (!t) return;
+    if (titleEl) titleEl.textContent = 'Изменить триггер';
+    if (saveBtn) saveBtn.textContent = 'Сохранить';
+    $('#customTriggerModalId').value = t.id;
+    $('#customTriggerModalLabel').value = t.label || '';
+    $('#customTriggerModalPart').value = t.part || '';
+    if (wsEl) wsEl.value = t.workshop || '';
+  } else {
+    if (titleEl) titleEl.textContent = 'Добавить триггер';
+    if (saveBtn) saveBtn.textContent = 'Добавить';
+    $('#customTriggerModalId').value = '';
+    $('#customTriggerModalLabel').value = '';
+    $('#customTriggerModalPart').value = '';
+  }
+
+  openModal(modal);
+  setTimeout(() => $('#customTriggerModalLabel')?.focus(), 100);
+}
+
+function closeCustomTriggerModal() {
+  closeModal('#customTriggerModal');
+  currentEditingTriggerId = null;
+}
+
+function deleteCustomTrigger(id) {
+  const t = getCustomTriggers().find(x => x.id === id);
+  if (!t) return;
+
+  // Считаем, сколько стандартов используют этот триггер
+  const usedByMech = getStandards().filter(st =>
+    Array.isArray(st.triggers) && st.triggers.includes(t.value)
+  ).length;
+  const usedByElec = getElectronicParams().filter(p =>
+    Array.isArray(p.triggers) && p.triggers.includes(t.value)
+  ).length;
+
+  let msg = `Удалить триггер «${t.label}»?`;
+  if (usedByMech + usedByElec > 0) {
+    msg += `\n\nОн используется в ${usedByMech} мех. и ${usedByElec} эл. стандартах — у них он останется, но пропадёт из списка выбора.`;
+  }
+  if (!confirm(msg)) return;
+
+  setCustomTriggers(getCustomTriggers().filter(x => x.id !== id));
+  renderCustomTriggersSettings();
+  showToast('Триггер удалён');
+}
+
+$('#addCustomTriggerBtn')?.addEventListener('click', () => openCustomTriggerModal(null));
+$('#customTriggerModalClose')?.addEventListener('click', closeCustomTriggerModal);
+$('#customTriggerModalCancel')?.addEventListener('click', closeCustomTriggerModal);
+$('#customTriggerModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'customTriggerModal') closeCustomTriggerModal();
+});
+
+$('#customTriggerModalLabel')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    $('#customTriggerModalSave')?.click();
+  }
+});
+
+$('#customTriggerModalSave')?.addEventListener('click', () => {
+  const id = $('#customTriggerModalId').value;
+  const label = ($('#customTriggerModalLabel').value || '').trim();
+  const part = $('#customTriggerModalPart').value;
+  const workshop = ($('#customTriggerModalWorkshop')?.value || '').trim();
+
+  if (!label) return showToast('Введите название триггера', true);
+
+  const list = getCustomTriggers();
+
+  // Дубликат по названию
+  const dup = list.find(t => t.id !== id && t.label.toLowerCase() === label.toLowerCase());
+  if (dup) return showToast('Такой триггер уже есть', true);
+
+  if (id) {
+    const t = list.find(x => x.id === id);
+    if (!t) return;
+    t.label = label;
+    t.part = part;
+    t.workshop = workshop;
+  } else {
+    list.push({
+      id: 'ct_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      label,
+      value: 'ct_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      part,
+      workshop
+    });
+  }
+
+  setCustomTriggers(list);
+  renderCustomTriggersSettings();
+  if (typeof fillEditorFilters === 'function') fillEditorFilters();
+  closeCustomTriggerModal();
+  showToast(id ? 'Триггер обновлён' : 'Триггер добавлен');
+});
 
 /* Линии, у которых есть хотя бы один бренд */
 function getAvailableLines() {
@@ -4104,32 +4412,21 @@ function fillBrandsForLine(line) {
   updateBrandToOptions();
 }
 
-/* Обновить опции brandTo: для Intermediate/Major убираем brandFrom */
+/* Обновить опции brandTo (все бренды линии) */
 function updateBrandToOptions() {
-  const type = $('#transitionType').value;
   const line = $('#lineSelect').value;
-  const brandFrom = $('#brandFrom').value;
   const brandToSelect = $('#brandTo');
   if (!brandToSelect || !line) return;
 
   const brands = getBrandsForLine(line);
-  const isStrict = (type === 'Intermediate' || type === 'Major');
 
-  let currentValue = brandToSelect.value;
+  const currentValue = brandToSelect.value;
   brandToSelect.innerHTML = '<option value="">— выберите —</option>' +
-    brands
-      .filter(b => !(isStrict && b === brandFrom))   // для strict — исключаем brandFrom
-      .map(b => `<option>${escapeHtml(b)}</option>`)
-      .join('');
+    brands.map(b => `<option>${escapeHtml(b)}</option>`).join('');
 
-  // Если текущее значение удалено (совпадало с brandFrom) — сбрасываем
-  if (isStrict && currentValue === brandFrom) {
-    brandToSelect.value = '';
-  } else {
-    // Восстанавливаем выбор, если он ещё доступен
-    if (brands.includes(currentValue) && !(isStrict && currentValue === brandFrom)) {
-      brandToSelect.value = currentValue;
-    }
+  // Восстанавливаем выбор, если он ещё доступен
+  if (brands.includes(currentValue)) {
+    brandToSelect.value = currentValue;
   }
 
   brandToSelect.classList.remove('input-error');
@@ -4140,8 +4437,57 @@ $('#lineSelect').addEventListener('change', () => {
   $('#brandFrom').value = '';
   $('#brandTo').value = '';
   if (line) fillBrandsForLine(line);
+  renderCoclLineContext(line);
+  renderCoclPartStep(line);
   updateChecklist();
 });
+
+/* --- Контекст выбранной линии: Цех · Участок · Блок --- */
+function renderCoclLineContext(line) {
+  const el = $('#coclLineContext');
+  if (!el) return;
+
+  if (!line || typeof getBlockForLine !== 'function') {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+
+  const ctx = getBlockForLine(line);
+  if (!ctx) {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+
+  const chips = [
+    { cls: 'cocl-ctx-workshop', text: ctx.workshop.name },
+    { cls: 'cocl-ctx-area',     text: ctx.area.name },
+    ctx.block ? { cls: 'cocl-ctx-block', text: ctx.block.name } : null
+  ].filter(Boolean);
+
+  el.innerHTML = chips
+    .map(c => `<span class="cocl-ctx-chip ${c.cls}">${escapeHtml(c.text)}</span>`)
+    .join('');
+  el.style.display = 'flex';
+}
+
+/* --- Шаг «Часть линии»: активен только для SMD, иначе скрыт --- */
+function renderCoclPartStep(line) {
+  const partField = $('#partSelect')?.closest('.field');
+  const partSelect = $('#partSelect');
+  if (!partField || !partSelect) return;
+
+  const workshopId = line ? getWorkshopIdForLine(line) : null;
+  const needsPart = workshopId === 'smd';
+
+  partField.style.display = needsPart ? '' : 'none';
+
+  if (!needsPart) {
+    // Для не-SMD часть не выбирается — сбрасываем
+    partSelect.value = '';
+  }
+}
 
 /* --- Обновление чек-листа при изменении оператора/смены --- */
 $('#operatorName')?.addEventListener('input', () => {
@@ -4152,25 +4498,14 @@ $('#shift')?.addEventListener('change', () => {
 });
 
 $('#partSelect').addEventListener('change', () => {
-  const type = $('#transitionType').value;
-
-  // Если выбран Minor — перерисовать чекбоксы «Что меняется»
-  if (type === 'Minor') {
-    renderMaterialChanges();
-  }
-  // Для Intermediate/Major — перерисовать узлы (они зависят от Maker/Packer)
-  else if (type === 'Intermediate' || type === 'Major') {
-    renderNodes();
-  }
-
   updateChecklist();
 });
 
-/* Клик по кнопке-чипу */
-document.querySelectorAll('.type-option').forEach(btn => {
+/* Клик по кнопке-чипу типа перехода (только в блоке «Проверка») */
+$('#typeSelector')?.querySelectorAll('.type-option').forEach(btn => {
   btn.addEventListener('click', () => {
     const value = btn.dataset.value;
-    document.querySelectorAll('.type-option').forEach(b => b.classList.remove('active'));
+    $('#typeSelector').querySelectorAll('.type-option').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     $('#transitionType').value = value;
     onTransitionTypeChange();
@@ -4187,7 +4522,6 @@ function onTransitionTypeChange() {
   if (!type) {
     $('#brandsCard').style.display = 'none';
     $('#changesCard').style.display = 'none';
-    $('#nodesCard').style.display = 'none';
     $('#checklistCard').style.display = 'none';
     return;
   }
@@ -4198,11 +4532,9 @@ function onTransitionTypeChange() {
     $('#changesCard').style.display = 'block';
     $('#changesTitle').textContent = '5. Что меняется';
     renderMaterialChanges();
-    $('#nodesCard').style.display = 'none';
   } else {
     $('#brandsCard').style.display = 'none';
     $('#changesCard').style.display = 'none';
-    $('#nodesCard').style.display = 'none';
   }
 
   updateChecklist();
@@ -4212,50 +4544,23 @@ function renderMaterialChanges() {
   const c = $('#changesContainer');
   const part = $('#partSelect').value;   // Maker / Packer
 
-  // Берём список изменений для конкретной части линии
-  const items = MINOR_CHANGES_BY_PART[part] || [];
+  // Пользовательские триггеры для конкретной части линии (или общие)
+  const items = getCustomTriggersForPart(part).map(t => ({
+    value: t.value,
+    label: t.label
+  }));
 
   if (!items.length) {
-    c.innerHTML = '<div class="empty-state" style="padding:20px">Для этой части линии нет настроенных изменений.</div>';
+    c.innerHTML = '<div class="empty-state" style="padding:20px">Триггеры не настроены. Добавьте их в Настройках → «Триггеры Change Over».</div>';
     return;
   }
 
   c.innerHTML = '<div class="checkbox-group">' +
     items.map(m =>
-      `<label><input type="checkbox" value="${m.value}" data-change> ${escapeHtml(m.label)}</label>`
+      `<label><input type="checkbox" value="${escapeHtml(m.value)}" data-change> ${escapeHtml(m.label)}</label>`
     ).join('') + '</div>';
 
   c.querySelectorAll('input[data-change]').forEach(cb => {
-    cb.addEventListener('change', (e) => {
-      e.target.closest('label').classList.toggle('checked', e.target.checked);
-      updateChecklist();
-    });
-  });
-}
-/* ============================================================
-   ЗАМЕНА УЗЛОВ — для Intermediate / Major
-   ============================================================ */
-function renderNodes() {
-  const c = $('#nodesContainer');
-  const part = $('#partSelect').value;
-
-  // Берём узлы из настроек, фильтруем по части
-  let nodes = (typeof getNodes === 'function' ? getNodes() : []);
-  if (part) {
-    nodes = nodes.filter(n => n.part === 'Both' || n.part === part);
-  }
-
-  if (!nodes.length) {
-    c.innerHTML = '<div class="empty-state" style="padding:20px">Нет узлов для этой части линии. Добавьте их в Настройках.</div>';
-    return;
-  }
-
-  c.innerHTML = '<div class="checkbox-group">' +
-    nodes.map(n =>
-      `<label><input type="checkbox" value="${escapeHtml(n.name)}" data-node> ${escapeHtml(n.name)} <span style="font-size:10px;opacity:0.7">[${n.part}]</span></label>`
-    ).join('') + '</div>';
-
-  c.querySelectorAll('input[data-node]').forEach(cb => {
     cb.addEventListener('change', (e) => {
       e.target.closest('label').classList.toggle('checked', e.target.checked);
       updateChecklist();
@@ -4291,18 +4596,65 @@ function getSelectedTriggers() {
   return triggers;
 }
 
+/* ============================================================
+   Показ стандарта в Change Over — логика «отличий точек»
+   ============================================================ */
+
+/**
+ * Эффективный блок точек для бренда:
+ * сначала блок конкретного бренда, иначе блок «Все бренды» (brand === '').
+ * Возвращает null, если подходящего блока нет.
+ */
+function getEffectiveBrandBlock(blocks, brand) {
+  if (!Array.isArray(blocks) || !blocks.length) return null;
+  const exact = blocks.find(b =>
+    b && b.brand === brand && Array.isArray(b.points) && b.points.length > 0
+  );
+  if (exact) return exact;
+  const universal = blocks.find(b =>
+    b && (b.brand === '' || b.brand == null) && Array.isArray(b.points) && b.points.length > 0
+  );
+  return universal || null;
+}
+
+/**
+ * true, если наборы точек различаются (по числу точек или по значению хотя бы одной).
+ */
+function brandBlocksDiffer(blockA, blockB) {
+  const pa = (blockA && Array.isArray(blockA.points))
+    ? blockA.points.map(p => String((p && p.value) || '').trim())
+    : [];
+  const pb = (blockB && Array.isArray(blockB.points))
+    ? blockB.points.map(p => String((p && p.value) || '').trim())
+    : [];
+  if (pa.length !== pb.length) return true;
+  return pa.some((v, i) => v !== pb[i]);
+}
+
+/**
+ * Проверка триггеров стандарта для Change Over.
+ * Без триггеров — показывается; с триггерами — только при совпадении.
+ */
+function standardMatchesTriggers(st, selectedTriggers) {
+  if (!st.triggers || !st.triggers.length) return true;
+  return st.triggers.some(t => selectedTriggers.includes(t));
+}
+
 function updateChecklist() {
   const operator = ($('#operatorName')?.value || '').trim();
   const shift = $('#shift')?.value || '';
   const type = $('#transitionType').value;
   const line = $('#lineSelect').value;
   const part = $('#partSelect').value;
+  const brandFrom = $('#brandFrom')?.value || '';
 
   const buildCard = $('#buildChecklistCard');
   const checklistCard = $('#checklistCard');
 
   // --- Если не заполнены основные поля — ничего не показываем ---
-  if (!operator || !shift || !type || !line || !part) {
+  const workshopId = line ? getWorkshopIdForLine(line) : null;
+  const needsPart = workshopId === 'smd';
+  if (!operator || !shift || !type || !line || (needsPart && !part)) {
     if (buildCard) buildCard.style.display = 'none';
     if (checklistCard) checklistCard.style.display = 'none';
     return;
@@ -4328,20 +4680,30 @@ function updateChecklist() {
     if (st.line !== line) return false;
     if (st.nodePart && st.nodePart !== part) return false;
 
-    // --- Change Over: только стандарты с блоком выбранного бренда ---
+    // --- Change Over: стандарт показываем, только если точки целевого
+    //     бренда отличаются от точек исходного (либо технолог принудительно
+    //     включил стандарт в проверку смены сорта) ---
     if (type === 'ChangeOver') {
       const blocks = Array.isArray(st.measurements) ? st.measurements : [];
       if (!blocks.length) return false;
 
-      const hasBrandBlock = blocks.some(b =>
-        b.brand === brandTo && Array.isArray(b.points) && b.points.length > 0
-      );
-      if (!hasBrandBlock) return false;
+      const blockFrom = getEffectiveBrandBlock(blocks, brandFrom);
+      const blockTo = getEffectiveBrandBlock(blocks, brandTo);
 
-      if (st.triggers && st.triggers.length > 0) {
-        return st.triggers.some(t => triggers.includes(t));
+      // Нет релевантного блока для целевого бренда — не показываем
+      if (!blockTo) return false;
+
+      // Если технолог НЕ принудительно указал стандарт — показываем только
+      // при отличии точек целевого бренда от исходного.
+      if (st.forceInChangeOver !== true) {
+        // Блок исходного бренда не задан (и нет «Все бренды») — стандарт
+        // специфичен для целевого бренда, показываем. Иначе требуем отличие.
+        if (blockFrom && !brandBlocksDiffer(blockFrom, blockTo)) {
+          return false;
+        }
       }
-      return true;
+
+      return standardMatchesTriggers(st, triggers);
     }
 
     // --- CL_TO / CL_Conversion: триггеры не проверяем ---
@@ -4384,17 +4746,16 @@ function renderChecklist(items) {
     let selectedBlock = null;
 
     if (type === 'ChangeOver' && brandTo) {
-      selectedBlock = blocks.find(b => b.brand === brandTo) || null;
+      selectedBlock = getEffectiveBrandBlock(blocks, brandTo);
     } else {
       selectedBlock = blocks[0] || null;
     }
 
     const visiblePoints = selectedBlock ? selectedBlock.points : [];
 
-    // Сетка точек (для value_input / range_input)
+    // Сетка точек (для типов с точками: variable / interval / fixed с точками)
     let pointsHtml = '';
-    if (selectedBlock && visiblePoints.length &&
-        (st.controlType === 'value_input' || st.controlType === 'range_input')) {
+    if (selectedBlock && visiblePoints.length) {
       const cells = visiblePoints.map((m, i) => {
         const norm = parseNorm(m.value);
         const normData = norm ? JSON.stringify(norm).replace(/"/g, '&quot;') : '';
@@ -4428,9 +4789,9 @@ function renderChecklist(items) {
       `;
     }
 
-    // Ответ (для ok_not_ok)
+    // Ответ (ОК/Не ОК) — только для Фиксированного без точек
     let answerHtml = '';
-    if (st.controlType === 'ok_not_ok') {
+    if (st.controlType === 'fixed' && !visiblePoints.length) {
       answerHtml = `
         <div class="radio-group">
           <label><input type="radio" name="ans_${st.id}" value="OK" data-ans> ОК</label>
@@ -4757,9 +5118,13 @@ function getBlockNameForLine(line) {
 /* Текст типа контроля для отображения */
 function controlTypeLabel(type) {
   switch (type) {
-    case 'ok_not_ok':    return 'ОК / Не ОК';
-    case 'value_input':  return 'Ввод значения';
+    case 'ok_not_ok':    return 'Фиксированный (ОК/Не ОК)';
+    case 'value_input':  return 'Вариабельный (значение ± допуск)';
+    case 'range_input':  return 'Контролируемый интервал';
     case 'tolerance':    return 'В допуске / Не в допуске';
+    case 'fixed':        return 'Фиксированный';
+    case 'variable':     return 'Вариабельный';
+    case 'interval':     return 'Контролируемый интервал';
     default:             return '—';
   }
 }
@@ -5115,13 +5480,12 @@ $('#saveCheckBtn').addEventListener('click', () => {
   const type = $('#transitionType').value;
   const brandFrom = $('#brandFrom').value;
   const brandTo = $('#brandTo').value;
-  const customNode = $('#customNode').value.trim();
 
   
 if (!operator) return showToast('Укажите ФИО оператора', true);
 if (!shift) return showToast('Укажите смену', true);
 if (!line) return showToast('Укажите линию', true);
-if (!part) return showToast('Укажите часть линии', true);
+if (getWorkshopIdForLine(line) === 'smd' && !part) return showToast('Укажите часть линии', true);
 if (!type) return showToast('Укажите тип перехода', true);
 
 /* Бренды обязательны ТОЛЬКО для Change Over */
@@ -5143,13 +5507,16 @@ if (type === 'ChangeOver') {
     let answer = '—';
     let status = 'UNCHECKED';
 
-    if (st.controlType === 'ok_not_ok') {
+    const hasPoints = Array.isArray(st.measurements) &&
+      st.measurements.some(b => b && Array.isArray(b.points) && b.points.length > 0);
+
+    if (st.controlType === 'fixed' && !hasPoints) {
       const r = item.querySelector('input[data-ans]:checked');
       if (!r) { hasEmpty = true; return; }
       answer = r.value === 'OK' ? 'ОК' : 'Не ОК';
       status = r.value;
 
-    } else if (st.controlType === 'value_input' || st.controlType === 'range_input') {
+    } else {
       const cells = item.querySelectorAll('.checklist-point-cell');
       if (!cells.length) { hasEmpty = true; return; }
 
@@ -5214,7 +5581,6 @@ if (type === 'ChangeOver') {
     timestamp: new Date().toISOString(),
     operator, shift, line, part, type, brandFrom, brandTo,
     triggers,
-    customNode: customNode || '',
     items
   };
 
@@ -5239,12 +5605,10 @@ function resetCheckForm() {
   document.querySelectorAll('.type-option').forEach(b => b.classList.remove('active'));
   $('#brandFrom').value = '';
   $('#brandTo').value = '';
-  $('#customNode').value = '';
 
   // Сброс внутренностей
   $('#checklistContainer').innerHTML = '';
   $('#changesContainer').innerHTML = '';
-  $('#nodesContainer').innerHTML = '';
 
   // Сброс прогресса
   $('#progressBadge').textContent = '';
@@ -5263,7 +5627,7 @@ function resetCheckForm() {
     // Показываем все основные карточки (1. Оператор, 2. Линия, 3. Тип)
     if (!id) {
       card.style.display = '';
-    } else if (id === 'brandsCard' || id === 'changesCard' || id === 'nodesCard' ||
+    } else if (id === 'brandsCard' || id === 'changesCard' ||
                id === 'buildChecklistCard' || id === 'checklistCard') {
       // Эти скрыты, пока не выбран тип/бренды
       card.style.display = 'none';
@@ -5345,6 +5709,32 @@ function getFilteredHistory() {
   return hist.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
 }
 
+/* ============================================================
+   ИСТОРИЯ: вспомогательные для CL-режимов
+   ============================================================ */
+
+/* Текстовое имя режима записи истории */
+function getHistoryModeText(h) {
+  if (h.mode === 'toploss') return 'TOP Losses';
+  if (h.mode === 'electronic') return 'CL Electronic';
+  if (h.mode === 'cl') return 'CL (мех)';
+  return 'COCL';
+}
+
+/* Смена CL-записи в человекочитаемом виде: «День · A» / «Ночь · B».
+   Для CL-записей h.shift хранит букву бригады (A/B/C/D), h.date — дату.
+   День/ночь восстанавливается по графику смен.
+   Для обычных записей возвращает h.shift как есть (или '—' при пустом). */
+function formatClShift(h) {
+  const letter = String(h.shift || '').trim();
+  if (/^[A-D]$/.test(letter) && h.date) {
+    const shifts = getShiftsForDate(h.date);
+    if (shifts.day === letter) return 'День · ' + letter;
+    if (shifts.night === letter) return 'Ночь · ' + letter;
+  }
+  return h.shift || '—';
+}
+
 function renderHistory() {
   const hist = getFilteredHistory();
   $('#historyCount').textContent = hist.length;
@@ -5389,6 +5779,7 @@ function renderHistory() {
           const fails = h.items.filter(i => i.status === 'FAIL').length;
           const unchecked = h.items.filter(i => i.status === 'UNCHECKED').length;
           const isTopLoss = h.mode === 'toploss';
+          const isCl = h.mode === 'cl' || h.mode === 'electronic';
           const isElec = h.mode === 'electronic';
 
           // --- Контекст ---
@@ -5401,15 +5792,16 @@ function renderHistory() {
             contextHtml = names.length
               ? `<span class="tl-history-losses">${names.map(escapeHtml).join(' · ')}</span>`
               : '—';
-          } else if (isElec) {
-            const brandBadge = `<span class="badge badge-mode-electronic">${escapeHtml(h.brandActual || '—')}</span>`;
+          } else if (isCl) {
+            const brandBadge = `<span class="badge ${isElec ? 'badge-mode-electronic' : 'badge-mode-cl'}">${escapeHtml(h.brandActual || '—')}</span>`;
             const planNote = (h.brandPlanned && h.brandPlanned !== h.brandActual)
               ? ` <span style="font-size:11px;color:var(--accent-amber);font-style:italic">(план: ${escapeHtml(h.brandPlanned)})</span>`
               : '';
             contextHtml = brandBadge + planNote;
           } else {
-            const badgeCls = h.type === 'Minor' ? 'badge-minor' :
-                            h.type === 'Intermediate' ? 'badge-intermediate' : 'badge-major';
+            const badgeCls = h.type === 'ChangeOver' ? 'badge-changeover' :
+                            h.type === 'CL_TO' ? 'badge-clto' :
+                            h.type === 'CL_Conversion' ? 'badge-clconv' : 'badge-mode-cocl';
             contextHtml = `
               <span class="badge ${badgeCls}">${escapeHtml(h.type || '—')}</span>
               <span class="history-brands">${escapeHtml(h.brandFrom || '—')} → ${escapeHtml(h.brandTo || '—')}</span>
@@ -5420,6 +5812,8 @@ function renderHistory() {
           let modeBadge;
           if (isTopLoss) {
             modeBadge = `<span class="badge badge-mode-toploss">TOP</span>`;
+          } else if (h.mode === 'cl') {
+            modeBadge = `<span class="badge badge-mode-cl">CL</span>`;
           } else if (isElec) {
             modeBadge = `<span class="badge badge-mode-electronic">E-PARAM</span>`;
           } else {
@@ -5439,14 +5833,14 @@ function renderHistory() {
           // --- Колонка «Не проверено» ---
           const uncheckedHtml = unchecked > 0
             ? `<span class="badge badge-unchecked">${unchecked}</span>`
-            : ((isTopLoss || isElec) ? '<span class="badge badge-ok">0</span>' : '—');
+            : ((isTopLoss || isCl) ? '<span class="badge badge-ok">0</span>' : '—');
 
           return `
             <tr>
               <td>${fmtDate(h.timestamp)}</td>
               <td>${modeBadge}</td>
               <td>${escapeHtml(h.operator)}</td>
-              <td>${escapeHtml(h.shift || '—')}</td>
+              <td>${escapeHtml(formatClShift(h))}</td>
               <td>${escapeHtml(h.line)}</td>
               <td>${contextHtml}</td>
               <td>${h.items.length}</td>
@@ -5551,6 +5945,7 @@ window.viewRecord = function(id) {
   const fails = h.items.filter(i => i.status === 'FAIL').length;
   const oks = h.items.length - fails;
   const isTopLoss = h.mode === 'toploss';
+  const isCl = h.mode === 'cl' || h.mode === 'electronic';
   const isElec = h.mode === 'electronic';
 
   // --- Собираем контекст в зависимости от режима ---
@@ -5572,6 +5967,14 @@ window.viewRecord = function(id) {
         </div>
       </div>
     `;
+  } else if (isCl) {
+    const planned = (h.brandPlanned && h.brandPlanned !== h.brandActual)
+      ? `<div><strong>Бренд по плану:</strong> ${escapeHtml(h.brandPlanned)}</div>`
+      : '';
+    contextBlock = `
+      <div><strong>Бренд:</strong> ${escapeHtml(h.brandActual || '—')}</div>
+      ${planned}
+    `;
   } else {
     contextBlock = `
       <div><strong>Тип перехода:</strong> ${escapeHtml(h.type || '—')}</div>
@@ -5587,7 +5990,9 @@ window.viewRecord = function(id) {
         <strong>Режим:</strong>
         ${isTopLoss
           ? '<span class="badge badge-mode-toploss">TOP Losses</span>'
-          : isElec
+          : h.mode === 'cl'
+            ? '<span class="badge badge-mode-cl">Чек-лист CL (мех)</span>'
+            : isElec
             ? '<span class="badge badge-mode-electronic">CL Electronic</span>'
             : (() => {
                 const type = h.type || '';
@@ -5600,7 +6005,7 @@ window.viewRecord = function(id) {
       </div>
       <div><strong>Дата:</strong> ${fmtDate(h.timestamp)}</div>
       <div><strong>Оператор:</strong> ${escapeHtml(h.operator)}</div>
-      <div><strong>Смена:</strong> ${escapeHtml(h.shift)}</div>
+      <div><strong>Смена:</strong> ${escapeHtml(formatClShift(h))}</div>
       <div><strong>Линия:</strong> ${escapeHtml(h.line)}${!isTopLoss && h.part ? ' / ' + escapeHtml(h.part) : ''}</div>
       ${contextBlock}
       <div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)">
@@ -5713,7 +6118,7 @@ $('#elecSaveCheckBtn')?.addEventListener('click', () => {
     let status = 'UNCHECKED';
     let value = null;
 
-    if (it.controlType === 'ok_not_ok') {
+    if (it.controlType === 'fixed') {
       const r = item.querySelector('input[data-elec-ans]:checked');
       if (r) {
         answer = r.value === 'OK' ? 'ОК' : 'Не ОК';
@@ -5782,6 +6187,20 @@ $('#elecSaveCheckBtn')?.addEventListener('click', () => {
  * Для CL Electronic — из norm или normText.
  * Для COCL — из блока точек (по бренду или все).
  */
+/**
+ * Определяет, является ли запись проверкой «ОК / Не ОК» (без ввода значения).
+ */
+function isOkNotOkRecord(it) {
+  if (it.controlType === 'ok_not_ok') return true;
+  if (it.controlType === 'fixed') {
+    const a = String(it.answer || '').trim();
+    // «Фиксированный» бывает двух видов: ОК/Не ОК (answer = «ОК»/«Не ОК»)
+    // или точное значение (answer = число). Различаем по тексту ответа.
+    return a === 'ОК' || a === 'Не ОК' || a === '';
+  }
+  return false;
+}
+
 function renderRecordNorm(it, isElec) {
   if (isElec) {
     return escapeHtml(it.norm || '—');
@@ -5817,7 +6236,7 @@ function renderRecordAnswer(it, isElec) {
     if (it.status === 'UNCHECKED') {
       return '<span class="status-badge status-unchecked">Не проверено</span>';
     }
-    if (it.controlType === 'ok_not_ok') {
+    if (it.controlType === 'ok_not_ok' || isOkNotOkRecord(it)) {
       return it.status === 'OK'
         ? '<span class="status-badge status-ok">ОК</span>'
         : '<span class="status-badge status-fail">Не ОК</span>';
@@ -5837,13 +6256,13 @@ function renderRecordAnswer(it, isElec) {
     return '<span class="status-badge status-unchecked">Не проверено</span>';
   }
 
-  if (it.controlType === 'ok_not_ok') {
+  if (it.controlType === 'ok_not_ok' || isOkNotOkRecord(it)) {
     return it.status === 'OK'
       ? '<span class="status-badge status-ok">ОК</span>'
       : '<span class="status-badge status-fail">Не ОК</span>';
   }
 
-  // value_input / range_input — ответ = список значений
+  // value_input / range_input / variable / interval — ответ = список значений
   const values = String(it.answer || '').split(',').map(v => v.trim()).filter(Boolean);
   const statusCls = it.status === 'FAIL' ? 'status-fail' : 'status-ok';
   const statusLabel = it.status === 'FAIL' ? 'Есть отклонения' : 'В норме';
@@ -5896,7 +6315,7 @@ function exportToCsv(hist) {
   const headers = [
     'Дата/время','Режим','Оператор','Смена','Линия','Часть','Тип перехода',
     'С бренда','На бренд','Потери','Триггеры','Доп. узел',
-    'Пунктов','Не ОК','Детали проверки'
+    'Пунктов','Не ОК','Детали проверки','Бренд CL (факт)'
   ];
   const rows = [headers];
 
@@ -5904,9 +6323,10 @@ function exportToCsv(hist) {
     const fails = h.items.filter(i => i.status === 'FAIL').length;
     const triggersText = (h.triggers || []).map(t => t.replace('node:','')).join(', ');
     const isTopLoss = h.mode === 'toploss';
+    const isCl = h.mode === 'cl' || h.mode === 'electronic';
 
-    // Режим: текст
-    const modeText = isTopLoss ? 'Top Losses' : 'COCL';
+    // Режим: текст (COCL / TOP Losses / CL Electronic / CL (мех))
+    const modeText = getHistoryModeText(h);
 
     // Потери (для TOP Losses): названия через запятую
     const lossesText = isTopLoss
@@ -5921,18 +6341,19 @@ function exportToCsv(hist) {
       fmtDate(h.timestamp),
       modeText,
       h.operator,
-      h.shift,
+      formatClShift(h),
       h.line,
       h.part || '',
-      isTopLoss ? '' : (h.type || ''),
-      isTopLoss ? '' : (h.brandFrom || ''),
-      isTopLoss ? '' : (h.brandTo || ''),
+      (isTopLoss || isCl) ? '' : (h.type || ''),
+      (isTopLoss || isCl) ? '' : (h.brandFrom || ''),
+      (isTopLoss || isCl) ? '' : (h.brandTo || ''),
       lossesText,
       isTopLoss ? '' : triggersText,
       h.customNode || '',
       h.items.length,
       fails,
-      buildDetailsText(h)
+      buildDetailsText(h),
+      isCl ? (h.brandActual || '') : ''
     ]);
   });
 
@@ -5968,7 +6389,7 @@ const XL_COLOR_BORDER  = 'FFCBD2D9';
 const EXPORT_HEADERS = [
   'Дата/время','Режим','Оператор','Смена','Линия','Часть','Тип перехода',
   'С бренда','На бренд','Потери','Триггеры','Доп. узел',
-  'Пунктов','Не ОК','Детали проверки'
+  'Пунктов','Не ОК','Детали проверки','Бренд CL (факт)'
 ];
 
 async function exportToXlsx(hist) {
@@ -5990,6 +6411,12 @@ async function exportToXlsx(hist) {
     buildSheetLosses(wb, hist);
   }
 
+  // Только если есть CL-записи (Чек-лист CL: мех + электро)
+  const hasCL = hist.some(h => h.mode === 'cl' || h.mode === 'electronic');
+  if (hasCL) {
+    buildSheetCL(wb, hist);
+  }
+
   const buf = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
@@ -6008,7 +6435,7 @@ const COLUMN_WIDTHS = [
   28,   // Дата/время
   16,   // Режим
   30,   // Оператор
-  12,   // Смена
+  14,   // Смена
   14,   // Линия
   14,   // Часть
   28,   // Тип перехода
@@ -6019,7 +6446,8 @@ const COLUMN_WIDTHS = [
   28,   // Доп. узел
   14,   // Пунктов
   12,   // Не ОК
-  100   // Детали проверки
+  100,  // Детали проверки
+  18    // Бренд CL (факт)
 ];
   ws.columns = EXPORT_HEADERS.map((header, i) => ({
     header: header,
@@ -6031,9 +6459,10 @@ const COLUMN_WIDTHS = [
   hist.forEach(h => {
     const fails = h.items.filter(i => i.status === 'FAIL').length;
     const triggersText = (h.triggers || []).map(t => t.replace('node:','')).join(', ');
-
     const isTopLoss = h.mode === 'toploss';
-    const modeText = isTopLoss ? 'Top Losses' : 'COCL';
+    const isCl = h.mode === 'cl' || h.mode === 'electronic';
+
+    const modeText = getHistoryModeText(h);
     const lossesText = isTopLoss
       ? (h.topLosses || [])
           .map(lid => findLossById(lid))
@@ -6046,18 +6475,19 @@ const COLUMN_WIDTHS = [
       fmtDate(h.timestamp),
       modeText,
       h.operator,
-      h.shift,
+      formatClShift(h),
       h.line,
       h.part || '',
-      isTopLoss ? '' : (h.type || ''),
-      isTopLoss ? '' : (h.brandFrom || ''),
-      isTopLoss ? '' : (h.brandTo || ''),
+      (isTopLoss || isCl) ? '' : (h.type || ''),
+      (isTopLoss || isCl) ? '' : (h.brandFrom || ''),
+      (isTopLoss || isCl) ? '' : (h.brandTo || ''),
       lossesText,
       isTopLoss ? '' : triggersText,
       h.customNode || '',
       h.items.length,
       fails,
-      buildDetailsText(h)
+      buildDetailsText(h),
+      isCl ? (h.brandActual || '') : ''
     ]);
 
     // Высота строки: по числу пунктов, минимум 30
@@ -6147,6 +6577,8 @@ function buildSheetAnalytics(wb, hist) {
   const byLine = {}, byOperator = {}, byType = {}, byBrand = {}, byShift = {}, byStd = {};
   hist.forEach(h => {
     const f = h.items.filter(i => i.status === 'FAIL').length;
+    const isTopLoss = h.mode === 'toploss';
+    const isCl = h.mode === 'cl' || h.mode === 'electronic';
 
     if (!byLine[h.line]) byLine[h.line] = { checks: 0, items: 0, fails: 0 };
     byLine[h.line].checks++;
@@ -6157,18 +6589,22 @@ function buildSheetAnalytics(wb, hist) {
     byOperator[h.operator].checks++;
     byOperator[h.operator].fails += f;
 
-    if (!byType[h.type]) byType[h.type] = { checks: 0, fails: 0 };
-    byType[h.type].checks++;
-    byType[h.type].fails += f;
+    const typeKey = getHistoryModeText(h);
+    if (!byType[typeKey]) byType[typeKey] = { checks: 0, fails: 0 };
+    byType[typeKey].checks++;
+    byType[typeKey].fails += f;
 
-    const bKey = h.brandFrom + ' → ' + h.brandTo;
-    if (!byBrand[bKey]) byBrand[bKey] = { checks: 0, fails: 0 };
-    byBrand[bKey].checks++;
-    byBrand[bKey].fails += f;
+    if (!isTopLoss && !isCl) {
+      const bKey = h.brandFrom + ' → ' + h.brandTo;
+      if (!byBrand[bKey]) byBrand[bKey] = { checks: 0, fails: 0 };
+      byBrand[bKey].checks++;
+      byBrand[bKey].fails += f;
+    }
 
-    if (!byShift[h.shift]) byShift[h.shift] = { checks: 0, fails: 0 };
-    byShift[h.shift].checks++;
-    byShift[h.shift].fails += f;
+    const shiftKey = isCl ? formatClShift(h) : (h.shift || '—');
+    if (!byShift[shiftKey]) byShift[shiftKey] = { checks: 0, fails: 0 };
+    byShift[shiftKey].checks++;
+    byShift[shiftKey].fails += f;
 
   h.items.forEach(it => {
     // Ключ: OPL + машина — чтобы стандарты с одинаковым OPL
@@ -6270,7 +6706,7 @@ function buildSheetAnalytics(wb, hist) {
   opRows.forEach(r => addDataRow(r));
   ws.addRow([]);
 
-  addTitle('🔄 По типам переходов');
+  addTitle('🔄 По режимам / типам');
   addHeader(['Тип', 'Проверок', 'Не ОК', '% отклонений', '']);
   Object.entries(byType).forEach(([t, v]) => {
     addDataRow([t, v.checks, v.fails, v.checks > 0 ? ((v.fails/v.checks)*100).toFixed(1) + '%' : '0%', '']);
@@ -6427,6 +6863,124 @@ function buildSheetLosses(wb, hist) {
 
   if (rows.length === 0) {
     addDataRow(['—', 'Отклонений по потерям не зафиксировано', '', '', '', '']);
+  } else {
+    rows.forEach(r => addDataRow(r));
+  }
+}
+
+/* ============================================================
+   XLSX: лист «CL» — аналитика по Чек-листу CL (мех + электро)
+   ============================================================ */
+function buildSheetCL(wb, hist) {
+  const ws = wb.addWorksheet('CL');
+
+  ws.columns = [
+    { width: 60 },   // A — параметр / стандарт
+    { width: 16 },   // B — режим
+    { width: 16 },   // C — машина
+    { width: 16 },   // D — линия
+    { width: 12 },   // E — пунктов
+    { width: 12 },   // F — не ОК
+    { width: 18 }    // G — % отклонений
+  ];
+
+  // Фильтруем только CL-записи (Чек-лист CL)
+  const clHist = hist.filter(h => h.mode === 'cl' || h.mode === 'electronic');
+
+  // Агрегация по параметру/стандарту + машина
+  const agg = {};
+  clHist.forEach(h => {
+    const isElec = h.mode === 'electronic';
+    h.items.forEach(it => {
+      const name = isElec ? (it.paramName || '—') : (it.title || it.oplNumber || '—');
+      const key = it.machine ? name + ' [' + it.machine + ']' : name;
+
+      if (!agg[key]) {
+        agg[key] = {
+          name: name,
+          mode: isElec ? 'Электро' : 'Механика',
+          machine: it.machine || '—',
+          line: h.line || '—',
+          total: 0,
+          fails: 0
+        };
+      }
+      agg[key].total++;
+      if (it.status === 'FAIL') agg[key].fails++;
+    });
+  });
+
+  const addTitle = (text) => {
+    const row = ws.addRow([text]);
+    row.height = 36;
+    const cell = row.getCell(1);
+    cell.font = { name: 'Calibri', size: 15, bold: true, color: { argb: XL_COLOR_PRIMARY } };
+    cell.alignment = { vertical: 'middle', horizontal: 'left' };
+    ws.mergeCells(row.number, 1, row.number, 7);
+  };
+
+  const addHeader = (arr) => {
+    const row = ws.addRow(arr);
+    row.height = 32;
+    for (let c = 1; c <= 7; c++) {
+      const cell = row.getCell(c);
+      cell.font = {
+        name: 'Calibri',
+        size: XL_FONT_SIZE_HEADER,
+        bold: true,
+        color: { argb: XL_COLOR_HEADER_TEXT }
+      };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLOR_PRIMARY } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: false };
+      cell.border = {
+        top:    { style: 'thin', color: { argb: XL_COLOR_PRIMARY } },
+        bottom: { style: 'thin', color: { argb: XL_COLOR_PRIMARY } },
+        left:   { style: 'thin', color: { argb: XL_COLOR_PRIMARY } },
+        right:  { style: 'thin', color: { argb: XL_COLOR_PRIMARY } }
+      };
+    }
+  };
+
+  const addDataRow = (arr) => {
+    const row = ws.addRow(arr);
+    row.height = 24;
+    for (let c = 1; c <= 7; c++) {
+      const cell = row.getCell(c);
+      cell.font = { name: 'Calibri', size: XL_FONT_SIZE };
+      cell.alignment = { vertical: 'middle', horizontal: 'left' };
+      cell.border = {
+        top:    { style: 'thin', color: { argb: XL_COLOR_BORDER } },
+        bottom: { style: 'thin', color: { argb: XL_COLOR_BORDER } },
+        left:   { style: 'thin', color: { argb: XL_COLOR_BORDER } },
+        right:  { style: 'thin', color: { argb: XL_COLOR_BORDER } }
+      };
+    }
+  };
+
+  addTitle('📊 Аналитика по Чек-листу CL (механика + электроника)');
+  ws.addRow([]);
+  addDataRow(['Дата формирования:', fmtDate(new Date()), '', '', '', '', '']);
+  addDataRow(['Всего проверок CL:', clHist.length, '', '', '', '', '']);
+  addDataRow(['Всего пунктов:', clHist.reduce(function(s, h) { return s + h.items.length; }, 0), '', '', '', '', '']);
+  ws.addRow([]);
+
+  addHeader(['Параметр / Стандарт', 'Режим', 'Машина', 'Линия', 'Пунктов', 'Не ОК', '% отклонений']);
+
+  const rows = Object.values(agg).map(v => [
+    v.name,
+    v.mode,
+    v.machine,
+    v.line,
+    v.total,
+    v.fails,
+    v.total > 0 ? ((v.fails / v.total) * 100).toFixed(1) + '%' : '0%'
+  ]);
+
+  // Сортировка по "Не ОК" (убывание)
+  rows.sort(function(a, b) { return b[5] - a[5]; });
+
+  if (rows.length === 0) {
+    addDataRow(['—', 'Отклонений по CL не зафиксировано', '', '', '', '', '']);
   } else {
     rows.forEach(r => addDataRow(r));
   }
@@ -7170,26 +7724,12 @@ function updateItemAnsweredBadge(item) {
 
   let badge = null;
 
-  if (st.controlType === 'ok_not_ok') {
-    const checked = item.querySelector('input[data-ans]:checked');
-    if (checked) {
-      badge = checked.value === 'OK'
-        ? { cls: 'tl-answered-badge-ok', text: '✓ ОК' }
-        : { cls: 'tl-answered-badge-fail', text: '✕ Не ОК' };
-    }
-  } else if (st.controlType === 'value_input') {
-    const inp = item.querySelector('input[data-ans-value]');
-    if (inp && inp.value !== '') {
-      badge = { cls: 'tl-answered-badge-ok', text: '✓ ' + inp.value };
-    }
-  } else if (st.controlType === 'tolerance') {
-    const inp = item.querySelector('input[data-ans-value]');
-    const r = item.querySelector('input[data-tol]:checked');
-    if (inp && inp.value !== '' && r) {
-      badge = r.value === 'OK'
-        ? { cls: 'tl-answered-badge-ok', text: '✓ ' + inp.value }
-        : { cls: 'tl-answered-badge-fail', text: '✕ ' + inp.value };
-    }
+  // Top Losses всегда отвечает ОК / Не ОК (radio), независимо от типа контроля
+  const checked = item.querySelector('input[data-ans]:checked');
+  if (checked) {
+    badge = checked.value === 'OK'
+      ? { cls: 'tl-answered-badge-ok', text: '✓ ОК' }
+      : { cls: 'tl-answered-badge-fail', text: '✕ Не ОК' };
   }
 
   if (badge) {
@@ -7291,17 +7831,8 @@ function updateTlChecklistProgress() {
   items.forEach(item => {
     const std = getStandards().find(s => s.id === item.dataset.stdId);
     if (!std) return;
-    const valueFilled = (() => {
-      const inp = item.querySelector('input[data-ans-value]');
-      return inp && inp.value !== '';
-    })();
-    if (std.controlType === 'ok_not_ok') {
-      if (item.querySelector('input[data-ans]:checked')) filled++;
-    } else if (std.controlType === 'value_input') {
-      if (valueFilled) filled++;
-    } else if (std.controlType === 'tolerance') {
-      if (valueFilled && item.querySelector('input[data-tol]:checked')) filled++;
-    }
+    // Top Losses всегда использует radio ОК/Не ОК
+    if (item.querySelector('input[data-ans]:checked')) filled++;
   });
 
   const total = items.length;
@@ -7368,7 +7899,7 @@ function saveTopLossCheck() {
       node: st.node,
       nodePart: st.nodePart,
       title: st.title,
-      controlType: 'ok_not_ok',   // фиксируем тип для истории
+      controlType: 'fixed',   // Top Losses — всегда ОК/Не ОК (фиксированный без точек)
       norm: mainValue,
       answer: answer,
       status: status,
@@ -7704,17 +8235,49 @@ function renderSettings() {
   renderLineMachinesSettings();
   renderTopLossesSettings();
   renderBrandsSettings();
+  renderCustomTriggersSettings();
   renderLineBrandsSettings();
   renderOperatorsSettings();
 }
 /* ============================================================
    ДАШБОРД
    ============================================================ */
+function renderDashboardWorkshopBar() {
+  const bar = $('#dashboardWorkshopBar');
+  if (!bar) return;
+
+  const workshops = getWorkshops();
+  const tabs = [{ id: '', name: 'Общий' }].concat(
+    workshops.map(w => ({ id: w.id, name: w.name }))
+  );
+
+  bar.innerHTML = tabs.map(t => {
+    const active = t.id === dashboardWorkshop;
+    return `<button type="button" class="dash-ws-tab ${active ? 'active' : ''}" data-dash-ws="${escapeAttr(t.id)}">${escapeHtml(t.name)}</button>`;
+  }).join('');
+
+  bar.querySelectorAll('[data-dash-ws]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ws = btn.dataset.dashWs;
+      if (ws === dashboardWorkshop) return;
+      dashboardWorkshop = ws;
+      try { localStorage.setItem('cl_dashboard_workshop', ws); } catch (e) {}
+      renderDashboard();
+    });
+  });
+}
+
 function renderDashboard() {
   const container = $('#dashboardContent');
   if (!container) return;
 
-  const stats = calculateDashboardStats();
+  // Восстанавливаем выбранный цех
+  dashboardWorkshop = localStorage.getItem('cl_dashboard_workshop') || '';
+
+  // --- Панель выбора цеха ---
+  renderDashboardWorkshopBar();
+
+  const stats = calculateDashboardStats(dashboardWorkshop);
 
   container.innerHTML = `
     ${renderDashboardStats(stats)}
@@ -7781,7 +8344,7 @@ function renderDashboardTertiaryBlock(stats) {
     </div>
     <div class="dash-grid">
       <div>${renderDashboardTopLossesStats(stats.topLossStats)}</div>
-      <div></div>
+      <div>${renderDashboardClParamStats(stats.clParamStats)}</div>
     </div>
     ${renderDashboardActions()}
   `;
@@ -8019,6 +8582,62 @@ function renderDashboardTopLossesStats(items) {
           <line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
         Топ-5 потерь по отклонениям (30 дней)
+      </div>
+      <div class="dash-bars">${rows}</div>
+    </div>
+  `;
+}
+
+/* Виджет: Топ-5 параметров CL по отклонениям (30 дней) */
+function renderDashboardClParamStats(items) {
+  if (!items.length) {
+    return `
+      <div class="dash-widget">
+        <div class="dash-widget-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="5" x2="5" y2="19"/>
+            <circle cx="6.5" cy="6.5" r="2.5"/>
+            <circle cx="17.5" cy="17.5" r="2.5"/>
+          </svg>
+          Топ-5 параметров по отклонениям (30 дней)
+        </div>
+        <div class="dash-widget-empty">Отклонений по параметрам CL за месяц не зафиксировано</div>
+      </div>
+    `;
+  }
+
+  const rows = items.map(item => {
+    const failsPct = item.percent;
+    const oksPct = 100 - failsPct;
+    const percentText = failsPct.toFixed(1) + '%';
+    const numbersText = `${item.fails} из ${item.total}`;
+    const failWidth = Math.max(failsPct, 1.5);
+    const label = item.machine ? `${item.name} [${item.machine}]` : item.name;
+
+    return `
+      <div class="dash-bar-item">
+        <span class="dash-bar-label dash-bar-label-plain" title="${escapeAttr(label)}">${escapeHtml(label)}</span>
+        <div class="dash-bar-track dash-bar-track-ok">
+          <div class="dash-bar-fill-ok" style="width:${oksPct}%"></div>
+          <div class="dash-bar-fill-fail" style="width:${failWidth}%"></div>
+        </div>
+        <span class="dash-bar-value">
+          ${percentText}
+          <span class="dash-bar-sub">${numbersText}</span>
+        </span>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="dash-widget">
+      <div class="dash-widget-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="5" x2="5" y2="19"/>
+          <circle cx="6.5" cy="6.5" r="2.5"/>
+          <circle cx="17.5" cy="17.5" r="2.5"/>
+        </svg>
+        Топ-5 параметров по отклонениям (30 дней)
       </div>
       <div class="dash-bars">${rows}</div>
     </div>
@@ -8424,11 +9043,17 @@ function renderDashboardTopProblems(problems, maxCount) {
 }
 
 /* Расчёт всех показателей дашборда */
-function calculateDashboardStats() {
-  const standards = getStandards();
-  const history = getHistory();
+function calculateDashboardStats(workshopId) {
+  let standards = getStandards();
+  let history = getHistory();
   const brands = getBrands();
   const operators = getOperators();
+
+  // --- Фильтр по цеху: оставляем только линии выбранного цеха ---
+  if (workshopId) {
+    standards = standards.filter(s => getWorkshopIdForLine(s.line) === workshopId);
+    history = history.filter(h => getWorkshopIdForLine(h.line) === workshopId);
+  }
 
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -8451,8 +9076,8 @@ function calculateDashboardStats() {
   });
     // --- Проверок потерь за неделю ---
   const topLossChecksWeek = checksWeek.filter(h => h.mode === 'toploss').length;
-    // --- Проверок CL Electronic за неделю ---
-  const elecChecksWeek = checksWeek.filter(h => h.mode === 'electronic').length;
+    // --- Проверок CL (мех + электро) за неделю ---
+  const clChecksWeek = checksWeek.filter(h => h.mode === 'cl' || h.mode === 'electronic').length;
 
   // --- Топ-5 потерь по отклонениям (30 дней) ---
   const monthAgoForLosses = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
@@ -8490,6 +9115,28 @@ function calculateDashboardStats() {
     }))
     .filter(x => x.fails > 0)
     .sort((a, b) => b.fails - a.fails)
+    .slice(0, 5);
+
+  // --- Топ-5 параметров CL (мех + электро) по отклонениям (30 дней) ---
+  const clMonthParamChecks = history.filter(h =>
+    (h.mode === 'cl' || h.mode === 'electronic') &&
+    new Date(h.timestamp) >= monthAgoForLosses
+  );
+  const clParamAgg = {};
+  clMonthParamChecks.forEach(h => {
+    h.items.forEach(it => {
+      const isElec = h.mode === 'electronic';
+      const name = isElec ? (it.paramName || '—') : (it.title || it.oplNumber || '—');
+      const key = it.machine ? name + ' [' + it.machine + ']' : name;
+      if (!clParamAgg[key]) clParamAgg[key] = { name: name, machine: it.machine || '', total: 0, fails: 0 };
+      clParamAgg[key].total++;
+      if (it.status === 'FAIL') clParamAgg[key].fails++;
+    });
+  });
+  const clParamStats = Object.values(clParamAgg)
+    .map(function(v) { return { name: v.name, machine: v.machine, total: v.total, fails: v.fails, percent: v.total > 0 ? (v.fails / v.total) * 100 : 0 }; })
+    .filter(function(v) { return v.fails > 0; })
+    .sort(function(a, b) { return b.fails - a.fails; })
     .slice(0, 5);
 
   // --- Потери без проверок за 30 дней ---
@@ -8891,8 +9538,9 @@ function calculateDashboardStats() {
     lossesNeverChecked,
     standardsWithoutLosses,
 
-    // --- CL ELECTRONIC ---
-    elecChecksWeek
+    // --- CL (мех + электро) ---
+    clChecksWeek,
+    clParamStats
   };
 }
 
@@ -8966,12 +9614,12 @@ function renderDashboardStats(stats) {
 
       <div class="dash-stat dash-stat-purple">
         <div class="dash-stat-head">
-          <span>Проверок E-Param</span>
+          <span>Проверок CL</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
           </svg>
         </div>
-        <div class="dash-stat-value">${stats.elecChecksWeek}</div>
+        <div class="dash-stat-value">${stats.clChecksWeek}</div>
         <div class="dash-stat-sub">за последние 7 дней</div>
       </div>
 
@@ -10258,6 +10906,11 @@ function renderTopLossesSettings() {
         </button>
       </div>
 
+      <select id="tlWorkshopFilter" class="tl-workshop-filter" title="Фильтр по цеху">
+        <option value="">Все цеха</option>
+        ${getWorkshops().map(w => `<option value="${escapeAttr(w.id)}">${escapeHtml(w.name)}</option>`).join('')}
+      </select>
+
       <button type="button" class="btn btn-secondary btn-sm tl-cat-toggle-all-btn" id="tlCatToggleAllBtn" title="Развернуть или свернуть все категории">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="tlCatToggleAllIcon">
           <polyline points="7 13 12 18 17 13"/>
@@ -10280,6 +10933,7 @@ function renderTopLossesSettings() {
       ? items.map(it => `
           <div class="tl-loss-inline-row" data-loss-id="${escapeAttr(it.id)}" data-cat-id="${escapeAttr(catId)}">
             <span class="tl-loss-inline-name">${escapeHtml(it.name)}</span>
+            ${it.workshop ? `<span class="tl-loss-ws-chip" title="Цех">${escapeHtml(getWorkshopName(it.workshop))}</span>` : ''}
             <div class="tl-loss-inline-actions">
               <button type="button" class="tl-row-action-btn tl-row-edit-btn" data-tl-edit="${escapeAttr(it.id)}" title="Изменить">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -10431,6 +11085,49 @@ function renderTopLossesSettings() {
       if (searchInput) searchInput.focus();
     });
   }
+
+  // --- Фильтр по цеху ---
+  const wsFilter = $('#tlWorkshopFilter');
+  if (wsFilter) {
+    const savedWs = sessionStorage.getItem('tl_workshop_filter') || '';
+    wsFilter.value = savedWs;
+    if (savedWs) applyTlWorkshopFilter(savedWs);
+
+    wsFilter.addEventListener('change', () => {
+      const val = wsFilter.value;
+      sessionStorage.setItem('tl_workshop_filter', val);
+      applyTlWorkshopFilter(val);
+    });
+  }
+}
+
+/* Показать только потери выбранного цеха */
+function applyTlWorkshopFilter(workshopId) {
+  const container = $('#topLossesContainer');
+  if (!container) return;
+
+  container.querySelectorAll('.tl-loss-inline-row').forEach(row => {
+    const lossId = row.dataset.lossId;
+    const catId = row.dataset.catId;
+    if (!workshopId) {
+      row.style.display = '';
+      return;
+    }
+    const cats = getTopLosses();
+    const cat = cats.find(c => c.id === catId);
+    const item = cat && Array.isArray(cat.items) ? cat.items.find(i => i.id === lossId) : null;
+    const ws = item ? (item.workshop || '') : '';
+    // Показываем потери нужного цеха и универсальные (без цеха)
+    row.style.display = (!ws || ws === workshopId) ? '' : 'none';
+  });
+
+  // Скрываем категории, где не осталось видимых потерь
+  container.querySelectorAll('.tl-cat-group').forEach(group => {
+    const rows = group.querySelectorAll('.tl-loss-inline-row');
+    if (!rows.length) return;
+    const anyVisible = [...rows].some(r => r.style.display !== 'none');
+    group.style.display = anyVisible ? '' : 'none';
+  });
 }
 
 /* Обновить вид кнопки «Развернуть / Свернуть всё» */
@@ -10476,6 +11173,8 @@ function applyTlCatSearch(query) {
       g.classList.toggle('expanded', openCats.includes(g.dataset.catId));
     });
     container.querySelectorAll('.tl-loss-inline-row').forEach(r => r.style.display = '');
+    const wsFilter = sessionStorage.getItem('tl_workshop_filter') || '';
+    if (wsFilter) applyTlWorkshopFilter(wsFilter);
     return;
   }
 
@@ -10502,6 +11201,10 @@ function applyTlCatSearch(query) {
       g.querySelectorAll('.tl-loss-inline-row').forEach(row => row.style.display = '');
     }
   });
+
+  // Повторно применим фильтр по цеху поверх поиска
+  const wsFilter = sessionStorage.getItem('tl_workshop_filter') || '';
+  if (wsFilter) applyTlWorkshopFilter(wsFilter);
 }
 
 /* Склонение: 1 потеря / 2 потери / 5 потерь */
@@ -10927,9 +11630,15 @@ function renderBrandsSettings() {
   const pageItems = filtered.slice(startIdx, endIdx);
 
   // Рендер строк
-  list.innerHTML = pageItems.map(b => `
+  list.innerHTML = pageItems.map(b => {
+    const ws = getBrandWorkshop(b);
+    const wsChip = ws
+      ? `<span class="brands-row-ws-chip" title="Цех">${escapeHtml(getWorkshopName(ws))}</span>`
+      : '';
+    return `
     <div class="brands-row" data-brand="${escapeAttr(b)}">
       <span class="brands-row-name">${highlightBrandName(b, query)}</span>
+      ${wsChip}
       <div class="brands-row-actions">
         <button type="button" class="brands-row-action-btn brands-row-edit-btn"
                 data-brands-edit="${escapeAttr(b)}" title="Изменить">
@@ -10947,7 +11656,8 @@ function renderBrandsSettings() {
         </button>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   // Обработчики: изменить
   list.querySelectorAll('[data-brands-edit]').forEach(btn => {
@@ -11042,6 +11752,10 @@ function openEditBrandModal(oldName) {
   if (!modal || !input) return;
   input.value = oldName;
 
+  // Цех бренда
+  const wsEl = $('#editBrandWorkshop');
+  if (wsEl) wsEl.innerHTML = workshopOptionsHtml(getBrandWorkshop(oldName));
+
   // Загружаем линии, к которым уже привязан бренд
   const lb = getLineBrands();
   const assignedLines = Object.keys(lb).filter(line =>
@@ -11128,6 +11842,10 @@ $('#editBrandSaveBtn')?.addEventListener('click', () => {
 
   setLineBrands(lb);
 
+  // Цех бренда
+  const workshop = ($('#editBrandWorkshop')?.value || '').trim();
+  setBrandWorkshop(workingName, workshop);
+
   // Перерисовываем всё
   renderBrandsSettings();
   renderLineBrandsSettings();
@@ -11188,6 +11906,9 @@ function openAddBrandModal() {
 
   renderLinesCheckboxesGroup('addBrandLinesGroup', []);
 
+  const wsEl = $('#addBrandWorkshop');
+  if (wsEl) wsEl.innerHTML = workshopOptionsHtml('');
+
   openModal(modal);
   setTimeout(() => { if (input) input.focus(); }, 100);
 }
@@ -11223,6 +11944,10 @@ $('#addBrandBtn')?.addEventListener('click', () => {
 
   brands.push(name);
   setBrands(brands);
+
+  // Цех бренда
+  const workshop = ($('#addBrandWorkshop')?.value || '').trim();
+  if (workshop) setBrandWorkshop(name, workshop);
 
   // Привязка к выбранным линиям
   const selectedLines = collectSelectedLines('addBrandLinesGroup');
@@ -11481,6 +12206,7 @@ $('#topLossCategoryModalName')?.addEventListener('keydown', (e) => {
     $('#topLossItemModalCategoryId').value = catId;
     $('#topLossItemModalCategoryLabel').textContent = 'Категория: ' + (cat.name || '—');
 
+    let currentWorkshop = '';
     if (itemId) {
       const item = (cat.items || []).find(i => i.id === itemId);
       if (!item) return;
@@ -11488,12 +12214,16 @@ $('#topLossCategoryModalName')?.addEventListener('keydown', (e) => {
       saveBtn.textContent = 'Сохранить';
       $('#topLossItemModalId').value = itemId;
       $('#topLossItemModalName').value = item.name || '';
+      currentWorkshop = item.workshop || '';
     } else {
       title.textContent = 'Добавить потерю';
       saveBtn.textContent = 'Добавить';
       $('#topLossItemModalId').value = '';
       $('#topLossItemModalName').value = '';
     }
+
+    const wsEl = $('#topLossItemModalWorkshop');
+    if (wsEl) wsEl.innerHTML = workshopOptionsHtml(currentWorkshop);
 
     openModal(modal);
     setTimeout(() => $('#topLossItemModalName').focus(), 100);
@@ -11521,6 +12251,7 @@ $('#topLossItemModalSave')?.addEventListener('click', () => {
   const catId = $('#topLossItemModalCategoryId').value;
   const itemId = $('#topLossItemModalId').value;
   const name = ($('#topLossItemModalName').value || '').trim();
+  const workshop = ($('#topLossItemModalWorkshop')?.value || '').trim();
   if (!catId) return;
   if (!name) return showToast('Введите название потери', true);
 
@@ -11537,10 +12268,12 @@ $('#topLossItemModalSave')?.addEventListener('click', () => {
     const item = cat.items.find(i => i.id === itemId);
     if (!item) return;
     item.name = name;
+    item.workshop = workshop;
   } else {
-    cat.items.push({  
+    cat.items.push({
       id: makeLossId(name),
-      name
+      name,
+      workshop
     });
   }
 
@@ -12139,10 +12872,14 @@ const backup = {
   workshops: getWorkshops(),   // ← НОВОЕ
   shifts: getShifts(),
   brands: getBrands(),
+  brandWorkshops: getBrandWorkshops(),
   lineBrands: getLineBrands(),
   operators: getOperators(),
   lineMachines: getLineMachines(),
-  topLosses: getTopLosses()
+  topLosses: getTopLosses(),
+  electronicParams: getElectronicParams(),
+  electronicShiftCfg: getElectronicShiftConfig(),
+  electronicBrandSchedule: getElectronicBrandSchedule()
 };
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8' });
   const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
@@ -12168,11 +12905,15 @@ $('#backupFileInput').addEventListener('change', (e) => {
       if (Array.isArray(data.nodes)) setNodes(data.nodes);
       if (Array.isArray(data.lines)) setLines(data.lines);
       if (Array.isArray(data.brands)) setBrands(data.brands);
+      if (data.brandWorkshops && typeof data.brandWorkshops === 'object') setBrandWorkshops(data.brandWorkshops);
       if (data.lineBrands && typeof data.lineBrands === 'object') setLineBrands(data.lineBrands);
       if (Array.isArray(data.operators)) setOperators(data.operators);
       if (Array.isArray(data.workshops)) setWorkshops(data.workshops);
       if (data.lineMachines && typeof data.lineMachines === 'object') setLineMachines(data.lineMachines);
       if (Array.isArray(data.topLosses)) setTopLosses(data.topLosses);
+      if (Array.isArray(data.electronicParams)) setElectronicParams(data.electronicParams);
+      if (data.electronicShiftCfg && typeof data.electronicShiftCfg === 'object') setElectronicShiftConfig(data.electronicShiftCfg);
+      if (data.electronicBrandSchedule && typeof data.electronicBrandSchedule === 'object') setElectronicBrandSchedule(data.electronicBrandSchedule);
       init();
       showToast('Бэкап загружен');
     } catch (err) {
@@ -12200,6 +12941,8 @@ function init() {
   migrateToWorkshopsStructure();
   fillShifts();
   fillLinesForOperator();
+  renderCoclPartStep('');     // начальное состояние шага «Часть»
+  renderCoclLineContext('');  // начальное состояние контекста линии
   fillHistoryFilters();
   renderSettings();
   fillTopLossTab();
@@ -13119,7 +13862,7 @@ $('#editorExportBtn')?.addEventListener('click', async () => {
 /** Скрыть настройки, показать чек-лист */
 function buildChecklistView() {
   // Прячем все карточки настройки
-  ['#brandsCard', '#changesCard', '#nodesCard', '#buildChecklistCard'].forEach(sel => {
+  ['#brandsCard', '#changesCard', '#buildChecklistCard'].forEach(sel => {
     const el = $(sel);
     if (el) el.style.display = 'none';
   });
@@ -13155,7 +13898,7 @@ function editChecklistConditions() {
   // Применяем видимость через onTransitionTypeChange
   if (typeof onTransitionTypeChange === 'function') {
     // Сначала скрыть всё ненужное
-    ['#brandsCard', '#changesCard', '#nodesCard', '#buildChecklistCard'].forEach(sel => {
+    ['#brandsCard', '#changesCard', '#buildChecklistCard'].forEach(sel => {
       const el = $(sel);
       if (el) el.style.display = 'none';
     });
@@ -13186,7 +13929,7 @@ async function parseStandardsExcelV3(file, targetLine) {
   if (!ws) throw new Error('Не найден лист «Стандарты»');
 
   const VALID_PARTS = ['Maker', 'Packer'];
-  const VALID_CONTROL = ['ok_not_ok', 'value_input', 'range_input'];
+  const VALID_CONTROL = ['ok_not_ok', 'value_input', 'range_input', 'fixed', 'variable', 'interval'];
   const VALID_APPLIES = ['ChangeOver', 'CL_TO', 'CL_Conversion'];
 
   const TRIGGER_MAP = {
@@ -14295,7 +15038,6 @@ function refreshEditorMechTable() {
           <th class="et-col-opl">№ OPL</th>
           <th class="et-col-struct">Структура</th>
           <th class="et-col-part">Часть</th>
-          <th class="et-col-work">Run/Stop</th>
           <th class="et-col-types">Тип</th>
           <th class="et-col-status">Статус</th>
           <th class="et-col-date">Дата</th>
@@ -14316,16 +15058,11 @@ function refreshEditorMechTable() {
     const typesHtml = renderMechTypeChips(st.appliesTo);
     const partHtml = st.nodePart ? `<span class="et-part-chip et-part-${st.nodePart.toLowerCase()}">${escapeHtml(st.nodePart)}</span>` : '—';
 
-    // Work — чипы как в форме
-    const workVal = (st.work === 'Stop') ? 'Stop' : 'Run';
-    const workCls = workVal === 'Run' ? 'elec-work-chip-run' : 'elec-work-chip-stop';
-    const workHtml = `<span class="et-work-chip ${workCls}">${workVal}</span>`;
-
     // Порядковый номер: (page - 1) * size + idx + 1
     const rowNumber = (editorTableState.mechPage - 1) * editorTableState.mechPageSize + idx + 1;
 
     html += `
-      <tr data-std-id="${escapeAttr(st.id)}" class="${isSelected ? 'is-selected' : ''}">
+      <tr data-std-id="${escapeAttr(st.id)}" class="${isSelected ? 'is-selected' : ''} ${isActive ? '' : 'et-row-inactive'}">
         <td class="et-col-num">${rowNumber}</td>
         <td class="et-col-check">
           <input type="checkbox" class="et-check-row" data-std-id="${escapeAttr(st.id)}" ${isSelected ? 'checked' : ''}>
@@ -14341,12 +15078,10 @@ function refreshEditorMechTable() {
         </td>
         <td class="et-col-struct">${contextHtml}</td>
         <td class="et-col-part">${partHtml}</td>
-        <td class="et-col-work">${workHtml}</td>
         <td class="et-col-types"><div class="et-types">${typesHtml}</div></td>
         <td class="et-col-status">
           <span class="et-status ${isActive ? 'et-status-active' : 'et-status-inactive'}"
-                data-toggle-active="${escapeAttr(st.id)}"
-                title="Клик — переключить активность">
+                title="${isActive ? 'Активен' : 'Неактивен — измените в редактировании стандарта'}">
             ${isActive ? 'Активен' : 'Неактивен'}
           </span>
         </td>
@@ -14394,17 +15129,6 @@ function refreshEditorMechTable() {
     el.addEventListener('click', () => {
       const id = el.dataset.openView;
       if (id) openStandardFullView(id, 'view');
-    });
-  });
-
-  // Клик по статусу → переключение активности
-  wrap.querySelectorAll('[data-toggle-active]').forEach(el => {
-    el.addEventListener('click', () => {
-      const id = el.dataset.toggleActive;
-      if (!id) return;
-      const st = getStandards().find(s => s.id === id);
-      if (!st) return;
-      toggleStandardActive(id, st.active === false);
     });
   });
 
@@ -14519,18 +15243,18 @@ function renderEditorMechPagination(total, totalPages, startIdx, endIdx) {
     bar.innerHTML = `
       <span class="pagination-info">Показано ${startIdx + 1}–${endIdx} из ${total}</span>
       <div class="pagination-controls">
-        <select class="pagination-size" id="eePageSize">
-          <option value="10"  ${editorTableState.elecPageSize === 10 ? 'selected' : ''}>10</option>
-          <option value="20"  ${editorTableState.elecPageSize === 20 ? 'selected' : ''}>20</option>
-          <option value="50"  ${editorTableState.elecPageSize === 50 ? 'selected' : ''}>50</option>
-          <option value="100" ${editorTableState.elecPageSize === 100 ? 'selected' : ''}>100</option>
+        <select class="pagination-size" id="emPageSize">
+          <option value="10"  ${editorTableState.mechPageSize === 10 ? 'selected' : ''}>10</option>
+          <option value="20"  ${editorTableState.mechPageSize === 20 ? 'selected' : ''}>20</option>
+          <option value="50"  ${editorTableState.mechPageSize === 50 ? 'selected' : ''}>50</option>
+          <option value="100" ${editorTableState.mechPageSize === 100 ? 'selected' : ''}>100</option>
         </select>
       </div>
     `;
-    bar.querySelector('#eePageSize')?.addEventListener('change', (e) => {
-      editorTableState.elecPageSize = parseInt(e.target.value, 10) || 20;
-      editorTableState.elecPage = 1;
-      refreshEditorElecTable();
+    bar.querySelector('#emPageSize')?.addEventListener('change', (e) => {
+      editorTableState.mechPageSize = parseInt(e.target.value, 10) || 20;
+      editorTableState.mechPage = 1;
+      refreshEditorMechTable();
     });
     return;
   }
@@ -14688,7 +15412,6 @@ function refreshEditorElecTable() {
           <th class="et-col-machine">Машина</th>
           <th class="et-col-struct">Структура</th>
           <th class="et-col-part">Часть</th>
-          <th class="et-col-work">Run/Stop</th>
           <th class="et-col-types">Тип</th>
           <th class="et-col-types">Применяемость</th>
           <th class="et-col-status">Статус</th>
@@ -14713,14 +15436,11 @@ function refreshEditorElecTable() {
       ? `<span class="et-part-chip et-part-${p.nodePart.toLowerCase()}">${escapeHtml(p.nodePart)}</span>`
       : '—';
 
-    // Work — чипы как в форме
-    const workVal = p.work === 'Stop' ? 'Stop' : 'Run';
-    const workCls = workVal === 'Run' ? 'elec-work-chip-run' : 'elec-work-chip-stop';
-    const workHtml = `<span class="et-work-chip ${workCls}">${workVal}</span>`;
-
     // Тип контроля
-    const typeLabel = p.controlType === 'ok_not_ok' ? 'ОК / Не ОК' : 'Числовой';
-    const typeHtml = `<span class="et-type-chip ${p.controlType === 'ok_not_ok' ? 'et-type-none' : 'et-type-clto'}">${escapeHtml(typeLabel)}</span>`;
+    const typeLabel = controlTypeLabel(p.controlType);
+    const typeCls = (p.controlType === 'fixed' || p.controlType === 'ok_not_ok')
+      ? 'et-type-none' : 'et-type-clto';
+    const typeHtml = `<span class="et-type-chip ${typeCls}">${escapeHtml(typeLabel)}</span>`;
 
     // Применяемость
     const appliesToHtml = renderMechTypeChips(p.appliesTo);
@@ -14729,7 +15449,7 @@ function refreshEditorElecTable() {
     const rowNumber = (editorTableState.elecPage - 1) * editorTableState.elecPageSize + idx + 1;
 
     html += `
-      <tr data-param-id="${escapeAttr(p.id)}" class="${isSelected ? 'is-selected' : ''}">
+      <tr data-param-id="${escapeAttr(p.id)}" class="${isSelected ? 'is-selected' : ''} ${isActive ? '' : 'et-row-inactive'}">
         <td class="et-col-num">${rowNumber}</td>
         <td class="et-col-check">
           <input type="checkbox" class="et-check-row" data-param-id="${escapeAttr(p.id)}" ${isSelected ? 'checked' : ''}>
@@ -14742,13 +15462,11 @@ function refreshEditorElecTable() {
         <td class="et-col-machine"><span class="et-machine">${escapeHtml(p.machine || '—')}</span></td>
         <td class="et-col-struct">${contextHtml}</td>
         <td class="et-col-part">${partHtml}</td>
-        <td class="et-col-work">${workHtml}</td>
         <td class="et-col-types">${typeHtml}</td>
         <td class="et-col-types"><div class="et-types">${appliesToHtml}</div></td>
         <td class="et-col-status">
           <span class="et-status ${isActive ? 'et-status-active' : 'et-status-inactive'}"
-                data-toggle-active-elec="${escapeAttr(p.id)}"
-                title="Клик — переключить активность">
+                title="${isActive ? 'Активен' : 'Неактивен — измените в редактировании параметра'}">
             ${isActive ? 'Активен' : 'Неактивен'}
           </span>
         </td>
@@ -14805,20 +15523,6 @@ function refreshEditorElecTable() {
       setElectronicParams(getElectronicParams().filter(x => x.id !== id));
       refreshEditorElecTable();
       showToast('Параметр удалён');
-    });
-  });
-
-  wrap.querySelectorAll('[data-toggle-active-elec]').forEach(el => {
-    el.addEventListener('click', () => {
-      const id = el.dataset.toggleActiveElec;
-      const all = getElectronicParams().map(normalizeElectronicParam);
-      const p = all.find(x => x.id === id);
-      if (!p) return;
-      p.active = p.active === false ? true : false;
-      p.updatedAt = new Date().toISOString();
-      setElectronicParams(all);
-      refreshEditorElecTable();
-      showToast(p.active ? 'Параметр активирован' : 'Параметр деактивирован');
     });
   });
 
@@ -14881,18 +15585,18 @@ function renderEditorElecPagination(total, totalPages, startIdx, endIdx) {
     bar.innerHTML = `
       <span class="pagination-info">Показано ${startIdx + 1}–${endIdx} из ${total}</span>
       <div class="pagination-controls">
-        <select class="pagination-size" id="emPageSize">
-          <option value="10"  ${editorTableState.mechPageSize === 10 ? 'selected' : ''}>10</option>
-          <option value="20"  ${editorTableState.mechPageSize === 20 ? 'selected' : ''}>20</option>
-          <option value="50"  ${editorTableState.mechPageSize === 50 ? 'selected' : ''}>50</option>
-          <option value="100" ${editorTableState.mechPageSize === 100 ? 'selected' : ''}>100</option>
+        <select class="pagination-size" id="eePageSize">
+          <option value="10"  ${editorTableState.elecPageSize === 10 ? 'selected' : ''}>10</option>
+          <option value="20"  ${editorTableState.elecPageSize === 20 ? 'selected' : ''}>20</option>
+          <option value="50"  ${editorTableState.elecPageSize === 50 ? 'selected' : ''}>50</option>
+          <option value="100" ${editorTableState.elecPageSize === 100 ? 'selected' : ''}>100</option>
         </select>
       </div>
     `;
-    bar.querySelector('#emPageSize')?.addEventListener('change', (e) => {
-      editorTableState.mechPageSize = parseInt(e.target.value, 10) || 20;
-      editorTableState.mechPage = 1;
-      refreshEditorMechTable();
+    bar.querySelector('#eePageSize')?.addEventListener('change', (e) => {
+      editorTableState.elecPageSize = parseInt(e.target.value, 10) || 20;
+      editorTableState.elecPage = 1;
+      refreshEditorElecTable();
     });
     return;
   }
@@ -15040,6 +15744,253 @@ $('#editorElecAddBtn')?.addEventListener('click', () => {
   currentElectronicMachine = machines[0];
   openElectronicParamForm(null);
 });
+
+/* --- Электронные параметры: Импорт --- */
+$('#editorElecUploadBtn')?.addEventListener('click', () => {
+  const line = currentElectronicLine || localStorage.getItem('cl_editor_line');
+  if (!line) return showToast('Сначала выберите линию', true);
+  $('#editorElecUploadInput').click();
+});
+
+$('#editorElecUploadInput')?.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const line = currentElectronicLine || localStorage.getItem('cl_editor_line');
+  if (!line) return;
+  try {
+    const count = await parseElectronicParamsExcel(file, line);
+    if (count > 0) {
+      refreshEditorElecTable();
+      if (typeof updatePartCounters === 'function') updatePartCounters();
+      showToast(`Импортировано ${count} параметр(ов)`);
+    }
+  } catch (err) {
+    showToast('Ошибка импорта: ' + (err.message || 'неизвестная'), true);
+  }
+});
+
+/* --- Электронные параметры: Шаблон --- */
+$('#editorElecTemplateBtn')?.addEventListener('click', () => {
+  if (typeof editorElecDownloadTemplate === 'function') {
+    editorElecDownloadTemplate();
+  }
+});
+
+/* --- Электронные параметры: Экспорт --- */
+$('#editorElecExportBtn')?.addEventListener('click', () => {
+  if (typeof editorElecExport === 'function') {
+    editorElecExport();
+  }
+});
+
+/* ============================================================
+   ЭЛЕКТРОННЫЕ ПАРАМЕТРЫ: экспорт / импорт / шаблон
+   ============================================================ */
+
+function serializeValuesByBrand(arr) {
+  if (!Array.isArray(arr) || !arr.length) return '';
+  return arr
+    .filter(v => v && (v.brand || v.target != null || v.tolerance != null))
+    .map(v => [(v.brand || ''), (v.target != null ? v.target : ''), (v.tolerance != null ? v.tolerance : '')].join('|'))
+    .join('; ');
+}
+
+function parseValuesByBrand(str) {
+  if (!str || !str.trim()) return [];
+  const out = [];
+  str.split(';').forEach(part => {
+    const p = part.trim();
+    if (!p) return;
+    const seg = p.split('|').map(x => x.trim());
+    const brand = seg[0] || '';
+    const target = seg[1] !== undefined ? seg[1] : '';
+    const tolerance = seg[2] !== undefined ? seg[2] : '';
+    if (!brand && target === '' && tolerance === '') return;
+    out.push({ brand, target: target === '' ? '' : target, tolerance: tolerance === '' ? '' : tolerance });
+  });
+  return out;
+}
+
+async function editorElecDownloadTemplate() {
+  if (typeof ExcelJS === 'undefined') return showToast('Библиотека ExcelJS не загружена', true);
+  const line = currentElectronicLine || localStorage.getItem('cl_editor_line');
+  if (!line) return showToast('Сначала выберите линию', true);
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Параметры');
+
+  const headers = ['Параметр', 'Линия', 'Узел/часть', 'Машина', 'Тип контроля', 'Норма',
+    'Работа', 'Время с', 'Время по', 'Применять к', 'Значения по брендам', 'Активен'];
+  ws.addRow(headers);
+
+  // Пример
+  ws.addRow([
+    'Давление в камере', line, 'Maker', 'SE',
+    'variable', '92 ± 5',
+    'Run', '09:10', '10:00',
+    'ChangeOver, CL_TO',
+    'Kent|92|5; |90|3',
+    'Да'
+  ]);
+
+  const widths = [30, 10, 18, 10, 14, 16, 8, 10, 10, 22, 40, 8];
+  ws.columns.forEach((col, i) => { col.width = widths[i] || 14; });
+
+  const headerRow = ws.getRow(1);
+  headerRow.height = 30;
+  headerRow.eachCell(cell => {
+    cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4FA8' } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    cell.border = { top: {style:'thin'}, bottom: {style:'thin'}, left: {style:'thin'}, right: {style:'thin'} };
+  });
+
+  // Инструкция
+  const wsInfo = wb.addWorksheet('Инструкция');
+  wsInfo.columns = [{ width: 100 }];
+  const info = [
+    ['📋 Шаблон импорта электронных параметров — ' + line],
+    [''],
+    ['1. Заполните лист «Параметры» — по одной строке на параметр.'],
+    ['2. В колонке «Значения по брендам» укажите: Бренд|Номинал|Допуск; Бренд|Номинал|Допуск'],
+    ['   Пустой бренд (||допуск) — применяется ко всем брендам.'],
+    ['3. Тип контроля: fixed (Фиксированный), variable (Вариабельный), interval (Интервал).'],
+    ['4. «Применять к» — через запятую: ChangeOver, CL_TO, CL_Conversion.'],
+    [''],
+    ['ОБЯЗАТЕЛЬНЫЕ ПОЛЯ: Параметр, Линия, Машина, Тип контроля.']
+  ];
+  info.forEach(([text]) => wsInfo.addRow([text]));
+  wsInfo.getRow(1).font = { bold: true, size: 16, color: { argb: 'FF0A4FA8' } };
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  downloadBlob(blob, `template_electronic_${line}.xlsx`);
+  showToast('Шаблон скачан');
+}
+
+async function editorElecExport() {
+  if (typeof ExcelJS === 'undefined') return showToast('Библиотека ExcelJS не загружена', true);
+  const line = currentElectronicLine || localStorage.getItem('cl_editor_line');
+  if (!line) return showToast('Сначала выберите линию', true);
+
+  const params = getElectronicParams().filter(p => p.line === line);
+  if (!params.length) return showToast('Нет электронных параметров для экспорта', true);
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Параметры');
+
+  const headers = ['Параметр', 'Линия', 'Узел/часть', 'Машина', 'Тип контроля', 'Норма',
+    'Работа', 'Время с', 'Время по', 'Применять к', 'Значения по брендам', 'Активен'];
+  ws.addRow(headers);
+
+  const headerRow = ws.getRow(1);
+  headerRow.height = 30;
+  headerRow.eachCell(cell => {
+    cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4FA8' } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    cell.border = { top: {style:'thin'}, bottom: {style:'thin'}, left: {style:'thin'}, right: {style:'thin'} };
+  });
+
+  params.forEach(p => {
+    ws.addRow([
+      p.paramName, p.line, p.nodePart, p.machine,
+      (typeof controlTypeLabel === 'function' ? controlTypeLabel(p.controlType) : p.controlType),
+      p.normText || '',
+      p.work || 'Run', p.timeFrom || '', p.timeTo || '',
+      (Array.isArray(p.appliesTo) ? p.appliesTo.join(', ') : ''),
+      serializeValuesByBrand(p.valuesByBrand),
+      p.active !== false ? 'Да' : 'Нет'
+    ]);
+  });
+
+  const widths = [30, 10, 18, 10, 14, 16, 8, 10, 10, 22, 40, 8];
+  ws.columns.forEach((col, i) => { col.width = widths[i] || 14; });
+
+  // Инструкция
+  const wsInfo = wb.addWorksheet('Инструкция');
+  wsInfo.columns = [{ width: 100 }];
+  wsInfo.addRow(['📋 Экспорт электронных параметров — ' + line]);
+  wsInfo.addRow(['']);
+  wsInfo.addRow(['Колонка «Значения по брендам» — формат: Бренд|Номинал|Допуск; ...']);
+  wsInfo.addRow(['Пустой бренд (||допуск) — для всех брендов.']);
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  downloadBlob(blob, `electronic_params_${line}.xlsx`);
+  showToast('Электронные параметры экспортированы');
+}
+
+async function parseElectronicParamsExcel(file, targetLine) {
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(await file.arrayBuffer());
+
+  const ws = wb.getWorksheet('Параметры');
+  if (!ws) throw new Error('Лист «Параметры» не найден');
+
+  const rows = [];
+  ws.eachRow((row, rowNum) => {
+    if (rowNum < 2) return; // skip header
+    const vals = [];
+    for (let c = 1; c <= 12; c++) vals.push(row.getCell(c).text || '');
+    const name = vals[0].trim();
+    if (!name) return;
+    rows.push(vals);
+  });
+
+  if (!rows.length) throw new Error('Нет данных на листе «Параметры»');
+
+  const all = getElectronicParams();
+  let imported = 0;
+
+  rows.forEach((vals, idx) => {
+    const paramName = vals[0].trim();
+    const line = (vals[1] || targetLine).trim();
+    const nodePart = vals[2].trim();
+    const machine = vals[3].trim();
+    let controlType = (vals[4] || 'variable').trim().toLowerCase();
+    // нормализуем (принимаем как новые, так и legacy-значения)
+    if (!['ok_not_ok', 'value_input', 'range_input', 'fixed', 'variable', 'interval'].includes(controlType)) {
+      controlType = 'variable';
+    }
+    controlType = migrateControlType(controlType, null);
+    const normText = vals[5].trim();
+    const work = (vals[6] || '').trim();
+    const timeFrom = vals[7].trim();
+    const timeTo = vals[8].trim();
+    const appliesToRaw = vals[9].trim();
+    const appliesTo = appliesToRaw
+      ? appliesToRaw.split(',').map(x => x.trim()).filter(x => ['ChangeOver','CL_TO','CL_Conversion'].includes(x))
+      : [];
+    const brandValuesStr = vals[10].trim();
+    const activeText = vals[11].trim();
+    const active = activeText.toLowerCase() !== 'нет';
+
+    const valuesByBrand = parseValuesByBrand(brandValuesStr);
+
+    const id = makeElectronicParamId();
+    const p = {
+      id, active,
+      line, machine, nodePart, paramName,
+      work: work === 'Stop' ? 'Stop' : 'Run',
+      timeFrom, timeTo,
+      controlType, normText,
+      valuesByBrand,
+      appliesTo,
+      frequency: { type: 'weekly', schedule: [], shifts: ['day', 'night'], daysOfWeek: [], dates: [] },
+      inSchedule: false,
+      author: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    all.push(p);
+    imported++;
+  });
+
+  setElectronicParams(all);
+  return imported;
+}
 /* ============================================================
    РЕДАКТОР: заполнение фильтров
    ============================================================ */
@@ -15301,7 +16252,7 @@ async function editorDownloadTemplate() {
     'Maker', 'SE', 'OPL-1.1.1', 'Узел передачи',
     'Давление на передающем устройстве (Паук)', line,
     'Run', '09:10', '10:00',
-    'value_input', 'ChangeOver', 'Да',
+    'variable', 'ChangeOver', 'Да',
     'Пример: к чему приводит отклонение',
     'Пример: как проверить',
     'Пример: цель контроля',
@@ -15886,6 +16837,35 @@ function renderScheduleMatrix() {
       if (rowId) openTimeWindowsModal(rowId);
     });
   });
+
+  // Клик по Run/Stop — переключить прямо в черновике расписания
+  wrap.querySelectorAll('[data-work-toggle]').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const rowId = el.dataset.workToggle;
+      if (!rowId) return;
+      if (!schState.draft[rowId]) {
+        const row = schState.rows.find(r => r.id === rowId);
+        const f = row?.frequency || { type: 'weekly', schedule: [], shifts: [], daysOfWeek: [], dates: [] };
+        schState.draft[rowId] = {
+          type: 'weekly',
+          schedule: Array.isArray(f.schedule) ? [...f.schedule.map(x => ({ ...x }))] : [],
+          timeWindows: Array.isArray(f.timeWindows) ? [...f.timeWindows.map(w => ({ ...w }))] : [],
+          shifts: [...(f.shifts || [])],
+          daysOfWeek: [...(f.daysOfWeek || [])],
+          dates: [...(f.dates || [])],
+          work: (row?.work === 'Stop') ? 'Stop' : 'Run'
+        };
+      } else if (schState.draft[rowId].work == null) {
+        const row = schState.rows.find(r => r.id === rowId);
+        schState.draft[rowId].work = (row?.work === 'Stop') ? 'Stop' : 'Run';
+      }
+      schState.draft[rowId].work = schState.draft[rowId].work === 'Stop' ? 'Run' : 'Stop';
+      schState.dirty = true;
+      updateSchSaveBtn();
+      renderScheduleMatrix();
+    });
+  });
 }
 /* ============================================================
    РАСПИСАНИЕ CL — время проверки (timeWindows)
@@ -16083,7 +17063,7 @@ function renderScheduleRow(row, DAYS) {
   const freqFull = schState.draft[row.id] || row.frequency || {};
   const timeWindows = Array.isArray(freqFull.timeWindows) ? freqFull.timeWindows : [];
 
-  const work = row.work === 'Stop' ? 'Stop' : 'Run';
+  const work = (schState.draft[row.id] && schState.draft[row.id].work) || (row.work === 'Stop' ? 'Stop' : 'Run');
 
   // Норма / периодичность — счётчик ячеек
   const activeCells = schedule.length;
@@ -16110,7 +17090,9 @@ function renderScheduleRow(row, DAYS) {
     }).join('');
   }
   html += `<div class="sch-info-cell sch-info-time" data-tw-open="${escapeAttr(row.id)}" title="Кликните, чтобы задать время проверки">${timeHtml}</div>`;
-  html += `<div class="sch-info-cell sch-info-work"><span class="sch-work-badge sch-work-badge-${work.toLowerCase()}">${work}</span></div>`;
+  html += `<div class="sch-info-cell sch-info-work" data-work-toggle="${escapeAttr(row.id)}" title="Кликните, чтобы переключить Run/Stop">${work === 'Run'
+    ? '<span class="sch-work-badge sch-work-badge-run">Run</span>'
+    : '<span class="sch-work-badge sch-work-badge-stop">Stop</span>'}</div>`;
   html += `<div class="sch-info-cell sch-info-schedule">${activeLabel}</div>`;
   html += `<div class="sch-info-cell sch-info-actions">
     <button type="button" class="sch-row-remove" data-remove-from-schedule="${escapeAttr(row.id)}" title="Убрать из расписания">
@@ -16551,6 +17533,9 @@ function saveMechSchedule() {
       daysOfWeek: [...(freq.daysOfWeek || [])],
       dates: [...(freq.dates || [])]
     };
+    if (freq.work === 'Stop' || freq.work === 'Run') {
+      st.work = freq.work;
+    }
     st.updatedAt = new Date().toISOString();
     changed++;
   });
@@ -16598,6 +17583,9 @@ function saveElecSchedule() {
       daysOfWeek: [...(freq.daysOfWeek || [])],
       dates: [...(p.frequency?.dates || [])]
     };
+    if (freq.work === 'Stop' || freq.work === 'Run') {
+      p.work = freq.work;
+    }
     p.updatedAt = new Date().toISOString();
     changed++;
   });
@@ -17001,13 +17989,30 @@ function renderClMatrix() {
     { idx: 0, name: 'Вс' }
   ];
 
-  const weekDays = getCurrentWeekDays();
+  const weekDays = getWeekDays(clState.weekOffset);
   const dateByDayIdx = {};
   [1, 2, 3, 4, 5, 6, 0].forEach((dayIdx, i) => {
     dateByDayIdx[dayIdx] = weekDays[i];
   });
 
-  let html = '<div class="cl-matrix">';
+  // Панель навигации по неделям
+  const weekLabel = getWeekLabel(clState.weekOffset);
+  const isCurrentWeek = clState.weekOffset === 0;
+  let html = `
+    <div class="cl-week-nav">
+      <button type="button" class="cl-week-nav-btn" id="clWeekPrev" title="Предыдущая неделя">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="cl-week-nav-label">
+        <span class="cl-week-nav-title">${escapeHtml(weekLabel)}</span>
+        ${isCurrentWeek ? '<span class="cl-week-nav-sub">текущая неделя</span>' : ''}
+      </div>
+      <button type="button" class="cl-week-nav-btn" id="clWeekNext" title="Следующая неделя">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      ${!isCurrentWeek ? '<button type="button" class="cl-week-nav-today" id="clWeekToday">Сегодня</button>' : ''}
+    </div>
+    <div class="cl-matrix">`;
 
   // ===== Шапка =====
   html += '<div class="cl-head-grid">';
@@ -17054,6 +18059,22 @@ function renderClMatrix() {
   wrap.innerHTML = html;
 
   bindClCells();
+  bindClWeekNav();
+}
+
+function bindClWeekNav() {
+  $('#clWeekPrev')?.addEventListener('click', () => {
+    clState.weekOffset--;
+    renderClMatrix();
+  });
+  $('#clWeekNext')?.addEventListener('click', () => {
+    clState.weekOffset++;
+    renderClMatrix();
+  });
+  $('#clWeekToday')?.addEventListener('click', () => {
+    clState.weekOffset = 0;
+    renderClMatrix();
+  });
 }
 
 function renderClRow(row, num, DAYS, dateByDayIdx) {
@@ -17113,16 +18134,18 @@ function renderClRow(row, num, DAYS, dateByDayIdx) {
       const draftKey = `${row.id}|${dateStr}|${shift}`;
       const draft = clState.quickDraft[draftKey];
 
+      const isToday = dateStr === clState.todayISO;
+      const dateInPast = !!(dateStr && clState.todayISO && dateStr < clState.todayISO);
+
       let status = 'na';
       if (draft) {
         status = draft.status;
       } else if (existing) {
         status = existing.status;
       } else if (planned) {
-        status = 'due';
+        status = dateInPast ? 'missed' : 'due';
       }
 
-      const isToday = dateStr === clState.todayISO;
       const isCurrentShift = shift === clState.shiftType;
       const isClickable = planned && isToday && isCurrentShift && clState.checkMode;
 
@@ -17141,6 +18164,9 @@ function renderClRow(row, num, DAYS, dateByDayIdx) {
       } else if (status === 'UNCHECKED') {
         cls += ' cl-cell-unchecked';
         content = '?';
+      } else if (status === 'missed') {
+        cls += ' cl-cell-missed';
+        content = '?';
       } else {
         cls += ' cl-cell-na';
         content = '—';
@@ -17149,13 +18175,15 @@ function renderClRow(row, num, DAYS, dateByDayIdx) {
       if (planned && isToday && isCurrentShift) cls += ' cl-cell-today';
       if (isClickable) cls += ' cl-cell-clickable';
 
+      const cellTitle = `${d.name} · ${shift === 'day' ? 'День' : 'Ночь'}${status === 'missed' ? ' — пропущено' : ''}`;
+
       html += `<div class="${cls}"
         data-row-id="${escapeAttr(row.id)}"
         data-date="${escapeAttr(dateStr)}"
         data-shift="${escapeAttr(shift)}"
         data-planned="${planned ? '1' : '0'}"
         data-clickable="${isClickable ? '1' : '0'}"
-        title="${d.name} · ${shift === 'day' ? 'День' : 'Ночь'}">${content}</div>`;
+        title="${cellTitle}">${content}</div>`;
     });
   });
 
@@ -17165,15 +18193,20 @@ function renderClRow(row, num, DAYS, dateByDayIdx) {
 
 /* Сводка по норме для строки матрицы CL */
 function renderClRowNorm(row) {
-  const controlType = row.controlType;
+  const controlType = migrateControlType(row.controlType, row.measurements);
   const measurements = Array.isArray(row.measurements) ? row.measurements : [];
 
-  // --- Тип ok_not_ok: всегда галочка, независимо от точек ---
-  if (controlType === 'ok_not_ok') {
-    return {
-      text: '<span class="cl-norm-check">✓</span>',
-      title: 'ОК / Не ОК — проверяется оператором'
-    };
+  // --- Фиксированный без точек → ОК / Не ОК ---
+  if (controlType === 'fixed') {
+    const hasPoints = measurements.some(b =>
+      b && Array.isArray(b.points) && b.points.length > 0
+    );
+    if (!hasPoints) {
+      return {
+        text: '<span class="cl-norm-check">✓</span>',
+        title: 'Фиксированный — ОК / Не ОК'
+      };
+    }
   }
 
   // --- Если нет точек — «—» ---
@@ -17193,41 +18226,52 @@ function renderClRowNorm(row) {
     return { text: '<span style="color:var(--text-dim)">—</span>', title: '' };
   }
 
-  // --- value_input ---
-  if (controlType === 'value_input') {
-    // 1 точка — показываем «target ± tolerance»
+  // --- Вариабельный → «target ± tolerance» ---
+  if (controlType === 'variable') {
     if (points.length === 1) {
       const norm = parseNorm(points[0].value);
       if (norm) {
         const center = (norm.min + norm.max) / 2;
         const tol = (norm.max - norm.min) / 2;
-        const text = tol > 0 ? `${center} ± ${tol}` : `${center}`;
+        const text = tol > 0 ? `${fmtNum(center)} ± ${fmtNum(tol)}` : `${fmtNum(center)}`;
         return { text: escapeHtml(text), title: points[0].value || '' };
       }
       return { text: escapeHtml(points[0].value || '—'), title: '' };
     }
-    // > 1 точки — только количество
     return {
       text: `<strong>${points.length} точки</strong>`,
       title: `${points.length} точек замера — у каждой своя норма`
     };
   }
 
-  // --- range_input ---
-  if (controlType === 'range_input') {
-    // 1 точка — показываем интервал
+  // --- Контролируемый интервал → «от … до …» ---
+  if (controlType === 'interval') {
     if (points.length === 1) {
       const norm = parseNorm(points[0].value);
+      if (norm && norm.min !== norm.max) {
+        return { text: escapeHtml(`${fmtNum(norm.min)}…${fmtNum(norm.max)}`), title: points[0].value || '' };
+      }
       if (norm) {
-        const text = `${norm.min}…${norm.max}`;
-        return { text: escapeHtml(text), title: points[0].value || '' };
+        return { text: escapeHtml(fmtNum(norm.min)), title: points[0].value || '' };
       }
       return { text: escapeHtml(points[0].value || '—'), title: '' };
     }
-    // > 1 точки — количество
     return {
       text: `<strong>${points.length} точки</strong>`,
       title: `${points.length} точек замера — у каждой свой интервал`
+    };
+  }
+
+  // --- Фиксированный с точками → точное значение (без допуска) ---
+  if (controlType === 'fixed') {
+    if (points.length === 1) {
+      const norm = parseNorm(points[0].value);
+      const val = norm != null ? fmtNum(norm.max) : (points[0].value || '—');
+      return { text: escapeHtml(val), title: points[0].value || '' };
+    }
+    return {
+      text: `<strong>${points.length} точки</strong>`,
+      title: `${points.length} точек замера — точные значения`
     };
   }
 
@@ -17239,6 +18283,12 @@ function renderClRowNorm(row) {
     text: `<strong>${points.length} точки</strong>`,
     title: `${points.length} точек замера`
   };
+}
+
+/* Формат числа: убирает «.0» и лишние нули */
+function fmtNum(n) {
+  if (n == null || isNaN(n)) return '';
+  return parseFloat(n.toFixed(6)).toString();
 }
 
 function findExistingCheck(stdId, dateStr, shiftLetter) {
@@ -17345,7 +18395,7 @@ function saveClDraftToHistory() {
       oplNumber: row.oplNumber || '',
       node: row.node || '',
       nodePart: row.nodePart || '',
-      controlType: row.controlType || 'ok_not_ok',
+      controlType: migrateControlType(row.controlType, row.measurements),
       answer: val.answer,
       value: val.value,
       status: val.status,
@@ -17739,9 +18789,9 @@ function renderSvMainFields(st, isEdit) {
         <label>Тип контроля</label>
         <select id="svf_controlType">
           <option value="">— выберите —</option>
-          <option value="ok_not_ok"    ${st.controlType === 'ok_not_ok'    ? 'selected' : ''}>ОК / Не ОК</option>
-          <option value="value_input"  ${st.controlType === 'value_input'  ? 'selected' : ''}>Число ± допуск</option>
-          <option value="range_input"  ${st.controlType === 'range_input'  ? 'selected' : ''}>Диапазон</option>
+          <option value="fixed"     ${st.controlType === 'fixed'    ? 'selected' : ''}>Фиксированный</option>
+          <option value="variable"  ${st.controlType === 'variable' ? 'selected' : ''}>Вариабельный</option>
+          <option value="interval"  ${st.controlType === 'interval' ? 'selected' : ''}>Контролируемый интервал</option>
         </select>
       </div>
       <div class="sv-full-field-edit">
@@ -18085,10 +19135,10 @@ function bindSvControlEvents(st) {
   const container = $('#svf_brandBlocksContainer');
   if (!container) return;
 
-  // Инициализация — рендерим из st.measurements
+  // Если таблица ещё не отрисована — отрисовываем из st.measurements,
+  // НО не выходим: ниже должны привязаться обработчики (в т.ч. «+ Добавить бренд»).
   if (!container.querySelector('.bt-row') && !container.querySelector('.bt-empty')) {
     renderSvBrandsTable(st.measurements || []);
-    return;
   }
 
   // --- Удаление бренда ---
@@ -18390,18 +19440,18 @@ function renderSvFullExtra(st, isEdit) {
     </div>
   `;
 
-  // Триггеры — соберём из справочника материалов + узлов
-  const materials = MATERIAL_CHANGES.map(m => ({
-    value: m.value,
-    label: m.label,
-    group: 'Материалы'
+  // Триггеры — соберём из пользовательских триггеров + узлов
+  const customTriggers = getCustomTriggers().map(t => ({
+    value: t.value,
+    label: t.label,
+    group: 'Пользовательские'
   }));
   const nodes = (typeof getNodes === 'function' ? getNodes() : []).map(n => ({
     value: 'node:' + n.name,
     label: n.name + ' [' + n.part + ']',
     group: 'Узлы'
   }));
-  const allTriggers = [...materials, ...nodes];
+  const allTriggers = [...customTriggers, ...nodes];
 
   let triggersHtml = '';
   let lastGroup = '';
@@ -18704,7 +19754,7 @@ $('#svFullSaveBtn')?.addEventListener('click', () => {
     nodePart,
     durationSec: durationEl ? Math.max(0, parseInt(durationEl.value, 10) || 0) : st.durationSec,
     tool: toolEl ? toolEl.value.trim() : st.tool,
-    controlType: controlEl ? controlEl.value : st.controlType,
+    controlType: migrateControlType(controlEl ? controlEl.value : st.controlType, st.measurements),
     active: activeEl ? activeEl.checked : st.active,
     updatedAt: new Date().toISOString()
   };

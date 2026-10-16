@@ -158,58 +158,62 @@
 <!-- ======================= ВКЛАДКА ПРОВЕРКА ======================= -->
 <div class="tab" id="tab-check">
 
-  <div class="card">
-    <h2>1. Оператор и смена</h2>
-    <div class="row">
-      <div class="field" style="position:relative">
-        <label class="required">ФИО оператора</label>
-        <input type="text" id="operatorName" placeholder="Начните вводить фамилию..." autocomplete="off">
-        <div class="autocomplete-dropdown" id="operatorAutocomplete" style="display:none"></div>
-      </div>
-      <div class="field">
-        <label class="required">Смена</label>
-        <select id="shift"><option value="">— выберите —</option></select>
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>2. Номер линии и часть</h2>
-    <div class="row">
+  <div class="cocl-steps-grid">
+    <!-- 1. Линия -->
+    <div class="card cocl-step-card">
+      <h2><span class="cocl-step-num">1</span> Линия производства</h2>
       <div class="field">
         <label class="required">Линия производства</label>
         <select id="lineSelect"><option value="">— выберите —</option></select>
       </div>
-      <div class="field">
-        <label class="required">Часть линии</label>
-        <select id="partSelect">
-          <option value="">— выберите —</option>
-          <option value="Maker">Maker (сигаретная часть)</option>
-          <option value="Packer">Packer (упаковка)</option>
-        </select>
+      <div class="cocl-line-context" id="coclLineContext" style="display:none"></div>
+    </div>
+
+    <!-- 2. Часть и тип перехода -->
+    <div class="card cocl-step-card">
+      <h2><span class="cocl-step-num">2</span> Часть линии и тип перехода</h2>
+      <div class="row">
+        <div class="field">
+          <label class="required">Часть линии</label>
+          <select id="partSelect">
+            <option value="">— выберите —</option>
+            <option value="Maker">Maker (сигаретная часть)</option>
+            <option value="Packer">Packer (упаковка)</option>
+          </select>
+        </div>
+        <div class="field" style="flex-basis:60%">
+          <label class="required">Тип перехода</label>
+          <input type="hidden" id="transitionType" value="">
+          <div class="type-selector" id="typeSelector">
+            <button type="button" class="type-option type-option-changeover" data-value="ChangeOver">
+              <span class="type-option-title">Change Over</span>
+              <span class="type-option-time">Смена сорта</span>
+            </button>
+            <button type="button" class="type-option type-option-clto" data-value="CL_TO">
+              <span class="type-option-title">CL в ТО</span>
+              <span class="type-option-time">Тех. обслуживание</span>
+            </button>
+            <button type="button" class="type-option type-option-clconv" data-value="CL_Conversion">
+              <span class="type-option-title">CL в Конвертацию</span>
+              <span class="type-option-time">Конвертация</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="card">
-    <h2>3. Тип перехода</h2>
-    <div class="row">
-      <div class="field" style="flex-basis:100%">
-        <label class="required">Тип перехода</label>
-        <input type="hidden" id="transitionType" value="">
-        <div class="type-selector" id="typeSelector">
-          <button type="button" class="type-option type-option-changeover" data-value="ChangeOver">
-            <span class="type-option-title">Change Over</span>
-            <span class="type-option-time">Смена сорта</span>
-          </button>
-          <button type="button" class="type-option type-option-clto" data-value="CL_TO">
-            <span class="type-option-title">CL в ТО</span>
-            <span class="type-option-time">Тех. обслуживание</span>
-          </button>
-          <button type="button" class="type-option type-option-clconv" data-value="CL_Conversion">
-            <span class="type-option-title">CL в Конвертацию</span>
-            <span class="type-option-time">Конвертация</span>
-          </button>
+    <!-- 3. Оператор и смена -->
+    <div class="card cocl-step-card">
+      <h2><span class="cocl-step-num">3</span> Оператор и смена</h2>
+      <div class="row">
+        <div class="field" style="position:relative">
+          <label class="required">ФИО оператора</label>
+          <input type="text" id="operatorName" placeholder="Начните вводить фамилию..." autocomplete="off">
+          <div class="autocomplete-dropdown" id="operatorAutocomplete" style="display:none"></div>
+        </div>
+        <div class="field">
+          <label class="required">Смена</label>
+          <select id="shift"><option value="">— выберите —</option></select>
         </div>
       </div>
     </div>
@@ -232,15 +236,6 @@
   <div class="card" id="changesCard" style="display:none">
     <h2 id="changesTitle">5. Что меняется</h2>
     <div id="changesContainer"></div>
-  </div>
-
-  <div class="card" id="nodesCard" style="display:none">
-    <h2 id="nodesTitle">5. Замена узлов</h2>
-    <div id="nodesContainer"></div>
-    <div class="field" style="margin-top:12px">
-      <label>Дополнительно (свой узел)</label>
-      <input type="text" id="customNode" placeholder="Впишите узел, если его нет в списке">
-    </div>
   </div>
 
   <!-- Кнопка «Сформировать проверку» -->
@@ -655,6 +650,31 @@
             </svg>
             <span>Создать параметр</span>
           </button>
+          <button class="btn btn-secondary btn-icon-text btn-sm" id="editorElecUploadBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <span>Импорт</span>
+          </button>
+          <input type="file" id="editorElecUploadInput" accept=".xlsx,.xls" style="display:none">
+          <button class="btn btn-secondary btn-icon-text btn-sm" id="editorElecTemplateBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span>Шаблон</span>
+          </button>
+          <button class="btn btn-secondary btn-icon-text btn-sm" id="editorElecExportBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <span>Экспорт</span>
+          </button>
         </div>
       </div>
 
@@ -735,8 +755,9 @@
           <label>Тип контроля</label>
           <select id="eeFilterControlType">
             <option value="">Все</option>
-            <option value="value_input">Числовой</option>
-            <option value="ok_not_ok">ОК / Не ОК</option>
+            <option value="fixed">Фиксированный</option>
+            <option value="variable">Вариабельный</option>
+            <option value="interval">Контролируемый интервал</option>
           </select>
         </div>
         <div class="editor-filter-field">
@@ -1236,6 +1257,7 @@
 
   <div class="card">
     <h2>Дашборд</h2>
+    <div id="dashboardWorkshopBar" class="dash-workshop-bar"></div>
     <div id="dashboardContent">
       <div class="empty-state">Загрузка данных...</div>
     </div>
@@ -1311,7 +1333,26 @@
     </p>
     <div id="lineMachinesContainer"></div>
   </div>
-<div class="card">
+
+  <div class="card">
+    <h2>Триггеры Change Over</h2>
+    <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
+      Собственные причины смены сорта, которые показываются в блоке «Что меняется».
+      Назначаются стандартам (механическим и электронным) в качестве триггера.
+    </p>
+    <div id="customTriggersContainer"></div>
+    <div class="card-actions-bar">
+      <button class="btn btn-primary btn-icon-text" id="addCustomTriggerBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span>Добавить триггер</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="card">
   <h2>Категории Top Losses</h2>
   <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
     Потери, дефекты и выбросы, по которым контролируются стандарты.
@@ -1742,6 +1783,12 @@
         <label class="required">Название потери</label>
         <input type="text" id="topLossItemModalName" placeholder="Обрыв штранга">
       </div>
+      <div class="field">
+        <label>Цех</label>
+        <select id="topLossItemModalWorkshop">
+          <option value="">— все цеха —</option>
+        </select>
+      </div>
       <p style="color:var(--text-second);font-size:12px;margin-top:8px">
         Например: <strong>Обрыв штранга</strong>, <strong>Замятие сигарет</strong>, <strong>Выбросы по LES</strong>.
       </p>
@@ -1786,6 +1833,12 @@
         <label class="required">Название бренда</label>
         <input type="text" id="newBrandInput" placeholder="Например: Marlboro">
       </div>
+      <div class="field">
+        <label>Цех</label>
+        <select id="addBrandWorkshop">
+          <option value="">— все цеха —</option>
+        </select>
+      </div>
       <p style="color:var(--text-second);font-size:12px;margin-top:8px">
         Используйте название, которое будет отображаться у оператора.
       </p>
@@ -1805,6 +1858,41 @@
   </div>
 </div>
 
+<!-- ======================= МОДАЛЬНОЕ ОКНО: ТРИГГЕР CHANGE OVER ======================= -->
+<div class="modal-overlay" id="customTriggerModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="customTriggerModalTitle">Добавить триггер</h3>
+      <button class="modal-close" id="customTriggerModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="customTriggerModalId">
+      <div class="field">
+        <label class="required">Название триггера</label>
+        <input type="text" id="customTriggerModalLabel" placeholder="Например: Смена ароматизатора">
+      </div>
+      <div class="field">
+        <label>Часть линии</label>
+        <select id="customTriggerModalPart">
+          <option value="">— любая —</option>
+          <option value="Maker">Maker</option>
+          <option value="Packer">Packer</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Цех</label>
+        <select id="customTriggerModalWorkshop">
+          <option value="">— все цеха —</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="customTriggerModalCancel">Отмена</button>
+      <button class="btn btn-primary" id="customTriggerModalSave">Добавить</button>
+    </div>
+  </div>
+</div>
+
 <!-- ======================= МОДАЛЬНОЕ ОКНО: РЕДАКТИРОВАТЬ БРЕНД ======================= -->
 <div class="modal-overlay" id="editBrandModal">
   <div class="modal">
@@ -1816,6 +1904,12 @@
       <div class="field">
         <label class="required">Название бренда</label>
         <input type="text" id="editBrandInput" placeholder="Название бренда">
+      </div>
+      <div class="field">
+        <label>Цех</label>
+        <select id="editBrandWorkshop">
+          <option value="">— все цеха —</option>
+        </select>
       </div>
       <p style="color:var(--text-second);font-size:12px;margin-top:8px">
         Новое название автоматически применится во всех линиях, где использовался этот бренд.
@@ -1956,9 +2050,9 @@
       <div class="field">
         <select id="sf_controlType">
           <option value="">— выберите —</option>
-          <option value="ok_not_ok">ОК / Не ОК</option>
-          <option value="value_input">Число ± допуск</option>
-          <option value="range_input">Диапазон (от … до …)</option>
+          <option value="fixed">Фиксированный (точное значение / ОК-НеОК)</option>
+          <option value="variable">Вариабельный (значение ± допуск)</option>
+          <option value="interval">Контролируемый интервал (от … до …)</option>
         </select>
       </div>
 
@@ -1989,6 +2083,17 @@
       <p style="color:var(--text-second);font-size:12px;margin-top:8px">
         Если ничего не выбрано — стандарт хранится в системе, но оператору не показывается.
       </p>
+
+      <div class="field" id="sf_forceChangeOverField" style="margin-top:10px">
+        <label class="sf-switch-label">
+          <input type="checkbox" id="sf_forceChangeOver">
+          <span>
+            <strong>Показывать в смене сорта всегда</strong>
+            <em>По умолчанию стандарт попадает в проверку смены сорта только если точки
+            целевого бренда отличаются от исходного.</em>
+          </span>
+        </label>
+      </div>
 
       <div class="sf-collapsible" id="sf_triggersCollapsible">
         <div class="sf-collapsible-header" data-sf-toggle="triggers">
@@ -2123,17 +2228,31 @@
 
       <h4 class="form-section-title">Тип контроля</h4>
       <div class="field" style="flex-basis:100%">
-        <input type="hidden" id="ep_controlType" value="value_input">
+        <input type="hidden" id="ep_controlType" value="variable">
           <div class="type-selector" id="ep_controlTypeSelector">
-            <button type="button" class="type-option type-option-changeover active" data-value="value_input">
-              <span class="type-option-title">Числовой</span>
+            <button type="button" class="type-option type-option-changeover active" data-value="fixed">
+              <span class="type-option-title">Фиксированный</span>
+              <span class="type-option-time">точное значение / ОК-НеОК</span>
+            </button>
+            <button type="button" class="type-option type-option-clto" data-value="variable">
+              <span class="type-option-title">Вариабельный</span>
               <span class="type-option-time">target ± tolerance</span>
             </button>
-            <button type="button" class="type-option type-option-clto" data-value="ok_not_ok">
-              <span class="type-option-title">ОК / Не ОК</span>
-              <span class="type-option-time">текстовая норма</span>
+            <button type="button" class="type-option type-option-changeover" data-value="interval">
+              <span class="type-option-title">Контролируемый интервал</span>
+              <span class="type-option-time">от … до …</span>
             </button>
           </div>
+      </div>
+
+      <div id="ep_normTextBlock" style="display:none">
+        <h4 class="form-section-title">Текст нормы (ОК / Не ОК)</h4>
+        <div class="field">
+          <input type="text" id="ep_normText" placeholder="Например: проверить визуально, что плёнка без повреждений">
+        </div>
+        <p style="color:var(--text-second);font-size:12px;margin-top:-4px;margin-bottom:12px">
+          Для типа «Фиксированный» без числовой нормы оператор отмечает ОК / Не ОК.
+        </p>
       </div>
 
       <h4 class="form-section-title">Применять к</h4>
@@ -2150,6 +2269,12 @@
       </div>
       <p style="color:var(--text-second);font-size:12px;margin-top:8px;margin-bottom:12px">
         Если ничего не выбрано — параметр хранится, но оператору не показывается.
+      </p>
+
+      <h4 class="form-section-title">Триггеры Change Over</h4>
+      <div id="ep_triggersGroup"></div>
+      <p style="color:var(--text-second);font-size:12px;margin-top:6px;margin-bottom:12px">
+        Показывать этот параметр только при выбранном «Что меняется».
       </p>
 
       <div id="ep_brandsBlock">
