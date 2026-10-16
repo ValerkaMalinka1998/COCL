@@ -10326,36 +10326,7 @@ window.openBlockModal = function(blockId) {
   const nameField = $('#blockModalName')?.closest('.field');
   if (nameField) nameField.style.display = '';
 
-  // Рендер чекбоксов линий — только линии того же цеха, что и блок
-  const group = $('#blockModalLinesGroup');
-  const allLines = getAllLinesWithContext()
-    .filter(x => x.workshopId === block.workshopId)
-    .map(x => x.line);
-  const otherLines = blocks
-    .filter(b => b.id !== blockId && b.workshopId === block.workshopId)
-    .flatMap(b => b.lines || []);
-
-  if (!allLines.length) {
-    group.innerHTML = '<div class="empty-state" style="padding:10px">Сначала добавьте линии</div>';
-  } else {
-    group.innerHTML = allLines.map(line => {
-      const checked = (block.lines || []).includes(line);
-      const disabled = otherLines.includes(line);
-      return `
-        <label class="${checked ? 'checked' : ''}" ${disabled ? 'style="opacity:0.4;cursor:not-allowed" title="Линия уже в другом блоке"' : ''}>
-          <input type="checkbox" value="${escapeHtml(line)}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
-          ${escapeHtml(line)}
-        </label>
-      `;
-    }).join('');
-
-    // Навешиваем обработчики
-    group.querySelectorAll('input').forEach(cb => {
-      cb.addEventListener('change', e => {
-        e.target.closest('label').classList.toggle('checked', e.target.checked);
-      });
-    });
-  }
+  renderBlockModalLines(block.workshopId, block.lines || [], x => x.blockId === blockId);
 
   openModal(modal);
   setTimeout(() => $('#blockModalName').focus(), 100);
@@ -10364,6 +10335,93 @@ window.openBlockModal = function(blockId) {
 function closeBlockModal() {
   closeModal('#blockModal');
 }
+
+/* Линии, с которыми открыта модалка (для предупреждения при снятии) */
+let blockModalInitialLines = [];
+
+/* Список линий в модалке блока/участка.
+   ownLines — линии этого блока/участка (отмечены);
+   isOwn(ctx) — принадлежит ли линия из getAllLinesWithContext() этому
+   владельцу. Чужие линии того же цеха показываются выключенными,
+   с подписью, где они сейчас. */
+function renderBlockModalLines(workshopId, ownLines, isOwn) {
+  const group = $('#blockModalLinesGroup');
+  if (!group) return;
+  blockModalInitialLines = ownLines.slice();
+  const newInput = $('#blockModalNewLine');
+  if (newInput) newInput.value = '';
+
+  const ctxs = getAllLinesWithContext().filter(x => x.workshopId === workshopId);
+  const items = ctxs.map(x => {
+    const own = isOwn(x);
+    const where = x.blockName ? `${x.areaName} · ${x.blockName}` : x.areaName;
+    return { line: x.line, checked: own && ownLines.includes(x.line), disabled: !own, where };
+  });
+
+  group.innerHTML = items.length
+    ? items.map(blockModalLineLabel).join('')
+    : '<div class="empty-state block-modal-empty" style="padding:10px">Линий пока нет — добавьте первую ниже</div>';
+}
+
+function blockModalLineLabel(it) {
+  const title = it.disabled ? ` title="Сейчас в: ${escapeAttr(it.where)}"` : '';
+  return `
+    <label class="${it.checked ? 'checked' : ''}${it.disabled ? ' is-disabled' : ''}"${title}>
+      <input type="checkbox" value="${escapeAttr(it.line)}" ${it.checked ? 'checked' : ''} ${it.disabled ? 'disabled' : ''}>
+      ${escapeHtml(it.line)}${it.disabled ? `<span class="block-modal-line-where">${escapeHtml(it.where)}</span>` : ''}
+    </label>
+  `;
+}
+
+/* Добавить новую линию в список модалки (сохранится по «Сохранить») */
+function addBlockModalNewLine() {
+  const input = $('#blockModalNewLine');
+  const group = $('#blockModalLinesGroup');
+  if (!input || !group) return;
+  const code = input.value.trim().replace(/\s+/g, ' ');
+  if (!code) return showToast('Введите код линии', true);
+
+  const exists = getAllLinesWithContext().find(x => x.line.toLowerCase() === code.toLowerCase());
+  if (exists) {
+    const where = [exists.workshopName, exists.areaName, exists.blockName].filter(Boolean).join(' · ');
+    return showToast(`Линия ${exists.line} уже есть: ${where}`, true);
+  }
+  const inList = [...group.querySelectorAll('input[type=checkbox]')]
+    .some(cb => cb.value.toLowerCase() === code.toLowerCase());
+  if (inList) return showToast('Эта линия уже в списке', true);
+
+  group.querySelector('.block-modal-empty')?.remove();
+  group.insertAdjacentHTML('beforeend', blockModalLineLabel({ line: code, checked: true, disabled: false, where: '' }));
+  input.value = '';
+  input.focus();
+}
+
+/* Линии, которые сняли с отметки: предупредить, если на них есть данные */
+function confirmBlockModalRemovedLines(selectedLines) {
+  const removed = blockModalInitialLines.filter(l => !selectedLines.includes(l));
+  if (!removed.length) return true;
+  const withData = removed.filter(line =>
+    getStandards().some(s => s.line === line) ||
+    getElectronicParams().some(p => p.line === line) ||
+    getHistory().some(h => h.line === line));
+  const msg = withData.length
+    ? `Линии ${withData.join(', ')} будут удалены из структуры, хотя по ним есть стандарты или история. ` +
+      'Данные останутся, но линия пропадёт из выбора, пока её снова не добавят. Продолжить?'
+    : `Линии ${removed.join(', ')} будут удалены из структуры. Продолжить?`;
+  return confirm(msg);
+}
+
+$('#blockModalLinesGroup')?.addEventListener('change', (e) => {
+  const cb = e.target.closest('input[type=checkbox]');
+  if (cb) cb.closest('label')?.classList.toggle('checked', cb.checked);
+});
+$('#blockModalAddLineBtn')?.addEventListener('click', addBlockModalNewLine);
+$('#blockModalNewLine')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    addBlockModalNewLine();
+  }
+});
 
 /* --- Обработчики модалки --- */
 $('#blockModalClose')?.addEventListener('click', closeBlockModal);
@@ -10398,32 +10456,10 @@ window.openAreaLinesModal = function(workshopId, areaId) {
   const nameField = $('#blockModalName')?.closest('.field');
   if (nameField) nameField.style.display = 'none';
 
-  const group = $('#blockModalLinesGroup');
-  const allLines = getAllLinesWithContext()
-    .filter(x => x.workshopId === workshopId)
-    .map(x => x.line);
-
-  if (!allLines.length) {
-    group.innerHTML = '<div class="empty-state" style="padding:10px">В этом цехе пока нет линий</div>';
-  } else {
-    group.innerHTML = allLines.map(line => {
-      const checked = (area.lines || []).includes(line);
-      return `
-        <label class="${checked ? 'checked' : ''}">
-          <input type="checkbox" value="${escapeHtml(line)}" ${checked ? 'checked' : ''}>
-          ${escapeHtml(line)}
-        </label>
-      `;
-    }).join('');
-
-    group.querySelectorAll('input').forEach(cb => {
-      cb.addEventListener('change', e => {
-        e.target.closest('label').classList.toggle('checked', e.target.checked);
-      });
-    });
-  }
+  renderBlockModalLines(workshopId, area.lines || [], x => x.areaId === areaId && !x.blockId);
 
   openModal(modal);
+  setTimeout(() => $('#blockModalNewLine')?.focus(), 100);
 };
 
 /* --- Создание нового блока в рамках участка --- */
@@ -10442,23 +10478,7 @@ window.openNewBlockModal = function(workshopId, areaId) {
   const nameField = $('#blockModalName')?.closest('.field');
   if (nameField) nameField.style.display = '';
 
-  const group = $('#blockModalLinesGroup');
-  const allLines = getAllLinesWithContext()
-    .filter(x => x.workshopId === workshopId)
-    .map(x => x.line);
-
-  if (!allLines.length) {
-    group.innerHTML = '<div class="empty-state" style="padding:10px">В этом цехе пока нет линий</div>';
-  } else {
-    group.innerHTML = allLines.map(line => `
-      <label><input type="checkbox" value="${escapeHtml(line)}"> ${escapeHtml(line)}</label>
-    `).join('');
-    group.querySelectorAll('input').forEach(cb => {
-      cb.addEventListener('change', e => {
-        e.target.closest('label').classList.toggle('checked', e.target.checked);
-      });
-    });
-  }
+  renderBlockModalLines(workshopId, [], () => false);
 
   openModal(modal);
   setTimeout(() => $('#blockModalName').focus(), 100);
@@ -10470,6 +10490,7 @@ $('#blockModalSaveBtn')?.addEventListener('click', () => {
   if (!rawId) return;
 
   const selectedLines = [...$$('#blockModalLinesGroup input:checked')].map(cb => cb.value);
+  if (!confirmBlockModalRemovedLines(selectedLines)) return;
 
   // --- Режим 1: «линии участка без блоков» (PMD и др.) ---
   if (rawId.indexOf('area:') === 0) {

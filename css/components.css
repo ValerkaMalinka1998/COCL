@@ -79,6 +79,28 @@
   border-color: var(--accent-cyan);
   box-shadow: var(--glow-cyan-sm);
 }
+.checkbox-group label.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.checkbox-group label.is-disabled:hover {
+  background: inherit;
+}
+
+/* Модалка блока/участка: где сейчас чужая линия + поле новой линии */
+.block-modal-line-where {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-left: 4px;
+}
+.block-modal-newline {
+  display: flex;
+  gap: 8px;
+}
+.block-modal-newline input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
 
 /* ============ Кнопки ============ */
 button.btn {
