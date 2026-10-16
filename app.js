@@ -18,7 +18,8 @@ const STORAGE_KEYS = {
   electronicShiftCfg: 'cl_electronic_shiftcfg_v1',
   electronicParams: 'cl_electronic_params_v1',
   electronicBrandSchedule: 'cl_electronic_brandschedule_v1',
-  customTriggers: 'cl_custom_triggers_v1'
+  customTriggers: 'cl_custom_triggers_v1',
+  scheduleWeeks: 'cl_schedule_weeks_v1'
 };
 
 /* ============================================================
@@ -297,62 +298,6 @@ function openModal(modalOrId) {
   modal.classList.remove('modal-suspended');
 
   modalStack.push(modal);
-}
-
-function closeModal(modalOrId) {
-  const modal = typeof modalOrId === 'string'
-    ? (modalOrId.startsWith('#') ? document.querySelector(modalOrId) : document.getElementById(modalOrId))
-    : modalOrId;
-
-  if (!modal) return;
-
-  // Скрываем закрываемую
-  modal.classList.remove('active');
-  modal.classList.remove('modal-suspended');
-  modal.style.zIndex = '';
-
-  // Убираем из стека
-  const idx = modalStack.indexOf(modal);
-  if (idx !== -1) {
-    modalStack.splice(idx, 1);
-  }
-
-  // --- Снимаем suspend со всех модалок, которые должны быть видны ---
-  // Логика: если модалка в стеке — она должна быть видима
-  // (кроме тех, что выше верхушки — их не бывает)
-  document.querySelectorAll('.modal-overlay.modal-suspended').forEach(m => {
-    if (modalStack.includes(m)) {
-      // Модалка в стеке — значит она должна быть видима
-      m.classList.remove('modal-suspended');
-      m.classList.add('active');
-    } else {
-      // Модалка не в стеке — не должна быть видима вообще
-      m.classList.remove('modal-suspended');
-      m.classList.remove('active');
-    }
-  });
-
-  // Пересчитываем z-index оставшихся в стеке
-  const baseZ = parseInt(
-    getComputedStyle(document.documentElement)
-      .getPropertyValue('--modal-z-base')
-      .trim() || '2000',
-    10
-  );
-  modalStack.forEach((m, i) => {
-    m.style.zIndex = baseZ + i * 10;
-  });
-}
-
-function bindModalBackdropClose(modalId) {
-  const modal = typeof modalId === 'string'
-    ? (modalId.startsWith('#') ? document.querySelector(modalId) : document.getElementById(modalId))
-    : modalId;
-  if (!modal) return;
-
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) closeModal(modal);
-  });
 }
 
 /**
@@ -896,6 +841,10 @@ function openStandardForm(id) {
   const title = $('#standardFormTitle');
   if (!modal) return;
 
+  // Создание/редактирование стандарта — полноэкранная рабочая форма
+  // (как редактор), а не маленькое модальное окно.
+  modal.classList.add('sf-page-mode');
+
   // Если id передан — редактируем, иначе создаём новый
   let st;
   if (id) {
@@ -905,7 +854,7 @@ function openStandardForm(id) {
   } else {
     st = createEmptyStandard();
     st.line = currentEditorLine;
-    title.textContent = 'Добавить стандарт — ' + currentEditorLine;
+    title.textContent = 'Новый стандарт — ' + currentEditorLine;
   }
 
   // Заполняем поля
@@ -1007,6 +956,8 @@ function openStandardForm(id) {
 window.openStandardForm = openStandardForm;
 
 function closeStandardForm() {
+  // Возвращаем обычный (не полноэкранный) режим окна
+  $('#standardFormModal')?.classList.remove('sf-page-mode');
   closeModal('#standardFormModal');
 }
 /* ============================================================
@@ -1833,7 +1784,7 @@ if (!controlType) return showToast('Выберите тип контроля', t
     // --- НОВОЕ: история ---
     author: id
       ? (getStandards().find(s => s.id === id) || {}).author || ''
-      : (($('#operatorName')?.value || '').trim() || '—'),
+      : (getCurrentUser() || '—'),
     createdAt: id
       ? (getStandards().find(s => s.id === id) || {}).createdAt || new Date().toISOString()
       : new Date().toISOString(),
@@ -3332,6 +3283,72 @@ function getWeekLabel(offset = 0) {
   return `${first} – ${last}`;
 }
 
+/* ============================================================
+   РАСПИСАНИЕ CL — ПОНЕДЕЛЬНЫЕ ПРАВКИ (оверрайды)
+
+   Базовое расписание (standard.frequency.schedule) — это повторяющийся
+   недельный шаблон. Правки, сделанные для конкретной недели, хранятся
+   отдельно и НЕ трогают базовый шаблон и другие недели.
+
+   Структура cl_schedule_weeks_v1:
+   {
+     "<YYYY-MM-DD начала недели>": {
+       "<линия>": {
+         removed: [stdId, ...],           // убрано только для этой недели
+         added:   [stdId, ...],           // добавлено только для этой недели
+         rows: { [stdId]: { schedule:[{day,shift}], timeWindows:[{from,to}], work } }
+       }
+     }
+   }
+   ============================================================ */
+
+/* Понедельник недели по смещению (0 = текущая) */
+function getSchWeekStart(offset = 0) {
+  return getWeekDays(offset)[0];
+}
+
+function getScheduleWeeks() {
+  return load(STORAGE_KEYS.scheduleWeeks, {});
+}
+function setScheduleWeeks(v) {
+  save(STORAGE_KEYS.scheduleWeeks, v);
+}
+
+/* Оверрайд конкретной недели+линии или null */
+function getScheduleWeekOverride(weekStart, line) {
+  if (!weekStart || !line) return null;
+  const all = getScheduleWeeks();
+  const wk = all[weekStart];
+  if (!wk) return null;
+  return wk[line] || null;
+}
+
+/* Сохранить оверрайд недели+линии (пустой — удаляем) */
+function setScheduleWeekOverride(weekStart, line, ov) {
+  if (!weekStart || !line) return;
+  const all = getScheduleWeeks();
+  if (!all[weekStart]) all[weekStart] = {};
+
+  const isEmpty = !ov || (
+    !(ov.removed && ov.removed.length) &&
+    !(ov.added && ov.added.length) &&
+    !(ov.rows && Object.keys(ov.rows).length)
+  );
+
+  if (isEmpty) {
+    delete all[weekStart][line];
+    if (!Object.keys(all[weekStart]).length) delete all[weekStart];
+  } else {
+    all[weekStart][line] = ov;
+  }
+  setScheduleWeeks(all);
+}
+
+/* Есть ли для недели+линии хоть какие-то правки */
+function hasScheduleWeekOverride(weekStart, line) {
+  return !!getScheduleWeekOverride(weekStart, line);
+}
+
 /* Утилита: человекочитаемая дата 'YYYY-MM-DD' → '28.09.2026' */
 function fmtISODate(dateStr) {
   if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr || '';
@@ -4149,9 +4166,6 @@ function setHistory(v) { save(STORAGE_KEYS.history, v); }
 function getNodes() { return load(STORAGE_KEYS.nodes, [...DEFAULT_NODES]); }
 function setNodes(v) { save(STORAGE_KEYS.nodes, v); }
 
-function getLines() { return load(STORAGE_KEYS.lines, [...DEFAULT_LINES]); }
-function setLines(v) { save(STORAGE_KEYS.lines, v); }
-
 /* Смены — фиксированные A, B, C, D. Редактирование через UI запрещено. */
 function getShifts() {
   return ['A', 'B', 'C', 'D'];
@@ -4209,13 +4223,81 @@ function renderCustomTriggersSettings() {
   if (!container) return;
 
   const list = getCustomTriggers();
+  const workshops = getWorkshops();
 
   if (!list.length) {
     container.innerHTML = '<div class="empty-state">Триггеров нет. Нажмите «Добавить триггер».</div>';
     return;
   }
 
-  container.innerHTML = '<div class="tl-cat-losses">' + list.map(t => {
+  // Группируем по цехам: «общие» (workshop==='') и по id цеха
+  const groups = new Map();
+  groups.set('__shared__', []);
+  workshops.forEach(w => groups.set(w.id, []));
+
+  list.forEach(t => {
+    const key = (t.workshop && groups.has(t.workshop)) ? t.workshop : '__shared__';
+    groups.get(key).push(t);
+  });
+
+  // Хранилище открытых групп
+  let openIds = getCtOpenGroups();
+  if (openIds === null) { openIds = []; setCtOpenGroups(openIds); }
+
+  let html = '';
+
+  // Общие триггеры (без привязки к цеху)
+  const shared = groups.get('__shared__') || [];
+  if (shared.length) {
+    const open = openIds.includes('__shared__');
+    html += `<div class="bl-group bl-group-workshop ${open ? 'expanded' : ''}">
+      <div class="bl-group-head" data-ct-toggle="__shared__">
+        <span class="bl-group-toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
+        <span class="bl-group-name">Общие (все цеха)</span>
+        <span class="bl-group-count">${shared.length} триг.</span>
+      </div>
+      <div class="bl-group-body">${renderCtList(shared)}</div>
+    </div>`;
+  }
+
+  // По цехам
+  workshops.forEach(ws => {
+    const wsTriggers = groups.get(ws.id) || [];
+    if (!wsTriggers.length) return;
+    const open = openIds.includes(ws.id);
+    html += `<div class="bl-group bl-group-workshop ${open ? 'expanded' : ''}">
+      <div class="bl-group-head" data-ct-toggle="${escapeAttr(ws.id)}">
+        <span class="bl-group-toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
+        <span class="bl-group-name">${escapeHtml(ws.name)}</span>
+        <span class="bl-group-count">${wsTriggers.length} триг.</span>
+      </div>
+      <div class="bl-group-body">${renderCtList(wsTriggers)}</div>
+    </div>`;
+  });
+
+  container.innerHTML = html;
+
+  container.querySelectorAll('[data-ct-toggle]').forEach(head => {
+    head.addEventListener('click', () => {
+      const id = head.dataset.ctToggle;
+      let open = getCtOpenGroups() || [];
+      if (open.includes(id)) open = open.filter(x => x !== id);
+      else open.push(id);
+      setCtOpenGroups(open);
+      renderCustomTriggersSettings();
+    });
+  });
+
+  container.querySelectorAll('[data-ct-edit]').forEach(btn => {
+    btn.addEventListener('click', () => openCustomTriggerModal(btn.dataset.ctEdit));
+  });
+  container.querySelectorAll('[data-ct-delete]').forEach(btn => {
+    btn.addEventListener('click', () => deleteCustomTrigger(btn.dataset.ctDelete));
+  });
+}
+
+function renderCtList(arr) {
+  return arr.map(t => {
     const wsName = t.workshop ? getWorkshopName(t.workshop) : '';
     const meta = [t.part || 'любая часть', wsName || 'все цеха'].join(' · ');
     return `
@@ -4238,15 +4320,17 @@ function renderCustomTriggersSettings() {
         </div>
       </div>
     `;
-  }).join('') + '</div>';
-
-  container.querySelectorAll('[data-ct-edit]').forEach(btn => {
-    btn.addEventListener('click', () => openCustomTriggerModal(btn.dataset.ctEdit));
-  });
-  container.querySelectorAll('[data-ct-delete]').forEach(btn => {
-    btn.addEventListener('click', () => deleteCustomTrigger(btn.dataset.ctDelete));
-  });
+  }).join('');
 }
+
+function getCtOpenGroups() {
+  try { return JSON.parse(localStorage.getItem('cl_ct_open_groups')) || null; } catch(e) { return null; }
+}
+function setCtOpenGroups(arr) {
+  try { localStorage.setItem('cl_ct_open_groups', JSON.stringify(arr)); } catch(e) {}
+}
+
+/* Старая функция с удалённым рендером — объединена выше */
 
 let currentEditingTriggerId = null;
 
@@ -4385,14 +4469,10 @@ tickClock();
    ВКЛАДКА ПРОВЕРКА
    ============================================================ */
 
-function fillShifts() {
-  const el = $('#shift');
-  el.innerHTML = '<option value="">— выберите —</option>' +
-    getShifts().map(s => `<option>${escapeHtml(s)}</option>`).join('');
-}
-
+/* Заполнение скрытого select линий (значение задаётся выбором из модалки) */
 function fillLinesForOperator() {
   const el = $('#lineSelect');
+  if (!el) return;
   const available = getAvailableLines();
   if (!available.length) {
     el.innerHTML = '<option value="">— нет доступных линий (добавьте бренды в Настройках) —</option>';
@@ -4401,6 +4481,49 @@ function fillLinesForOperator() {
   el.innerHTML = '<option value="">— выберите —</option>' +
     available.map(l => `<option>${escapeHtml(l)}</option>`).join('');
 }
+
+/* --- Установить линию в COCL (из модалки выбора) --- */
+function setCoclLine(line) {
+  const sel = $('#lineSelect');
+  if (!sel) return;
+  sel.value = line;
+
+  const codeEl = $('#coclLinePillCode');
+  if (codeEl) {
+    const ctx = (line && typeof getBlockForLine === 'function') ? getBlockForLine(line) : null;
+    const wsName = ctx ? ctx.workshop.name : '';
+    codeEl.textContent = line ? (line + (wsName ? ' · ' + wsName : '')) : 'Выбрать линию';
+  }
+
+  sel.dispatchEvent(new Event('change'));
+}
+
+/* Сбросить выбор линии */
+function clearCoclLine() {
+  const codeEl = $('#coclLinePillCode');
+  if (codeEl) codeEl.textContent = 'Выбрать линию';
+  const ctxEl = $('#coclLineContext');
+  if (ctxEl) { ctxEl.style.display = 'none'; ctxEl.innerHTML = ''; }
+}
+
+/* Текущий пользователь (автовход). Берём из localStorage; если не задан —
+   подставляем первого оператора из настроек. */
+function getCurrentUser() {
+  try {
+    const v = localStorage.getItem('cl_current_user');
+    if (v && String(v).trim()) return String(v).trim();
+  } catch (e) {}
+  const ops = getOperators();
+  return (Array.isArray(ops) && ops.length) ? String(ops[0]).trim() : '';
+}
+
+/* Кнопка-чип линии → модалка выбора линии */
+$('#coclLinePill')?.addEventListener('click', () => {
+  linePickerOnSelect = (line) => {
+    setCoclLine(line);
+  };
+  openLinePickerModal();
+});
 
 function fillBrandsForLine(line) {
   const brands = getBrandsForLine(line);
@@ -4466,9 +4589,18 @@ function renderCoclLineContext(line) {
     ctx.block ? { cls: 'cocl-ctx-block', text: ctx.block.name } : null
   ].filter(Boolean);
 
+  // Автовход: показываем, кто проверяет и какая смена сейчас активна
+  const period = getCurrentShiftPeriod();
+  const shiftLetter = (getShiftsForDate(period.date) || {})[period.shiftType] || '—';
+  const user = getCurrentUser();
+  const autoText = [
+    user ? 'Оператор: ' + user : null,
+    (period.shiftType === 'day' ? 'День' : 'Ночь') + ' · бригада ' + shiftLetter
+  ].filter(Boolean).join(' · ');
+
   el.innerHTML = chips
     .map(c => `<span class="cocl-ctx-chip ${c.cls}">${escapeHtml(c.text)}</span>`)
-    .join('');
+    .join('') + `<span class="cocl-ctx-auto">${escapeHtml(autoText)}</span>`;
   el.style.display = 'flex';
 }
 
@@ -4489,15 +4621,8 @@ function renderCoclPartStep(line) {
   }
 }
 
-/* --- Обновление чек-листа при изменении оператора/смены --- */
-$('#operatorName')?.addEventListener('input', () => {
-  if (typeof updateChecklist === 'function') updateChecklist();
-});
-$('#shift')?.addEventListener('change', () => {
-  if (typeof updateChecklist === 'function') updateChecklist();
-});
-
-$('#partSelect').addEventListener('change', () => {
+/* --- Обновление чек-листа при изменении условий --- */
+$('#partSelect')?.addEventListener('change', () => {
   updateChecklist();
 });
 
@@ -4530,7 +4655,7 @@ function onTransitionTypeChange() {
   if (type === 'ChangeOver') {
     $('#brandsCard').style.display = 'block';
     $('#changesCard').style.display = 'block';
-    $('#changesTitle').textContent = '5. Что меняется';
+    $('#changesTitle').textContent = '4. Что меняется';
     renderMaterialChanges();
   } else {
     $('#brandsCard').style.display = 'none';
@@ -4641,8 +4766,6 @@ function standardMatchesTriggers(st, selectedTriggers) {
 }
 
 function updateChecklist() {
-  const operator = ($('#operatorName')?.value || '').trim();
-  const shift = $('#shift')?.value || '';
   const type = $('#transitionType').value;
   const line = $('#lineSelect').value;
   const part = $('#partSelect').value;
@@ -4654,7 +4777,7 @@ function updateChecklist() {
   // --- Если не заполнены основные поля — ничего не показываем ---
   const workshopId = line ? getWorkshopIdForLine(line) : null;
   const needsPart = workshopId === 'smd';
-  if (!operator || !shift || !type || !line || (needsPart && !part)) {
+  if (!type || !line || (needsPart && !part)) {
     if (buildCard) buildCard.style.display = 'none';
     if (checklistCard) checklistCard.style.display = 'none';
     return;
@@ -5210,32 +5333,12 @@ function renderStandardViewContent(st) {
     `;
   };
 
-  // Точки замера — по брендам
+  // Точки замера — по брендам (таблицей, как в редакторе стандарта)
   const blocks = Array.isArray(st.measurements) ? st.measurements : [];
   const pointsHtml = blocks.length ? `
     <div class="sv-section">
       <div class="sv-section-title">Точки замера по брендам</div>
-      <div class="sv-brand-blocks">
-        ${blocks.map(block => {
-          const points = Array.isArray(block.points) ? block.points : [];
-          if (!points.length) return '';
-          return `
-            <div class="sv-brand-block">
-              <div class="sv-brand-block-head">
-                <span class="sv-brand-badge">${escapeHtml(block.brand || 'Все бренды')}</span>
-              </div>
-              <div class="sv-points-grid">
-                ${points.map((p, i) => `
-                  <div class="sv-point-cell">
-                    <span class="sv-point-num">${i + 1}</span>
-                    <span class="sv-point-value">${escapeHtml(p.value || '—')}</span>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-          `;
-        }).join('')}
-      </div>
+      ${renderReadonlyBrandsTable(blocks)}
     </div>
   ` : '';
 
@@ -5473,17 +5576,17 @@ $('#commentSaveBtn').addEventListener('click', () => {
    СОХРАНЕНИЕ ПРОВЕРКИ
    ============================================================ */
 $('#saveCheckBtn').addEventListener('click', () => {
-  const operator = $('#operatorName').value.trim();
-  const shift = $('#shift').value;
   const line = $('#lineSelect').value;
   const part = $('#partSelect').value;
   const type = $('#transitionType').value;
   const brandFrom = $('#brandFrom').value;
   const brandTo = $('#brandTo').value;
 
-  
-if (!operator) return showToast('Укажите ФИО оператора', true);
-if (!shift) return showToast('Укажите смену', true);
+  // ФИО и смена подставляются автоматически (автовход + смена из настроек)
+  const period = getCurrentShiftPeriod();
+  const operator = getCurrentUser();
+  const shift = (getShiftsForDate(period.date) || {})[period.shiftType] || '—';
+
 if (!line) return showToast('Укажите линию', true);
 if (getWorkshopIdForLine(line) === 'smd' && !part) return showToast('Укажите часть линии', true);
 if (!type) return showToast('Укажите тип перехода', true);
@@ -5580,6 +5683,10 @@ if (type === 'ChangeOver') {
     id: uid(),
     timestamp: new Date().toISOString(),
     operator, shift, line, part, type, brandFrom, brandTo,
+    // Дата и тип смены определяются автоматически (ночь 21:00→09:00
+    // относится к дате её начала — см. getCurrentShiftPeriod)
+    date: period.date,
+    shiftType: period.shiftType,
     triggers,
     items
   };
@@ -5597,9 +5704,8 @@ $('#resetCheckBtn').addEventListener('click', resetCheckForm);
 
 function resetCheckForm() {
   // Сброс полей
-  $('#operatorName').value = '';
-  $('#shift').value = '';
   $('#lineSelect').value = '';
+  clearCoclLine();
   $('#partSelect').value = '';
   $('#transitionType').value = '';
   document.querySelectorAll('.type-option').forEach(b => b.classList.remove('active'));
@@ -8231,7 +8337,6 @@ function renderSettings() {
   renderPhotoStorageSettings();
   renderBlocksSettings();
   renderElectronicShiftSettings();
-  renderLinesSettings();
   renderLineMachinesSettings();
   renderTopLossesSettings();
   renderBrandsSettings();
@@ -10020,36 +10125,51 @@ function renderBlocksSettings() {
           <div class="bl-group-body">
       `;
 
-      if (Array.isArray(area.blocks) && area.blocks.length) {
-        // Список блоков (компактные строки)
-        area.blocks.forEach(b => {
-          const blockLines = (b.lines || []).filter(Boolean);
-          const linesText = blockLines.length
-            ? `${blockLines.length} ${pluralizeLines(blockLines.length)}: ${blockLines.map(escapeHtml).join(', ')}`
-            : '<span style="color:var(--accent-red);font-style:italic">— нет линий</span>';
+      if (Array.isArray(area.blocks)) {
+        // Участок с делением на блоки (SMD/FMD)
+        if (area.blocks.length) {
+          area.blocks.forEach(b => {
+            const blockLines = (b.lines || []).filter(Boolean);
+            const linesText = blockLines.length
+              ? `${blockLines.length} ${pluralizeLines(blockLines.length)}: ${blockLines.map(escapeHtml).join(', ')}`
+              : '<span style="color:var(--accent-red);font-style:italic">— нет линий</span>';
 
-          html += `
-            <div class="block-row">
-              <div class="block-row-info">
-                <div class="block-row-name">${escapeHtml(b.name || 'Без названия')}</div>
-                <div class="block-row-lines">${linesText}</div>
+            html += `
+              <div class="block-row">
+                <div class="block-row-info">
+                  <div class="block-row-name">${escapeHtml(b.name || 'Без названия')}</div>
+                  <div class="block-row-lines">${linesText}</div>
+                </div>
+                <div class="block-row-actions">
+                  <button class="btn btn-secondary btn-sm" onclick="openBlockModal('${escapeAttr(b.id)}')">Изменить состав</button>
+                  <button class="btn btn-danger btn-sm" onclick="deleteBlock('${escapeAttr(b.id)}')">Удалить</button>
+                </div>
               </div>
-              <div class="block-row-actions">
-                <button class="btn btn-secondary btn-sm" onclick="openBlockModal('${escapeAttr(b.id)}')">Изменить состав</button>
-                <button class="btn btn-danger btn-sm" onclick="deleteBlock('${escapeAttr(b.id)}')">Удалить</button>
-              </div>
-            </div>
-          `;
-        });
+            `;
+          });
+        } else {
+          html += `<div class="empty-state" style="padding:10px">В участке нет блоков</div>`;
+        }
+        html += `
+          <div style="margin:6px 4px 8px">
+            <button class="btn btn-secondary btn-sm" onclick="openNewBlockModal('${escapeAttr(workshop.id)}','${escapeAttr(area.id)}')">＋ Добавить блок</button>
+          </div>
+        `;
       } else {
-        // Участок без блоков (PMD)
+        // Участок без блоков (PMD): линии хранятся прямо в участке — редактируемые
         const linesText = (area.lines || []).length
           ? (area.lines || []).map(escapeHtml).join(', ')
-          : '<span style="color:var(--text-dim);font-style:italic">— нет линий</span>';
+          : '<span style="color:var(--accent-red);font-style:italic">— нет линий</span>';
 
         html += `
-          <div class="bl-group-notice">
-            У этого участка нет деления на блоки. Линии: ${linesText}
+          <div class="block-row">
+            <div class="block-row-info">
+              <div class="block-row-name">${escapeHtml(area.name || 'Без названия')} — линии</div>
+              <div class="block-row-lines">${linesText}</div>
+            </div>
+            <div class="block-row-actions">
+              <button class="btn btn-secondary btn-sm" onclick="openAreaLinesModal('${escapeAttr(workshop.id)}','${escapeAttr(area.id)}')">Изменить состав</button>
+            </div>
           </div>
         `;
       }
@@ -10201,6 +10321,23 @@ function getCurrentShiftType() {
   return (h >= 9 && h < 21) ? 'day' : 'night';
 }
 
+/* Текущий период смены: тип + ДАТА НАЧАЛА смены.
+   Ночная смена 21:00 → 09:00 переходит через полночь:
+   в интервале 00:00–08:59 активна ночная смена, которая
+   стартовала ВЧЕРА в 21:00, поэтому датой смены берём вчерашний день.
+   Пример: в 06:00 в пятницу активна «Чт · ночь», а не «Пт · ночь». */
+function getCurrentShiftPeriod(now = new Date()) {
+  const h = now.getHours();
+  if (h >= 9 && h < 21) {
+    return { shiftType: 'day', date: todayISO() };
+  }
+  if (h >= 21) {
+    return { shiftType: 'night', date: todayISO() };
+  }
+  // 00:00 – 08:59 → ночная смена, стартовавшая вчера в 21:00
+  return { shiftType: 'night', date: addDaysISO(todayISO(), -1) };
+}
+
 /* Обёртка для совместимости со старым кодом */
 function getShiftForDate(date) {
   return getDayShiftForDate(date);
@@ -10263,28 +10400,6 @@ function pluralizeLines(n) {
   if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'линии';
   return 'линий';
 }
-/* Добавить блок */
-$('#addBlockBtn')?.addEventListener('click', () => {
-  const nameInput = $('#newBlockNameInput');
-  const name = nameInput.value.trim();
-  if (!name) return showToast('Введите название блока', true);
-
-  const blocks = getBlocks();
-  if (blocks.some(b => b.name.toLowerCase() === name.toLowerCase())) {
-    return showToast('Блок с таким названием уже есть', true);
-  }
-
-  const newId = 'block_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
-  blocks.push({ id: newId, name, lines: [] });
-  setBlocks(blocks);
-  nameInput.value = '';
-  renderBlocksSettings();
-  showToast('Блок добавлен');
-
-  // Сразу открываем модалку редактирования нового блока
-  openBlockModal(newId);
-});
-
 /* --- CL Electronic: график смен (v2: день/ночь) --- */
 
 function parseCycleString(str) {
@@ -10348,7 +10463,18 @@ window.deleteBlock = function(id) {
 
   if (!confirm(`Удалить блок "${block.name}"? Линии останутся, но отвяжутся от блока.`)) return;
 
-  setBlocks(blocks.filter(b => b.id !== id));
+  // Удаляем блок из реальной структуры цехов
+  const workshops = getWorkshops();
+  let removed = false;
+  workshops.forEach(w => (w.areas || []).forEach(a => {
+    if (!Array.isArray(a.blocks)) return;
+    const idx = a.blocks.findIndex(b => b.id === id);
+    if (idx !== -1) {
+      a.blocks.splice(idx, 1);
+      removed = true;
+    }
+  }));
+  if (removed) setWorkshops(workshops);
   renderBlocksSettings();
   showToast('Блок удалён');
 };
@@ -10367,12 +10493,17 @@ window.openBlockModal = function(blockId) {
   title.textContent = 'Блок: ' + (block.name || 'Без названия');
   $('#blockModalId').value = blockId;
   $('#blockModalName').value = block.name || '';
+  // Возвращаем поле имени (могло быть скрыто режимом «линии участка»)
+  const nameField = $('#blockModalName')?.closest('.field');
+  if (nameField) nameField.style.display = '';
 
-  // Рендер чекбоксов линий
+  // Рендер чекбоксов линий — только линии того же цеха, что и блок
   const group = $('#blockModalLinesGroup');
-  const allLines = getLines();
+  const allLines = getAllLinesWithContext()
+    .filter(x => x.workshopId === block.workshopId)
+    .map(x => x.line);
   const otherLines = blocks
-    .filter(b => b.id !== blockId)
+    .filter(b => b.id !== blockId && b.workshopId === block.workshopId)
     .flatMap(b => b.lines || []);
 
   if (!allLines.length) {
@@ -10420,29 +10551,168 @@ $('#blockModalName')?.addEventListener('keydown', (e) => {
   }
 });
 
-/* Сохранить */
+/* --- Редактирование линий участка БЕЗ блоков (PMD и др.) --- */
+window.openAreaLinesModal = function(workshopId, areaId) {
+  const w = getWorkshop(workshopId);
+  if (!w) return;
+  const area = (w.areas || []).find(a => a.id === areaId);
+  if (!area) return;
+
+  const modal = $('#blockModal');
+  if (!modal) return;
+  const title = $('#blockModalTitle');
+  if (title) title.textContent = 'Линии участка: ' + (area.name || '');
+
+  // Режим участка: id вида 'area:<workshopId>:<areaId>'
+  $('#blockModalId').value = 'area:' + workshopId + ':' + areaId;
+  // Поле имени блока в этом режиме не нужно — скрываем
+  const nameField = $('#blockModalName')?.closest('.field');
+  if (nameField) nameField.style.display = 'none';
+
+  const group = $('#blockModalLinesGroup');
+  const allLines = getAllLinesWithContext()
+    .filter(x => x.workshopId === workshopId)
+    .map(x => x.line);
+
+  if (!allLines.length) {
+    group.innerHTML = '<div class="empty-state" style="padding:10px">В этом цехе пока нет линий</div>';
+  } else {
+    group.innerHTML = allLines.map(line => {
+      const checked = (area.lines || []).includes(line);
+      return `
+        <label class="${checked ? 'checked' : ''}">
+          <input type="checkbox" value="${escapeHtml(line)}" ${checked ? 'checked' : ''}>
+          ${escapeHtml(line)}
+        </label>
+      `;
+    }).join('');
+
+    group.querySelectorAll('input').forEach(cb => {
+      cb.addEventListener('change', e => {
+        e.target.closest('label').classList.toggle('checked', e.target.checked);
+      });
+    });
+  }
+
+  openModal(modal);
+};
+
+/* --- Создание нового блока в рамках участка --- */
+window.openNewBlockModal = function(workshopId, areaId) {
+  const w = getWorkshop(workshopId);
+  const area = w && (w.areas || []).find(a => a.id === areaId);
+  if (!w || !area) return;
+
+  const modal = $('#blockModal');
+  if (!modal) return;
+  const title = $('#blockModalTitle');
+  if (title) title.textContent = 'Новый блок · ' + (area.name || '');
+
+  $('#blockModalId').value = 'new:' + workshopId + ':' + areaId;
+  $('#blockModalName').value = '';
+  const nameField = $('#blockModalName')?.closest('.field');
+  if (nameField) nameField.style.display = '';
+
+  const group = $('#blockModalLinesGroup');
+  const allLines = getAllLinesWithContext()
+    .filter(x => x.workshopId === workshopId)
+    .map(x => x.line);
+
+  if (!allLines.length) {
+    group.innerHTML = '<div class="empty-state" style="padding:10px">В этом цехе пока нет линий</div>';
+  } else {
+    group.innerHTML = allLines.map(line => `
+      <label><input type="checkbox" value="${escapeHtml(line)}"> ${escapeHtml(line)}</label>
+    `).join('');
+    group.querySelectorAll('input').forEach(cb => {
+      cb.addEventListener('change', e => {
+        e.target.closest('label').classList.toggle('checked', e.target.checked);
+      });
+    });
+  }
+
+  openModal(modal);
+  setTimeout(() => $('#blockModalName').focus(), 100);
+};
+
+/* Сохранить (три режима: area: / new: / обычный блок) */
 $('#blockModalSaveBtn')?.addEventListener('click', () => {
-  const blockId = $('#blockModalId').value;
+  const rawId = $('#blockModalId').value;
+  if (!rawId) return;
+
+  const selectedLines = [...$$('#blockModalLinesGroup input:checked')].map(cb => cb.value);
+
+  // --- Режим 1: «линии участка без блоков» (PMD и др.) ---
+  if (rawId.indexOf('area:') === 0) {
+    const [, workshopId, areaId] = rawId.split(':');
+    if (!workshopId || !areaId) return;
+
+    const workshops = getWorkshops();
+    const w = workshops.find(x => x.id === workshopId);
+    const area = w && (w.areas || []).find(a => a.id === areaId);
+    if (!area) return;
+
+    area.lines = selectedLines;
+    setWorkshops(workshops);
+    renderBlocksSettings();
+    closeBlockModal();
+    showToast('Линии участка обновлены');
+    return;
+  }
+
+  // --- Режим 2: создание нового блока в участке ---
+  if (rawId.indexOf('new:') === 0) {
+    const [, workshopId, areaId] = rawId.split(':');
+    const name = $('#blockModalName').value.trim();
+    if (!name) return showToast('Введите название блока', true);
+
+    const workshops = getWorkshops();
+    const w = workshops.find(x => x.id === workshopId);
+    const area = w && (w.areas || []).find(a => a.id === areaId);
+    if (!area) return;
+
+    if (!Array.isArray(area.blocks)) area.blocks = [];
+    if (area.blocks.some(b => (b.name || '').toLowerCase() === name.toLowerCase())) {
+      return showToast('Блок с таким названием уже есть в этом участке', true);
+    }
+
+    area.blocks.push({
+      id: 'block_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      name,
+      lines: selectedLines
+    });
+
+    setWorkshops(workshops);
+    renderBlocksSettings();
+    closeBlockModal();
+    showToast('Блок добавлен');
+    return;
+  }
+
+  // --- Режим 3: редактирование существующего блока ---
+  const blockId = rawId;
   const name = $('#blockModalName').value.trim();
-  if (!blockId) return;
   if (!name) return showToast('Введите название блока', true);
 
-  const blocks = getBlocks();
-  const block = blocks.find(b => b.id === blockId);
-  if (!block) return;
+  const workshops = getWorkshops();
+  let target = null;
+  let ownerArea = null;
+  workshops.forEach(w => (w.areas || []).forEach(a => {
+    if (Array.isArray(a.blocks)) {
+      a.blocks.forEach(b => { if (b.id === blockId) { target = b; ownerArea = a; } });
+    }
+  }));
+  if (!target) return showToast('Блок не найден', true);
 
-  // Проверка дубликата названия (кроме самого себя)
-  if (blocks.some(b => b.id !== blockId && b.name.toLowerCase() === name.toLowerCase())) {
+  // Дубликат названия в пределах участка-владельца
+  if (ownerArea.blocks.some(b => b.id !== blockId && (b.name || '').toLowerCase() === name.toLowerCase())) {
     return showToast('Блок с таким названием уже есть', true);
   }
 
-  // Собираем выбранные линии
-  const selectedLines = [...$$('#blockModalLinesGroup input:checked')].map(cb => cb.value);
+  target.name = name;
+  target.lines = selectedLines;
 
-  block.name = name;
-  block.lines = selectedLines;
-
-  setBlocks(blocks);
+  setWorkshops(workshops);
   renderBlocksSettings();
   closeBlockModal();
   showToast('Блок обновлён');
@@ -10876,6 +11146,7 @@ function renderTopLossesSettings() {
   if (!container) return;
 
   const cats = getTopLosses();
+  const workshops = getWorkshops();
 
   if (!cats.length) {
     container.innerHTML = '<div class="empty-state">Категорий нет</div>';
@@ -10888,6 +11159,14 @@ function renderTopLossesSettings() {
     openCats = cats.map(c => c.id);   // все раскрыты по умолчанию
     setTlOpenCats(openCats);
   }
+
+  // Открытые цеха
+  let openWs = getTlOpenWorkshops();
+  if (openWs === null) {
+    openWs = workshops.map(w => w.id);
+    setTlOpenWorkshops(openWs);
+  }
+  const wsOpen = (id) => openWs.includes(id);
 
   // --- Тулбар ---
   let html = `
@@ -10908,7 +11187,7 @@ function renderTopLossesSettings() {
 
       <select id="tlWorkshopFilter" class="tl-workshop-filter" title="Фильтр по цеху">
         <option value="">Все цеха</option>
-        ${getWorkshops().map(w => `<option value="${escapeAttr(w.id)}">${escapeHtml(w.name)}</option>`).join('')}
+        ${workshops.map(w => `<option value="${escapeAttr(w.id)}">${escapeHtml(w.name)}</option>`).join('')}
       </select>
 
       <button type="button" class="btn btn-secondary btn-sm tl-cat-toggle-all-btn" id="tlCatToggleAllBtn" title="Развернуть или свернуть все категории">
@@ -10921,14 +11200,12 @@ function renderTopLossesSettings() {
     </div>
   `;
 
-  // --- Категории ---
-  html += '<div class="tl-cat-groups">';
-  cats.forEach(cat => {
+  // --- Категории (список одной категории) ---
+  const renderCat = (cat) => {
     const items = Array.isArray(cat.items) ? cat.items : [];
     const isOpen = openCats.includes(cat.id);
     const catId = cat.id;
 
-    // Потери
     const itemsHtml = items.length
       ? items.map(it => `
           <div class="tl-loss-inline-row" data-loss-id="${escapeAttr(it.id)}" data-cat-id="${escapeAttr(catId)}">
@@ -10952,14 +11229,13 @@ function renderTopLossesSettings() {
         `).join('')
       : '<div class="tl-cat-empty">В категории нет потерь</div>';
 
-    // Счётчик: сколько стандартов использует потери категории
     const allStandards = getStandards();
     const lossIdsSet = new Set(items.map(it => it.id));
     const stdCount = allStandards.filter(st =>
       Array.isArray(st.topLosses) && st.topLosses.some(id => lossIdsSet.has(id))
     ).length;
 
-    html += `
+    return `
       <div class="tl-cat-group ${isOpen ? 'expanded' : ''}" data-cat-id="${escapeAttr(catId)}">
         <div class="tl-cat-group-head" data-cat-toggle="${escapeAttr(catId)}">
           <span class="tl-cat-group-toggle">
@@ -10987,21 +11263,97 @@ function renderTopLossesSettings() {
         </div>
       </div>
     `;
-  });
-  html += '</div>';
+  };
 
+  // --- Группируем категории по цехам ---
+  const catWorkshop = (cat) => {
+    // Цех категории: поле workshop, иначе — по общему цеху её потерь
+    if (cat.workshop) return cat.workshop;
+    const items = Array.isArray(cat.items) ? cat.items : [];
+    const wsSet = new Set(items.map(i => i.workshop).filter(Boolean));
+    if (wsSet.size === 1) return [...wsSet][0];
+    return '';
+  };
+
+  const byWs = new Map();
+  workshops.forEach(w => byWs.set(w.id, []));
+  const shared = [];
+  cats.forEach(cat => {
+    const ws = catWorkshop(cat);
+    if (ws && byWs.has(ws)) byWs.get(ws).push(cat);
+    else shared.push(cat);
+  });
+
+  html += '<div class="tl-cat-groups">';
+
+  workshops.forEach(w => {
+    const list = byWs.get(w.id) || [];
+    if (!list.length) return;
+    const isOpen = wsOpen(w.id);
+    const lossCount = list.reduce((s, c) => s + ((c.items || []).length), 0);
+
+    html += `
+      <div class="bl-group bl-group-workshop ${isOpen ? 'expanded' : ''}" data-ws-id="${escapeAttr(w.id)}">
+        <div class="bl-group-head" data-ws-toggle="${escapeAttr(w.id)}">
+          <span class="bl-group-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </span>
+          <span class="bl-group-name">${escapeHtml(w.name)}</span>
+          <span class="bl-group-count">${list.length} кат. · ${lossCount} ${pluralizeLosses(lossCount)}</span>
+        </div>
+        <div class="bl-group-body">
+          <div class="tl-cat-groups">${list.map(renderCat).join('')}</div>
+        </div>
+      </div>
+    `;
+  });
+
+  if (shared.length) {
+    const isOpen = wsOpen('__shared__');
+    const lossCount = shared.reduce((s, c) => s + ((c.items || []).length), 0);
+    html += `
+      <div class="bl-group bl-group-workshop ${isOpen ? 'expanded' : ''}" data-ws-id="__shared__">
+        <div class="bl-group-head" data-ws-toggle="__shared__">
+          <span class="bl-group-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </span>
+          <span class="bl-group-name">Общие (все цеха)</span>
+          <span class="bl-group-count">${shared.length} кат. · ${lossCount} ${pluralizeLosses(lossCount)}</span>
+        </div>
+        <div class="bl-group-body">
+          <div class="tl-cat-groups">${shared.map(renderCat).join('')}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  html += '</div>';
   container.innerHTML = html;
 
-  // --- Обработчики: аккордеон ---
-  container.querySelectorAll('[data-cat-toggle]').forEach(head => {
+  // --- Аккордеон цехов ---
+  container.querySelectorAll('[data-ws-toggle]').forEach(head => {
     head.addEventListener('click', () => {
+      const id = head.dataset.wsToggle;
+      let open = getTlOpenWorkshops() || [];
+      if (open.includes(id)) open = open.filter(x => x !== id);
+      else open.push(id);
+      setTlOpenWorkshops(open);
+      renderTopLossesSettings();
+    });
+  });
+
+  // --- Аккордеон категорий ---
+  container.querySelectorAll('[data-cat-toggle]').forEach(head => {
+    head.addEventListener('click', (e) => {
+      e.stopPropagation();
       const catId = head.dataset.catToggle;
       let open = getTlOpenCats() || [];
-      if (open.includes(catId)) {
-        open = open.filter(id => id !== catId);
-      } else {
-        open.push(catId);
-      }
+      if (open.includes(catId)) open = open.filter(id => id !== catId);
+      else open.push(catId);
       setTlOpenCats(open);
       renderTopLossesSettings();
     });
@@ -11101,11 +11453,32 @@ function renderTopLossesSettings() {
   }
 }
 
-/* Показать только потери выбранного цеха */
+function getTlOpenWorkshops() {
+  try { return JSON.parse(localStorage.getItem('cl_tl_open_ws')); } catch(e) { return null; }
+}
+function setTlOpenWorkshops(arr) {
+  try { localStorage.setItem('cl_tl_open_ws', JSON.stringify(arr)); } catch(e) {}
+}
+
+/* Показать только потери выбранного цеха.
+   Работает и как «фильтр по цеху-блоку»: при выборе цеха показываем
+   только его блок, пряча остальные. */
 function applyTlWorkshopFilter(workshopId) {
   const container = $('#topLossesContainer');
   if (!container) return;
 
+  // 1) Блоки цехов: при выборе конкретного цеха — показываем только его
+  container.querySelectorAll('[data-ws-id]').forEach(block => {
+    const id = block.dataset.wsId;
+    if (!workshopId) {
+      block.style.display = '';
+      return;
+    }
+    block.style.display = (id === workshopId || id === '__shared__') ? '' : 'none';
+  });
+
+  // 2) Потери: показываем нужный цех и универсальные
+  const cats = getTopLosses();
   container.querySelectorAll('.tl-loss-inline-row').forEach(row => {
     const lossId = row.dataset.lossId;
     const catId = row.dataset.catId;
@@ -11113,21 +11486,26 @@ function applyTlWorkshopFilter(workshopId) {
       row.style.display = '';
       return;
     }
-    const cats = getTopLosses();
     const cat = cats.find(c => c.id === catId);
     const item = cat && Array.isArray(cat.items) ? cat.items.find(i => i.id === lossId) : null;
     const ws = item ? (item.workshop || '') : '';
-    // Показываем потери нужного цеха и универсальные (без цеха)
     row.style.display = (!ws || ws === workshopId) ? '' : 'none';
   });
 
-  // Скрываем категории, где не осталось видимых потерь
+  // 3) Скрываем категории, где не осталось видимых потерь
   container.querySelectorAll('.tl-cat-group').forEach(group => {
     const rows = group.querySelectorAll('.tl-loss-inline-row');
     if (!rows.length) return;
     const anyVisible = [...rows].some(r => r.style.display !== 'none');
     group.style.display = anyVisible ? '' : 'none';
   });
+
+  // 4) Раскрываем цех, чтобы сразу были видны его категории
+  if (workshopId) {
+    container.querySelectorAll('[data-ws-id]').forEach(block => {
+      if (block.style.display !== 'none') block.classList.add('expanded');
+    });
+  }
 }
 
 /* Обновить вид кнопки «Развернуть / Свернуть всё» */
@@ -11173,14 +11551,17 @@ function applyTlCatSearch(query) {
       g.classList.toggle('expanded', openCats.includes(g.dataset.catId));
     });
     container.querySelectorAll('.tl-loss-inline-row').forEach(r => r.style.display = '');
+    container.querySelectorAll('[data-ws-id]').forEach(b => b.style.display = '');
     const wsFilter = sessionStorage.getItem('tl_workshop_filter') || '';
     if (wsFilter) applyTlWorkshopFilter(wsFilter);
     return;
   }
 
-  // При активном поиске — все категории раскрыты
+  // При активном поиске — все блоки цехов и категории раскрыты
+  container.querySelectorAll('[data-ws-id]').forEach(b => b.classList.add('expanded'));
   groups.forEach(g => {
     g.classList.add('expanded');
+    g.style.display = '';  // сброс, ниже пересчитаем
 
     const catName = g.querySelector('.tl-cat-group-name')?.textContent.toLowerCase() || '';
     let visibleInCat = 0;
@@ -11192,14 +11573,21 @@ function applyTlCatSearch(query) {
       if (match) visibleInCat++;
     });
 
-    // Если в категории ничего не найдено — скрываем категорию
-    const catMatch = catName.includes(q);
-    g.style.display = (visibleInCat > 0 || catMatch) ? '' : 'none';
-
     // Если название категории совпало — показываем все её потери
-    if (catMatch) {
+    if (catName.includes(q)) {
       g.querySelectorAll('.tl-loss-inline-row').forEach(row => row.style.display = '');
+      g.style.display = '';
+    } else if (visibleInCat === 0) {
+      g.style.display = 'none';
+    } else {
+      g.style.display = '';
     }
+  });
+
+  // Скрываем блоки цехов, в которых не видно категорий
+  container.querySelectorAll('[data-ws-id]').forEach(block => {
+    const visibleCats = [...block.querySelectorAll('.tl-cat-group')].filter(c => c.style.display !== 'none');
+    block.style.display = visibleCats.length > 0 ? '' : 'none';
   });
 
   // Повторно применим фильтр по цеху поверх поиска
@@ -11261,10 +11649,6 @@ window.openMachinesListModal = function(line) {
 
   openModal(modal);
 };
-
-function closeMachinesListModal() {
-  closeModal('#machinesListModal');
-}
 
 function closeMachinesListModal() {
   const modal = $('#machinesListModal');
@@ -11504,79 +11888,6 @@ $('#machineModalSaveBtn')?.addEventListener('click', () => {
   closeMachineModal();
   showToast(oldName ? 'Машина обновлена' : 'Машина добавлена');
 });
-function renderLinesSettings() {
-  const lines = getLines();
-  const list = $('#linesList');
-  if (!lines.length) {
-    list.innerHTML = '<div class="empty-state">Линий нет</div>';
-    return;
-  }
-  list.innerHTML = lines.map(l => `
-    <div class="line-tile">
-      <span class="line-tile-name">${escapeHtml(l)}</span>
-      <button class="line-tile-remove" onclick="deleteLine('${escapeHtml(l).replace(/'/g,"\\'")}')" title="Удалить линию">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"/>
-          <line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
-    </div>
-  `).join('');
-}
-
-$('#addLineBtn').addEventListener('click', () => {
-  const name = $('#newLineInput').value.trim();
-  if (!name) return showToast('Введите название линии', true);
-  const lines = getLines();
-  if (lines.includes(name)) return showToast('Такая линия уже есть', true);
-  lines.push(name);
-  setLines(lines);
-  $('#newLineInput').value = '';
-
-  // Перерисовываем всё, включая блоки и машины (новая линия появится в чекбоксах)
-  renderBlocksSettings();
-  renderLinesSettings();
-  renderLineMachinesSettings();
-  renderLineBrandsSettings();
-  fillHistoryFilters();
-  fillLinesForOperator();
-  showToast('Линия добавлена');
-});
-
-window.deleteLine = function(name) {
-  if (!confirm('Удалить линию "' + name + '"? У неё пропадут все привязанные бренды, машины и привязка к блоку.')) return;
-
-  // Удаляем линию
-  setLines(getLines().filter(l => l !== name));
-
-  // Удаляем бренды линии
-  const lb = getLineBrands();
-  delete lb[name];
-  setLineBrands(lb);
-
-  // Убираем линию из блоков
-  const blocks = getBlocks();
-  blocks.forEach(b => {
-    if (Array.isArray(b.lines)) {
-      b.lines = b.lines.filter(l => l !== name);
-    }
-  });
-  setBlocks(blocks);
-
-  // Убираем машины линии
-  const lm = getLineMachines();
-  delete lm[name];
-  setLineMachines(lm);
-
-  // Перерисовываем всё
-  renderBlocksSettings();
-  renderLinesSettings();
-  renderLineMachinesSettings();
-  renderLineBrandsSettings();
-  fillHistoryFilters();
-  fillLinesForOperator();
-  showToast('Линия удалена');
-};
 
 /* ============================================================
    ОБЩИЙ СПИСОК БРЕНДОВ — строки + inline + пагинация
@@ -11592,11 +11903,39 @@ function renderBrandsSettings() {
   const allBrands = getBrands().slice().sort((a, b) => a.localeCompare(b, 'ru'));
   const query = ($('#brandsSearch')?.value || '').trim().toLowerCase();
 
+  // --- Фильтр по цехам ---
+  const wsFilterEl = $('#brandsWorkshopFilter');
+  if (wsFilterEl) {
+    const workshops = getWorkshops();
+    const cur = wsFilterEl.value;
+    wsFilterEl.innerHTML = '<option value="">Все цеха</option>' +
+      workshops.map(w => `<option value="${escapeAttr(w.id)}">${escapeHtml(w.name)}</option>`).join('') +
+      '<option value="__none__">Без цеха</option>';
+    wsFilterEl.value = cur;
+
+    if (!wsFilterEl.dataset.bound) {
+      wsFilterEl.dataset.bound = '1';
+      wsFilterEl.addEventListener('change', () => {
+        brandsCurrentPage = 1;
+        renderBrandsSettings();
+      });
+    }
+  }
+  const wsFilter = wsFilterEl ? wsFilterEl.value : '';
+
+  // Фильтрация по цеху
+  let byWorkshop = allBrands;
+  if (wsFilter === '__none__') {
+    byWorkshop = allBrands.filter(b => !getBrandWorkshop(b));
+  } else if (wsFilter) {
+    byWorkshop = allBrands.filter(b => getBrandWorkshop(b) === wsFilter);
+  }
+
   // Счётчик
   const counter = $('#brandsCount');
   if (counter) {
-    counter.textContent = query
-      ? `(${allBrands.filter(b => b.toLowerCase().includes(query)).length} из ${allBrands.length})`
+    counter.textContent = (query || wsFilter)
+      ? `(${byWorkshop.filter(b => !query || b.toLowerCase().includes(query)).length} из ${allBrands.length})`
       : `(${allBrands.length})`;
   }
 
@@ -11607,14 +11946,15 @@ function renderBrandsSettings() {
     return;
   }
 
-  // Фильтрация
-  let filtered = allBrands;
+  // Фильтрация по поиску
+  let filtered = byWorkshop;
   if (query) {
-    filtered = allBrands.filter(b => b.toLowerCase().includes(query));
+    filtered = byWorkshop.filter(b => b.toLowerCase().includes(query));
   }
 
   if (!filtered.length) {
-    list.innerHTML = `<div class="empty-state">Ничего не найдено по запросу «${escapeHtml(query)}»</div>`;
+    list.innerHTML = `<div class="empty-state">Ничего не найдено${
+      query ? ' по запросу «' + escapeHtml(query) + '»' : ''}.</div>`;
     renderBrandsPagination(0);
     return;
   }
@@ -12939,7 +13279,6 @@ $('#resetAllBtn').addEventListener('click', () => {
 function init() {
   // Разовые миграции структуры (на случай, если getWorkshops ещё не вызывался)
   migrateToWorkshopsStructure();
-  fillShifts();
   fillLinesForOperator();
   renderCoclPartStep('');     // начальное состояние шага «Часть»
   renderCoclLineContext('');  // начальное состояние контекста линии
@@ -14594,8 +14933,22 @@ function bindLinePickerEvents(container) {
    Выбор линии
    ============================================================ */
 
+/* Колбэк переиспользования модалки выбора линии (например, во вкладке COCL).
+   Если задан — selectLine отдаёт выбор обратно, а не редактору стандартов. */
+let linePickerOnSelect = null;
+
 function selectLine(line) {
   if (!line) return;
+
+  // Переиспользование модалки выбора линии (COCL и др.)
+  if (typeof linePickerOnSelect === 'function') {
+    const cb = linePickerOnSelect;
+    linePickerOnSelect = null;
+    addRecentLine(line);
+    closeLinePickerModal();
+    cb(line);
+    return;
+  }
 
   localStorage.setItem('cl_editor_line', line);
   currentEditorLine = line;   // ← глобальная для формы стандарта
@@ -16474,6 +16827,7 @@ const schState = {
   line: null,             // выбранная линия
   mode: 'mech',           // 'mech' | 'elec'
   part: '',               // '' | 'Maker' | 'Packer'  (только для mech)
+  weekOffset: 0,          // 0 = текущая неделя, +1 = следующая, -1 = предыдущая
   dirty: false,           // были ли несохранённые изменения
   rows: [],               // текущие строки матрицы (стандарты/параметры)
   // Кэш "черновика" изменений: id → { daysOfWeek:[], shifts:[] }
@@ -16496,6 +16850,7 @@ function openScheduleTab() {
   schState.mode = savedMode;
   schState.part = savedPart;
   schState.line = savedLine;
+  schState.weekOffset = 0;
   schState.dirty = false;
   schState.draft = {};
 
@@ -16567,25 +16922,34 @@ function getFilteredScheduleRows() {
   const removed = schState.removedFromSchedule || new Set();
   const added = schState.addedToSchedule || new Set();
 
+  // Понедельные оверрайды: правки этой недели не трогают базовый шаблон
+  // (оверрайд применяется всегда — в т.ч. когда неделя станет текущей)
+  const weekOffset = schState.weekOffset || 0;
+  const ov = getScheduleWeekOverride(getSchWeekStart(weekOffset), schState.line) || {};
+  const ovRemoved = new Set(ov.removed || []);
+  const ovAdded = new Set(ov.added || []);
+
+  // Базовый шаблон → оверрайд недели → черновик (несохранённые правки)
+  const isMember = (id, inBase) => {
+    let m = inBase;
+    if (ovRemoved.has(id)) m = false;
+    if (ovAdded.has(id)) m = true;
+    if (removed.has(id)) m = false;
+    if (added.has(id)) m = true;
+    return m;
+  };
+
   let rows = [];
   if (schState.mode === 'mech') {
     rows = getStandards()
       .filter(s => s.line === schState.line)
       .filter(s => s.active !== false)
       .filter(s => !schState.part || s.nodePart === schState.part)
-      .filter(s => {
-        if (removed.has(s.id)) return false;
-        if (added.has(s.id)) return true;
-        return s.inSchedule === true;
-      });
+      .filter(s => isMember(s.id, s.inSchedule === true));
   } else {
     rows = getElectronicParamsForLine(schState.line)
       .filter(p => p.active !== false)
-      .filter(p => {
-        if (removed.has(p.id)) return false;
-        if (added.has(p.id)) return true;
-        return p.inSchedule === true;
-      });
+      .filter(p => isMember(p.id, p.inSchedule === true));
   }
 
   // Фильтр по машине
@@ -16629,7 +16993,7 @@ function updateSchMatrixCounters(rows) {
   let filledCells = 0;
 
   rows.forEach(row => {
-    const freq = schState.draft[row.id] || row.frequency || { schedule: [] };
+    const freq = getSchRowFreq(row) || { schedule: [] };
     const schedule = Array.isArray(freq.schedule) ? freq.schedule : [];
     if (schedule.length > 0) withSchedule++;
     filledCells += schedule.length;
@@ -16762,13 +17126,41 @@ function renderScheduleMatrix() {
     { idx: 0, name: 'Вс' }
   ];
 
-  const weekDays = getCurrentWeekDays();
+  const weekDays = getWeekDays(schState.weekOffset);
   const dateByDayIdx = {};
   [1, 2, 3, 4, 5, 6, 0].forEach((dayIdx, i) => {
     dateByDayIdx[dayIdx] = weekDays[i];
   });
 
-  let html = '<div class="sch-matrix">';
+  // Навигация по неделям: на будущей неделе расписание полностью
+  // редактируется, на текущей блокируются прошедшие дни, прошедшая — только просмотр.
+  const weekLabel = getWeekLabel(schState.weekOffset);
+  const isCurrentWeek = schState.weekOffset === 0;
+  const isFutureWeek = schState.weekOffset > 0;
+  const hasOv = hasScheduleWeekOverride(getSchWeekStart(schState.weekOffset), schState.line);
+  const weekSub = hasOv
+    ? 'есть отдельные правки для этой недели'
+    : (isCurrentWeek
+        ? 'текущая неделя · шаблон для всех недель'
+        : (isFutureWeek
+            ? 'правки — только для этой недели'
+            : 'прошедшая неделя — только просмотр'));
+
+  let html = `
+    <div class="cl-week-nav sch-week-nav">
+      <button type="button" class="cl-week-nav-btn" id="schWeekPrev" title="Предыдущая неделя">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="cl-week-nav-label">
+        <span class="cl-week-nav-title">${escapeHtml(weekLabel)}</span>
+        <span class="cl-week-nav-sub">${escapeHtml(weekSub)}</span>
+      </div>
+      <button type="button" class="cl-week-nav-btn" id="schWeekNext" title="Следующая неделя">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      ${!isCurrentWeek ? '<button type="button" class="cl-week-nav-today" id="schWeekToday">Текущая неделя</button>' : ''}
+    </div>
+    <div class="sch-matrix">`;
 
   // ===== Шапка (с инфо-колонками) =====
   html += '<div class="sch-head-grid">';
@@ -16811,7 +17203,7 @@ function renderScheduleMatrix() {
   // Тело — каждая строка (нумеруем)
   rows.forEach((row, idx) => {
     row._index = idx + 1;
-    html += renderScheduleRow(row, DAYS);
+    html += renderScheduleRow(row, DAYS, dateByDayIdx);
   });
 
   html += '</div>';
@@ -16819,6 +17211,9 @@ function renderScheduleMatrix() {
 
   // Обработчики
   bindScheduleCells();
+
+  // Навигация по неделям
+  bindSchWeekNav();
 
   // Клик по «×» — убрать из расписания
   wrap.querySelectorAll('[data-remove-from-schedule]').forEach(btn => {
@@ -16844,23 +17239,8 @@ function renderScheduleMatrix() {
       e.stopPropagation();
       const rowId = el.dataset.workToggle;
       if (!rowId) return;
-      if (!schState.draft[rowId]) {
-        const row = schState.rows.find(r => r.id === rowId);
-        const f = row?.frequency || { type: 'weekly', schedule: [], shifts: [], daysOfWeek: [], dates: [] };
-        schState.draft[rowId] = {
-          type: 'weekly',
-          schedule: Array.isArray(f.schedule) ? [...f.schedule.map(x => ({ ...x }))] : [],
-          timeWindows: Array.isArray(f.timeWindows) ? [...f.timeWindows.map(w => ({ ...w }))] : [],
-          shifts: [...(f.shifts || [])],
-          daysOfWeek: [...(f.daysOfWeek || [])],
-          dates: [...(f.dates || [])],
-          work: (row?.work === 'Stop') ? 'Stop' : 'Run'
-        };
-      } else if (schState.draft[rowId].work == null) {
-        const row = schState.rows.find(r => r.id === rowId);
-        schState.draft[rowId].work = (row?.work === 'Stop') ? 'Stop' : 'Run';
-      }
-      schState.draft[rowId].work = schState.draft[rowId].work === 'Stop' ? 'Run' : 'Stop';
+      const d = ensureSchDraft(rowId);
+      d.work = (d.work === 'Stop') ? 'Run' : 'Stop';
       schState.dirty = true;
       updateSchSaveBtn();
       renderScheduleMatrix();
@@ -16969,19 +17349,8 @@ function saveTimeWindows() {
 
   const rowId = twState.rowId;
 
-  // Инициализируем draft для строки, если его нет
-  if (!schState.draft[rowId]) {
-    const row = schState.rows.find(r => r.id === rowId);
-    const f = row?.frequency || { type: 'weekly', schedule: [], shifts: [], daysOfWeek: [], dates: [] };
-    schState.draft[rowId] = {
-      type: 'weekly',
-      schedule: Array.isArray(f.schedule) ? [...f.schedule.map(x => ({ ...x }))] : [],
-      timeWindows: Array.isArray(f.timeWindows) ? [...f.timeWindows.map(w => ({ ...w }))] : [],
-      shifts: [...(f.shifts || [])],
-      daysOfWeek: [...(f.daysOfWeek || [])],
-      dates: [...(f.dates || [])]
-    };
-  }
+  // Инициализируем draft для строки (с учётом правок просматриваемой недели)
+  ensureSchDraft(rowId);
 
   schState.draft[rowId].timeWindows = twState.draft.map(w => ({ from: w.from, to: w.to }));
 
@@ -17046,9 +17415,93 @@ function fmtShortDate(dateStr) {
 }
 
 /* --- Одна строка матрицы расписания (с инфо-колонками) --- */
-function renderScheduleRow(row, DAYS) {
-  // Получаем актуальную периодичность
-  const freq = schState.draft[row.id] || (row.frequency || { type: 'weekly', schedule: [], shifts: [], daysOfWeek: [], dates: [] });
+/* Эффективная периодичность строки для ТЕКУЩЕЙ просматриваемой недели:
+   черновик → оверрайд недели → базовый шаблон. */
+function getSchRowFreq(row) {
+  const base = (row && row.frequency) || { type: 'weekly', schedule: [], shifts: [], daysOfWeek: [], dates: [], timeWindows: [] };
+  if (!row) return base;
+
+  // Несохранённые правки главнее всего
+  if (schState.draft[row.id]) return schState.draft[row.id];
+
+  // Правки просматриваемой недели (в т.ч. когда неделя уже стала текущей)
+  const ov = getScheduleWeekOverride(getSchWeekStart(schState.weekOffset || 0), schState.line) || {};
+  const snap = ov.rows && ov.rows[row.id];
+  if (snap) {
+    return {
+      ...base,
+      schedule: Array.isArray(snap.schedule) ? snap.schedule : (base.schedule || []),
+      timeWindows: Array.isArray(snap.timeWindows) ? snap.timeWindows : (base.timeWindows || []),
+      work: (snap.work != null) ? snap.work : base.work
+    };
+  }
+  return base;
+}
+
+/* Эффективная периодичность строки для операторского чек-листа:
+   если для просматриваемой недели в «Расписании CL» сделаны правки —
+   используем их, иначе базовый шаблон. */
+function getClRowFreq(row) {
+  const base = (row && row.frequency) || { type: 'weekly', schedule: [], shifts: [], daysOfWeek: [], dates: [], timeWindows: [] };
+  if (!row) return base;
+
+  // Правки просматриваемой недели (в т.ч. когда неделя уже стала текущей)
+  const ov = getScheduleWeekOverride(getWeekDays(clState.weekOffset || 0)[0], clState.line) || {};
+  const snap = ov.rows && ov.rows[row.id];
+  if (snap) {
+    return {
+      ...base,
+      schedule: Array.isArray(snap.schedule) ? snap.schedule : (base.schedule || []),
+      timeWindows: Array.isArray(snap.timeWindows) ? snap.timeWindows : (base.timeWindows || []),
+      work: (snap.work != null) ? snap.work : base.work
+    };
+  }
+  return base;
+}
+
+/* id стандартов/параметров, у которых уже есть результат проверки
+   на указанной неделе. Такие строки остаются в чек-листе, даже если
+   их убрали из расписания — иначе пропадут уже выполненные проверки. */
+function getCheckedStandardIdsForWeek(line, weekDays) {
+  const ids = new Set();
+  if (!line || !Array.isArray(weekDays) || !weekDays.length) return ids;
+
+  const weekSet = new Set(weekDays);
+  getHistory().forEach(h => {
+    if (h.line !== line) return;
+    if (!weekSet.has(h.date)) return;
+    (h.items || []).forEach(it => {
+      if (it && it.standardId) ids.add(it.standardId);
+    });
+  });
+  return ids;
+}
+
+/* Инициализировать черновик строки из эффективных данных недели */
+function ensureSchDraft(rowId) {
+  if (schState.draft[rowId]) return schState.draft[rowId];
+
+  const row = schState.rows.find(r => r.id === rowId);
+  const f = getSchRowFreq(row || null);
+
+  const d = {
+    type: 'weekly',
+    schedule: Array.isArray(f.schedule) ? f.schedule.map(x => ({ ...x })) : [],
+    timeWindows: Array.isArray(f.timeWindows) ? f.timeWindows.map(w => ({ from: w.from, to: w.to })) : [],
+    shifts: [...(f.shifts || [])],
+    daysOfWeek: [...(f.daysOfWeek || [])],
+    dates: [...(f.dates || [])]
+  };
+  const w = (f.work != null) ? f.work : (row && row.work === 'Stop' ? 'Stop' : 'Run');
+  if (w) d.work = w;
+
+  schState.draft[rowId] = d;
+  return d;
+}
+
+function renderScheduleRow(row, DAYS, dateByDayIdx) {
+  // Получаем актуальную периодичность с учётом правок этой недели
+  const freq = getSchRowFreq(row);
   const schedule = Array.isArray(freq.schedule) ? freq.schedule : [];
   const isOn = (dayIdx, shift) => schedule.some(x => x.day === dayIdx && x.shift === shift);
 
@@ -17059,11 +17512,12 @@ function renderScheduleRow(row, DAYS) {
   const machine = row.machine || '';
   const node = isMech ? (row.node || '') : '';
   const title = isMech ? (row.title || '—') : (row.paramName || '—');
-  // Время проверки — теперь из frequency.timeWindows
-  const freqFull = schState.draft[row.id] || row.frequency || {};
-  const timeWindows = Array.isArray(freqFull.timeWindows) ? freqFull.timeWindows : [];
+  // Время проверки — из frequency.timeWindows
+  const timeWindows = Array.isArray(freq.timeWindows) ? freq.timeWindows : [];
 
-  const work = (schState.draft[row.id] && schState.draft[row.id].work) || (row.work === 'Stop' ? 'Stop' : 'Run');
+  const work = (freq.work != null)
+    ? (freq.work === 'Stop' ? 'Stop' : 'Run')
+    : (row.work === 'Stop' ? 'Stop' : 'Run');
 
   // Норма / периодичность — счётчик ячеек
   const activeCells = schedule.length;
@@ -17103,16 +17557,35 @@ function renderScheduleRow(row, DAYS) {
     </button>
   </div>`;
 
-  // 14 ячеек: 7 дней × 2 смены
+  // 14 ячеек: 7 дней × 2 смены.
+  // Блокировка зависит от просматриваемой недели:
+  //  • текущая неделя — прошедшие дни заблокированы (их «догонять» нельзя);
+  //  • будущая неделя — всё редактируется (чек-лист составляется заранее);
+  //  • прошедшая неделя — только просмотр.
+  const todayStr = todayISO();
+  const weekOffset = schState.weekOffset || 0;
+  const isPastWeek = weekOffset < 0;
+  const isFutureWeek = weekOffset > 0;
+
   DAYS.forEach(d => {
+    const dateStr = (dateByDayIdx && dateByDayIdx[d.idx]) || '';
+    const isPastDay = isPastWeek || (!isFutureWeek && !!(dateStr && dateStr < todayStr));
+
     ['day', 'night'].forEach(shift => {
       const on = isOn(d.idx, shift);
+      const lockedCls = isPastDay ? ' sch-cell-locked' : '';
+      const lockedAttr = isPastDay ? ' data-locked="1"' : '';
+      const title = isPastDay
+        ? (isPastWeek
+            ? `${d.name} · ${shift === 'day' ? 'День' : 'Ночь'} — прошедшая неделя, только просмотр`
+            : `${d.name} · ${shift === 'day' ? 'День' : 'Ночь'} — день уже прошёл, планирование недоступно`)
+        : `${d.name} · ${shift === 'day' ? 'День' : 'Ночь'}`;
       html += `<button type="button"
-        class="sch-cell-cell sch-cell-cell-${shift} ${on ? 'on' : ''}"
+        class="sch-cell-cell sch-cell-cell-${shift} ${on ? 'on' : ''}${lockedCls}"
         data-row-id="${escapeAttr(row.id)}"
         data-day="${d.idx}"
-        data-shift="${shift}"
-        title="${d.name} · ${shift === 'day' ? 'День' : 'Ночь'}">${on ? '✓' : ''}</button>`;
+        data-shift="${shift}"${lockedAttr}
+        title="${escapeAttr(title)}">${on ? '✓' : ''}</button>`;
     });
   });
 
@@ -17153,24 +17626,23 @@ function bindScheduleCells() {
   wrap.querySelectorAll('.sch-cell-cell').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
+      // Заблокированные дни: прошедшая неделя или прошедшие дни текущей недели
+      if (btn.dataset.locked === '1') {
+        const weekOffset = schState.weekOffset || 0;
+        if (weekOffset < 0) {
+          showToast('Прошедшая неделя — только просмотр', true);
+        } else {
+          showToast('День уже прошёл — он попадёт в следующую неделю', true);
+        }
+        return;
+      }
       const rowId = btn.dataset.rowId;
       const day = parseInt(btn.dataset.day, 10);
       const shift = btn.dataset.shift;
       if (!rowId) return;
 
-      // Инициализация draft для строки
-      if (!schState.draft[rowId]) {
-        const row = schState.rows.find(r => r.id === rowId);
-        const f = row?.frequency || { type: 'weekly', schedule: [], shifts: [], daysOfWeek: [], dates: [] };
-        schState.draft[rowId] = {
-          type: 'weekly',
-          schedule: Array.isArray(f.schedule) ? [...f.schedule.map(x => ({ ...x }))] : [],
-          shifts: [...(f.shifts || [])],
-          daysOfWeek: [...(f.daysOfWeek || [])],
-          dates: [...(f.dates || [])]
-        };
-      }
-      const draft = schState.draft[rowId];
+      // Инициализация draft для строки (с учётом правок этой недели)
+      const draft = ensureSchDraft(rowId);
 
       // Определяем текущее состояние
       const idx = draft.schedule.findIndex(x => x.day === day && x.shift === shift);
@@ -17225,6 +17697,25 @@ function bindScheduleCells() {
   });
 }
 
+/* --- Навигация по неделям в Расписании CL --- */
+function bindSchWeekNav() {
+  const goTo = (offset) => {
+    if (offset === (schState.weekOffset || 0)) return;
+    if (schState.dirty && !confirm('Есть несохранённые изменения. Продолжить без сохранения?')) return;
+    schState.weekOffset = offset;
+    schState.dirty = false;
+    schState.draft = {};
+    schState.removedFromSchedule = new Set();
+    schState.addedToSchedule = new Set();
+    updateSchSaveBtn();
+    renderScheduleMatrix();
+  };
+
+  $('#schWeekPrev')?.addEventListener('click', () => goTo((schState.weekOffset || 0) - 1));
+  $('#schWeekNext')?.addEventListener('click', () => goTo((schState.weekOffset || 0) + 1));
+  $('#schWeekToday')?.addEventListener('click', () => goTo(0));
+}
+
 /* --- Обновление состояния кнопки "Сохранить" --- */
 function updateSchSaveBtn() {
   const btn = $('#schSaveBtn');
@@ -17237,10 +17728,19 @@ function saveSchedule() {
   if (!schState.line) return;
   if (!schState.dirty) return;
 
-  if (schState.mode === 'mech') {
-    saveMechSchedule();
+  const weekOffset = schState.weekOffset || 0;
+  if (weekOffset === 0) {
+    // Текущая неделя — правим базовый (повторяющийся) шаблон.
+    // Понедельный оверрайд этой недели больше не нужен — база его перекрывает.
+    setScheduleWeekOverride(getSchWeekStart(0), schState.line, null);
+    if (schState.mode === 'mech') {
+      saveMechSchedule();
+    } else {
+      saveElecSchedule();
+    }
   } else {
-    saveElecSchedule();
+    // Другая неделя — правки только для этой недели
+    saveScheduleWeekOverride(weekOffset);
   }
 
   schState.dirty = false;
@@ -17251,6 +17751,47 @@ function saveSchedule() {
   updateSchSaveBtn();
   renderScheduleMatrix();
   showToast('Расписание сохранено');
+}
+
+/* Сохранение правок для конкретной недели (не текущей) — не трогает
+   базовый шаблон и другие недели. */
+function saveScheduleWeekOverride(weekOffset) {
+  const weekStart = getSchWeekStart(weekOffset);
+  const line = schState.line;
+  const ov = getScheduleWeekOverride(weekStart, line) || { removed: [], added: [], rows: {} };
+  ov.removed = Array.isArray(ov.removed) ? ov.removed.slice() : [];
+  ov.added = Array.isArray(ov.added) ? ov.added.slice() : [];
+  ov.rows = ov.rows || {};
+
+  // Ячейки, время, Run/Stop — кладём полный снимок строки для этой недели
+  Object.entries(schState.draft).forEach(([id, freq]) => {
+    ov.rows[id] = {
+      schedule: Array.isArray(freq.schedule) ? freq.schedule.map(x => ({ ...x })) : [],
+      timeWindows: Array.isArray(freq.timeWindows) ? freq.timeWindows.map(w => ({ from: w.from, to: w.to })) : [],
+      work: (freq.work != null) ? freq.work : undefined
+    };
+    // Раз строка снова в черновике — она точно не «убрана»
+    ov.removed = ov.removed.filter(x => x !== id);
+  });
+
+  // Убрать из расписания (только эта неделя)
+  if (schState.removedFromSchedule) {
+    schState.removedFromSchedule.forEach(id => {
+      if (!ov.removed.includes(id)) ov.removed.push(id);
+      ov.added = ov.added.filter(x => x !== id);
+      delete ov.rows[id];
+    });
+  }
+
+  // Добавить в расписание (только эта неделя)
+  if (schState.addedToSchedule) {
+    schState.addedToSchedule.forEach(id => {
+      if (!ov.added.includes(id)) ov.added.push(id);
+      ov.removed = ov.removed.filter(x => x !== id);
+    });
+  }
+
+  setScheduleWeekOverride(weekStart, line, ov);
 }
 /* ============================================================
    РАСПИСАНИЕ CL — модалка добавления стандартов
@@ -17636,6 +18177,7 @@ $('#schModeSwitch')?.addEventListener('click', (e) => {
   schState.mode = mode;
   schState.dirty = false;
   schState.draft = {};
+  schState.weekOffset = 0;
   schState.removedFromSchedule = new Set();
   schState.addedToSchedule = new Set();
 
@@ -17661,6 +18203,7 @@ $('#schPartSwitch')?.addEventListener('click', (e) => {
   schState.part = part;
   schState.dirty = false;
   schState.draft = {};
+  schState.weekOffset = 0;
   schState.removedFromSchedule = new Set();
   schState.addedToSchedule = new Set();
 
@@ -17743,6 +18286,9 @@ window.selectLine = function(line) {
     }
     schState.dirty = false;
     schState.draft = {};
+    schState.weekOffset = 0;
+    schState.removedFromSchedule = new Set();
+    schState.addedToSchedule = new Set();
 
     updateSchLinePill();
     updateSchSaveBtn();
@@ -17856,18 +18402,22 @@ function updateClContext() {
     return;
   }
 
+  // Реальная «календарная» сегодня — для навигации по неделям и missed
   const dateStr = todayISO();
   clState.todayISO = dateStr;
-  clState.shiftType = getCurrentShiftType();
+  // Активный период смены (тип + дата начала смены) — для подсветки/клика
+  const period = getCurrentShiftPeriod();
+  clState.activeDate = period.date;
+  clState.shiftType = period.shiftType;
 
-  const shifts = getShiftsForDate(dateStr);
+  const shifts = getShiftsForDate(period.date);
   clState.shiftLetter = shifts[clState.shiftType] || '—';
 
-  const brandPlanned = getElectronicBrandForDate(clState.line, dateStr) || '';
+  const brandPlanned = getElectronicBrandForDate(clState.line, period.date) || '';
   clState.brandPlanned = brandPlanned;
   clState.brand = brandPlanned;
 
-  const dateFormatted = fmtISODate(dateStr);
+  const dateFormatted = fmtISODate(period.date);
   const shiftLabel = clState.shiftType === 'day' ? 'День' : 'Ночь';
 
   bar.innerHTML = `
@@ -17945,17 +18495,39 @@ function renderClMatrix() {
     return;
   }
 
+  // --- Расписание для просматриваемой недели + уже проверенные стандарты ---
+  const weekDaysForRows = getWeekDays(clState.weekOffset);
+  const weekStartForRows = weekDaysForRows[0];
+
+  // Правки, сделанные в «Расписании CL» именно для этой недели
+  // (применяются всегда — в т.ч. когда неделя уже стала текущей)
+  const weekOv = getScheduleWeekOverride(weekStartForRows, clState.line) || {};
+  const ovRemoved = new Set(weekOv.removed || []);
+  const ovAdded = new Set(weekOv.added || []);
+
+  // Стандарты/параметры, у которых УЖЕ есть результат проверки на этой неделе.
+  // Их нельзя скрывать, даже если их убрали из расписания — иначе у оператора
+  // пропадут уже выполненные проверки.
+  const checkedIds = getCheckedStandardIdsForWeek(clState.line, weekDaysForRows);
+
+  const isMember = (id, inBase) => {
+    let m = inBase;
+    if (ovRemoved.has(id)) m = false;
+    if (ovAdded.has(id)) m = true;
+    return m;
+  };
+
   let rows = [];
   if (clState.mode === 'mech') {
     rows = getStandards()
       .filter(s => s.line === clState.line)
-      .filter(s => s.active !== false)
-      .filter(s => s.inSchedule === true)
+      .filter(s => s.active !== false || checkedIds.has(s.id))
+      .filter(s => isMember(s.id, s.inSchedule === true) || checkedIds.has(s.id))
       .filter(s => !clState.part || s.nodePart === clState.part);
   } else {
     rows = getElectronicParamsForLine(clState.line)
-      .filter(p => p.active !== false)
-      .filter(p => p.inSchedule === true);
+      .filter(p => p.active !== false || checkedIds.has(p.id))
+      .filter(p => isMember(p.id, p.inSchedule === true) || checkedIds.has(p.id));
   }
 
   rows.sort((a, b) => {
@@ -18078,7 +18650,7 @@ function bindClWeekNav() {
 }
 
 function renderClRow(row, num, DAYS, dateByDayIdx) {
-  const freq = row.frequency || { type: 'weekly', schedule: [], shifts: [], daysOfWeek: [], dates: [] };
+  const freq = getClRowFreq(row);
   const schedule = Array.isArray(freq.schedule) ? freq.schedule : [];
   const isInSchedule = (dayIdx, shift) => schedule.some(x => x.day === dayIdx && x.shift === shift);
 
@@ -18134,20 +18706,27 @@ function renderClRow(row, num, DAYS, dateByDayIdx) {
       const draftKey = `${row.id}|${dateStr}|${shift}`;
       const draft = clState.quickDraft[draftKey];
 
-      const isToday = dateStr === clState.todayISO;
       const dateInPast = !!(dateStr && clState.todayISO && dateStr < clState.todayISO);
+
+      // Текущая неделя: активны только дни с даты начала активной смены
+      // (например, в Пт утром — с Чт·ночь) и далее. Прошедшие дни текущей
+      // недели НЕ считаются запланированными → нет жёлтого «?»/missed.
+      // На других неделях расписание действует целиком.
+      const isCurrentWeek = clState.weekOffset === 0;
+      const activeFrom = isCurrentWeek ? clState.activeDate : null;
+      const effectivelyPlanned = planned && (!activeFrom || dateStr >= activeFrom);
 
       let status = 'na';
       if (draft) {
         status = draft.status;
       } else if (existing) {
         status = existing.status;
-      } else if (planned) {
-        status = dateInPast ? 'missed' : 'due';
+      } else if (effectivelyPlanned) {
+        status = (!isCurrentWeek && dateInPast) ? 'missed' : 'due';
       }
 
-      const isCurrentShift = shift === clState.shiftType;
-      const isClickable = planned && isToday && isCurrentShift && clState.checkMode;
+      const isActiveCell = dateStr === clState.activeDate && shift === clState.shiftType;
+      const isClickable = effectivelyPlanned && isActiveCell && clState.checkMode;
 
       let cls = 'cl-cell';
       let content = '—';
@@ -18172,7 +18751,7 @@ function renderClRow(row, num, DAYS, dateByDayIdx) {
         content = '—';
       }
 
-      if (planned && isToday && isCurrentShift) cls += ' cl-cell-today';
+      if (effectivelyPlanned && isActiveCell) cls += ' cl-cell-today';
       if (isClickable) cls += ' cl-cell-clickable';
 
       const cellTitle = `${d.name} · ${shift === 'day' ? 'День' : 'Ночь'}${status === 'missed' ? ' — пропущено' : ''}`;
@@ -18899,19 +19478,6 @@ function renderSvContentBlocks(st, isEdit) {
   }
 }
 
-/* Блок контента — просмотр */
-function svContentBlock(title, value) {
-  const isEmpty = !value || !String(value).trim();
-  return `
-    <div class="sv-content-block">
-      <div class="sv-content-block-title">${escapeHtml(title)}</div>
-      <div class="sv-content-block-text ${isEmpty ? 'sv-empty' : ''}">
-        ${isEmpty ? 'Не указано' : escapeHtml(value).replace(/\n/g, '<br>')}
-      </div>
-    </div>
-  `;
-}
-
 /* Блок контента — просмотр ИЛИ редактирование */
 function svContentBlockEditable(title, value, inputId, isEdit, placeholder) {
   const isEmpty = !value || !String(value).trim();
@@ -18933,18 +19499,6 @@ function svContentBlockEditable(title, value, inputId, isEdit, placeholder) {
       <textarea id="${inputId}" rows="3"
                 placeholder="${escapeAttr(placeholder)}"
                 class="sv-content-textarea">${escapeHtml(value || '')}</textarea>
-    </div>
-  `;
-}
-
-function svContentBlock(title, value) {
-  const isEmpty = !value || !String(value).trim();
-  return `
-    <div class="sv-content-block">
-      <div class="sv-content-block-title">${escapeHtml(title)}</div>
-      <div class="sv-content-block-text ${isEmpty ? 'sv-empty' : ''}">
-        ${isEmpty ? 'Не указано' : escapeHtml(value).replace(/\n/g, '<br>')}
-      </div>
     </div>
   `;
 }
@@ -18986,35 +19540,49 @@ function renderSvControlSection(st, isEdit) {
   `;
 }
 
-/* Просмотр точек по брендам (компактный) */
+/* Просмотр точек по брендам — таблицей как в редакторе стандарта.
+   Общий помощник, чтобы и компактный (#standardViewModal), и полноэкранный
+   (#standardFullViewModal) просмотр выглядели одинаково с формой. */
+function renderReadonlyBrandsTable(measurements) {
+  const blocks = Array.isArray(measurements) ? measurements : [];
+  const maxPoints = blocks.reduce((m, b) => Math.max(m, (b && Array.isArray(b.points)) ? b.points.length : 0), 0);
+
+  if (!maxPoints) {
+    return '<div class="sv-content-block-text sv-empty">Точки не заданы</div>';
+  }
+
+  let headerHtml = `<tr><th class="bt-th-brand">Бренд</th>`;
+  for (let i = 0; i < maxPoints; i++) {
+    headerHtml += `<th class="bt-th-point"><span>Точка ${i + 1}</span></th>`;
+  }
+  headerHtml += `</tr>`;
+
+  const bodyHtml = blocks.map(block => {
+    const points = (block && Array.isArray(block.points)) ? block.points : [];
+    let cells = '';
+    for (let i = 0; i < maxPoints; i++) {
+      const val = points[i]?.value || '';
+      cells += `<td class="bt-td-value">${escapeHtml(val) || '<span style="color:var(--text-dim)">—</span>'}</td>`;
+    }
+    return `<tr><td class="bt-td-brand">${escapeHtml(block && block.brand ? block.brand : 'Все бренды')}</td>${cells}</tr>`;
+  }).join('');
+
+  return `
+    <div class="brands-table-wrap">
+      <table class="brands-table">
+        <thead>${headerHtml}</thead>
+        <tbody>${bodyHtml}</tbody>
+      </table>
+    </div>
+  `;
+}
+
 function renderSvBrandBlocksView(st) {
   const blocks = Array.isArray(st.measurements) ? st.measurements : [];
   if (!blocks.length) {
     return '<div class="sv-content-block-text sv-empty">Точки не заданы</div>';
   }
-
-  const html = blocks.map(block => {
-    const points = Array.isArray(block.points) ? block.points : [];
-    if (!points.length) return '';
-
-    return `
-      <div class="sv-brand-block">
-        <div class="sv-brand-block-head">
-          <span class="sv-brand-badge">${escapeHtml(block.brand || 'Все бренды')}</span>
-        </div>
-        <div class="sv-points-grid">
-          ${points.map((p, i) => `
-            <div class="sv-point-cell">
-              <span class="sv-point-num">${i + 1}</span>
-              <span class="sv-point-value">${escapeHtml(p.value || '—')}</span>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  return `<div class="sv-brand-blocks">${html}</div>`;
+  return renderReadonlyBrandsTable(blocks);
 }
 /* ============================================================
    Таблица брендов × точек — рендер в новом экране

@@ -164,7 +164,21 @@
       <h2><span class="cocl-step-num">1</span> Линия производства</h2>
       <div class="field">
         <label class="required">Линия производства</label>
-        <select id="lineSelect"><option value="">— выберите —</option></select>
+        <!-- Скрытый источник значения: заполняется выбором из модалки -->
+        <select id="lineSelect" style="display:none"><option value="">— выберите —</option></select>
+        <button type="button" class="editor-line-pill cocl-line-pill" id="coclLinePill" title="Выбрать линию">
+          <span class="editor-line-pill-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+          </span>
+          <span class="editor-line-pill-code" id="coclLinePillCode">Выбрать линию</span>
+          <span class="editor-line-pill-caret">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </span>
+        </button>
       </div>
       <div class="cocl-line-context" id="coclLineContext" style="display:none"></div>
     </div>
@@ -173,7 +187,7 @@
     <div class="card cocl-step-card">
       <h2><span class="cocl-step-num">2</span> Часть линии и тип перехода</h2>
       <div class="row">
-        <div class="field">
+        <div class="field" id="partSelectField">
           <label class="required">Часть линии</label>
           <select id="partSelect">
             <option value="">— выберите —</option>
@@ -201,26 +215,10 @@
         </div>
       </div>
     </div>
-
-    <!-- 3. Оператор и смена -->
-    <div class="card cocl-step-card">
-      <h2><span class="cocl-step-num">3</span> Оператор и смена</h2>
-      <div class="row">
-        <div class="field" style="position:relative">
-          <label class="required">ФИО оператора</label>
-          <input type="text" id="operatorName" placeholder="Начните вводить фамилию..." autocomplete="off">
-          <div class="autocomplete-dropdown" id="operatorAutocomplete" style="display:none"></div>
-        </div>
-        <div class="field">
-          <label class="required">Смена</label>
-          <select id="shift"><option value="">— выберите —</option></select>
-        </div>
-      </div>
-    </div>
   </div>
 
   <div class="card" id="brandsCard" style="display:none">
-    <h2>4. Бренды</h2>
+    <h2>3. Бренды</h2>
     <div class="row">
       <div class="field">
         <label class="required">С бренда</label>
@@ -234,7 +232,7 @@
   </div>
 
   <div class="card" id="changesCard" style="display:none">
-    <h2 id="changesTitle">5. Что меняется</h2>
+    <h2 id="changesTitle">4. Что меняется</h2>
     <div id="changesContainer"></div>
   </div>
 
@@ -1294,35 +1292,11 @@
   </div>
 
   <div class="card">
-    <h2>Линии производства</h2>
-    <div class="row">
-      <div class="field">
-        <label>Новая линия</label>
-        <input type="text" id="newLineInput" placeholder="SD99">
-      </div>
-      <div class="field" style="flex:0 0 auto; min-width:auto">
-        <label>&nbsp;</label>
-        <button class="btn btn-primary" id="addLineBtn">Добавить</button>
-      </div>
-    </div>
-    <div id="linesList"></div>
-  </div>
-
-  <div class="card">
     <h2>Блоки линий</h2>
     <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
       Разделите участок на блоки. Каждая линия может быть только в одном блоке.
+      Новый блок добавляется кнопкой «＋ Добавить блок» внутри нужного участка.
     </p>
-    <div class="row">
-      <div class="field">
-        <label>Новый блок</label>
-        <input type="text" id="newBlockNameInput" placeholder="Cell2 (LST 1)">
-      </div>
-      <div class="field" style="flex:0 0 auto; min-width:auto">
-        <label>&nbsp;</label>
-        <button class="btn btn-primary" id="addBlockBtn">Добавить</button>
-      </div>
-    </div>
     <div id="blocksList"></div>
   </div>
 
@@ -1383,6 +1357,9 @@
     <h2>Общий список брендов <span class="list-counter" id="brandsCount"></span></h2>
     <div class="list-toolbar">
       <input type="text" id="brandsSearch" placeholder="🔍 Поиск по названию...">
+      <select id="brandsWorkshopFilter" class="tl-workshop-filter" title="Фильтр по цеху">
+        <option value="">Все цеха</option>
+      </select>
     </div>
     <div class="brands-list" id="brandsList"></div>
     <div class="pagination-bar" id="brandsPagination"></div>
@@ -1968,6 +1945,10 @@
     <div class="modal-body">
 
       <input type="hidden" id="sf_id">
+
+      <p class="sf-required-hint">
+        Поля со звёздочкой <span class="sf-req-star">*</span> обязательны для заполнения.
+      </p>
 
     <h4 class="form-section-title">Основные</h4>
       <div class="row">
