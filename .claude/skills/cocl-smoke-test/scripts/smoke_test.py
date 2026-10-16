@@ -116,7 +116,10 @@ def main():
         page.goto(url)
         page.wait_for_load_state('load')
         page.evaluate(SEED_JS, [backup, args.line])
+        # Тот же файл с другим #хэшем не перезагружает страницу — нужен reload,
+        # иначе init() отработает на пустом localStorage.
         page.goto(url + '#electronic')
+        page.reload()
         page.wait_for_load_state('load')
         time.sleep(0.5)
         ready = page.evaluate("document.documentElement.getAttribute('data-app-ready')")

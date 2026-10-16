@@ -32,6 +32,13 @@
   --accent-red:    #e6244f;
   --accent-amber:  #e89a00;
 
+  /* Части линии — сплошные нейтральные заливки, чтобы не путать
+     с цветными пилюлями применяемости (ChangeOver / CL в ТО / Конвертация) */
+  --part-maker-bg:   #1f3f73;
+  --part-maker-fg:   #ffffff;
+  --part-packer-bg:  #4b5568;
+  --part-packer-fg:  #ffffff;
+
   /* Текст */
   --text-main:    #1a2643;
   --text-second:  #5a6b8a;
@@ -86,6 +93,11 @@
   --accent-green:  #00ff9d;
   --accent-red:    #ff4d6d;
   --accent-amber:  #ffb800;
+
+  --part-maker-bg:   #3a64a8;
+  --part-maker-fg:   #ffffff;
+  --part-packer-bg:  #5d6880;
+  --part-packer-fg:  #ffffff;
 
   /* Текст — светлый */
   --text-main:    #e0e7ff;

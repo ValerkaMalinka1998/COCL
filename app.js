@@ -3428,7 +3428,6 @@ $$('#elecChecklistContainer .elec-acc-item').forEach(item => {
   const shift = elecState.shift;
   const brand = elecState.brand;
 
-  if (!operator) return showToast('Укажите ФИО оператора', true);
   if (!line)     return showToast('Выберите линию', true);
   if (!brand)    return showToast('Бренд не определён', true);
 
@@ -4506,15 +4505,14 @@ function clearCoclLine() {
   if (ctxEl) { ctxEl.style.display = 'none'; ctxEl.innerHTML = ''; }
 }
 
-/* Текущий пользователь (автовход). Берём из localStorage; если не задан —
-   подставляем первого оператора из настроек. */
+/* Текущий пользователь (автовход). Пока автовхода нет — пусто, а вызывающий
+   код пишет «—». Когда появится SSO, он положит ФИО в 'cl_current_user'. */
 function getCurrentUser() {
   try {
     const v = localStorage.getItem('cl_current_user');
     if (v && String(v).trim()) return String(v).trim();
   } catch (e) {}
-  const ops = getOperators();
-  return (Array.isArray(ops) && ops.length) ? String(ops[0]).trim() : '';
+  return '';
 }
 
 /* Кнопка-чип линии → модалка выбора линии */
@@ -5231,13 +5229,6 @@ function openCommentModal(item) {
    ПРОСМОТР СТАНДАРТА — полноценная модалка
    ============================================================ */
 
-/* Определить блок (Cell2 LST 1/2) по линии */
-function getBlockNameForLine(line) {
-  const blocks = getBlocks();
-  const block = blocks.find(b => Array.isArray(b.lines) && b.lines.includes(line));
-  return block ? block.name : '';
-}
-
 /* Текст типа контроля для отображения */
 function controlTypeLabel(type) {
   switch (type) {
@@ -5303,14 +5294,16 @@ window.openStandardView = function(stdId) {
 
 /* Отрисовать чипы для шапки модалки просмотра стандарта */
 function renderStandardViewHeaderChips(st) {
-  const blockName = getBlockNameForLine(st.line) || '';
-  const ceh = 'SMD';
+  const ctx = getBlockForLine(st.line);
 
   const chips = [];
-  if (ceh) chips.push(`<span class="sv-chip sv-chip-cyan">${escapeHtml(ceh)}</span>`);
-  if (blockName) chips.push(`<span class="sv-chip sv-chip-cyan">${escapeHtml(blockName)}</span>`);
+  if (ctx) {
+    chips.push(`<span class="sv-chip sv-chip-cyan">${escapeHtml(ctx.workshop.name)}</span>`);
+    const areaLabel = ctx.area.name + (ctx.block ? ` · ${ctx.block.name}` : '');
+    chips.push(`<span class="sv-chip sv-chip-cyan">${escapeHtml(areaLabel)}</span>`);
+  }
   if (st.line) chips.push(`<span class="sv-chip sv-chip-cyan">${escapeHtml(st.line)}</span>`);
-  if (st.nodePart) chips.push(`<span class="sv-chip sv-chip-purple">${escapeHtml(st.nodePart)}</span>`);
+  if (st.nodePart) chips.push(`<span class="et-part-chip et-part-${escapeAttr(st.nodePart.toLowerCase())}">${escapeHtml(st.nodePart)}</span>`);
   if (st.machine) chips.push(`<span class="sv-chip sv-chip-amber">${escapeHtml(st.machine)}</span>`);
 
   return chips.join('');
@@ -5318,45 +5311,12 @@ function renderStandardViewHeaderChips(st) {
 
 /* Сформировать HTML содержимого модалки */
 function renderStandardViewContent(st) {
-  const blockName = getBlockNameForLine(st.line) || '';
-  const ceh = 'SMD';
+  const ctx = getBlockForLine(st.line);
 
-  // ----- Левая колонка: основное -----
-
-  const htmlSection = (label, value) => {
-    const isEmpty = !value || !String(value).trim();
-    return `
-      <div class="sv-section">
-        <div class="sv-section-title">${escapeHtml(label)}</div>
-        <div class="sv-section-text ${isEmpty ? 'sv-empty' : ''}">${isEmpty ? 'Не указано' : escapeHtml(value)}</div>
-      </div>
-    `;
-  };
-
-  // Точки замера — по брендам (таблицей, как в редакторе стандарта)
-  const blocks = Array.isArray(st.measurements) ? st.measurements : [];
-  const pointsHtml = blocks.length ? `
-    <div class="sv-section">
-      <div class="sv-section-title">Точки замера по брендам</div>
-      ${renderReadonlyBrandsTable(blocks)}
-    </div>
-  ` : '';
-
-  // Тип контроля
-  const controlTypeHtml = st.controlType ? `
-    <div class="sv-section">
-      <div class="sv-section-title">Тип контроля</div>
-      <div class="sv-control-type">${escapeHtml(controlTypeLabel(st.controlType))}</div>
-    </div>
-  ` : '';
-
+  // ----- Левая колонка: те же блоки, что на полной странице стандарта -----
   const mainHtml = `
     <div class="sv-title">${escapeHtml(st.title || '—')}</div>
-    ${htmlSection('Описание контроля', st.controlDescription)}
-    ${pointsHtml}
-    ${htmlSection('Описание проблемы', st.problemDescription)}
-    ${htmlSection('Цель', st.purpose)}
-    ${htmlSection('Почему создан', st.whyCreated)}
+    <div class="sv-full-content-blocks">${buildSvContentBlocksHtml(st, false)}</div>
   `;
 
   // ----- Правая колонка: фото + связанные объекты -----
@@ -5413,8 +5373,8 @@ function renderStandardViewContent(st) {
         </svg>
         Связанные объекты
       </div>
-      ${sideRow('Цех', ceh)}
-      ${sideRow('Участок', blockName)}
+      ${sideRow('Цех', ctx ? ctx.workshop.name : '')}
+      ${sideRow('Участок', ctx ? ctx.area.name + (ctx.block ? ` (${ctx.block.name})` : '') : '')}
       ${sideRow('Линия', st.line)}
       ${sideRow('Рабочий центр', st.nodePart)}
       ${sideRow('Машина', st.machine)}
@@ -5584,7 +5544,7 @@ $('#saveCheckBtn').addEventListener('click', () => {
 
   // ФИО и смена подставляются автоматически (автовход + смена из настроек)
   const period = getCurrentShiftPeriod();
-  const operator = getCurrentUser();
+  const operator = getCurrentUser() || '—';
   const shift = (getShiftsForDate(period.date) || {})[period.shiftType] || '—';
 
 if (!line) return showToast('Укажите линию', true);
@@ -6210,7 +6170,6 @@ $('#elecSaveCheckBtn')?.addEventListener('click', () => {
   const shift = elecState.shift;
   const brand = elecState.brand;
 
-  if (!operator) return showToast('Укажите ФИО оператора', true);
   if (!line)     return showToast('Выберите линию', true);
   if (!brand)    return showToast('Бренд не определён', true);
 
@@ -7135,7 +7094,6 @@ const tlState = {
    ---------------------------------------- */
 function fillTopLossTab() {
   fillTopLossLines();
-  initTopLossOperatorAutocomplete();
 
   // Явно сбрасываем линию в пустое значение
   const lineEl = $('#tlLine');
@@ -7158,131 +7116,6 @@ function fillTopLossLines() {
 
   // Явный сброс — чтобы браузер не выбирал первую линию автоматически
   el.value = '';
-}
-/* ----------------------------------------
-   Автокомплит оператора (копия логики из initOperatorAutocomplete,
-   но привязан к #tlOperator / #tlOperatorAutocomplete)
-   ---------------------------------------- */
-function initTopLossOperatorAutocomplete() {
-  const input = document.getElementById('tlOperator');
-  const dropdown = document.getElementById('tlOperatorAutocomplete');
-  if (!input || !dropdown) return;
-  if (input.dataset.acReady === '1') return;
-  input.dataset.acReady = '1';
-
-  let activeIndex = -1;
-  let currentMatches = [];
-
-  function highlightMatch(fullText, query) {
-    const idx = fullText.toLowerCase().indexOf(query.toLowerCase());
-    if (idx === -1) return escapeHtml(fullText);
-    const before = fullText.slice(0, idx);
-    const match = fullText.slice(idx, idx + query.length);
-    const after = fullText.slice(idx + query.length);
-    return escapeHtml(before) + '<strong>' + escapeHtml(match) + '</strong>' + escapeHtml(after);
-  }
-
-  function renderDropdown(matches, query) {
-    currentMatches = matches;
-    activeIndex = -1;
-    if (!matches.length) {
-      if (query.length >= 1) {
-        dropdown.innerHTML = '<div class="autocomplete-empty">Ничего не найдено</div>';
-        dropdown.style.display = 'block';
-      } else {
-        dropdown.style.display = 'none';
-      }
-      return;
-    }
-    dropdown.innerHTML = matches.map((name, i) =>
-      `<div class="autocomplete-item" data-index="${i}">${highlightMatch(name, query)}</div>`
-    ).join('');
-    dropdown.style.display = 'block';
-
-    dropdown.querySelectorAll('.autocomplete-item').forEach(el => {
-      el.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        selectItem(parseInt(el.dataset.index, 10));
-      });
-    });
-  }
-
-  function selectItem(index) {
-    if (index < 0 || index >= currentMatches.length) return;
-    input.value = currentMatches[index];
-    dropdown.style.display = 'none';
-    activeIndex = -1;
-  }
-
-  function updateActive() {
-    dropdown.querySelectorAll('.autocomplete-item').forEach((el, i) => {
-      el.classList.toggle('active', i === activeIndex);
-    });
-    if (activeIndex >= 0) {
-      const el = dropdown.querySelector(`[data-index="${activeIndex}"]`);
-      if (el) el.scrollIntoView({ block: 'nearest' });
-    }
-  }
-
-  const MAX_SUGGESTIONS = 7;
-
-  function filterOperators(query) {
-    const q = query.toLowerCase();
-    const all = sortOperatorsRus(getOperators());
-    const starts = [];
-    const contains = [];
-    all.forEach(op => {
-      const low = op.toLowerCase();
-      if (low.startsWith(q)) starts.push(op);
-      else if (low.includes(q)) contains.push(op);
-    });
-    return [...starts, ...contains];
-  }
-
-  input.addEventListener('input', () => {
-    const query = input.value.trim();
-    const operators = getOperators();
-    if (!operators.length) {
-      dropdown.style.display = 'none';
-      return;
-    }
-    if (!query) {
-      renderDropdown(sortOperatorsRus(getOperators()).slice(0, MAX_SUGGESTIONS), '');
-      return;
-    }
-    renderDropdown(filterOperators(query).slice(0, 15), query);
-  });
-
-  input.addEventListener('focus', () => {
-    const operators = getOperators();
-    if (operators.length && !input.value.trim()) {
-      renderDropdown(sortOperatorsRus(getOperators()).slice(0, MAX_SUGGESTIONS), '');
-    }
-  });
-
-  input.addEventListener('keydown', (e) => {
-    if (dropdown.style.display !== 'block') return;
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      activeIndex = Math.min(activeIndex + 1, currentMatches.length - 1);
-      updateActive();
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      activeIndex = Math.max(activeIndex - 1, 0);
-      updateActive();
-    } else if (e.key === 'Enter') {
-      if (activeIndex >= 0) {
-        e.preventDefault();
-        selectItem(activeIndex);
-      }
-    } else if (e.key === 'Escape') {
-      dropdown.style.display = 'none';
-    }
-  });
-
-  input.addEventListener('blur', () => {
-    setTimeout(() => { dropdown.style.display = 'none'; }, 150);
-  });
 }
 
 /* ----------------------------------------
@@ -7459,11 +7292,10 @@ function resetTopLossSelection() {
    Сформировать чек-лист — Этап 4.1
    ---------------------------------------- */
 function buildTopLossChecklist() {
-  const operator = ($('#tlOperator')?.value || '').trim();
+  const operator = getCurrentUser() || '—';
   const line = $('#tlLine')?.value || '';
   const lossIds = [...tlState.selectedLossIds];
 
-  if (!operator) return showToast('Укажите ФИО оператора', true);
   if (!line)     return showToast('Укажите линию', true);
   if (!lossIds.length) return showToast('Выберите хотя бы одну потерю', true);
 
@@ -7965,12 +7797,11 @@ function updateTlChecklistProgress() {
    Сохранение проверки TOP Losses — Этап 4.2
    ---------------------------------------- */
 function saveTopLossCheck() {
-  const operator = ($('#tlOperator')?.value || '').trim();
+  const operator = getCurrentUser() || '—';
   const line = $('#tlLine')?.value || '';
   const lossIds = [...tlState.selectedLossIds];
 
   // Валидация
-  if (!operator) return showToast('Укажите ФИО оператора', true);
   if (!line)     return showToast('Укажите линию', true);
   if (!lossIds.length) return showToast('Не выбрано ни одной потери', true);
 
@@ -8261,10 +8092,8 @@ function backToTopLossList() {
   tlState.selectedLossIds.clear();
   tlState.expandedCategoryIds.clear();
 
-  // Сбрасываем форму (оператор, линия)
-  const opEl = $('#tlOperator');
+  // Сбрасываем форму (линия)
   const lnEl = $('#tlLine');
-  if (opEl) opEl.value = '';
   if (lnEl) lnEl.value = '';
 
   renderTopLossCategories();
@@ -13340,142 +13169,6 @@ function init() {
       localStorage.setItem(STORAGE_KEY, next);
     });
   }
-})();
-/* ============================================================
-   Автокомплит ФИО оператора
-   ============================================================ */
-(function initOperatorAutocomplete() {
-  const input = document.getElementById('operatorName');
-  const dropdown = document.getElementById('operatorAutocomplete');
-  if (!input || !dropdown) return;
-
-  let activeIndex = -1;
-  let currentMatches = [];
-
-  function highlightMatch(fullText, query) {
-    const idx = fullText.toLowerCase().indexOf(query.toLowerCase());
-    if (idx === -1) return escapeHtml(fullText);
-    const before = fullText.slice(0, idx);
-    const match = fullText.slice(idx, idx + query.length);
-    const after = fullText.slice(idx + query.length);
-    return escapeHtml(before) + '<strong>' + escapeHtml(match) + '</strong>' + escapeHtml(after);
-  }
-
-  function renderDropdown(matches, query) {
-    currentMatches = matches;
-    activeIndex = -1;
-    if (!matches.length) {
-      if (query.length >= 1) {
-        dropdown.innerHTML = '<div class="autocomplete-empty">Ничего не найдено</div>';
-        dropdown.style.display = 'block';
-      } else {
-        dropdown.style.display = 'none';
-      }
-      return;
-    }
-    dropdown.innerHTML = matches.map((name, i) =>
-      `<div class="autocomplete-item" data-index="${i}">${highlightMatch(name, query)}</div>`
-    ).join('');
-    dropdown.style.display = 'block';
-
-    dropdown.querySelectorAll('.autocomplete-item').forEach(el => {
-      el.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        selectItem(parseInt(el.dataset.index));
-      });
-    });
-  }
-
-  function selectItem(index) {
-    if (index < 0 || index >= currentMatches.length) return;
-    input.value = currentMatches[index];
-    dropdown.style.display = 'none';
-    activeIndex = -1;
-  }
-
-  function updateActive() {
-    dropdown.querySelectorAll('.autocomplete-item').forEach((el, i) => {
-      el.classList.toggle('active', i === activeIndex);
-    });
-    if (activeIndex >= 0) {
-      const el = dropdown.querySelector(`[data-index="${activeIndex}"]`);
-      if (el) el.scrollIntoView({ block: 'nearest' });
-    }
-  }
-
-  const MAX_SUGGESTIONS = 7;   // максимум подсказок при пустом вводе
-
-  function getSortedOperators() {
-    return sortOperatorsRus(getOperators());
-  }
-
-  /* Сортировка совпадений: сначала те, что НАЧИНАЮТСЯ с запроса,
-     потом те, где запрос встречается в середине */
-  function filterOperators(query) {
-    const q = query.toLowerCase();
-    const all = getSortedOperators();
-    const starts = [];
-    const contains = [];
-    all.forEach(op => {
-      const low = op.toLowerCase();
-      if (low.startsWith(q)) starts.push(op);
-      else if (low.includes(q)) contains.push(op);
-    });
-    return [...starts, ...contains];
-  }
-
-  input.addEventListener('input', () => {
-    const query = input.value.trim();
-    const operators = getOperators();
-    if (!operators.length) {
-      dropdown.style.display = 'none';
-      return;
-    }
-    if (!query) {
-      renderDropdown(getSortedOperators().slice(0, MAX_SUGGESTIONS), '');
-      return;
-    }
-    const matches = filterOperators(query);
-    // При вводе показываем больше совпадений — до 15, если есть
-    renderDropdown(matches.slice(0, 15), query);
-  });
-
-  input.addEventListener('focus', () => {
-    const operators = getOperators();
-    if (operators.length && !input.value.trim()) {
-      renderDropdown(getSortedOperators().slice(0, MAX_SUGGESTIONS), '');
-    }
-  });
-
-  input.addEventListener('keydown', (e) => {
-    if (dropdown.style.display !== 'block') return;
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      activeIndex = Math.min(activeIndex + 1, currentMatches.length - 1);
-      updateActive();
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      activeIndex = Math.max(activeIndex - 1, 0);
-      updateActive();
-    } else if (e.key === 'Enter') {
-      if (activeIndex >= 0) {
-        e.preventDefault();
-        selectItem(activeIndex);
-      }
-    } else if (e.key === 'Escape') {
-      dropdown.style.display = 'none';
-    }
-  });
-
-  input.addEventListener('blur', () => {
-    setTimeout(() => { dropdown.style.display = 'none'; }, 150);
-  });
-
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('#operatorName') && !e.target.closest('#operatorAutocomplete')) {
-      dropdown.style.display = 'none';
-    }
-  });
 })();
 /* ============================================================
    ИМПОРТ/ЭКСПОРТ: ШАБЛОНЫ
@@ -19416,6 +19109,16 @@ function renderSvContentBlocks(st, isEdit) {
   const wrap = $('#svContentBlocks');
   if (!wrap) return;
 
+  wrap.innerHTML = buildSvContentBlocksHtml(st, isEdit);
+
+  // В режиме редактирования — обработчики таблицы контроля
+  if (isEdit) bindSvControlEvents(st);
+}
+
+/* HTML блоков «Точки контроля и описание». Общий для полной страницы
+   стандарта и окна просмотра (#standardViewModal), чтобы они выглядели
+   одинаково. */
+function buildSvContentBlocksHtml(st, isEdit) {
   // 1. Описание — на всю ширину
   const blockDescription = svContentBlockEditable(
     'Описание',
@@ -19455,8 +19158,8 @@ function renderSvContentBlocks(st, isEdit) {
     'К чему приводит отсутствие контроля'
   );
 
-  // Компоновка
-  wrap.innerHTML = `
+  // Компоновка: «Цель» и «Знаю почему» — две колонки одной высоты
+  return `
     ${blockDescription}
     ${blockControl}
     ${blockControlDesc}
@@ -19469,13 +19172,6 @@ function renderSvContentBlocks(st, isEdit) {
       </div>
     </div>
   `;
-
-  // Если режим редактирования — навешиваем обработчики на таблицу контроля
-  if (isEdit) {
-    bindSvControlEvents(st);
-  } else {
-    bindSvBrandBlockPhotoEvents(st);
-  }
 }
 
 /* Блок контента — просмотр ИЛИ редактирование */
@@ -19483,12 +19179,13 @@ function svContentBlockEditable(title, value, inputId, isEdit, placeholder) {
   const isEmpty = !value || !String(value).trim();
 
   if (!isEdit) {
+    // Текст — без пробелов и переносов вокруг: у .sv-content-block-text
+    // white-space: pre-wrap, и любые отступы шаблона стали бы видны.
+    const text = isEmpty ? 'Не указано' : escapeHtml(String(value).trim());
     return `
       <div class="sv-content-block">
         <div class="sv-content-block-title">${escapeHtml(title)}</div>
-        <div class="sv-content-block-text ${isEmpty ? 'sv-empty' : ''}">
-          ${isEmpty ? 'Не указано' : escapeHtml(value).replace(/\n/g, '<br>')}
-        </div>
+        <div class="sv-content-block-text ${isEmpty ? 'sv-empty' : ''}">${text}</div>
       </div>
     `;
   }
@@ -19761,10 +19458,6 @@ function bindSvControlEvents(st) {
 }
 
 /* Заглушка для совместимости (вызывается в renderSvContentBlocks) */
-function bindSvBrandBlockPhotoEvents(st) {
-  // Пока не нужно — было для старого варианта
-}
-
 /* ============================================================
    Фото
    ============================================================ */
