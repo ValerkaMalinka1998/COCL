@@ -7519,16 +7519,23 @@ header,
 }
 
 /* ============================================================ */
-/* === ОБЩИЙ СПИСОК БРЕНДОВ — строки + inline + пагинация ===== */
+/* === ОБЩИЙ СПИСОК БРЕНДОВ — группы по цехам ================= */
 /* ============================================================ */
 
-.brands-list {
+.brands-group-list {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-input);
-  overflow: hidden;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+}
+.brands-group-add {
+  margin-left: 8px;
+  padding: 3px 10px;
+  font-size: 11px;
+}
+.brands-empty {
+  padding: 12px 14px;
+  font-size: 12px;
 }
 
 .brands-row {
@@ -7566,19 +7573,6 @@ header,
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.brands-row-ws-chip {
-  flex-shrink: 0;
-  padding: 1px 8px;
-  border-radius: 9px;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  background: rgba(0, 212, 255, 0.1);
-  color: var(--accent-cyan);
-  border: 1px solid rgba(0, 212, 255, 0.4);
-}
-
 .brands-row-actions {
   display: flex;
   gap: 4px;
