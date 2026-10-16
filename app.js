@@ -526,12 +526,10 @@ function fillElectronicTriggersGroup(selected = []) {
   const g = $('#ep_triggersGroup');
   if (!g) return;
 
-  const custom = getCustomTriggers().map(t => ({ value: t.value, label: t.label }));
-  const nodes = (typeof getNodes === 'function' ? getNodes() : []).map(n => ({
-    value: 'node:' + n.name,
-    label: n.name + ' [' + n.part + ']'
+  const all = getCustomTriggers().map(t => ({
+    value: t.value,
+    label: t.label + ' [' + (getWorkshopName(t.workshop) || '—') + ']'
   }));
-  const all = [...custom, ...nodes];
 
   if (!all.length) {
     g.innerHTML = '<span style="color:var(--text-dim);font-size:12px">Триггеры не настроены</span>';
@@ -1189,21 +1187,12 @@ function fillStandardTriggersGroup(selected = []) {
   const g = $('#sf_triggersGroup');
   if (!g) return;
 
-  // Пользовательские триггеры (дефолт — прежние материалы)
-  const custom = getCustomTriggers().map(t => ({
+  // Триггеры из настроек, сгруппированы по цехам
+  const all = getCustomTriggers().map(t => ({
     value: t.value,
-    label: t.label,
-    group: 'Пользовательские'
+    label: t.label + (t.part ? ' [' + t.part + ']' : ''),
+    group: getWorkshopName(t.workshop) || 'Без цеха'
   }));
-
-  // Узлы — из настроек (если функция getNodes доступна)
-  const nodes = (typeof getNodes === 'function' ? getNodes() : []).map(n => ({
-    value: 'node:' + n.name,
-    label: n.name + ' [' + n.part + ']',
-    group: 'Узлы'
-  }));
-
-  const all = [...custom, ...nodes];
 
   let html = '';
   let lastGroup = '';
@@ -1644,6 +1633,129 @@ $('#topLossPickerModal')?.addEventListener('click', (e) => {
 $('#topLossPickerSearch')?.addEventListener('input', (e) => {
   renderTopLossPickerList(e.target.value);
 });
+
+/* ============================================================
+   ВЫБОР ТРИГГЕРОВ CHANGE OVER — общая модалка
+   (полная страница стандарта и параметра)
+   ============================================================ */
+
+const triggerPickerState = {
+  workshopId: null,
+  part: '',
+  temp: new Set(),
+  onApply: null
+};
+
+/* opts: { workshopId, part, selected: [value], onApply(values) } */
+function openTriggerPickerModal(opts) {
+  const modal = $('#triggerPickerModal');
+  if (!modal) return;
+  triggerPickerState.workshopId = opts.workshopId || null;
+  triggerPickerState.part = opts.part || '';
+  triggerPickerState.temp = new Set(opts.selected || []);
+  triggerPickerState.onApply = typeof opts.onApply === 'function' ? opts.onApply : null;
+
+  const hint = $('#triggerPickerHint');
+  if (hint) {
+    const wsName = getWorkshopName(triggerPickerState.workshopId) || '—';
+    const partTxt = triggerPickerState.workshopId === 'smd' && triggerPickerState.part
+      ? ` · ${triggerPickerState.part} и общие для цеха` : '';
+    hint.textContent = `Триггеры цеха ${wsName}${partTxt}. Список настраивается в Настройках → «Триггеры Change Over».`;
+  }
+  const search = $('#triggerPickerSearch');
+  if (search) search.value = '';
+  renderTriggerPickerList('');
+  openModal(modal);
+  setTimeout(() => search?.focus(), 100);
+}
+
+function renderTriggerPickerList(query) {
+  const list = $('#triggerPickerList');
+  if (!list) return;
+  const q = (query || '').trim().toLowerCase();
+  const all = getTriggersForWorkshop(triggerPickerState.workshopId, triggerPickerState.part);
+
+  if (!all.length) {
+    list.innerHTML = '<div class="empty-state" style="padding:20px">Для этого цеха триггеры не заданы — добавьте их в Настройках.</div>';
+    updateTriggerPickerCounter();
+    return;
+  }
+
+  // Группы по части линии: общие, Maker, Packer
+  const groups = [
+    { name: 'Любая часть линии', items: all.filter(t => !t.part) },
+    { name: 'Maker', items: all.filter(t => t.part === 'Maker') },
+    { name: 'Packer', items: all.filter(t => t.part === 'Packer') }
+  ];
+  const html = groups.map(g => {
+    const visible = g.items.filter(t => !q || t.label.toLowerCase().includes(q));
+    if (!visible.length) return '';
+    return `
+      <div class="toploss-picker-group">
+        <div class="toploss-picker-group-head">
+          <span class="toploss-picker-group-name">${escapeHtml(g.name)}</span>
+          <span class="toploss-picker-group-count">${visible.length}</span>
+        </div>
+        <div class="toploss-picker-group-body">
+          ${visible.map(t => {
+            const checked = triggerPickerState.temp.has(t.value);
+            return `
+              <label class="toploss-picker-item ${checked ? 'checked' : ''}">
+                <input type="checkbox" value="${escapeAttr(t.value)}" ${checked ? 'checked' : ''}>
+                <span>${escapeHtml(t.label)}</span>
+              </label>`;
+          }).join('')}
+        </div>
+      </div>`;
+  }).join('');
+  list.innerHTML = html || '<div class="empty-state" style="padding:20px">Ничего не найдено</div>';
+  updateTriggerPickerCounter();
+}
+
+function updateTriggerPickerCounter() {
+  const el = $('#triggerPickerCounter');
+  if (el) el.textContent = 'Выбрано: ' + triggerPickerState.temp.size;
+}
+
+function closeTriggerPickerModal() {
+  closeModal('#triggerPickerModal');
+  triggerPickerState.onApply = null;
+}
+
+$('#triggerPickerList')?.addEventListener('change', (e) => {
+  const cb = e.target.closest('input[type=checkbox]');
+  if (!cb) return;
+  if (cb.checked) triggerPickerState.temp.add(cb.value);
+  else triggerPickerState.temp.delete(cb.value);
+  cb.closest('.toploss-picker-item')?.classList.toggle('checked', cb.checked);
+  updateTriggerPickerCounter();
+});
+$('#triggerPickerSearch')?.addEventListener('input', (e) => renderTriggerPickerList(e.target.value));
+$('#triggerPickerClose')?.addEventListener('click', closeTriggerPickerModal);
+$('#triggerPickerCancel')?.addEventListener('click', closeTriggerPickerModal);
+$('#triggerPickerModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'triggerPickerModal') closeTriggerPickerModal();
+});
+$('#triggerPickerApply')?.addEventListener('click', () => {
+  const cb = triggerPickerState.onApply;
+  const values = [...triggerPickerState.temp];
+  closeTriggerPickerModal();
+  if (cb) cb(values);
+});
+
+/* Чипы выбранных триггеров с крестиком (data-remove-trigger) */
+function renderTriggerChipsEditable(values) {
+  return (values || []).map(v => `
+    <div class="sv-toploss-item" title="${escapeAttr(getTriggerLabel(v))}">
+      <span>${escapeHtml(getTriggerLabel(v))}</span>
+      <button type="button" class="sv-toploss-remove" data-remove-trigger="${escapeAttr(v)}" title="Убрать">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>`).join('');
+}
 
 /* --- Чипы Run/Stop в форме стандарта --- */
 $('#sf_workChips')?.addEventListener('click', (e) => {
@@ -4290,8 +4402,59 @@ function getCustomTriggers() {
   return raw.filter(t => t && typeof t.label === 'string' && t.label.trim());
 }
 function setCustomTriggers(v) { save(STORAGE_KEYS.customTriggers, v); }
-function getCustomTriggersForPart(part) {
-  return getCustomTriggers().filter(t => !t.part || t.part === part);
+
+/* Триггеры цеха. Часть линии учитывается только в SMD: триггер без части
+   подходит и Maker, и Packer. */
+function getTriggersForWorkshop(workshopId, part) {
+  if (!workshopId) return [];
+  return getCustomTriggers().filter(t =>
+    t.workshop === workshopId &&
+    (workshopId !== 'smd' || !part || !t.part || t.part === part));
+}
+
+/* Название триггера по значению (для чипов) */
+function getTriggerLabel(value) {
+  const t = getCustomTriggers().find(x => x.value === value);
+  return t ? t.label : String(value || '');
+}
+
+/* Разовая миграция триггеров:
+   - триггер без цеха → SMD (сегодняшние триггеры — материалы SMD);
+   - «узлы» (node:…) убираются из стандартов и параметров: оператор
+     никогда не мог их выбрать в «Что меняется», поэтому стандарт с
+     такими триггерами в Change Over не показывался вовсе. */
+function migrateTriggersByWorkshop() {
+  const FLAG = 'cl_triggers_ws_v1';
+  try { if (localStorage.getItem(FLAG)) return; } catch (e) { return; }
+
+  const wsIds = getWorkshops().map(w => w.id);
+  const fallbackWs = wsIds.includes('smd') ? 'smd' : wsIds[0];
+  const list = getCustomTriggers();
+  let changed = false;
+  list.forEach(t => {
+    if (!wsIds.includes(t.workshop)) { t.workshop = fallbackWs; changed = true; }
+    if (t.workshop !== 'smd' && t.part) { t.part = ''; changed = true; }
+  });
+  if (changed) setCustomTriggers(list);
+
+  const stripNodes = arr => Array.isArray(arr) ? arr.filter(x => !String(x).startsWith('node:')) : [];
+  const stds = getStandards();
+  let stdChanged = false;
+  stds.forEach(st => {
+    const next = stripNodes(st.triggers);
+    if (Array.isArray(st.triggers) && next.length !== st.triggers.length) { st.triggers = next; stdChanged = true; }
+  });
+  if (stdChanged) setStandards(stds);
+
+  const params = getElectronicParams();
+  let pChanged = false;
+  params.forEach(pr => {
+    const next = stripNodes(pr.triggers);
+    if (Array.isArray(pr.triggers) && next.length !== pr.triggers.length) { pr.triggers = next; pChanged = true; }
+  });
+  if (pChanged) setElectronicParams(params);
+
+  try { localStorage.setItem(FLAG, '1'); } catch (e) {}
 }
 
 /* ============================================================
@@ -4305,60 +4468,29 @@ function renderCustomTriggersSettings() {
   const list = getCustomTriggers();
   const workshops = getWorkshops();
 
-  if (!list.length) {
-    container.innerHTML = '<div class="empty-state">Триггеров нет. Нажмите «Добавить триггер».</div>';
-    return;
-  }
-
-  // Группируем по цехам: «общие» (workshop==='') и по id цеха
-  const groups = new Map();
-  groups.set('__shared__', []);
-  workshops.forEach(w => groups.set(w.id, []));
-
-  list.forEach(t => {
-    const key = (t.workshop && groups.has(t.workshop)) ? t.workshop : '__shared__';
-    groups.get(key).push(t);
-  });
-
-  // Хранилище открытых групп
   let openIds = getCtOpenGroups();
   if (openIds === null) { openIds = []; setCtOpenGroups(openIds); }
 
-  let html = '';
-
-  // Общие триггеры (без привязки к цеху)
-  const shared = groups.get('__shared__') || [];
-  if (shared.length) {
-    const open = openIds.includes('__shared__');
-    html += `<div class="bl-group bl-group-workshop ${open ? 'expanded' : ''}">
-      <div class="bl-group-head" data-ct-toggle="__shared__">
-        <span class="bl-group-toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
-        <span class="bl-group-name">Общие (все цеха)</span>
-        <span class="bl-group-count">${shared.length} триг.</span>
-      </div>
-      <div class="bl-group-body">${renderCtList(shared)}</div>
-    </div>`;
-  }
-
-  // По цехам
-  workshops.forEach(ws => {
-    const wsTriggers = groups.get(ws.id) || [];
-    if (!wsTriggers.length) return;
+  // Каждый цех — свой блок со своими триггерами (показываем и пустые)
+  container.innerHTML = '<div class="bl-groups">' + workshops.map(ws => {
+    const wsTriggers = list.filter(t => t.workshop === ws.id);
     const open = openIds.includes(ws.id);
-    html += `<div class="bl-group bl-group-workshop ${open ? 'expanded' : ''}">
+    return `<div class="bl-group bl-group-workshop ${open ? 'expanded' : ''}">
       <div class="bl-group-head" data-ct-toggle="${escapeAttr(ws.id)}">
-        <span class="bl-group-toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
+        <span class="bl-group-toggle"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
         <span class="bl-group-name">${escapeHtml(ws.name)}</span>
         <span class="bl-group-count">${wsTriggers.length} триг.</span>
+        <button type="button" class="btn btn-secondary btn-sm brands-group-add" data-ct-add="${escapeAttr(ws.id)}" title="Добавить триггер в ${escapeAttr(ws.name)}">+ Триггер</button>
       </div>
-      <div class="bl-group-body">${renderCtList(wsTriggers)}</div>
+      <div class="bl-group-body">${wsTriggers.length
+        ? renderCtList(wsTriggers, ws.id)
+        : '<div class="tl-cat-empty">Триггеров пока нет</div>'}</div>
     </div>`;
-  });
-
-  container.innerHTML = html;
+  }).join('') + '</div>';
 
   container.querySelectorAll('[data-ct-toggle]').forEach(head => {
-    head.addEventListener('click', () => {
+    head.addEventListener('click', (e) => {
+      if (e.target.closest('[data-ct-add]')) return;
       const id = head.dataset.ctToggle;
       let open = getCtOpenGroups() || [];
       if (open.includes(id)) open = open.filter(x => x !== id);
@@ -4367,7 +4499,12 @@ function renderCustomTriggersSettings() {
       renderCustomTriggersSettings();
     });
   });
-
+  container.querySelectorAll('[data-ct-add]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openCustomTriggerModal(null, btn.dataset.ctAdd);
+    });
+  });
   container.querySelectorAll('[data-ct-edit]').forEach(btn => {
     btn.addEventListener('click', () => openCustomTriggerModal(btn.dataset.ctEdit));
   });
@@ -4376,14 +4513,18 @@ function renderCustomTriggersSettings() {
   });
 }
 
-function renderCtList(arr) {
+function renderCtList(arr, workshopId) {
   return arr.map(t => {
-    const wsName = t.workshop ? getWorkshopName(t.workshop) : '';
-    const meta = [t.part || 'любая часть', wsName || 'все цеха'].join(' · ');
+    // Часть линии имеет смысл только в SMD
+    const partChip = workshopId === 'smd'
+      ? (t.part
+          ? `<span class="et-part-chip et-part-${escapeAttr(t.part.toLowerCase())}">${escapeHtml(t.part)}</span>`
+          : '<span class="tl-loss-ws-chip">любая часть</span>')
+      : '';
     return `
       <div class="tl-loss-inline-row" data-trigger-id="${escapeAttr(t.id)}">
         <span class="tl-loss-inline-name">${escapeHtml(t.label)}</span>
-        <span class="tl-loss-ws-chip">${escapeHtml(meta)}</span>
+        ${partChip}
         <div class="tl-loss-inline-actions">
           <button type="button" class="tl-row-action-btn tl-row-edit-btn" data-ct-edit="${escapeAttr(t.id)}" title="Изменить">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -4410,11 +4551,9 @@ function setCtOpenGroups(arr) {
   try { localStorage.setItem('cl_ct_open_groups', JSON.stringify(arr)); } catch(e) {}
 }
 
-/* Старая функция с удалённым рендером — объединена выше */
-
 let currentEditingTriggerId = null;
 
-function openCustomTriggerModal(id) {
+function openCustomTriggerModal(id, presetWorkshop) {
   const modal = $('#customTriggerModal');
   if (!modal) return;
 
@@ -4423,7 +4562,12 @@ function openCustomTriggerModal(id) {
   const titleEl = $('#customTriggerModalTitle');
   const saveBtn = $('#customTriggerModalSave');
   const wsEl = $('#customTriggerModalWorkshop');
-  if (wsEl) wsEl.innerHTML = workshopOptionsHtml('');
+  // Цех обязателен — без варианта «все цеха»
+  if (wsEl) {
+    wsEl.innerHTML = getWorkshops()
+      .map(w => `<option value="${escapeAttr(w.id)}">${escapeHtml(w.name)}</option>`).join('');
+    wsEl.value = presetWorkshop || 'smd';
+  }
 
   if (id) {
     const t = getCustomTriggers().find(x => x.id === id);
@@ -4441,10 +4585,19 @@ function openCustomTriggerModal(id) {
     $('#customTriggerModalLabel').value = '';
     $('#customTriggerModalPart').value = '';
   }
+  updateCustomTriggerPartField();
 
   openModal(modal);
   setTimeout(() => $('#customTriggerModalLabel')?.focus(), 100);
 }
+
+/* «Часть линии» в модалке триггера — только для SMD */
+function updateCustomTriggerPartField() {
+  const field = $('#customTriggerModalPartField');
+  const ws = $('#customTriggerModalWorkshop')?.value || '';
+  if (field) field.style.display = ws === 'smd' ? '' : 'none';
+}
+$('#customTriggerModalWorkshop')?.addEventListener('change', updateCustomTriggerPartField);
 
 function closeCustomTriggerModal() {
   closeModal('#customTriggerModal');
@@ -4491,16 +4644,17 @@ $('#customTriggerModalLabel')?.addEventListener('keydown', (e) => {
 $('#customTriggerModalSave')?.addEventListener('click', () => {
   const id = $('#customTriggerModalId').value;
   const label = ($('#customTriggerModalLabel').value || '').trim();
-  const part = $('#customTriggerModalPart').value;
   const workshop = ($('#customTriggerModalWorkshop')?.value || '').trim();
+  const part = workshop === 'smd' ? $('#customTriggerModalPart').value : '';
 
   if (!label) return showToast('Введите название триггера', true);
+  if (!workshop) return showToast('Выберите цех', true);
 
   const list = getCustomTriggers();
 
-  // Дубликат по названию
-  const dup = list.find(t => t.id !== id && t.label.toLowerCase() === label.toLowerCase());
-  if (dup) return showToast('Такой триггер уже есть', true);
+  // Дубликат по названию — в пределах цеха
+  const dup = list.find(t => t.id !== id && t.workshop === workshop && t.label.toLowerCase() === label.toLowerCase());
+  if (dup) return showToast('Такой триггер в этом цехе уже есть', true);
 
   if (id) {
     const t = list.find(x => x.id === id);
@@ -4747,9 +4901,10 @@ function onTransitionTypeChange() {
 function renderMaterialChanges() {
   const c = $('#changesContainer');
   const part = $('#partSelect').value;   // Maker / Packer
+  const line = $('#lineSelect').value;
 
-  // Пользовательские триггеры для конкретной части линии (или общие)
-  const items = getCustomTriggersForPart(part).map(t => ({
+  // Триггеры цеха этой линии (в SMD — с учётом части линии)
+  const items = getTriggersForWorkshop(line ? getWorkshopIdForLine(line) : null, part).map(t => ({
     value: t.value,
     label: t.label
   }));
@@ -13025,6 +13180,7 @@ function init() {
   migrateToWorkshopsStructure();
   migrateBrandWorkshopsFromLines();
   migrateTopLossesByWorkshop();
+  migrateTriggersByWorkshop();
   fillLinesForOperator();
   renderCoclPartStep('');     // начальное состояние шага «Часть»
   renderCoclLineContext('');  // начальное состояние контекста линии
@@ -19585,10 +19741,8 @@ function renderSvFullExtra(st, isEdit) {
       }).join('');
 
     const triggerChips = (Array.isArray(st.triggers) ? st.triggers : [])
-      .map(t => {
-        const label = String(t).replace(/^node:/, '');
-        return `<span class="sv-trigger-chip">${escapeHtml(label)}</span>`;
-      }).join('');
+      .map(t => `<span class="sv-trigger-chip">${escapeHtml(getTriggerLabel(t))}</span>`)
+      .join('');
 
     const lossChips = (Array.isArray(st.topLosses) ? st.topLosses : [])
       .map(id => {
@@ -19637,36 +19791,8 @@ function renderSvFullExtra(st, isEdit) {
     </div>
   `;
 
-  // Триггеры — соберём из пользовательских триггеров + узлов
-  const customTriggers = getCustomTriggers().map(t => ({
-    value: t.value,
-    label: t.label,
-    group: 'Пользовательские'
-  }));
-  const nodes = (typeof getNodes === 'function' ? getNodes() : []).map(n => ({
-    value: 'node:' + n.name,
-    label: n.name + ' [' + n.part + ']',
-    group: 'Узлы'
-  }));
-  const allTriggers = [...customTriggers, ...nodes];
-
-  let triggersHtml = '';
-  let lastGroup = '';
-  allTriggers.forEach(t => {
-    if (t.group !== lastGroup) {
-      if (lastGroup) triggersHtml += '</div>';
-      triggersHtml += `<div class="sv-edit-trigger-group-title">${escapeHtml(t.group)}:</div><div class="sv-edit-trigger-group">`;
-      lastGroup = t.group;
-    }
-    const checked = triggersArr.includes(t.value);
-    triggersHtml += `
-      <label class="trigger-checkbox ${checked ? 'checked' : ''}">
-        <input type="checkbox" value="${escapeHtml(t.value)}" ${checked ? 'checked' : ''}>
-        <span>${escapeHtml(t.label)}</span>
-      </label>
-    `;
-  });
-  if (lastGroup) triggersHtml += '</div>';
+  // Триггеры — выбранные чипы, добавление через модалку (из настроек цеха)
+  const triggersHtml = renderTriggerChipsEditable(triggersArr);
 
   // Top Losses — чипы + кнопка
   const lossChips = topLossesArr
@@ -19699,8 +19825,11 @@ function renderSvFullExtra(st, isEdit) {
     <div class="sv-full-extra-block">
       <div class="sv-full-extra-label">Триггеры Change Over</div>
       <div class="sv-full-extra-chips" id="svf_triggersGroup">
-        ${triggersHtml || '<span class="sv-full-extra-empty">Нет доступных триггеров</span>'}
+        ${triggersHtml || '<span class="sv-full-extra-empty">Триггеры не заданы</span>'}
       </div>
+      <button type="button" class="btn btn-secondary btn-sm" id="svf_addTriggerBtn" style="margin-top:8px">
+        + Добавить триггер
+      </button>
     </div>
 
     <div class="sv-full-extra-block">
@@ -19727,14 +19856,23 @@ function renderSvFullExtra(st, isEdit) {
     });
   });
 
-  // Триггеры
-  $$('#svf_triggersGroup input[type="checkbox"]').forEach(cb => {
-    cb.addEventListener('change', (e) => {
-      e.target.closest('label').classList.toggle('checked', e.target.checked);
-
-      // Обновляем st.triggers в памяти
-      const allChecked = [...$$('#svf_triggersGroup input[type="checkbox"]:checked')].map(x => x.value);
-      st.triggers = allChecked;
+  // Триггеры — удаление чипа и выбор через модалку
+  wrap.querySelectorAll('[data-remove-trigger]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      st.triggers = (st.triggers || []).filter(v => v !== btn.dataset.removeTrigger);
+      renderSvFullExtra(st, true);
+    });
+  });
+  $('#svf_addTriggerBtn')?.addEventListener('click', () => {
+    openTriggerPickerModal({
+      workshopId: getWorkshopIdForLine(st.line),
+      part: st.nodePart || '',
+      selected: st.triggers || [],
+      onApply: (values) => {
+        st.triggers = values;
+        renderSvFullExtra(st, true);
+      }
     });
   });
 

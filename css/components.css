@@ -12491,53 +12491,13 @@ header,
   gap: 6px;
 }
 
-/* Группы триггеров */
-.sv-edit-trigger-group-title {
-  width: 100%;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  margin: 6px 0 4px;
-}
-
-.sv-edit-trigger-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.trigger-checkbox {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  border-radius: 14px;
+.trigger-picker-hint {
   font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  background: var(--bg-card);
-  border: 1px solid var(--border-hi);
-  color: var(--text-main);
-  transition: all 0.15s;
-  user-select: none;
-}
-.trigger-checkbox:hover {
-  border-color: var(--accent-cyan);
-}
-.trigger-checkbox input {
-  margin: 0;
-  accent-color: var(--accent-cyan);
-  cursor: pointer;
-}
-.trigger-checkbox.checked {
-  background: rgba(0, 212, 255, 0.1);
-  border-color: var(--accent-cyan);
-  color: var(--accent-cyan);
+  color: var(--text-second);
+  margin: 0 0 10px;
 }
 
-/* Top Losses — чипы в редактировании */
+/* Top Losses и триггеры — чипы в редактировании */
 .sv-toploss-item {
   display: inline-flex;
   align-items: center;

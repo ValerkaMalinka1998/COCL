@@ -1783,6 +1783,28 @@
   </div>
 </div>
 
+<!-- ======================= МОДАЛЬНОЕ ОКНО: ВЫБОР ТРИГГЕРОВ CHANGE OVER ======================= -->
+<div class="modal-overlay" id="triggerPickerModal">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <h3 id="triggerPickerTitle">Триггеры Change Over</h3>
+      <button class="modal-close" id="triggerPickerClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="trigger-picker-hint" id="triggerPickerHint"></p>
+      <div class="field" style="margin-bottom:14px">
+        <input type="text" id="triggerPickerSearch" placeholder="🔍 Поиск по триггерам..." autocomplete="off">
+      </div>
+      <div id="triggerPickerList" class="toploss-picker-list"></div>
+    </div>
+    <div class="modal-footer">
+      <div class="toploss-picker-counter" id="triggerPickerCounter">Выбрано: 0</div>
+      <button class="btn btn-secondary" id="triggerPickerCancel">Отмена</button>
+      <button class="btn btn-primary" id="triggerPickerApply">Применить</button>
+    </div>
+  </div>
+</div>
+
 <!-- ======================= МОДАЛЬНОЕ ОКНО: ДОБАВИТЬ БРЕНД ======================= -->
 <div class="modal-overlay" id="addBrandModal">
   <div class="modal">
@@ -1834,17 +1856,15 @@
         <input type="text" id="customTriggerModalLabel" placeholder="Например: Смена ароматизатора">
       </div>
       <div class="field">
+        <label class="required">Цех</label>
+        <select id="customTriggerModalWorkshop"></select>
+      </div>
+      <div class="field" id="customTriggerModalPartField">
         <label>Часть линии</label>
         <select id="customTriggerModalPart">
           <option value="">— любая —</option>
           <option value="Maker">Maker</option>
           <option value="Packer">Packer</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Цех</label>
-        <select id="customTriggerModalWorkshop">
-          <option value="">— все цеха —</option>
         </select>
       </div>
     </div>
