@@ -1929,7 +1929,10 @@ function normalizeElectronicFrequency(f) {
       schedule: uniqueSchedule,
       shifts: shifts.length ? shifts : ['day', 'night'],
       daysOfWeek,
-      dates
+      dates,
+      // Окна времени и версии шаблона задаются в «Расписании CL» — не терять
+      timeWindows: Array.isArray(f.timeWindows) ? f.timeWindows : [],
+      templates: Array.isArray(f.templates) ? f.templates : []
     };
   }
 
@@ -1954,68 +1957,13 @@ function normalizeElectronicFrequency(f) {
     });
   });
 
-  return { type, schedule, shifts, daysOfWeek, dates };
+  return {
+    type, schedule, shifts, daysOfWeek, dates,
+    timeWindows: Array.isArray(f.timeWindows) ? f.timeWindows : [],
+    templates: Array.isArray(f.templates) ? f.templates : []
+  };
 }
 
-/* Нормализация периодичности механического стандарта
-   (использует тот же формат, что и электронный параметр). */
-function normalizeStandardFrequency(f) {
-  const def = { type: 'weekly', schedule: [], shifts: ['day', 'night'], daysOfWeek: [], dates: [] };
-  if (!f || typeof f !== 'object') return def;
-
-  const type = ['daily', 'weekly', 'once'].includes(f.type) ? f.type : 'weekly';
-
-  // dates: YYYY-MM-DD
-  const dates = Array.isArray(f.dates)
-    ? f.dates.filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
-    : [];
-
-  // --- Новый формат: schedule ---
-  if (Array.isArray(f.schedule)) {
-    const schedule = f.schedule
-      .filter(x => x && Number.isInteger(x.day) && x.day >= 0 && x.day <= 6)
-      .filter(x => x.shift === 'day' || x.shift === 'night')
-      .map(x => ({ day: x.day, shift: x.shift }));
-
-    // Уникализируем
-    const seen = new Set();
-    const uniqueSchedule = schedule.filter(x => {
-      const key = `${x.day}|${x.shift}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-
-    const daysOfWeek = [...new Set(uniqueSchedule.map(x => x.day))];
-    const shifts = [...new Set(uniqueSchedule.map(x => x.shift))];
-
-    return {
-      type,
-      schedule: uniqueSchedule,
-      shifts: shifts.length ? shifts : ['day', 'night'],
-      daysOfWeek,
-      dates
-    };
-  }
-
-  // --- Миграция со старого формата (daysOfWeek + shifts) ---
-  let shifts = Array.isArray(f.shifts) ? f.shifts : [];
-  shifts = shifts.filter(s => s === 'day' || s === 'night');
-  if (!shifts.length) shifts = ['day', 'night'];
-
-  const daysOfWeek = Array.isArray(f.daysOfWeek)
-    ? f.daysOfWeek.filter(d => Number.isInteger(d) && d >= 0 && d <= 6)
-    : [];
-
-  const schedule = [];
-  daysOfWeek.forEach(day => {
-    shifts.forEach(shift => {
-      schedule.push({ day, shift });
-    });
-  });
-
-  return { type, schedule, shifts, daysOfWeek, dates };
-}
 /* Получить параметры конкретной линии */
 function getElectronicParamsForLine(line) {
   return getElectronicParams()
@@ -2623,6 +2571,111 @@ function setScheduleWeekOverride(weekStart, line, ov) {
 /* Есть ли для недели+линии хоть какие-то правки */
 function hasScheduleWeekOverride(weekStart, line) {
   return !!getScheduleWeekOverride(weekStart, line);
+}
+
+/* ============================================================ */
+/* === РАСПИСАНИЕ CL — ВЕРСИИ ШАБЛОНА ========================= */
+/* ============================================================ */
+/* Шаблон недели может меняться со временем, но прошлое не меняется.
+   frequency.templates = [{ from, inSchedule, schedule, timeWindows, work }]
+     from — понедельник недели, с которой действует версия ('YYYY-MM-DD').
+   Для недели W действует последняя версия с from <= W.
+   Пока версий нет, действуют «исходные» поля строки (inSchedule,
+   frequency.schedule / timeWindows, work) — так работают старые данные.
+   Исходные поля всегда повторяют самую позднюю версию: их читают импорт,
+   экспорт и окно «Добавить стандарты». */
+
+const SCH_BASELINE_FROM = '0000-01-01';
+
+/* Шаблон строки на неделю weekStart (без правок конкретной недели) */
+function getRowTemplateForWeek(row, weekStart) {
+  const f = (row && row.frequency) || {};
+  const list = Array.isArray(f.templates) ? f.templates : [];
+  let t = null;
+  list.forEach(v => {
+    if (v && v.from <= weekStart && (!t || v.from >= t.from)) t = v;
+  });
+  if (!t && !list.length) {
+    t = {
+      inSchedule: row && row.inSchedule === true,
+      schedule: f.schedule || [],
+      timeWindows: f.timeWindows || [],
+      work: row && row.work
+    };
+  }
+  if (!t) return { inSchedule: false, schedule: [], timeWindows: [], work: 'Run' };
+  return {
+    inSchedule: t.inSchedule === true,
+    schedule: Array.isArray(t.schedule) ? t.schedule : [],
+    timeWindows: Array.isArray(t.timeWindows) ? t.timeWindows : [],
+    work: t.work === 'Stop' ? 'Stop' : 'Run'
+  };
+}
+
+/* Строка на неделю с учётом разовых правок этой недели:
+   { member, schedule, timeWindows, work } */
+function getRowForWeek(row, weekStart, line) {
+  const t = getRowTemplateForWeek(row, weekStart);
+  const ov = getScheduleWeekOverride(weekStart, line) || {};
+  let member = t.inSchedule;
+  if ((ov.removed || []).includes(row.id)) member = false;
+  if ((ov.added || []).includes(row.id)) member = true;
+  const snap = ov.rows && ov.rows[row.id];
+  return {
+    member,
+    schedule: snap && Array.isArray(snap.schedule) ? snap.schedule : t.schedule,
+    timeWindows: snap && Array.isArray(snap.timeWindows) ? snap.timeWindows : t.timeWindows,
+    work: snap && snap.work != null ? (snap.work === 'Stop' ? 'Stop' : 'Run') : t.work
+  };
+}
+
+/* Записать версию шаблона «с недели from»: более поздние версии заменяются.
+   state = { inSchedule, schedule, timeWindows, work } */
+function setRowTemplateFrom(row, from, state) {
+  if (!row.frequency || typeof row.frequency !== 'object') {
+    row.frequency = { type: 'weekly', schedule: [], shifts: ['day', 'night'], daysOfWeek: [], dates: [] };
+  }
+  const f = row.frequency;
+  let list = Array.isArray(f.templates) ? f.templates.slice() : [];
+  // Первая версия: сохраняем то, что было раньше, как действующее для прошлого
+  if (!list.length) {
+    list.push({
+      from: SCH_BASELINE_FROM,
+      inSchedule: row.inSchedule === true,
+      schedule: (f.schedule || []).map(x => ({ ...x })),
+      timeWindows: (f.timeWindows || []).map(w => ({ from: w.from, to: w.to })),
+      work: row.work === 'Stop' ? 'Stop' : 'Run'
+    });
+  }
+  list = list.filter(v => v.from < from);
+  list.push({
+    from,
+    inSchedule: state.inSchedule === true,
+    schedule: (state.schedule || []).map(x => ({ day: x.day, shift: x.shift })),
+    timeWindows: (state.timeWindows || []).map(w => ({ from: w.from, to: w.to })),
+    work: state.work === 'Stop' ? 'Stop' : 'Run'
+  });
+  list.sort((a, b) => a.from.localeCompare(b.from));
+  f.templates = list;
+
+  // Исходные поля = самая поздняя версия
+  const last = list[list.length - 1];
+  row.inSchedule = last.inSchedule;
+  row.work = last.work;
+  f.schedule = last.schedule.map(x => ({ ...x }));
+  f.timeWindows = last.timeWindows.map(w => ({ ...w }));
+  f.daysOfWeek = [...new Set(f.schedule.map(x => x.day))];
+  f.shifts = [...new Set(f.schedule.map(x => x.shift))];
+  if (!f.shifts.length) f.shifts = ['day', 'night'];
+}
+
+/* Прошла ли смена (её уже нельзя планировать).
+   День D: 09:00–21:00, ночь D: 21:00 D – 09:00 D+1. Текущая смена не прошла. */
+function isShiftPast(dateStr, shift, now = new Date()) {
+  const cur = getCurrentShiftPeriod(now);
+  if (dateStr < cur.date) return true;
+  if (dateStr > cur.date) return false;
+  return shift === 'day' && cur.shiftType === 'night';
 }
 
 /* Утилита: человекочитаемая дата 'YYYY-MM-DD' → '28.09.2026' */
@@ -15740,6 +15793,7 @@ const schState = {
   mode: 'mech',           // 'mech' | 'elec'
   part: '',               // '' | 'Maker' | 'Packer'  (только для mech)
   weekOffset: 0,          // 0 = текущая неделя, +1 = следующая, -1 = предыдущая
+  saveScope: 'forward',   // 'forward' — с этой недели и далее, 'week' — только эта неделя
   dirty: false,           // были ли несохранённые изменения
   rows: [],               // текущие строки матрицы (стандарты/параметры)
   // Кэш "черновика" изменений: id → { daysOfWeek:[], shifts:[] }
@@ -15762,9 +15816,14 @@ function openScheduleTab() {
   schState.mode = savedMode;
   schState.part = savedPart;
   schState.line = savedLine;
-  schState.weekOffset = 0;
+  // С пятницы технолог планирует следующую неделю — открываем сразу её
+  const dow = new Date().getDay();
+  schState.weekOffset = (dow === 5 || dow === 6 || dow === 0) ? 1 : 0;
+  schState.saveScope = 'forward';
   schState.dirty = false;
   schState.draft = {};
+  schState.removedFromSchedule = new Set();
+  schState.addedToSchedule = new Set();
 
   // Обновляем UI переключателей
   document.querySelectorAll('#schModeSwitch .editor-mode-inline-btn').forEach(btn => {
@@ -15814,7 +15873,7 @@ function updateSchPanelCount() {
   const total = schState.rows.length;
   // Считаем, у скольких есть хоть одна активная ячейка
   const withSchedule = schState.rows.filter(r => {
-    const f = schState.draft[r.id] || r.frequency || {};
+    const f = getSchRowFreq(r);
     return Array.isArray(f.schedule) && f.schedule.length > 0;
   }).length;
 
@@ -15829,39 +15888,29 @@ function updateSchPanelCount() {
   el.textContent = `${total} ${label} · ${withSchedule} ${labelShort}`;
 }
 
-/* --- Получить отфильтрованные строки расписания --- */
-function getFilteredScheduleRows() {
+/* Входит ли строка в расписание просматриваемой недели
+   (шаблон недели → разовые правки → несохранённые добавления/удаления) */
+function isSchRowMember(row) {
   const removed = schState.removedFromSchedule || new Set();
   const added = schState.addedToSchedule || new Set();
+  if (removed.has(row.id)) return false;
+  if (added.has(row.id)) return true;
+  return getRowForWeek(row, getSchWeekStart(schState.weekOffset || 0), schState.line).member;
+}
 
-  // Понедельные оверрайды: правки этой недели не трогают базовый шаблон
-  // (оверрайд применяется всегда — в т.ч. когда неделя станет текущей)
-  const weekOffset = schState.weekOffset || 0;
-  const ov = getScheduleWeekOverride(getSchWeekStart(weekOffset), schState.line) || {};
-  const ovRemoved = new Set(ov.removed || []);
-  const ovAdded = new Set(ov.added || []);
-
-  // Базовый шаблон → оверрайд недели → черновик (несохранённые правки)
-  const isMember = (id, inBase) => {
-    let m = inBase;
-    if (ovRemoved.has(id)) m = false;
-    if (ovAdded.has(id)) m = true;
-    if (removed.has(id)) m = false;
-    if (added.has(id)) m = true;
-    return m;
-  };
-
+/* --- Получить отфильтрованные строки расписания --- */
+function getFilteredScheduleRows() {
   let rows = [];
   if (schState.mode === 'mech') {
     rows = getStandards()
       .filter(s => s.line === schState.line)
       .filter(s => s.active !== false)
       .filter(s => !schState.part || s.nodePart === schState.part)
-      .filter(s => isMember(s.id, s.inSchedule === true));
+      .filter(isSchRowMember);
   } else {
     rows = getElectronicParamsForLine(schState.line)
       .filter(p => p.active !== false)
-      .filter(p => isMember(p.id, p.inSchedule === true));
+      .filter(isSchRowMember);
   }
 
   // Фильтр по машине
@@ -15959,31 +16008,14 @@ function renderScheduleMatrix() {
   const rows = getFilteredScheduleRows();
 
   // Список всех строк (без фильтров) — для счётчиков и фильтра машин
-  const allRows = [];
-  if (schState.mode === 'mech') {
-    getStandards()
-      .filter(s => s.line === schState.line && s.active !== false)
-      .filter(s => !schState.part || s.nodePart === schState.part)
-      .filter(s => {
-        const removed = schState.removedFromSchedule || new Set();
-        const added = schState.addedToSchedule || new Set();
-        if (removed.has(s.id)) return false;
-        if (added.has(s.id)) return true;
-        return s.inSchedule === true;
-      })
-      .forEach(s => allRows.push(s));
-  } else {
-    getElectronicParamsForLine(schState.line)
-      .filter(p => p.active !== false)
-      .filter(p => {
-        const removed = schState.removedFromSchedule || new Set();
-        const added = schState.addedToSchedule || new Set();
-        if (removed.has(p.id)) return false;
-        if (added.has(p.id)) return true;
-        return p.inSchedule === true;
-      })
-      .forEach(p => allRows.push(p));
-  }
+  const allRows = schState.mode === 'mech'
+    ? getStandards()
+        .filter(s => s.line === schState.line && s.active !== false)
+        .filter(s => !schState.part || s.nodePart === schState.part)
+        .filter(isSchRowMember)
+    : getElectronicParamsForLine(schState.line)
+        .filter(p => p.active !== false)
+        .filter(isSchRowMember);
 
   schState.rows = rows;
   updateSchPanelCount();
@@ -16044,35 +16076,50 @@ function renderScheduleMatrix() {
     dateByDayIdx[dayIdx] = weekDays[i];
   });
 
-  // Навигация по неделям: на будущей неделе расписание полностью
-  // редактируется, на текущей блокируются прошедшие дни, прошедшая — только просмотр.
-  const weekLabel = getWeekLabel(schState.weekOffset);
-  const isCurrentWeek = schState.weekOffset === 0;
-  const isFutureWeek = schState.weekOffset > 0;
-  const hasOv = hasScheduleWeekOverride(getSchWeekStart(schState.weekOffset), schState.line);
-  const weekSub = hasOv
-    ? 'есть отдельные правки для этой недели'
-    : (isCurrentWeek
-        ? 'текущая неделя · шаблон для всех недель'
-        : (isFutureWeek
-            ? 'правки — только для этой недели'
-            : 'прошедшая неделя — только просмотр'));
+  // Навигация по неделям. Прошлое не меняется: прошедшая неделя — только
+  // просмотр, на текущей нельзя планировать уже прошедшие смены.
+  const off = schState.weekOffset || 0;
+  const isPastWeek = off < 0;
+  const weekLabel = getWeekLabel(off);
+  const weekKind = off === 0 ? 'Эта неделя'
+    : off === 1 ? 'Следующая неделя'
+    : off < 0 ? 'Прошедшая неделя'
+    : 'Неделя через ' + off;
+  let weekSub;
+  if (isPastWeek) weekSub = 'только просмотр — прошлое не меняется';
+  else if (schState.saveScope === 'week') weekSub = 'изменения — только для этой недели';
+  else if (off === 0) weekSub = 'изменения — на оставшиеся смены и в шаблон со следующей недели';
+  else weekSub = 'изменения — в шаблон с этой недели и далее';
+  if (hasScheduleWeekOverride(getSchWeekStart(off), schState.line)) weekSub += ' · есть разовые правки';
+
+  const scopeHtml = isPastWeek ? '' : `
+      <div class="sch-scope" role="group" aria-label="Как сохранить изменения">
+        <span class="sch-scope-label">Сохранить</span>
+        <button type="button" class="sch-scope-btn ${schState.saveScope !== 'week' ? 'active' : ''}" data-sch-scope="forward"
+                title="Изменения войдут в шаблон и будут повторяться каждую неделю">С этой недели и далее</button>
+        <button type="button" class="sch-scope-btn ${schState.saveScope === 'week' ? 'active' : ''}" data-sch-scope="week"
+                title="Разовые правки: другие недели не меняются">Только эта неделя</button>
+      </div>`;
 
   let html = `
     <div class="cl-week-nav sch-week-nav">
       <button type="button" class="cl-week-nav-btn" id="schWeekPrev" title="Предыдущая неделя">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <div class="cl-week-nav-label">
-        <span class="cl-week-nav-title">${escapeHtml(weekLabel)}</span>
+        <span class="cl-week-nav-title">${escapeHtml(weekKind)} · ${escapeHtml(weekLabel)}</span>
         <span class="cl-week-nav-sub">${escapeHtml(weekSub)}</span>
       </div>
       <button type="button" class="cl-week-nav-btn" id="schWeekNext" title="Следующая неделя">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
-      ${!isCurrentWeek ? '<button type="button" class="cl-week-nav-today" id="schWeekToday">Текущая неделя</button>' : ''}
+      <div class="sch-week-quick">
+        <button type="button" class="sch-week-chip ${off === 0 ? 'active' : ''}" data-sch-week="0">Эта неделя</button>
+        <button type="button" class="sch-week-chip ${off === 1 ? 'active' : ''}" data-sch-week="1">Следующая</button>
+      </div>
+      ${scopeHtml}
     </div>
-    <div class="sch-matrix">`;
+    <div class="sch-matrix ${isPastWeek ? 'sch-matrix-readonly' : ''}">`;
 
   // ===== Шапка (с инфо-колонками) =====
   html += '<div class="sch-head-grid">';
@@ -16141,6 +16188,7 @@ function renderScheduleMatrix() {
     el.addEventListener('click', (e) => {
       e.stopPropagation();
       const rowId = el.dataset.twOpen;
+      if (isSchReadOnly()) return;
       if (rowId) openTimeWindowsModal(rowId);
     });
   });
@@ -16151,6 +16199,7 @@ function renderScheduleMatrix() {
       e.stopPropagation();
       const rowId = el.dataset.workToggle;
       if (!rowId) return;
+      if (isSchReadOnly()) return;
       const d = ensureSchDraft(rowId);
       d.work = (d.work === 'Stop') ? 'Run' : 'Stop';
       schState.dirty = true;
@@ -16336,18 +16385,9 @@ function getSchRowFreq(row) {
   // Несохранённые правки главнее всего
   if (schState.draft[row.id]) return schState.draft[row.id];
 
-  // Правки просматриваемой недели (в т.ч. когда неделя уже стала текущей)
-  const ov = getScheduleWeekOverride(getSchWeekStart(schState.weekOffset || 0), schState.line) || {};
-  const snap = ov.rows && ov.rows[row.id];
-  if (snap) {
-    return {
-      ...base,
-      schedule: Array.isArray(snap.schedule) ? snap.schedule : (base.schedule || []),
-      timeWindows: Array.isArray(snap.timeWindows) ? snap.timeWindows : (base.timeWindows || []),
-      work: (snap.work != null) ? snap.work : base.work
-    };
-  }
-  return base;
+  // Шаблон недели + разовые правки этой недели
+  const w = getRowForWeek(row, getSchWeekStart(schState.weekOffset || 0), schState.line);
+  return { ...base, schedule: w.schedule, timeWindows: w.timeWindows, work: w.work };
 }
 
 /* Эффективная периодичность строки для операторского чек-листа:
@@ -16357,18 +16397,9 @@ function getClRowFreq(row) {
   const base = (row && row.frequency) || { type: 'weekly', schedule: [], shifts: [], daysOfWeek: [], dates: [], timeWindows: [] };
   if (!row) return base;
 
-  // Правки просматриваемой недели (в т.ч. когда неделя уже стала текущей)
-  const ov = getScheduleWeekOverride(getClWeekDays(clState.weekOffset || 0)[0], clState.line) || {};
-  const snap = ov.rows && ov.rows[row.id];
-  if (snap) {
-    return {
-      ...base,
-      schedule: Array.isArray(snap.schedule) ? snap.schedule : (base.schedule || []),
-      timeWindows: Array.isArray(snap.timeWindows) ? snap.timeWindows : (base.timeWindows || []),
-      work: (snap.work != null) ? snap.work : base.work
-    };
-  }
-  return base;
+  // Шаблон, действовавший на этой неделе, + разовые правки недели
+  const w = getRowForWeek(row, getClWeekDays(clState.weekOffset || 0)[0], clState.line);
+  return { ...base, schedule: w.schedule, timeWindows: w.timeWindows, work: w.work };
 }
 
 /* id стандартов/параметров, у которых уже есть результат проверки
@@ -16469,29 +16500,25 @@ function renderScheduleRow(row, DAYS, dateByDayIdx) {
     </button>
   </div>`;
 
-  // 14 ячеек: 7 дней × 2 смены.
-  // Блокировка зависит от просматриваемой недели:
-  //  • текущая неделя — прошедшие дни заблокированы (их «догонять» нельзя);
-  //  • будущая неделя — всё редактируется (чек-лист составляется заранее);
-  //  • прошедшая неделя — только просмотр.
-  const todayStr = todayISO();
-  const weekOffset = schState.weekOffset || 0;
-  const isPastWeek = weekOffset < 0;
-  const isFutureWeek = weekOffset > 0;
+  // 14 ячеек: 7 дней × 2 смены. Прошлое не меняется: заблокированы
+  // прошедшая неделя целиком и уже закончившиеся смены текущей недели
+  // (текущую смену ещё можно запланировать).
+  const isPastWeek = (schState.weekOffset || 0) < 0;
 
   DAYS.forEach(d => {
     const dateStr = (dateByDayIdx && dateByDayIdx[d.idx]) || '';
-    const isPastDay = isPastWeek || (!isFutureWeek && !!(dateStr && dateStr < todayStr));
 
     ['day', 'night'].forEach(shift => {
+      const isPast = isPastWeek || (!!dateStr && isShiftPast(dateStr, shift));
       const on = isOn(d.idx, shift);
-      const lockedCls = isPastDay ? ' sch-cell-locked' : '';
-      const lockedAttr = isPastDay ? ' data-locked="1"' : '';
-      const title = isPastDay
+      const lockedCls = isPast ? ' sch-cell-locked' : '';
+      const lockedAttr = isPast ? ' data-locked="1"' : '';
+      const shiftName = shift === 'day' ? 'День' : 'Ночь';
+      const title = isPast
         ? (isPastWeek
-            ? `${d.name} · ${shift === 'day' ? 'День' : 'Ночь'} — прошедшая неделя, только просмотр`
-            : `${d.name} · ${shift === 'day' ? 'День' : 'Ночь'} — день уже прошёл, планирование недоступно`)
-        : `${d.name} · ${shift === 'day' ? 'День' : 'Ночь'}`;
+            ? `${d.name} · ${shiftName} — прошедшая неделя, только просмотр`
+            : `${d.name} · ${shiftName} — смена уже прошла`)
+        : `${d.name} · ${shiftName}`;
       html += `<button type="button"
         class="sch-cell-cell sch-cell-cell-${shift} ${on ? 'on' : ''}${lockedCls}"
         data-row-id="${escapeAttr(row.id)}"
@@ -16504,9 +16531,19 @@ function renderScheduleRow(row, DAYS, dateByDayIdx) {
   html += '</div>';
   return html;
 }
+/* Прошедшую неделю можно только смотреть */
+function isSchReadOnly() {
+  if ((schState.weekOffset || 0) < 0) {
+    showToast('Прошедшая неделя — только просмотр', true);
+    return true;
+  }
+  return false;
+}
+
 /* --- Убрать стандарт из расписания (в черновике) --- */
 function removeRowFromSchedule(rowId) {
   if (!rowId) return;
+  if (isSchReadOnly()) return;
 
   const removedRow = schState.rows.find(r => r.id === rowId);
   if (!removedRow) return;
@@ -16540,11 +16577,10 @@ function bindScheduleCells() {
       e.stopPropagation();
       // Заблокированные дни: прошедшая неделя или прошедшие дни текущей недели
       if (btn.dataset.locked === '1') {
-        const weekOffset = schState.weekOffset || 0;
-        if (weekOffset < 0) {
+        if ((schState.weekOffset || 0) < 0) {
           showToast('Прошедшая неделя — только просмотр', true);
         } else {
-          showToast('День уже прошёл — он попадёт в следующую неделю', true);
+          showToast('Смена уже прошла. Чтобы она повторялась дальше — отметьте её на следующей неделе', true);
         }
         return;
       }
@@ -16625,7 +16661,15 @@ function bindSchWeekNav() {
 
   $('#schWeekPrev')?.addEventListener('click', () => goTo((schState.weekOffset || 0) - 1));
   $('#schWeekNext')?.addEventListener('click', () => goTo((schState.weekOffset || 0) + 1));
-  $('#schWeekToday')?.addEventListener('click', () => goTo(0));
+  document.querySelectorAll('[data-sch-week]').forEach(btn => {
+    btn.addEventListener('click', () => goTo(Number(btn.dataset.schWeek)));
+  });
+  document.querySelectorAll('[data-sch-scope]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      schState.saveScope = btn.dataset.schScope === 'week' ? 'week' : 'forward';
+      renderScheduleMatrix();
+    });
+  });
 }
 
 /* --- Обновление состояния кнопки "Сохранить" --- */
@@ -16641,18 +16685,17 @@ function saveSchedule() {
   if (!schState.dirty) return;
 
   const weekOffset = schState.weekOffset || 0;
-  if (weekOffset === 0) {
-    // Текущая неделя — правим базовый (повторяющийся) шаблон.
-    // Понедельный оверрайд этой недели больше не нужен — база его перекрывает.
-    setScheduleWeekOverride(getSchWeekStart(0), schState.line, null);
-    if (schState.mode === 'mech') {
-      saveMechSchedule();
-    } else {
-      saveElecSchedule();
-    }
-  } else {
-    // Другая неделя — правки только для этой недели
+  if (weekOffset < 0) return showToast('Прошедшую неделю изменить нельзя', true);
+  const weekLabel = getWeekLabel(weekOffset);
+  let msg;
+  if (schState.saveScope === 'week') {
     saveScheduleWeekOverride(weekOffset);
+    msg = `Сохранено только для недели ${weekLabel}`;
+  } else {
+    saveScheduleForward(weekOffset);
+    msg = weekOffset === 0
+      ? 'Сохранено: оставшиеся смены этой недели и шаблон со следующей недели'
+      : `Шаблон сохранён с недели ${weekLabel}`;
   }
 
   schState.dirty = false;
@@ -16662,7 +16705,59 @@ function saveSchedule() {
   schState.addedRows = [];
   updateSchSaveBtn();
   renderScheduleMatrix();
-  showToast('Расписание сохранено');
+  showToast(msg);
+}
+
+/* Сохранение «с этой недели и далее»: новая версия шаблона.
+   Текущая неделя: прошедшие смены не меняются — оставшиеся смены
+   сохраняются разовой правкой недели, а шаблон начинает действовать
+   со следующей недели. */
+function saveScheduleForward(weekOffset) {
+  const line = schState.line;
+  const weekStart = getSchWeekStart(weekOffset);
+  const from = weekOffset === 0 ? getSchWeekStart(1) : weekStart;
+  const removed = schState.removedFromSchedule || new Set();
+  const added = schState.addedToSchedule || new Set();
+  const touched = new Set([...Object.keys(schState.draft), ...removed, ...added]);
+  if (!touched.size) return;
+
+  // Состояние строк считаем ДО записи правок недели
+  const stateOf = (row) => {
+    const w = getRowForWeek(row, weekStart, line);
+    const d = schState.draft[row.id];
+    return {
+      inSchedule: added.has(row.id) ? true : (removed.has(row.id) ? false : w.member),
+      schedule: d ? d.schedule : w.schedule,
+      timeWindows: d ? d.timeWindows : w.timeWindows,
+      work: d && d.work != null ? d.work : w.work
+    };
+  };
+  const isMech = schState.mode === 'mech';
+  const all = isMech ? getStandards() : getElectronicParams().map(normalizeElectronicParam);
+  const states = {};
+  all.forEach(r => { if (touched.has(r.id)) states[r.id] = stateOf(r); });
+
+  if (weekOffset === 0) {
+    saveScheduleWeekOverride(0);
+  } else {
+    // Разовые правки этой недели для изменённых строк заменяет шаблон
+    const ov = getScheduleWeekOverride(weekStart, line);
+    if (ov) {
+      touched.forEach(id => { if (ov.rows) delete ov.rows[id]; });
+      ov.removed = (ov.removed || []).filter(id => !touched.has(id));
+      ov.added = (ov.added || []).filter(id => !touched.has(id));
+      setScheduleWeekOverride(weekStart, line, ov);
+    }
+  }
+
+  const now = new Date().toISOString();
+  all.forEach(r => {
+    if (!states[r.id]) return;
+    setRowTemplateFrom(r, from, states[r.id]);
+    r.updatedAt = now;
+  });
+  if (isMech) setStandards(all);
+  else setElectronicParams(all);
 }
 
 /* Сохранение правок для конкретной недели (не текущей) — не трогает
@@ -16719,6 +16814,7 @@ const schAddState = {
 /* --- Открытие --- */
 function openScheduleAddStandardsModal() {
   if (!schState.line) return;
+  if (isSchReadOnly()) return;
 
   const modal = $('#schAddStandardsModal');
   if (!modal) return;
@@ -16767,7 +16863,7 @@ function renderSchAddList() {
         machine: s.machine || '',
         node: s.node || '',
         nodePart: s.nodePart || '',
-        inSchedule: s.inSchedule === true,
+        inSchedule: isSchRowMember(s),
         group: s.machine || '— без машины —'
       }));
   } else {
@@ -16780,7 +16876,7 @@ function renderSchAddList() {
         machine: p.machine || '',
         node: '',
         nodePart: '',
-        inSchedule: p.inSchedule === true,
+        inSchedule: isSchRowMember(p),
         group: p.machine || '— без машины —'
       }));
   }
@@ -16969,105 +17065,6 @@ $('#schAddCheckAll')?.addEventListener('change', (e) => {
   });
   updateSchAddCounter();
 });
-/* Сохранение для механики */
-function saveMechSchedule() {
-  const all = getStandards();
-  let changed = 0;
-
-  // Обновляем frequency
-  Object.entries(schState.draft).forEach(([id, freq]) => {
-    const st = all.find(s => s.id === id);
-    if (!st) return;
-    st.frequency = {
-      type: 'weekly',
-      schedule: Array.isArray(freq.schedule) ? freq.schedule.map(x => ({ ...x })) : [],
-      timeWindows: Array.isArray(freq.timeWindows) ? freq.timeWindows.map(w => ({ from: w.from, to: w.to })) : [],
-      shifts: [...(freq.shifts || [])],
-      daysOfWeek: [...(freq.daysOfWeek || [])],
-      dates: [...(freq.dates || [])]
-    };
-    if (freq.work === 'Stop' || freq.work === 'Run') {
-      st.work = freq.work;
-    }
-    st.updatedAt = new Date().toISOString();
-    changed++;
-  });
-
-  // Убираем из расписания
-  if (schState.removedFromSchedule) {
-    schState.removedFromSchedule.forEach(id => {
-      const st = all.find(s => s.id === id);
-      if (!st) return;
-      st.inSchedule = false;
-      st.updatedAt = new Date().toISOString();
-      changed++;
-    });
-  }
-
-  // Добавляем в расписание
-  if (schState.addedToSchedule) {
-    schState.addedToSchedule.forEach(id => {
-      const st = all.find(s => s.id === id);
-      if (!st) return;
-      st.inSchedule = true;
-      st.updatedAt = new Date().toISOString();
-      changed++;
-    });
-  }
-
-  if (changed > 0) {
-    setStandards(all);
-  }
-}
-
-/* Сохранение для электроники */
-function saveElecSchedule() {
-  const all = getElectronicParams().map(normalizeElectronicParam);
-  let changed = 0;
-
-  Object.entries(schState.draft).forEach(([id, freq]) => {
-    const p = all.find(x => x.id === id);
-    if (!p) return;
-    p.frequency = {
-      type: 'weekly',
-      schedule: Array.isArray(freq.schedule) ? freq.schedule.map(x => ({ ...x })) : [],
-      timeWindows: Array.isArray(freq.timeWindows) ? freq.timeWindows.map(w => ({ from: w.from, to: w.to })) : [],
-      shifts: [...(freq.shifts || [])],
-      daysOfWeek: [...(freq.daysOfWeek || [])],
-      dates: [...(p.frequency?.dates || [])]
-    };
-    if (freq.work === 'Stop' || freq.work === 'Run') {
-      p.work = freq.work;
-    }
-    p.updatedAt = new Date().toISOString();
-    changed++;
-  });
-
-  if (schState.removedFromSchedule) {
-    schState.removedFromSchedule.forEach(id => {
-      const p = all.find(x => x.id === id);
-      if (!p) return;
-      p.inSchedule = false;
-      p.updatedAt = new Date().toISOString();
-      changed++;
-    });
-  }
-
-  if (schState.addedToSchedule) {
-    schState.addedToSchedule.forEach(id => {
-      const p = all.find(x => x.id === id);
-      if (!p) return;
-      p.inSchedule = true;
-      p.updatedAt = new Date().toISOString();
-      changed++;
-    });
-  }
-
-  if (changed > 0) {
-    setElectronicParams(all);
-  }
-}
-
 /* --- Обработчики вкладки --- */
 
 /* Чип линии — открыть модалку выбора */
@@ -17411,35 +17408,25 @@ function renderClMatrix() {
   const weekDaysForRows = getClWeekDays(clState.weekOffset);
   const weekStartForRows = weekDaysForRows[0];
 
-  // Правки, сделанные в «Расписании CL» именно для этой недели
-  // (применяются всегда — в т.ч. когда неделя уже стала текущей)
-  const weekOv = getScheduleWeekOverride(weekStartForRows, clState.line) || {};
-  const ovRemoved = new Set(weekOv.removed || []);
-  const ovAdded = new Set(weekOv.added || []);
-
   // Стандарты/параметры, у которых УЖЕ есть результат проверки на этой неделе.
   // Их нельзя скрывать, даже если их убрали из расписания — иначе у оператора
   // пропадут уже выполненные проверки.
   const checkedIds = getCheckedStandardIdsForWeek(clState.line, weekDaysForRows);
 
-  const isMember = (id, inBase) => {
-    let m = inBase;
-    if (ovRemoved.has(id)) m = false;
-    if (ovAdded.has(id)) m = true;
-    return m;
-  };
+  // Шаблон, действовавший на этой неделе, + разовые правки недели
+  const isMember = (row) => getRowForWeek(row, weekStartForRows, clState.line).member;
 
   let rows = [];
   if (clState.mode === 'mech') {
     rows = getStandards()
       .filter(s => s.line === clState.line)
       .filter(s => s.active !== false || checkedIds.has(s.id))
-      .filter(s => isMember(s.id, s.inSchedule === true) || checkedIds.has(s.id))
+      .filter(s => isMember(s) || checkedIds.has(s.id))
       .filter(s => !clState.part || s.nodePart === clState.part);
   } else {
     rows = getElectronicParamsForLine(clState.line)
       .filter(p => p.active !== false || checkedIds.has(p.id))
-      .filter(p => isMember(p.id, p.inSchedule === true) || checkedIds.has(p.id));
+      .filter(p => isMember(p) || checkedIds.has(p.id));
   }
 
   rows.sort((a, b) => {
@@ -17570,7 +17557,7 @@ function renderClRow(row, num, DAYS, dateByDayIdx) {
   const node = row.node || '';
   const machine = row.machine || '';
   const oplNumber = row.oplNumber || '';
-  const work = row.work === 'Stop' ? 'Stop' : 'Run';
+  const work = freq.work === 'Stop' ? 'Stop' : 'Run';
 
   // Время проверки — из frequency.timeWindows
   const timeWindows = Array.isArray(freq.timeWindows) ? freq.timeWindows : [];

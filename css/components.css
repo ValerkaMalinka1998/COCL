@@ -9761,6 +9761,82 @@ header,
   z-index: 2;
 }
 
+/* Расписание CL: подпись недели слева, быстрые кнопки недель и
+   выбор «как сохранить» — справа */
+.sch-week-nav .cl-week-nav-label {
+  min-width: 260px;
+  text-align: left;
+}
+.sch-week-nav .cl-week-nav-sub {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12px;
+}
+.sch-week-quick {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  margin-left: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-input);
+}
+.sch-week-chip,
+.sch-scope-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  color: var(--text-second);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.sch-week-chip:hover,
+.sch-scope-btn:hover {
+  color: var(--text-main);
+  background: var(--bg-hover);
+}
+.sch-week-chip.active {
+  color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.12);
+  border-color: var(--accent-cyan);
+}
+.sch-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 3px 3px 10px;
+  margin-left: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-input);
+}
+.sch-scope-label {
+  margin-right: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.sch-scope-btn.active {
+  color: var(--text-main);
+  background: var(--bg-card);
+  border-color: var(--border-hi);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+/* Прошедшая неделя: только просмотр */
+.sch-matrix-readonly .sch-info-time,
+.sch-matrix-readonly .sch-info-work,
+.sch-matrix-readonly .sch-row-remove {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
 .sch-matrix {
   display: flex;
   flex-direction: column;

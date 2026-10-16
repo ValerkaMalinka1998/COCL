@@ -119,7 +119,7 @@ def main():
             issues.append(f'id "{i}" удалён из index.html, но используется в JS')
 
     # 9. timeWindows при сохранении расписания
-    for fn in ('saveMechSchedule', 'saveElecSchedule'):
+    for fn in ('saveScheduleWeekOverride', 'setRowTemplateFrom', 'normalizeElectronicFrequency'):
         m = re.search(r'function ' + fn + r'\s*\(.*?\n\}', app_new, re.S)
         if m and 'timeWindows' not in m.group(0):
             issues.append(f'{fn} не сохраняет frequency.timeWindows — окна проверки потеряются')

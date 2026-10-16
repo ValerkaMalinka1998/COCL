@@ -24,7 +24,8 @@ python3 .claude/skills/cocl-review/scripts/review_checks.py --base origin/main
 - рост числа `classList.add/remove('active')` на модалках и `console.log`;
 - изменённый `STORAGE_KEYS`;
 - удалённые из index.html id, которые ещё ищет JS;
-- `saveMechSchedule` / `saveElecSchedule` без `timeWindows`;
+- сохранение расписания и нормализация параметра без `timeWindows`
+  (`saveScheduleWeekOverride`, `setRowTemplateFrom`, `normalizeElectronicFrequency`);
 - hex-цвета в CSS вместо переменных;
 - смену переводов строк CRLF → LF (файлы проекта в CRLF).
 
