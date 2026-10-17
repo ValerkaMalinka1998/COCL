@@ -5,6 +5,68 @@
    ============================================================ */
 
 /* ============================================================
+   ГРАФИК СМЕН — конфигурация (cl_electronic_shiftcfg_v1)
+   ============================================================ */
+function sanitizeCycleArray(arr, def) {
+  if (!Array.isArray(arr)) return [...def];
+  const filtered = arr.filter(s => ['A','B','C','D'].includes(s));
+  return filtered.length ? filtered : [...def];
+}
+
+function getElectronicShiftConfig() {
+  const raw = load(STORAGE_KEYS.electronicShiftCfg, null);
+
+  // Миграция со старого формата (cycle/daysPerShift) → v2
+  if (raw && typeof raw === 'object' && Array.isArray(raw.cycle) && !raw.dayCycle) {
+    const legacyCycle = raw.cycle;
+    const legacyDays = Number(raw.daysPerShift) > 0 ? Number(raw.daysPerShift) : 2;
+    const legacyStart = /^\d{4}-\d{2}-\d{2}$/.test(raw.startDate || '')
+      ? raw.startDate
+      : DEFAULT_ELECTRONIC_SHIFT_CFG.startDate;
+
+    const dayCycle = [];
+    const nightCycle = [];
+    for (let i = 0; i < 8; i++) {
+      const pos = Math.floor(i / legacyDays) % legacyCycle.length;
+      const nextPos = Math.floor((i + 1) / legacyDays) % legacyCycle.length;
+      dayCycle.push(legacyCycle[pos]);
+      nightCycle.push(legacyCycle[nextPos]);
+    }
+
+    const migrated = { dayCycle, nightCycle, startDate: legacyStart };
+    save(STORAGE_KEYS.electronicShiftCfg, migrated);
+    return migrated;
+  }
+
+  if (!raw || typeof raw !== 'object') {
+    return {
+      dayCycle:   [...DEFAULT_ELECTRONIC_SHIFT_CFG.dayCycle],
+      nightCycle: [...DEFAULT_ELECTRONIC_SHIFT_CFG.nightCycle],
+      startDate:  DEFAULT_ELECTRONIC_SHIFT_CFG.startDate
+    };
+  }
+
+  const dayCycle   = sanitizeCycleArray(raw.dayCycle,   DEFAULT_ELECTRONIC_SHIFT_CFG.dayCycle);
+  const nightCycle = sanitizeCycleArray(raw.nightCycle, DEFAULT_ELECTRONIC_SHIFT_CFG.nightCycle);
+  const startDate  = /^\d{4}-\d{2}-\d{2}$/.test(raw.startDate || '')
+    ? raw.startDate
+    : DEFAULT_ELECTRONIC_SHIFT_CFG.startDate;
+
+  return { dayCycle, nightCycle, startDate };
+}
+
+function setElectronicShiftConfig(cfg) {
+  const normalized = {
+    dayCycle:   sanitizeCycleArray(cfg.dayCycle,   DEFAULT_ELECTRONIC_SHIFT_CFG.dayCycle),
+    nightCycle: sanitizeCycleArray(cfg.nightCycle, DEFAULT_ELECTRONIC_SHIFT_CFG.nightCycle),
+    startDate:  /^\d{4}-\d{2}-\d{2}$/.test(cfg.startDate || '')
+      ? cfg.startDate
+      : DEFAULT_ELECTRONIC_SHIFT_CFG.startDate
+  };
+  save(STORAGE_KEYS.electronicShiftCfg, normalized);
+}
+
+/* ============================================================
    CL ELECTRONIC — карточка «График смен»
    ============================================================ */
 function renderElectronicShiftSettings() {
@@ -116,26 +178,3 @@ $('#elecShiftDayCycle')?.addEventListener('input', updateShiftPreviewTemporary);
 $('#elecShiftNightCycle')?.addEventListener('input', updateShiftPreviewTemporary);
 $('#elecShiftStart')?.addEventListener('input', updateShiftPreviewTemporary);
 
-/* Удалить блок */
-window.deleteBlock = function(id) {
-  const blocks = getBlocks();
-  const block = blocks.find(b => b.id === id);
-  if (!block) return;
-
-  if (!confirm(`Удалить блок "${block.name}"? Линии останутся, но отвяжутся от блока.`)) return;
-
-  // Удаляем блок из реальной структуры цехов
-  const workshops = getWorkshops();
-  let removed = false;
-  workshops.forEach(w => (w.areas || []).forEach(a => {
-    if (!Array.isArray(a.blocks)) return;
-    const idx = a.blocks.findIndex(b => b.id === id);
-    if (idx !== -1) {
-      a.blocks.splice(idx, 1);
-      removed = true;
-    }
-  }));
-  if (removed) setWorkshops(workshops);
-  renderBlocksSettings();
-  showToast('Блок удалён');
-};

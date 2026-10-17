@@ -569,7 +569,7 @@ async function parseStandardsExcelV3(file, targetLine) {
 
   if (result.addedMachines.length > 0) {
     setLineMachines(lineMachines);
-    if (typeof renderLineMachinesSettings === 'function') renderLineMachinesSettings();
+    if (typeof renderStructureSettings === 'function') renderStructureSettings();
     if (typeof fillEditorFilters === 'function') fillEditorFilters();
   }
 

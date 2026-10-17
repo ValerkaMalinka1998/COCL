@@ -1380,292 +1380,317 @@
 
 <!-- ======================= ВКЛАДКА НАСТРОЙКИ ======================= -->
 <div class="tab" id="tab-settings">
-
-  <div class="card">
-    <h2>Бэкап данных</h2>
-    <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
-      Скачайте бэкап — файл JSON со всеми стандартами, историей, узлами и настройками.
-      Сохраните его в надёжном месте. При необходимости — загрузите обратно.
-    </p>
-    <div style="display:flex; gap:10px; flex-wrap:wrap">
-      <button class="btn btn-primary btn-icon-text" id="backupDownloadBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-          <polyline points="17 21 17 13 7 13 7 21"/>
-          <polyline points="7 3 7 8 15 8"/>
-        </svg>
-        <span>Скачать бэкап</span>
+  <div class="settings-shell">
+    <nav class="settings-nav" id="settingsNav" aria-label="Разделы настроек">
+      <button type="button" class="settings-nav-item" data-settings-panel="structure" title="Цеха, участки, блоки, линии, машины">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><path d="M7 10v4a2 2 0 0 0 2 2h5"/></svg>
+        <span class="settings-nav-label">Структура</span>
+        <span class="settings-nav-count" data-settings-count="structure"></span>
       </button>
-      <button class="btn btn-secondary btn-icon-text" id="backupUploadBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-        </svg>
-        <span>Загрузить бэкап</span>
+      <button type="button" class="settings-nav-item" data-settings-panel="brands" title="Справочник брендов по цехам">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        <span class="settings-nav-label">Бренды</span>
+        <span class="settings-nav-count" data-settings-count="brands"></span>
       </button>
-      <input type="file" id="backupFileInput" accept=".json" style="display:none">
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>Блоки линий</h2>
-    <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
-      Разделите участок на блоки. Каждая линия может быть только в одном блоке.
-      Новый блок добавляется кнопкой «＋ Добавить блок» внутри нужного участка.
-    </p>
-    <div id="blocksList"></div>
-  </div>
-
-  <div class="card">
-    <h2>Машины для линий</h2>
-    <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
-      Для каждой линии задайте свой список машин. Используется при создании стандартов и в фильтрах.
-    </p>
-    <div id="lineMachinesContainer"></div>
-  </div>
-
-  <div class="card">
-    <h2>Триггеры Change Over</h2>
-    <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
-      Собственные причины смены сорта, которые показываются в блоке «Что меняется».
-      Назначаются стандартам (механическим и электронным) в качестве триггера.
-    </p>
-    <div id="customTriggersContainer"></div>
-    <div class="card-actions-bar">
-      <button class="btn btn-primary btn-icon-text" id="addCustomTriggerBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-        <span>Добавить триггер</span>
+      <button type="button" class="settings-nav-item" data-settings-panel="toplosses" title="Потери по цехам и категориям">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        <span class="settings-nav-label">TOP Losses</span>
+        <span class="settings-nav-count" data-settings-count="toplosses"></span>
       </button>
-    </div>
-  </div>
-
-  <div class="card">
-  <h2>Категории Top Losses</h2>
-  <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
-    Потери, дефекты и выбросы, по которым контролируются стандарты.
-    Оператор на вкладке «TOP Losses» выбирает конкретные потери — и получает список стандартов для проверки.
-  </p>
-  <div id="topLossesContainer"></div>
-  <div class="card-actions-bar">
-    <button class="btn btn-secondary btn-icon-text" id="downloadTopLossesTemplateBtn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-        <polyline points="7 10 12 15 17 10"/>
-        <line x1="12" y1="15" x2="12" y2="3"/>
-      </svg>
-      <span>Скачать шаблон</span>
-    </button>
-    <button class="btn btn-success btn-icon-text" id="uploadTopLossesBtn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-        <polyline points="17 8 12 3 7 8"/>
-        <line x1="12" y1="3" x2="12" y2="15"/>
-      </svg>
-      <span>Загрузить из Excel</span>
-    </button>
-    <input type="file" id="topLossesFileInput" accept=".xlsx,.xls" style="display:none">
-  </div>
-</div>
-  <div class="card">
-    <h2>Общий список брендов <span class="list-counter" id="brandsCount"></span></h2>
-    <div class="list-toolbar">
-      <input type="text" id="brandsSearch" placeholder="🔍 Поиск по названию...">
-    </div>
-    <div class="bl-groups" id="brandsList"></div>
-    <div class="card-actions-bar">
-      <button class="btn btn-primary btn-icon-text" id="openAddBrandModalBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-        <span>Добавить бренд</span>
+      <button type="button" class="settings-nav-item" data-settings-panel="triggers" title="Причины смены сорта">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        <span class="settings-nav-label">Триггеры</span>
+        <span class="settings-nav-count" data-settings-count="triggers"></span>
       </button>
-      <button class="btn btn-secondary btn-icon-text" id="downloadBrandsTemplateBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/>
-          <line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
-        <span>Скачать шаблон</span>
+      <button type="button" class="settings-nav-item" data-settings-panel="shifts" title="График бригад">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span class="settings-nav-label">Смены</span>
+        <span class="settings-nav-count" data-settings-count="shifts"></span>
       </button>
-      <button class="btn btn-success btn-icon-text" id="uploadBrandsBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="17 8 12 3 7 8"/>
-          <line x1="12" y1="3" x2="12" y2="15"/>
-        </svg>
-        <span>Загрузить из Excel</span>
+      <button type="button" class="settings-nav-item" data-settings-panel="operators" title="Список ФИО">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span class="settings-nav-label">Операторы</span>
+        <span class="settings-nav-count" data-settings-count="operators"></span>
       </button>
-      <input type="file" id="brandsFileInput" accept=".xlsx,.xls" style="display:none">
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>Бренды для каждой линии</h2>
-    <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
-      Нажмите «Настроить» на нужной линии, чтобы выбрать бренды.
-      Если у линии нет ни одного бренда — она не появится в выборе оператора.
-    </p>
-    <div id="lineBrandsContainer"></div>
-  </div>
-
-  <div class="card">
-    <h2>Операторы <span class="list-counter" id="operatorsCount"></span></h2>
-    <div class="list-toolbar">
-      <input type="text" id="operatorsSearch" placeholder="🔍 Поиск по ФИО...">
-    </div>
-    <div class="operators-list" id="operatorsList"></div>
-    <div class="pagination-bar" id="operatorsPagination"></div>
-    <div class="card-actions-bar">
-      <button class="btn btn-primary btn-icon-text" id="openAddOperatorModalBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-        <span>Добавить оператора</span>
+      <button type="button" class="settings-nav-item" data-settings-panel="photos" title="Хранилище и проверка">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span class="settings-nav-label">Фото</span>
+        <span class="settings-nav-count" data-settings-count="photos"></span>
       </button>
-      <button class="btn btn-secondary btn-icon-text" id="downloadOperatorsTemplateBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/>
-          <line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
-        <span>Скачать шаблон</span>
+      <button type="button" class="settings-nav-item" data-settings-panel="data" title="Бэкап и сброс">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        <span class="settings-nav-label">Данные</span>
+        <span class="settings-nav-count" data-settings-count="data"></span>
       </button>
-      <button class="btn btn-success btn-icon-text" id="uploadOperatorsBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="17 8 12 3 7 8"/>
-          <line x1="12" y1="3" x2="12" y2="15"/>
-        </svg>
-        <span>Загрузить из Excel</span>
-      </button>
-      <input type="file" id="operatorsFileInput" accept=".xlsx,.xls" style="display:none">
-    </div>
-  </div>
-
-  <div class="card">
-    <h2>График смен CL Electronic</h2>
-    <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
-      Определяет автоматический расчёт смены по дате для вкладки «CL Electronic».
-      Порядок смен и количество дней на смену фиксированы, дата старта задаётся один раз.
-    </p>
-
-    <div class="row">
-      <div class="field">
-        <label>Порядок смен в цикле</label>
-        <input type="text" id="elecShiftCycle" placeholder="D, A, C, B" readonly
-               style="background:var(--bg-hover);font-family:'Courier New',Consolas,monospace;letter-spacing:1px">
+    </nav>
+    <div class="settings-panels">
+    <section class="settings-panel" data-panel="structure">
+      <div class="card st-card">
+    <h2>Структура производства</h2>
+    <p class="settings-hint">Цех → участок → блок → линия. Линия добавляется кнопкой «+» прямо в своём блоке. Нажмите на линию — справа откроется её карточка: машины, бренды, место в структуре.</p>
+    <div class="st-layout">
+      <div class="st-tree-wrap">
+        <div class="st-toolbar">
+          <div class="settings-search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="stSearch" placeholder="Найти линию или машину…" autocomplete="off">
+          </div>
+          <div class="settings-chips" id="stWsChips"></div>
+        </div>
+        <div class="st-tree" id="stTree"></div>
       </div>
-      <div class="field" style="max-width:180px">
-        <label class="required">Дней на одну смену</label>
-        <input type="number" id="elecShiftDays" min="1" max="14" value="2" placeholder="2">
-      </div>
-      <div class="field" style="max-width:220px">
-        <label class="required">Дата старта цикла</label>
-        <input type="date" id="elecShiftStart" value="2026-01-01">
-      </div>
-    </div>
-
-    <div class="photo-path-block" style="margin-top:14px">
-      <div class="photo-path-label">Предпросмотр — ближайшие 8 дней от выбранной даты старта:</div>
-      <div id="elecShiftPreview" class="elec-shift-preview"></div>
-    </div>
-
-    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px">
-      <button class="btn btn-primary btn-icon-text" id="elecShiftSaveBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-          <polyline points="17 21 17 13 7 13 7 21"/>
-          <polyline points="7 3 7 8 15 8"/>
-        </svg>
-        <span>Сохранить</span>
-      </button>
-      <button class="btn btn-secondary" id="elecShiftResetBtn" type="button">
-        Сбросить к стандартному
-      </button>
+      <aside class="st-card-panel" id="stLineCard"></aside>
     </div>
   </div>
-
-  <!-- ======================= КАРТОЧКА: ХРАНИЛИЩЕ ФОТО ======================= -->
-  <div class="card">
-    <h2>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;color:var(--accent-cyan)">
-        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-        <circle cx="8.5" cy="8.5" r="1.5"/>
-        <polyline points="21 15 16 10 5 21"/>
-      </svg>
-      Хранилище фотографий
-    </h2>
-    <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
-      Все фотографии стандартов лежат в папке рядом с приложением. Файлы добавляются вручную — через проводник.
-    </p>
-
-    <div class="photo-path-block">
-      <div class="photo-path-label">Путь к папке с фотографиями:</div>
-      <div class="photo-path-row">
-        <code class="photo-path-value" id="photoPathValue">photos/&lt;Линия&gt;/&lt;Maker или Packer&gt;/</code>
-        <button class="btn btn-secondary btn-sm btn-icon-text" id="copyPhotoPathBtn" type="button">
+    </section>
+    <section class="settings-panel" data-panel="brands">
+      <div class="card">
+        <h2>Общий список брендов <span class="list-counter" id="brandsCount"></span></h2>
+        <p class="settings-hint">Справочник брендов по цехам. Какие бренды выпускает линия — отмечается в «Структуре» на карточке линии.</p>
+        <div id="brandsList"></div>
+        <div class="card-actions-bar">
+          <button class="btn btn-secondary btn-icon-text" id="downloadBrandsTemplateBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span>Скачать шаблон</span>
+          </button>
+          <button class="btn btn-success btn-icon-text" id="uploadBrandsBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <span>Загрузить из Excel</span>
+          </button>
+          <input type="file" id="brandsFileInput" accept=".xlsx,.xls" style="display:none">
+        </div>
+      </div>
+    </section>
+    <section class="settings-panel" data-panel="toplosses">
+      <div class="card">
+        <h2>Категории Top Losses</h2>
+      <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
+        Потери, дефекты и выбросы, по которым контролируются стандарты.
+        Оператор на вкладке «TOP Losses» выбирает конкретные потери — и получает список стандартов для проверки.
+      </p>
+      <div id="topLossesContainer"></div>
+      <div class="card-actions-bar">
+        <button class="btn btn-secondary btn-icon-text" id="downloadTopLossesTemplateBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
-          <span>Скопировать</span>
+          <span>Скачать шаблон</span>
+        </button>
+        <button class="btn btn-success btn-icon-text" id="uploadTopLossesBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <span>Загрузить из Excel</span>
+        </button>
+        <input type="file" id="topLossesFileInput" accept=".xlsx,.xls" style="display:none">
+      </div>
+    </div>
+    </section>
+    <section class="settings-panel" data-panel="triggers">
+      <div class="card">
+    <h2>Триггеры Change Over <span class="list-counter" id="triggersCount"></span></h2>
+    <p class="settings-hint">Причины смены сорта для блока «Что меняется». У каждого цеха свои; в SMD триггер можно ограничить частью линии. Назначаются стандартам и E-Param на их страницах.</p>
+    <div id="customTriggersContainer"></div>
+  </div>
+    </section>
+    <section class="settings-panel" data-panel="shifts">
+      <div class="card">
+        <h2>График смен CL Electronic</h2>
+        <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
+          Определяет автоматический расчёт смены по дате для вкладки «CL Electronic».
+          Порядок смен и количество дней на смену фиксированы, дата старта задаётся один раз.
+        </p>
+
+        <div class="row">
+          <div class="field">
+            <label>Порядок смен в цикле</label>
+            <input type="text" id="elecShiftCycle" placeholder="D, A, C, B" readonly
+                   style="background:var(--bg-hover);font-family:'Courier New',Consolas,monospace;letter-spacing:1px">
+          </div>
+          <div class="field" style="max-width:180px">
+            <label class="required">Дней на одну смену</label>
+            <input type="number" id="elecShiftDays" min="1" max="14" value="2" placeholder="2">
+          </div>
+          <div class="field" style="max-width:220px">
+            <label class="required">Дата старта цикла</label>
+            <input type="date" id="elecShiftStart" value="2026-01-01">
+          </div>
+        </div>
+
+        <div class="photo-path-block" style="margin-top:14px">
+          <div class="photo-path-label">Предпросмотр — ближайшие 8 дней от выбранной даты старта:</div>
+          <div id="elecShiftPreview" class="elec-shift-preview"></div>
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px">
+          <button class="btn btn-primary btn-icon-text" id="elecShiftSaveBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            <span>Сохранить</span>
+          </button>
+          <button class="btn btn-secondary" id="elecShiftResetBtn" type="button">
+            Сбросить к стандартному
+          </button>
+        </div>
+      </div>
+    </section>
+    <section class="settings-panel" data-panel="operators">
+      <div class="card">
+        <h2>Операторы <span class="list-counter" id="operatorsCount"></span></h2>
+        <div class="list-toolbar">
+          <input type="text" id="operatorsSearch" placeholder="🔍 Поиск по ФИО...">
+        </div>
+        <div class="operators-list" id="operatorsList"></div>
+        <div class="pagination-bar" id="operatorsPagination"></div>
+        <div class="card-actions-bar">
+          <button class="btn btn-primary btn-icon-text" id="openAddOperatorModalBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            <span>Добавить оператора</span>
+          </button>
+          <button class="btn btn-secondary btn-icon-text" id="downloadOperatorsTemplateBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span>Скачать шаблон</span>
+          </button>
+          <button class="btn btn-success btn-icon-text" id="uploadOperatorsBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <span>Загрузить из Excel</span>
+          </button>
+          <input type="file" id="operatorsFileInput" accept=".xlsx,.xls" style="display:none">
+        </div>
+      </div>
+    </section>
+    <section class="settings-panel" data-panel="photos">
+      <!-- ======================= КАРТОЧКА: ХРАНИЛИЩЕ ФОТО ======================= -->
+      <div class="card">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-2px;margin-right:6px;color:var(--accent-cyan)">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+          Хранилище фотографий
+        </h2>
+        <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
+          Все фотографии стандартов лежат в папке рядом с приложением. Файлы добавляются вручную — через проводник.
+        </p>
+
+        <div class="photo-path-block">
+          <div class="photo-path-label">Путь к папке с фотографиями:</div>
+          <div class="photo-path-row">
+            <code class="photo-path-value" id="photoPathValue">photos/&lt;Линия&gt;/&lt;Maker или Packer&gt;/</code>
+            <button class="btn btn-secondary btn-sm btn-icon-text" id="copyPhotoPathBtn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+              <span>Скопировать</span>
+            </button>
+          </div>
+          <div class="photo-path-example">
+            Пример: <code>photos/SD08/Maker/max-1.jpg</code>
+          </div>
+        </div>
+
+        <div class="photo-stats-grid">
+          <div class="photo-stat">
+            <div class="photo-stat-value" id="photoStatsStandards">0</div>
+            <div class="photo-stat-label">Стандартов с фото</div>
+          </div>
+          <div class="photo-stat">
+            <div class="photo-stat-value" id="photoStatsTotal">0</div>
+            <div class="photo-stat-label">Всего фото</div>
+          </div>
+        </div>
+
+        <div style="margin-top:14px">
+          <button class="btn btn-primary btn-icon-text" id="checkPhotosBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            <span>Проверить фото</span>
+          </button>
+        </div>
+
+    <p style="color:var(--text-second);font-size:12px;margin-top:14px;line-height:1.5">
+      ⚠ Файлы не загружаются через сайт — их нужно положить в папку вручную. Пока нет сервера, каждый
+      пользователь (технолог, оператор) должен иметь свою копию папки <code>photos/</code>. Чтобы
+      перенести фото на другой ПК — скопируйте папку целиком.
+    </p>
+      </div>
+    </section>
+    <section class="settings-panel" data-panel="data">
+      <div class="card">
+        <h2>Бэкап данных</h2>
+        <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
+          Скачайте бэкап — файл JSON со всеми стандартами, историей, узлами и настройками.
+          Сохраните его в надёжном месте. При необходимости — загрузите обратно.
+        </p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap">
+          <button class="btn btn-primary btn-icon-text" id="backupDownloadBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            <span>Скачать бэкап</span>
+          </button>
+          <button class="btn btn-secondary btn-icon-text" id="backupUploadBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span>Загрузить бэкап</span>
+          </button>
+          <input type="file" id="backupFileInput" accept=".json" style="display:none">
+        </div>
+      </div>
+
+      <div class="card" style="border-left:4px solid #c0392b">
+        <h2 style="color:#c0392b">Опасная зона</h2>
+        <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
+          Полный сброс всех данных: стандарты, история, узлы, настройки.
+          Действие необратимо. Рекомендуется сначала скачать бэкап.
+        </p>
+        <button class="btn btn-danger btn-icon-text" id="resetAllBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6"/>
+            <path d="M14 11v6"/>
+            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+          <span>Сбросить все данные</span>
         </button>
       </div>
-      <div class="photo-path-example">
-        Пример: <code>photos/SD08/Maker/max-1.jpg</code>
-      </div>
+    </section>
     </div>
-
-    <div class="photo-stats-grid">
-      <div class="photo-stat">
-        <div class="photo-stat-value" id="photoStatsStandards">0</div>
-        <div class="photo-stat-label">Стандартов с фото</div>
-      </div>
-      <div class="photo-stat">
-        <div class="photo-stat-value" id="photoStatsTotal">0</div>
-        <div class="photo-stat-label">Всего фото</div>
-      </div>
-    </div>
-
-    <div style="margin-top:14px">
-      <button class="btn btn-primary btn-icon-text" id="checkPhotosBtn" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-          <polyline points="22 4 12 14.01 9 11.01"/>
-        </svg>
-        <span>Проверить фото</span>
-      </button>
-    </div>
-
-<p style="color:var(--text-second);font-size:12px;margin-top:14px;line-height:1.5">
-  ⚠ Файлы не загружаются через сайт — их нужно положить в папку вручную. Пока нет сервера, каждый
-  пользователь (технолог, оператор) должен иметь свою копию папки <code>photos/</code>. Чтобы
-  перенести фото на другой ПК — скопируйте папку целиком.
-</p>
   </div>
-
-  <div class="card" style="border-left:4px solid #c0392b">
-    <h2 style="color:#c0392b">Опасная зона</h2>
-    <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
-      Полный сброс всех данных: стандарты, история, узлы, настройки.
-      Действие необратимо. Рекомендуется сначала скачать бэкап.
-    </p>
-    <button class="btn btn-danger btn-icon-text" id="resetAllBtn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="3 6 5 6 21 6"/>
-        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-        <path d="M10 11v6"/>
-        <path d="M14 11v6"/>
-        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-      </svg>
-      <span>Сбросить все данные</span>
-    </button>
-  </div>
-
 </div>
 
 </main>
@@ -1812,26 +1837,6 @@
   </div>
 </div>
 
-<!-- ======================= МОДАЛЬНОЕ ОКНО: БРЕНДЫ ЛИНИИ ======================= -->
-<div class="modal-overlay" id="lineBrandsModal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 id="lineBrandsModalTitle">Бренды линии</h3>
-      <button class="modal-close" id="lineBrandsModalClose">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="field" style="margin-bottom:14px">
-        <input type="text" id="lineBrandsSearch" placeholder="🔍 Поиск по названию бренда...">
-      </div>
-      <div class="list-counter" id="lineBrandsCounter" style="margin-bottom:8px"></div>
-      <div class="scrollable-list" id="lineBrandsChecklist" style="max-height:400px"></div>
-    </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary modal-add-btn-left" id="lineBrandsClearBtn">Очистить</button>
-        <button class="btn btn-primary" id="lineBrandsDoneBtn">Готово</button>
-      </div>
-  </div>
-</div>
 
 <!-- ======================= МОДАЛЬНОЕ ОКНО: ДОБАВИТЬ ОПЕРАТОРА ======================= -->
 <div class="modal-overlay" id="addOperatorModal">
@@ -1856,31 +1861,6 @@
   </div>
 </div>
 
-<!-- ======================= МОДАЛЬНОЕ ОКНО: ПОТЕРЯ (внутри категории) ======================= -->
-<div class="modal-overlay" id="topLossItemModal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 id="topLossItemModalTitle">Добавить потерю</h3>
-      <button class="modal-close" id="topLossItemModalClose">✕</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="topLossItemModalCategoryId">
-      <input type="hidden" id="topLossItemModalId">
-      <p id="topLossItemModalCategoryLabel" style="color:var(--text-second);font-size:13px;margin-bottom:14px"></p>
-      <div class="field">
-        <label class="required">Название потери</label>
-        <input type="text" id="topLossItemModalName" placeholder="Обрыв штранга">
-      </div>
-      <p style="color:var(--text-second);font-size:12px;margin-top:8px">
-        Например: <strong>Обрыв штранга</strong>, <strong>Замятие сигарет</strong>, <strong>Выбросы по LES</strong>.
-      </p>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" id="topLossItemModalCancel">Отмена</button>
-      <button class="btn btn-primary" id="topLossItemModalSave">Добавить</button>
-    </div>
-  </div>
-</div>
 
 <!-- ======================= МОДАЛЬНОЕ ОКНО: ВЫБОР ПОТЕРЬ ДЛЯ СТАНДАРТА ======================= -->
 <div class="modal-overlay" id="topLossPickerModal">
@@ -1925,109 +1905,8 @@
   </div>
 </div>
 
-<!-- ======================= МОДАЛЬНОЕ ОКНО: ДОБАВИТЬ БРЕНД ======================= -->
-<div class="modal-overlay" id="addBrandModal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>Добавить бренд</h3>
-      <button class="modal-close" id="addBrandModalClose">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="field">
-        <label class="required">Название бренда</label>
-        <input type="text" id="newBrandInput" placeholder="Например: Marlboro">
-      </div>
-      <div class="field">
-        <label>Цех</label>
-        <select id="addBrandWorkshop">
-          <option value="">— все цеха —</option>
-        </select>
-      </div>
-      <p style="color:var(--text-second);font-size:12px;margin-top:8px">
-        Используйте название, которое будет отображаться у оператора.
-      </p>
 
-      <div class="field" style="margin-top:16px">
-        <label>Сразу добавить на линии:</label>
-        <div class="checkbox-group" id="addBrandLinesGroup"></div>
-        <p style="color:var(--text-second);font-size:12px;margin-top:6px">
-          Можно оставить пустым — потом привяжете в разделе «Бренды для каждой линии».
-        </p>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" id="addBrandCancelBtn">Отмена</button>
-      <button class="btn btn-primary" id="addBrandBtn">Добавить</button>
-    </div>
-  </div>
-</div>
 
-<!-- ======================= МОДАЛЬНОЕ ОКНО: ТРИГГЕР CHANGE OVER ======================= -->
-<div class="modal-overlay" id="customTriggerModal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 id="customTriggerModalTitle">Добавить триггер</h3>
-      <button class="modal-close" id="customTriggerModalClose">✕</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="customTriggerModalId">
-      <div class="field">
-        <label class="required">Название триггера</label>
-        <input type="text" id="customTriggerModalLabel" placeholder="Например: Смена ароматизатора">
-      </div>
-      <div class="field">
-        <label class="required">Цех</label>
-        <select id="customTriggerModalWorkshop"></select>
-      </div>
-      <div class="field" id="customTriggerModalPartField">
-        <label>Часть линии</label>
-        <select id="customTriggerModalPart">
-          <option value="">— любая —</option>
-          <option value="Maker">Maker</option>
-          <option value="Packer">Packer</option>
-        </select>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" id="customTriggerModalCancel">Отмена</button>
-      <button class="btn btn-primary" id="customTriggerModalSave">Добавить</button>
-    </div>
-  </div>
-</div>
-
-<!-- ======================= МОДАЛЬНОЕ ОКНО: РЕДАКТИРОВАТЬ БРЕНД ======================= -->
-<div class="modal-overlay" id="editBrandModal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>Изменить бренд</h3>
-      <button class="modal-close" id="editBrandModalClose">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="field">
-        <label class="required">Название бренда</label>
-        <input type="text" id="editBrandInput" placeholder="Название бренда">
-      </div>
-      <div class="field">
-        <label>Цех</label>
-        <select id="editBrandWorkshop">
-          <option value="">— все цеха —</option>
-        </select>
-      </div>
-      <p style="color:var(--text-second);font-size:12px;margin-top:8px">
-        Новое название автоматически применится во всех линиях, где использовался этот бренд.
-      </p>
-
-      <div class="field" style="margin-top:16px">
-        <label>Привязан к линиям:</label>
-        <div class="checkbox-group" id="editBrandLinesGroup"></div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" id="editBrandCancelBtn">Отмена</button>
-      <button class="btn btn-primary" id="editBrandSaveBtn">Сохранить</button>
-    </div>
-  </div>
-</div>
 
 <!-- ======================= МОДАЛЬНОЕ ОКНО: ПРОСМОТР СТАНДАРТА ======================= -->
 <div class="modal-overlay" id="standardViewModal">
@@ -2159,71 +2038,7 @@
       </div>
   </div>
 </div>
-<!-- ======================= МОДАЛЬНОЕ ОКНО: БЛОК ЛИНИЙ ======================= -->
-<div class="modal-overlay" id="blockModal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 id="blockModalTitle">Блок линий</h3>
-      <button class="modal-close" id="blockModalClose">✕</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="blockModalId">
 
-      <div class="field">
-        <label class="required">Название блока</label>
-        <input type="text" id="blockModalName" placeholder="Cell2 (LST 1)">
-      </div>
-
-      <div class="field" style="margin-top:16px">
-        <label class="required">Линии</label>
-        <div class="checkbox-group" id="blockModalLinesGroup"></div>
-        <p style="color:var(--text-second);font-size:12px;margin-top:8px">
-          Линии из другого блока или участка недоступны — сначала уберите их оттуда.
-        </p>
-      </div>
-
-      <div class="field" style="margin-top:12px">
-        <label>Новая линия</label>
-        <div class="block-modal-newline">
-          <input type="text" id="blockModalNewLine" placeholder="Например, SD40" maxlength="40" autocomplete="off">
-          <button type="button" class="btn btn-secondary" id="blockModalAddLineBtn">+ Добавить</button>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" id="blockModalCancelBtn">Отмена</button>
-      <button class="btn btn-primary" id="blockModalSaveBtn">Сохранить</button>
-    </div>
-  </div>
-</div>
-
-<!-- ======================= МОДАЛЬНОЕ ОКНО: МАШИНА ======================= -->
-<div class="modal-overlay" id="machineModal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 id="machineModalTitle">Добавить машину</h3>
-      <button class="modal-close" id="machineModalClose">✕</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="machineModalLine">
-      <input type="hidden" id="machineModalOldName">
-
-      <p id="machineModalLineLabel" style="color:var(--text-second);font-size:13px;margin-bottom:14px"></p>
-
-      <div class="field">
-        <label class="required">Название машины</label>
-        <input type="text" id="machineModalName" placeholder="SE, M1, MAX, GD...">
-      </div>
-      <p style="color:var(--text-second);font-size:12px;margin-top:8px">
-        Используйте короткое обозначение: <strong>SE</strong>, <strong>M1</strong>, <strong>MAX</strong>.
-      </p>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" id="machineModalCancelBtn">Отмена</button>
-      <button class="btn btn-primary" id="machineModalSaveBtn">Добавить</button>
-    </div>
-  </div>
-</div>
 
 <!-- ======================= МОДАЛЬНОЕ ОКНО: БЫСТРОЕ ДОБАВЛЕНИЕ МАШИНЫ ======================= -->
 <div class="modal-overlay" id="quickAddMachineModal">
@@ -2376,29 +2191,6 @@
   </div>
 </div>
 
-<!-- ======================= МОДАЛЬНОЕ ОКНО: СПИСОК МАШИН ЛИНИИ ======================= -->
-<div class="modal-overlay" id="machinesListModal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 id="machinesListModalTitle">Машины линии</h3>
-      <button class="modal-close" id="machinesListModalClose">✕</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="machinesListModalLine">
-      <div id="machinesListContent"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary btn-icon-text modal-add-btn-left" id="machinesListAddBtn" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-        <span>Добавить машину</span>
-      </button>
-      <button class="btn btn-primary" id="machinesListDoneBtn">Готово</button>
-    </div>
-  </div>
-</div>
 
 <!-- ======================= МОДАЛЬНОЕ ОКНО: ВЫБОР ЛИНИИ (КОМПАКТНО) ======================= -->
 <div class="modal-overlay line-picker-overlay" id="linePickerModal">
@@ -2447,6 +2239,7 @@
 <script src="js/components/pickers.js"></script>
 <script src="js/components/line-picker.js"></script>
 <script src="js/components/standard-view.js"></script>
+<script src="js/components/quick-add-machine.js"></script>
 <script src="js/io/excel-common.js"></script>
 <script src="js/io/standards-io.js"></script>
 <script src="js/views/brand-schedule.js"></script>
@@ -2467,12 +2260,11 @@
 <script src="js/views/standard-page/standard-page-extra.js"></script>
 <script src="js/views/schedule/schedule.js"></script>
 <script src="js/views/schedule/schedule-add.js"></script>
-<script src="js/views/settings/structure.js"></script>
+<script src="js/views/settings/settings-shell.js"></script>
+<script src="js/views/settings/structure-tree.js"></script>
 <script src="js/views/settings/shifts.js"></script>
-<script src="js/views/settings/machines.js"></script>
 <script src="js/views/settings/toplosses.js"></script>
 <script src="js/views/settings/brands.js"></script>
-<script src="js/views/settings/line-brands.js"></script>
 <script src="js/views/settings/operators.js"></script>
 <script src="js/views/settings/triggers.js"></script>
 <script src="js/views/settings/photos.js"></script>

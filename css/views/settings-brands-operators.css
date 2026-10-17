@@ -2,94 +2,11 @@
 /* === ОБЩИЙ СПИСОК БРЕНДОВ — группы по цехам ================= */
 /* ============================================================ */
 
-.brands-group-list {
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-card);
-  border-top: 1px solid var(--border);
-}
-.brands-group-add {
-  margin-left: 8px;
-  padding: 3px 10px;
-  font-size: 11px;
-}
-.brands-empty {
-  padding: 12px 14px;
-  font-size: 12px;
-}
 
-.brands-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 14px;
-  border-bottom: 1px dashed var(--border);
-  transition: background 0.12s, border-color 0.12s;
-  position: relative;
-}
-.brands-row:last-child {
-  border-bottom: none;
-}
 
-.brands-row:hover {
-  background: rgba(0, 212, 255, 0.04);
-}
-.brands-row:hover::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 2px;
-  background: var(--accent-cyan);
-}
 
-.brands-row-name {
-  flex: 1;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-main);
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.brands-row-actions {
-  display: flex;
-  gap: 4px;
-  flex-shrink: 0;
-}
 
-.brands-row-action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  cursor: pointer;
-  color: var(--text-second);
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-.brands-row-action-btn svg {
-  width: 14px;
-  height: 14px;
-  display: block;
-  pointer-events: none;
-}
 
-.brands-row-edit-btn:hover {
-  background: rgba(0, 212, 255, 0.1);
-  border-color: rgba(0, 212, 255, 0.4);
-  color: var(--accent-cyan);
-}
-.brands-row-delete-btn:hover {
-  background: rgba(230, 36, 79, 0.1);
-  border-color: rgba(230, 36, 79, 0.4);
-  color: var(--accent-red);
-}
 
 /* ============================================================ */
 /* === ОПЕРАТОРЫ — строки + inline + пагинация ================ */
