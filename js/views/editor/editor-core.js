@@ -145,14 +145,12 @@ function selectLine(line) {
   editorTableState.mechSelected.clear();
   editorTableState.elecSelected.clear();
 
-  // Обновляем фильтры (пересобираем опции)
+  // Машина и узел другой линии не подходят — сбрасываем и пересобираем фильтры
+  ['emFilterMachine', 'eeFilterMachine', 'emFilterNode'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
   if (typeof fillEditorFilters === 'function') fillEditorFilters();
-
-  // Выставляем фильтр «Линия» = выбранная линия
-  const emLine = document.getElementById('emFilterLine');
-  if (emLine) emLine.value = line;
-  const eeLine = document.getElementById('eeFilterLine');
-  if (eeLine) eeLine.value = line;
 
   // Обновляем UI
   updateEditorLineContext();
@@ -203,7 +201,11 @@ function updateEditorLineContext() {
 
     // Счётчики — только если линия выбрана
     if (countersEl) {
-      countersEl.style.display = line ? 'inline-flex' : 'none';
+      // Часть линии (Maker / Packer) есть только у SMD
+      const isSmd = !!line && getWorkshopIdForLine(line) === 'smd';
+      countersEl.style.display = isSmd ? 'inline-flex' : 'none';
+      const partInput = $(`#${prefix}FilterPart`);
+      if (!isSmd && partInput) partInput.value = '';
     }
 
     // Переключатель Мех/Элек — скрыт, пока линия не выбрана
@@ -248,29 +250,29 @@ function updatePartCounters() {
   const line = localStorage.getItem('cl_editor_line') || '';
   if (!line) return;
 
-  const standards = getStandards().filter(s => s.line === line);
-
-  const countPart = (part) => {
-    const all = standards.filter(s => s.nodePart === part).length;
-    const active = standards.filter(s => s.nodePart === part && s.active !== false).length;
-    return { all, active };
+  // Счётчики «активных / всего» по части — у механики и у E-Param свои
+  const count = (rows, part) => {
+    const all = rows.filter(r => r.nodePart === part);
+    return `${all.filter(r => r.active !== false).length}/${all.length}`;
+  };
+  const sources = {
+    em: getStandards().filter(s => s.line === line),
+    ee: getElectronicParamsForLine(line)
   };
 
-  const m = countPart('Maker');
-  const p = countPart('Packer');
-
   ['em', 'ee'].forEach(prefix => {
+    const rows = sources[prefix];
     const mk = $(`#${prefix}CounterMaker`);
     const pk = $(`#${prefix}CounterPacker`);
-    if (mk) mk.textContent = `${m.active}/${m.all}`;
-    if (pk) pk.textContent = `${p.active}/${p.all}`;
+    if (mk) mk.textContent = count(rows, 'Maker');
+    if (pk) pk.textContent = count(rows, 'Packer');
 
     // Синхронизируем активное состояние переключателя с текущим фильтром
     const switchEl = $(`#${prefix}PartCounters`);
     const currentPart = ($(`#${prefix}FilterPart`)?.value) || '';
     if (switchEl) {
       switchEl.querySelectorAll('.editor-part-switch-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.part === currentPart);
+        btn.classList.toggle('active', (btn.dataset.part || '') === currentPart);
       });
     }
   });
@@ -315,12 +317,6 @@ function switchEditorModeInline(mode) {
 function clearEditorLine() {
   localStorage.removeItem('cl_editor_line');
   currentEditorLine = null;
-
-  // Сброс фильтра «Линия»
-  const emLine = document.getElementById('emFilterLine');
-  if (emLine) emLine.value = '';
-  const eeLine = document.getElementById('eeFilterLine');
-  if (eeLine) eeLine.value = '';
 
   // Сброс пагинации и выделения
   editorTableState.mechPage = 1;
@@ -425,28 +421,31 @@ const editorTableState = {
    ============================================================ */
 
 function resetMechFilters() {
-  ['emFilterWorkshop', 'emFilterArea', 'emFilterLine', 'emFilterMachine',
-   'emFilterNode', 'emFilterType', 'emFilterPart', 'emFilterActive', 'emFilterSearch'
+  ['emFilterMachine', 'emFilterNode', 'emFilterType', 'emFilterSchedule',
+   'emFilterPart', 'emFilterActive', 'emFilterSearch'
   ].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
   editorTableState.mechPage = 1;
   editorTableState.mechSelected.clear();
+  fillEditorFilters();
   refreshEditorMechTable();
   updatePartCounters();
 }
 
 function resetElecFilters() {
-  ['eeFilterWorkshop', 'eeFilterArea', 'eeFilterLine', 'eeFilterMachine',
-   'eeFilterControlType', 'eeFilterFreq', 'eeFilterActive', 'eeFilterSearch'
+  ['eeFilterMachine', 'eeFilterControlType', 'eeFilterType', 'eeFilterSchedule',
+   'eeFilterPart', 'eeFilterActive', 'eeFilterSearch'
   ].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
   editorTableState.elecPage = 1;
   editorTableState.elecSelected.clear();
+  fillEditorFilters();
   refreshEditorElecTable();
+  updatePartCounters();
 }
 
 /* ============================================================
@@ -454,8 +453,7 @@ function resetElecFilters() {
    ============================================================ */
 
 /* Фильтры мех-таблицы */
-['emFilterWorkshop', 'emFilterArea', 'emFilterLine', 'emFilterMachine',
- 'emFilterNode', 'emFilterType', 'emFilterPart', 'emFilterActive'
+['emFilterNode', 'emFilterType', 'emFilterSchedule', 'emFilterActive'
 ].forEach(id => {
   document.getElementById(id)?.addEventListener('change', () => {
     editorTableState.mechPage = 1;
@@ -471,8 +469,7 @@ $('#emFilterSearch')?.addEventListener('input', () => {
 $('#emFilterResetBtn')?.addEventListener('click', resetMechFilters);
 
 /* Фильтры электронной таблицы */
-['eeFilterWorkshop', 'eeFilterArea', 'eeFilterLine', 'eeFilterMachine',
- 'eeFilterControlType', 'eeFilterFreq', 'eeFilterActive'
+['eeFilterControlType', 'eeFilterType', 'eeFilterSchedule', 'eeFilterActive'
 ].forEach(id => {
   document.getElementById(id)?.addEventListener('change', () => {
     editorTableState.elecPage = 1;
@@ -538,78 +535,74 @@ $('#editorElecExportBtn')?.addEventListener('click', () => {
    ============================================================ */
 
 function fillEditorFilters() {
-  const workshops = getWorkshops();
-  const allLines = getAllLinesWithContext();
-  const standards = getStandards();
+  const line = localStorage.getItem('cl_editor_line') || '';
+  const mech = line ? getStandards().filter(s => s.line === line) : [];
+  const elec = line ? getElectronicParamsForLine(line) : [];
 
-  /* --- Цех --- */
-  ['emFilterWorkshop', 'eeFilterWorkshop'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (!sel) return;
+  /* --- Машины линии — чипы с количеством --- */
+  renderEditorMachineChips('em', mech);
+  renderEditorMachineChips('ee', elec);
+
+  /* --- Узел — из стандартов линии --- */
+  const sel = document.getElementById('emFilterNode');
+  if (sel) {
     const cur = sel.value;
-    sel.innerHTML = '<option value="">Все</option>' +
-      workshops.map(w => `<option value="${escapeAttr(w.id)}">${escapeHtml(w.name)}</option>`).join('');
-    sel.value = cur;
-  });
-
-  /* --- Участок (зависит от цеха) --- */
-  ['emFilterArea', 'eeFilterArea'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (!sel) return;
-    const cur = sel.value;
-    const workshopId = (id === 'emFilterArea' ? $('#emFilterWorkshop') : $('#eeFilterWorkshop'))?.value;
-
-    let areas = [];
-    if (workshopId) {
-      const w = getWorkshop(workshopId);
-      if (w) areas = w.areas || [];
-    } else {
-      // Все участки всех цехов
-      workshops.forEach(w => (w.areas || []).forEach(a => areas.push(a)));
-    }
-
-    sel.innerHTML = '<option value="">Все</option>' +
-      areas.map(a => `<option value="${escapeAttr(a.id)}">${escapeHtml(a.name)}</option>`).join('');
-    sel.value = cur;
-  });
-
-  /* --- Линия --- */
-  ['emFilterLine', 'eeFilterLine'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (!sel) return;
-    const cur = sel.value;
-    sel.innerHTML = '<option value="">Все</option>' +
-      allLines.map(x => `<option value="${escapeAttr(x.line)}">${escapeHtml(x.line)}</option>`).join('');
-    sel.value = cur;
-  });
-
-  /* --- Машина (все машины) --- */
-  const allMachines = new Set();
-  Object.values(getLineMachines()).forEach(arr => (arr || []).forEach(m => allMachines.add(m)));
-  ['emFilterMachine', 'eeFilterMachine'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (!sel) return;
-    const cur = sel.value;
-    sel.innerHTML = '<option value="">Все</option>' +
-      [...allMachines].sort().map(m => `<option value="${escapeAttr(m)}">${escapeHtml(m)}</option>`).join('');
-    sel.value = cur;
-  });
-
-  /* --- Узел --- */
-  const allNodes = [...new Set(standards.map(s => s.node).filter(Boolean))].sort();
-  ['emFilterNode'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (!sel) return;
-    const cur = sel.value;
-    sel.innerHTML = '<option value="">Все</option>' +
-      allNodes.map(n => `<option value="${escapeAttr(n)}">${escapeHtml(n)}</option>`).join('');
-    sel.value = cur;
-  });
+    const nodes = [...new Set(mech.map(s => s.node).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ru'));
+    sel.innerHTML = '<option value="">Узел: все</option>' +
+      nodes.map(n => `<option value="${escapeAttr(n)}">${escapeHtml(n)}</option>`).join('');
+    sel.value = nodes.includes(cur) ? cur : '';
+  }
 }
 
-/* Каскад: при смене цеха — обновить список участков */
-$('#emFilterWorkshop')?.addEventListener('change', () => fillEditorFilters());
-$('#eeFilterWorkshop')?.addEventListener('change', () => fillEditorFilters());
+/* Чипы машин линии над таблицей; выбранная машина хранится в скрытом поле */
+function renderEditorMachineChips(prefix, rows) {
+  const box = document.getElementById(`${prefix}MachineChips`);
+  const input = document.getElementById(`${prefix}FilterMachine`);
+  if (!box || !input) return;
+  const line = localStorage.getItem('cl_editor_line') || '';
+  const counts = {};
+  rows.forEach(r => { if (r.machine) counts[r.machine] = (counts[r.machine] || 0) + 1; });
+  // Машины линии из настроек — тоже показываем (с нулём), чтобы список был полным
+  (getLineMachines()[line] || []).forEach(m => { if (!(m in counts)) counts[m] = 0; });
+  const machines = Object.keys(counts).sort((a, b) => a.localeCompare(b, 'ru', { numeric: true }));
+  if (input.value && !machines.includes(input.value)) input.value = '';
+  if (machines.length < 2) {
+    box.innerHTML = '';
+    return;
+  }
+  box.innerHTML = '<span class="et-flabel">Машина</span>' + machines.map(m => `
+    <button type="button" class="et-fchip ${input.value === m ? 'on' : ''}" data-machine="${escapeAttr(m)}">
+      ${escapeHtml(m)}<span class="et-fchip-n">${counts[m]}</span>
+    </button>`).join('');
+}
+
+/* Клик по чипу машины — выбрать / снять */
+['em', 'ee'].forEach(prefix => {
+  document.getElementById(`${prefix}MachineChips`)?.addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-machine]');
+    if (!chip) return;
+    const input = document.getElementById(`${prefix}FilterMachine`);
+    input.value = input.value === chip.dataset.machine ? '' : chip.dataset.machine;
+    fillEditorFilters();
+    if (prefix === 'em') {
+      editorTableState.mechPage = 1;
+      refreshEditorMechTable();
+    } else {
+      editorTableState.elecPage = 1;
+      refreshEditorElecTable();
+    }
+  });
+});
+
+/* Меню «Excel»: импорт, шаблон, экспорт */
+document.addEventListener('click', (e) => {
+  const toggle = e.target.closest('.et-excel-toggle');
+  document.querySelectorAll('.et-excel.open').forEach(m => {
+    if (!toggle || !m.contains(toggle)) m.classList.remove('open');
+  });
+  if (toggle) toggle.closest('.et-excel').classList.toggle('open');
+  else if (e.target.closest('.et-excel-item')) e.target.closest('.et-excel').classList.remove('open');
+});
 
 /* ============================================================
    РЕДАКТОР: переключение активности стандарта

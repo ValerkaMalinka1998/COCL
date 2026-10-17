@@ -5,59 +5,6 @@
   gap: 16px;
 }
 
-.block-tile {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 20px;
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--accent-cyan);
-  border-radius: 10px;
-  cursor: pointer;
-  transition:
-    border-color 0.15s,
-    background 0.35s ease,
-    color 0.35s ease,
-    box-shadow 0.35s ease,
-    transform 0.15s;
-}
-.block-tile:hover {
-  border-color: var(--accent-cyan);
-  box-shadow: 0 4px 16px rgba(0, 212, 255, 0.15);
-  transform: translateY(-2px);
-}
-.block-tile-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.block-tile-name {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text-main);
-  letter-spacing: 0.3px;
-}
-.block-tile-lines {
-  font-size: 13px;
-  color: var(--text-second);
-  line-height: 1.5;
-  min-height: 40px;
-}
-.block-tile-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-}
-.block-tile-count {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--accent-cyan);
-}
-
 /* ============ Хлебные крошки ============ */
 .breadcrumbs {
   font-size: 12px;
@@ -67,23 +14,6 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 4px;
-}
-.breadcrumb-link {
-  color: var(--accent-cyan);
-  text-decoration: none;
-  transition: opacity 0.15s;
-}
-.breadcrumb-link:hover {
-  opacity: 0.75;
-  text-decoration: underline;
-}
-.breadcrumb-sep {
-  color: var(--text-dim);
-  margin: 0 4px;
-}
-.breadcrumb-current {
-  color: var(--text-second);
-  font-weight: 600;
 }
 
 /* На мобильных — блоки в одну колонку */
@@ -158,251 +88,6 @@
 /* === ТАБЛИЦА СТАНДАРТОВ ===================================== */
 /* ============================================================ */
 
-.standards-table-wrap {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-input);
-  overflow-x: auto;
-  overflow-y: visible;
-}
-
-.standards-table {
-  width: 100%;
-  min-width: 900px;          /* минимальная ширина — ниже появится скролл */
-  border-collapse: collapse;
-  font-size: 13px;
-  table-layout: auto;        /* ← авто-распределение ширины колонок */
-}
-
-/* --- Ширины колонок в процентах / мин. ширинах --- */
-/* Столбец «☐» — фиксированный */
-.standards-table th:nth-child(1),
-.standards-table td:nth-child(1) {
-  width: 56px;
-  min-width: 56px;
-  max-width: 56px;
-  text-align: center;
-}
-
-/* № — узкая фиксированная */
-.standards-table th:nth-child(2),
-.standards-table td:nth-child(2) {
-  width: 60px;
-  min-width: 50px;
-  text-align: center;
-}
-
-/* № OPL — фиксированная */
-.standards-table th:nth-child(3),
-.standards-table td:nth-child(3) {
-  width: 120px;
-  min-width: 100px;
-}
-
-/* Машина — узкая */
-.standards-table th:nth-child(4),
-.standards-table td:nth-child(4) {
-  width: 90px;
-  min-width: 70px;
-}
-
-/* Узел — гибкая, но не меньше 130px */
-.standards-table th:nth-child(5),
-.standards-table td:nth-child(5) {
-  min-width: 130px;
-  width: 15%;
-}
-
-/* Название — самая широкая, тянется */
-.standards-table th:nth-child(6),
-.standards-table td:nth-child(6) {
-  min-width: 200px;
-  width: 30%;
-}
-
-/* Типы — фиксированная */
-.standards-table th:nth-child(7),
-.standards-table td:nth-child(7) {
-  width: 140px;
-  min-width: 120px;
-}
-
-/* Действия — фиксированная */
-.standards-table th:nth-child(8),
-.standards-table td:nth-child(8) {
-  width: 130px;
-  min-width: 130px;
-  text-align: center;
-  white-space: nowrap;
-}
-
-/* --- Ширины колонок по позиции --- */
-.standards-table th:nth-child(1),
-.standards-table td:nth-child(1) { width: 48px;  text-align: center; }
-
-.standards-table th:nth-child(2),
-.standards-table td:nth-child(2) { width: 64px;  text-align: center; }
-
-.standards-table th:nth-child(3),
-.standards-table td:nth-child(3) { width: 130px; }
-
-.standards-table th:nth-child(4),
-.standards-table td:nth-child(4) { width: 110px; }
-
-.standards-table th:nth-child(5),
-.standards-table td:nth-child(5) { width: 200px; }
-
-.standards-table th:nth-child(6),
-.standards-table td:nth-child(6) { width: 320px; }
-
-.standards-table th:nth-child(7),
-.standards-table td:nth-child(7) { width: 170px; }
-
-.standards-table th:nth-child(8),
-.standards-table td:nth-child(8) { width: 130px; text-align: center; white-space: nowrap; }
-
-/* --- Заголовки --- */
-.standards-table thead th {
-  background: var(--bg-hover);
-  color: var(--blue-mid);
-  font-weight: 700;
-  text-transform: uppercase;
-  font-size: 11px;
-  letter-spacing: 0.4px;
-  padding: 10px 12px;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-  user-select: none;
-}
-.standards-table thead th[data-sort] { cursor: pointer; }
-.standards-table thead th[data-sort]:hover {
-  background: rgba(0, 212, 255, 0.08);
-  color: var(--accent-cyan);
-}
-.sort-idle { opacity: 0.3; }
-
-/* --- Ячейки --- */
-.standards-table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-  color: var(--text-main);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.standards-table tbody tr:last-child td { border-bottom: none; }
-.standards-table tbody tr { transition: background 0.15s; }
-.standards-table tbody tr:hover { background: var(--bg-hover); }
-
-.standards-table tbody tr.standard-inactive { opacity: 0.5; }
-.standards-table tbody tr.standard-inactive td { color: var(--text-dim); }
-
-/* --- Ячейки-хелперы --- */
-.standards-table td.td-opl {
-  font-weight: 600;
-  color: var(--accent-cyan);
-  cursor: pointer;
-}
-.standards-table td.td-title { cursor: pointer; }
-.standard-title {
-  font-weight: 600;
-  color: var(--text-main);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.standard-part {
-  font-size: 11px;
-  color: var(--text-dim);
-  margin-top: 2px;
-}
-/* ============ Бейдж «кол-во фото» в таблице стандартов ============ */
-.standard-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  overflow: hidden;
-  justify-content: flex-start;   /* ← явно указываем: по левому краю */
-  text-align: left;              /* ← и текст тоже */
-}
-.standard-title-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-  text-align: left;
-}
-.photo-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 11px;
-  font-weight: 700;
-  background: rgba(0, 212, 255, 0.1);
-  color: var(--accent-cyan);
-  border: 1px solid rgba(0, 212, 255, 0.4);
-  flex-shrink: 0;
-  font-variant-numeric: tabular-nums;
-}
-.photo-badge svg {
-  width: 12px;
-  height: 12px;
-  display: block;
-  flex-shrink: 0;
-}
-/* ============ Комментарий к деактивации ============ */
-.std-comment-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 1.5px dashed var(--accent-amber);   /* пунктир — «пусто, можно добавить» */
-  background: rgba(232, 154, 0, 0.08);
-  color: var(--accent-amber);
-  cursor: pointer;
-  transition: all 0.15s;
-  padding: 0;
-  margin-left: 6px;
-  flex-shrink: 0;
-  opacity: 0.75;
-}
-.std-comment-btn svg {
-  width: 12px;
-  height: 12px;
-  display: block;
-  pointer-events: none;
-}
-.std-comment-btn:hover {
-  border-style: solid;
-  border-color: var(--accent-amber);
-  background: var(--accent-amber);
-  color: #ffffff;
-  opacity: 1;
-  transform: scale(1.1);
-  box-shadow: 0 0 10px rgba(232, 154, 0, 0.5);
-}
-
-/* С комментарием — яркая сплошная амберная */
-.std-comment-btn.has-comment {
-  border: 1.5px solid var(--accent-amber);
-  background: var(--accent-amber);
-  color: #ffffff;
-  opacity: 1;
-  box-shadow: 0 0 8px rgba(232, 154, 0, 0.45);
-}
-.std-comment-btn.has-comment:hover {
-  background: #ffb800;
-  border-color: #ffb800;
-  transform: scale(1.12);
-  box-shadow: 0 0 14px rgba(255, 184, 0, 0.7);
-}
-
-/* Убираем старое правило .inactive (у активных иконки больше нет) */
-
 /* Архив в модалке */
 .deactivation-archive-list {
   display: flex;
@@ -434,15 +119,6 @@
   white-space: pre-wrap;
   word-break: break-word;
 }
-.standards-table td.td-node { font-size: 12px; }
-
-.standards-table td.td-actions .btn-sm {
-  padding: 5px 8px;
-  font-size: 12px;
-  min-width: 30px;
-  margin: 0 1px;
-  display: inline-block;
-}
 
 /* ============ Кнопки-иконки (векторные SVG) ============ */
 .btn-icon {
@@ -469,36 +145,6 @@
   transform: scale(0.95);
 }
 
-/* --- Чекбокс активности --- */
-.std-active-cb {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  accent-color: var(--accent-green);
-}
-.std-active-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-.std-active-cell svg {
-  max-width: 100%;
-  max-height: 100%;
-  display: block;
-}
-
-/* --- Чипы типов --- */
-.type-chip-xs {
-  font-size: 10px;
-  padding: 2px 8px;
-  margin-right: 3px;
-}
-.type-chip-empty {
-  color: var(--text-dim);
-  font-style: italic;
-  font-size: 11px;
-}
 /* ============ Кнопки «иконка + текст» ============ */
 .btn-icon-text {
   display: inline-flex;
@@ -539,18 +185,6 @@
 }
 .btn-icon-text:active > svg {
   transform: scale(0.95);
-}
-
-
-/* Иконки в хлебных крошках */
-.breadcrumb-link svg,
-.breadcrumb-current svg {
-  width: 14px;
-  height: 14px;
-  display: inline-block;
-  vertical-align: -2px;
-  margin-right: 4px;
-  pointer-events: none;
 }
 
 /* Иконки в sidebar */
