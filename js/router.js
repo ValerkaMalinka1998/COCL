@@ -88,6 +88,9 @@ if (tabName === 'editor') {
   if (tabName === 'electronic') {
     if (typeof openClCheckTab === 'function') openClCheckTab();
   }
+  if (tabName === 'settings' && typeof renderSettings === 'function') {
+    renderSettings();
+  }
   if (tabName === 'schedule') {
     if (typeof openScheduleTab === 'function') openScheduleTab();
   }

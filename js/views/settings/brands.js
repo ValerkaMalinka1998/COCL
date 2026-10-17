@@ -5,357 +5,206 @@
    ============================================================ */
 
 /* ============================================================
-   ОБЩИЙ СПИСОК БРЕНДОВ — группы по цехам
+   ОБЩИЙ СПИСОК БРЕНДОВ — справочник с фильтром по цеху
+   Какие бренды выпускает линия — отмечается на карточке линии
+   в разделе «Структура».
    ============================================================ */
 
-const BRANDS_OPEN_WS_KEY = 'cl_brands_open_ws';
+let brandsQuery = '';
+let brandsAddWs = '';   // цех для нового бренда
 
-function getBrandsOpenGroups() {
-  try {
-    const arr = JSON.parse(localStorage.getItem(BRANDS_OPEN_WS_KEY) || '[]');
-    return new Set(Array.isArray(arr) ? arr : []);
-  } catch (e) {
-    return new Set();
-  }
+function pluralizeBrandsShort(n) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'бренд';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'бренда';
+  return 'брендов';
 }
-function setBrandsOpenGroups(set) {
-  try { localStorage.setItem(BRANDS_OPEN_WS_KEY, JSON.stringify([...set])); } catch (e) {}
+
+/* Линии, на которых стоит бренд */
+function getLinesForBrand(brand) {
+  const lb = getLineBrands();
+  return Object.keys(lb).filter(l => Array.isArray(lb[l]) && lb[l].includes(brand));
 }
 
 function renderBrandsSettings() {
   const list = $('#brandsList');
   if (!list) return;
 
-  const allBrands = getBrands().slice().sort((a, b) => a.localeCompare(b, 'ru'));
-  const query = ($('#brandsSearch')?.value || '').trim().toLowerCase();
-  const matches = b => !query || b.toLowerCase().includes(query);
-
-  // Группы: все цеха по порядку + «Без цеха», если такие бренды есть
-  const groups = getWorkshops().map(w => ({
-    id: w.id,
-    name: w.name,
-    brands: allBrands.filter(b => getBrandWorkshop(b) === w.id)
-  }));
-  const noWs = allBrands.filter(b => !getBrandWorkshop(b));
-  if (noWs.length) groups.push({ id: '__none__', name: 'Без цеха', brands: noWs });
+  const all = getBrands().slice().sort((a, b) => a.localeCompare(b, 'ru'));
+  const wsOf = (b) => getBrandWorkshop(b) || '__none__';
+  const q = brandsQuery.trim().toLowerCase();
+  const ws = settingsState.brandsWs;
 
   const counter = $('#brandsCount');
-  if (counter) {
-    const found = allBrands.filter(matches).length;
-    counter.textContent = query ? `(${found} из ${allBrands.length})` : `(${allBrands.length})`;
-  }
+  if (counter) counter.textContent = `(${all.length})`;
 
-  const open = getBrandsOpenGroups();
-  const chevron = `<span class="bl-group-toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>`;
+  const chipItems = settingsWorkshopChipItems(id => all.filter(b => wsOf(b) === id).length, true, all.length);
+  const noneCount = all.filter(b => wsOf(b) === '__none__').length;
+  if (noneCount) chipItems.push({ id: '__none__', name: 'Без цеха', count: noneCount });
 
-  list.innerHTML = groups.map(g => {
-    const shown = g.brands.filter(matches);
-    if (query && !shown.length) return '';
-    // При поиске раскрываем группы с совпадениями, иначе — как оставил пользователь
-    const expanded = query ? true : open.has(g.id);
-    const rows = shown.length
-      ? shown.map(b => brandRowHtml(b, query)).join('')
-      : '<div class="empty-state brands-empty">Брендов пока нет</div>';
-    const addBtn = g.id === '__none__' ? '' : `
-      <button type="button" class="btn btn-secondary btn-sm brands-group-add" data-brands-add="${escapeAttr(g.id)}" title="Добавить бренд в ${escapeAttr(g.name)}">+ Бренд</button>`;
+  if (!brandsAddWs) brandsAddWs = (ws !== 'all' && ws !== '__none__') ? ws : (getWorkshops()[0]?.id || '');
+
+  const shown = all
+    .filter(b => ws === 'all' || wsOf(b) === ws)
+    .filter(b => !q || b.toLowerCase().includes(q));
+
+  const wsSeg = (active, attrName, brand) => getWorkshops().map(w => `
+    <button type="button" class="settings-seg-btn ${active === w.id ? 'active' : ''}" ${attrName}="${escapeAttr(w.id)}"${brand != null ? ` data-brand="${escapeAttr(brand)}"` : ''}>${escapeHtml(w.name)}</button>`).join('');
+
+  const rows = shown.map(b => {
+    const lines = getLinesForBrand(b);
     return `
-      <div class="bl-group bl-group-workshop ${expanded ? 'expanded' : ''}" data-brands-ws="${escapeAttr(g.id)}">
-        <div class="bl-group-head" data-brands-toggle="${escapeAttr(g.id)}">
-          ${chevron}
-          <span class="bl-group-name">${escapeHtml(g.name)}</span>
-          <span class="bl-group-count">${g.brands.length} ${pluralizeBrandsShort(g.brands.length)}</span>
-          ${addBtn}
-        </div>
-        <div class="bl-group-body"><div class="brands-group-list">${rows}</div></div>
-      </div>
-    `;
-  }).join('') || `<div class="empty-state">Ничего не найдено по запросу «${escapeHtml(query)}».</div>`;
-}
-
-function brandRowHtml(b, query) {
-  return `
-    <div class="brands-row" data-brand="${escapeAttr(b)}">
-      <span class="brands-row-name">${highlightBrandName(b, query)}</span>
-      <div class="brands-row-actions">
-        <button type="button" class="brands-row-action-btn brands-row-edit-btn"
-                data-brands-edit="${escapeAttr(b)}" title="Изменить">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-          </svg>
-        </button>
-        <button type="button" class="brands-row-action-btn brands-row-delete-btn"
-                data-brands-delete="${escapeAttr(b)}" title="Удалить">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
-    </div>
-  `;
-}
-
-/* Один делегированный обработчик на весь список брендов */
-$('#brandsList')?.addEventListener('click', (e) => {
-  const edit = e.target.closest('[data-brands-edit]');
-  if (edit) { e.stopPropagation(); return openEditBrandModal(edit.dataset.brandsEdit); }
-  const del = e.target.closest('[data-brands-delete]');
-  if (del) { e.stopPropagation(); return deleteBrand(del.dataset.brandsDelete); }
-  const add = e.target.closest('[data-brands-add]');
-  if (add) { e.stopPropagation(); return openAddBrandModal(add.dataset.brandsAdd); }
-  const head = e.target.closest('[data-brands-toggle]');
-  if (head) {
-    const id = head.dataset.brandsToggle;
-    const open = getBrandsOpenGroups();
-    if (open.has(id)) open.delete(id); else open.add(id);
-    setBrandsOpenGroups(open);
-    head.closest('.bl-group')?.classList.toggle('expanded', open.has(id));
-  }
-});
-
-/* Подсветка совпадений в имени бренда */
-function highlightBrandName(name, query) {
-  if (!query) return escapeHtml(name);
-  const lower = name.toLowerCase();
-  const idx = lower.indexOf(query);
-  if (idx === -1) return escapeHtml(name);
-  return escapeHtml(name.slice(0, idx)) +
-    '<strong class="hl-match">' + escapeHtml(name.slice(idx, idx + query.length)) + '</strong>' +
-    escapeHtml(name.slice(idx + query.length));
-}
-/* ============================================================
-   РЕДАКТИРОВАНИЕ БРЕНДА
-   ============================================================ */
-let currentEditingBrand = null;
-
-function openEditBrandModal(oldName) {
-  currentEditingBrand = oldName;
-  const modal = $('#editBrandModal');
-  const input = $('#editBrandInput');
-  if (!modal || !input) return;
-  input.value = oldName;
-
-  // Цех бренда
-  const wsEl = $('#editBrandWorkshop');
-  if (wsEl) wsEl.innerHTML = workshopOptionsHtml(getBrandWorkshop(oldName));
-
-  // Загружаем линии, к которым уже привязан бренд
-  const lb = getLineBrands();
-  const assignedLines = Object.keys(lb).filter(line =>
-    Array.isArray(lb[line]) && lb[line].includes(oldName)
-  );
-  renderLinesCheckboxesGroup('editBrandLinesGroup', assignedLines);
-
-  openModal(modal);
-  setTimeout(() => {
-    input.focus();
-    input.select();
-  }, 100);
-}
-
-function closeEditBrandModal() {
-  closeModal('#editBrandModal');
-  currentEditingBrand = null;
-}
-
-$('#editBrandModalClose')?.addEventListener('click', closeEditBrandModal);
-$('#editBrandCancelBtn')?.addEventListener('click', closeEditBrandModal);
-$('#editBrandModal')?.addEventListener('click', (e) => {
-  if (e.target.id === 'editBrandModal') closeEditBrandModal();
-});
-
-/* Enter — сохранить */
-$('#editBrandInput')?.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    $('#editBrandSaveBtn')?.click();
-  }
-});
-
-/* Сохранение */
-$('#editBrandSaveBtn')?.addEventListener('click', () => {
-  const newName = $('#editBrandInput').value.trim();
-  const oldName = currentEditingBrand;
-
-  if (!oldName) return;
-  if (!newName) return showToast('Введите название бренда', true);
-
-  // Если имя не менялось — проверяем только линии
-  const nameChanged = newName !== oldName;
-
-  if (nameChanged) {
-    const brands = getBrands();
-    if (brands.some(b => b.toLowerCase() === newName.toLowerCase())) {
-      return showToast('Бренд с таким названием уже есть', true);
-    }
-
-    const idx = brands.indexOf(oldName);
-    if (idx === -1) {
-      closeEditBrandModal();
-      return showToast('Бренд не найден', true);
-    }
-    brands[idx] = newName;
-    setBrands(brands);
-  }
-
-  // Работаем с привязкой к линиям
-  const lb = getLineBrands();
-  const selectedLines = collectSelectedLines('editBrandLinesGroup');
-  const workingName = nameChanged ? newName : oldName;
-
-  // Проходим по ВСЕМ линиям и обновляем привязку
-  getLines().forEach(line => {
-    if (!Array.isArray(lb[line])) lb[line] = [];
-
-    // Убираем старое имя
-    if (nameChanged) {
-      lb[line] = lb[line].filter(b => b !== oldName);
-    }
-
-    // Добавляем/убираем новое имя в зависимости от галочки
-    const isSelected = selectedLines.includes(line);
-    const hasBrand = lb[line].includes(workingName);
-
-    if (isSelected && !hasBrand) {
-      lb[line].push(workingName);
-    } else if (!isSelected && hasBrand) {
-      lb[line] = lb[line].filter(b => b !== workingName);
-    }
-  });
-
-  setLineBrands(lb);
-
-  // Цех бренда
-  const workshop = ($('#editBrandWorkshop')?.value || '').trim();
-  setBrandWorkshop(workingName, workshop);
-
-  // Перерисовываем всё
-  renderBrandsSettings();
-  renderLineBrandsSettings();
-  fillLinesForOperator();
-
-  closeEditBrandModal();
-
-  if (nameChanged) {
-    showToast('Бренд обновлён');
-  } else {
-    showToast('Привязки линий обновлены');
-  }
-});
-
-$('#brandsSearch')?.addEventListener('input', () => {
-  renderBrandsSettings();
-});
-
-/* Отрисовка чекбоксов линий в модалках бренда */
-function renderLinesCheckboxesGroup(containerId, selectedLines = []) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-
-  const lines = getLines();
-  if (!lines.length) {
-    container.innerHTML = '<div class="empty-state" style="padding:10px">Сначала добавьте линии в настройках</div>';
-    return;
-  }
-
-  container.innerHTML = lines.map(l => {
-    const checked = selectedLines.includes(l);
-    return `<label class="${checked ? 'checked' : ''}">
-      <input type="checkbox" value="${escapeHtml(l)}" ${checked ? 'checked' : ''}>
-      ${escapeHtml(l)}
-    </label>`;
+      <div class="settings-row" data-brand-row="${escapeAttr(b)}">
+        <span class="settings-row-name" data-brand-rename="${escapeAttr(b)}" title="Нажмите, чтобы переименовать">${settingsHighlight(b, q)}</span>
+        <span class="settings-row-meta" title="${escapeAttr(lines.join(', ') || 'Ни на одной линии')}">${lines.length ? lines.length + ' ' + pluralizeLines(lines.length) : 'нет линий'}</span>
+        <span class="settings-seg settings-seg-sm">${wsSeg(getBrandWorkshop(b), 'data-brand-ws', b)}</span>
+        <button type="button" class="st-icon-btn st-icon-danger" data-brand-delete="${escapeAttr(b)}" title="Удалить бренд">${SETTINGS_ICON_DELETE}</button>
+      </div>`;
   }).join('');
 
-  container.querySelectorAll('input').forEach(cb => {
-    cb.addEventListener('change', (e) => {
-      e.target.closest('label').classList.toggle('checked', e.target.checked);
-    });
-  });
+  list.innerHTML = `
+    <div class="settings-toolbar">
+      ${settingsSearchHtml('brandsSearch', 'Поиск бренда…', brandsQuery)}
+      <div class="settings-chips">${settingsChipsHtml(chipItems, ws, 'data-brands-filter')}</div>
+    </div>
+    <div class="settings-add-row">
+      <input type="text" id="newBrandInlineInput" placeholder="Новый бренд, Enter" autocomplete="off">
+      <span class="settings-seg">${wsSeg(brandsAddWs, 'data-brand-add-ws')}</span>
+      <button type="button" class="btn btn-primary btn-sm" id="newBrandInlineBtn">Добавить</button>
+    </div>
+    <div class="settings-list">
+      ${rows || `<div class="st-empty">${q ? `Ничего не найдено по «${escapeHtml(brandsQuery)}»` : 'Брендов в этом цехе пока нет'}</div>`}
+    </div>`;
 }
 
-/* Собрать выбранные линии из группы */
-function collectSelectedLines(containerId) {
-  const container = document.getElementById(containerId);
-  if (!container) return [];
-  return [...container.querySelectorAll('input:checked')].map(cb => cb.value);
-}
-/* --- Модалка добавления бренда --- */
-function openAddBrandModal(presetWorkshop) {
-  const modal = $('#addBrandModal');
-  if (!modal) return;
-  const input = $('#newBrandInput');
-  if (input) input.value = '';
-
-  renderLinesCheckboxesGroup('addBrandLinesGroup', []);
-
-  const wsEl = $('#addBrandWorkshop');
-  if (wsEl) wsEl.innerHTML = workshopOptionsHtml(typeof presetWorkshop === 'string' ? presetWorkshop : '');
-
-  openModal(modal);
-  setTimeout(() => { if (input) input.focus(); }, 100);
-}
-
-function closeAddBrandModal() {
-  closeModal('#addBrandModal');
-}
-
-$('#openAddBrandModalBtn')?.addEventListener('click', () => openAddBrandModal(''));
-$('#addBrandModalClose')?.addEventListener('click', closeAddBrandModal);
-$('#addBrandCancelBtn')?.addEventListener('click', closeAddBrandModal);
-$('#addBrandModal')?.addEventListener('click', (e) => {
-  if (e.target.id === 'addBrandModal') closeAddBrandModal();
-});
-
-/* Enter — добавить без клика */
-$('#newBrandInput')?.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    $('#addBrandBtn')?.click();
-  }
-});
-
-/* --- Добавление бренда --- */
-$('#addBrandBtn')?.addEventListener('click', () => {
-  const name = $('#newBrandInput').value.trim();
+function addBrandInline() {
+  const input = $('#newBrandInlineInput');
+  const name = (input?.value || '').trim();
   if (!name) return showToast('Введите название бренда', true);
-
   const brands = getBrands();
-  if (brands.some(b => b.toLowerCase() === name.toLowerCase())) {
-    return showToast('Такой бренд уже есть', true);
-  }
-
+  if (brands.some(b => b.toLowerCase() === name.toLowerCase())) return showToast('Такой бренд уже есть', true);
   brands.push(name);
   setBrands(brands);
+  if (brandsAddWs) setBrandWorkshop(name, brandsAddWs);
+  renderBrandsSettings();
+  updateSettingsNavCounts();
+  $('#newBrandInlineInput')?.focus();
+  showToast(`Бренд «${name}» добавлен — отметьте его на линиях в «Структуре»`);
+}
 
-  // Цех бренда
-  const workshop = ($('#addBrandWorkshop')?.value || '').trim();
-  if (workshop) setBrandWorkshop(name, workshop);
-
-  // Привязка к выбранным линиям
-  const selectedLines = collectSelectedLines('addBrandLinesGroup');
-  if (selectedLines.length) {
-    const lb = getLineBrands();
-    selectedLines.forEach(line => {
-      if (!Array.isArray(lb[line])) lb[line] = [];
-      if (!lb[line].includes(name)) lb[line].push(name);
-    });
-    setLineBrands(lb);
+/* Переименование бренда: справочник, линии, цех, нормы стандартов и параметров */
+function renameBrand(oldName, newName) {
+  const brands = getBrands();
+  if (brands.some(b => b !== oldName && b.toLowerCase() === newName.toLowerCase())) {
+    showToast('Бренд с таким названием уже есть', true);
+    return false;
   }
+  const idx = brands.indexOf(oldName);
+  if (idx === -1) return false;
+  brands[idx] = newName;
+  setBrands(brands);
 
-  // Очищаем поиск
-  const search = $('#brandsSearch');
-  if (search) search.value = '';
+  const lb = getLineBrands();
+  Object.keys(lb).forEach(l => {
+    if (Array.isArray(lb[l])) lb[l] = lb[l].map(b => b === oldName ? newName : b);
+  });
+  setLineBrands(lb);
+
+  const ws = getBrandWorkshop(oldName);
+  const map = getBrandWorkshops();
+  delete map[oldName];
+  if (ws) map[newName] = ws;
+  setBrandWorkshops(map);
+
+  let changed = 0;
+  const stds = getStandards();
+  stds.forEach(s => (s.measurements || []).forEach(m => {
+    if (m.brand === oldName) { m.brand = newName; changed++; }
+  }));
+  if (changed) setStandards(stds);
+  const eps = getElectronicParams();
+  let changedEp = 0;
+  eps.forEach(p => (p.valuesByBrand || []).forEach(v => {
+    if (v.brand === oldName) { v.brand = newName; changedEp++; }
+  }));
+  if (changedEp) setElectronicParams(eps);
 
   renderBrandsSettings();
-  renderLineBrandsSettings();
+  if (typeof renderStructureSettings === 'function') renderStructureSettings();
   fillLinesForOperator();
-  closeAddBrandModal();
+  showToast(changed + changedEp
+    ? `Бренд переименован, обновлено норм: ${changed + changedEp}`
+    : 'Бренд переименован');
+  return true;
+}
 
-  if (selectedLines.length) {
-    showToast(`Бренд добавлен на ${selectedLines.length} лин.`);
-  } else {
-    showToast('Бренд добавлен');
+window.deleteBrand = function(name) {
+  const lines = getLinesForBrand(name);
+  const msg = lines.length
+    ? `Удалить бренд «${name}»? Он стоит на линиях: ${lines.join(', ')} — и пропадёт с них.`
+    : `Удалить бренд «${name}»?`;
+  if (!confirm(msg)) return;
+  setBrands(getBrands().filter(b => b !== name));
+  const lb = getLineBrands();
+  Object.keys(lb).forEach(l => { if (Array.isArray(lb[l])) lb[l] = lb[l].filter(b => b !== name); });
+  setLineBrands(lb);
+  const map = getBrandWorkshops();
+  delete map[name];
+  setBrandWorkshops(map);
+  renderBrandsSettings();
+  if (typeof renderStructureSettings === 'function') renderStructureSettings();
+  updateSettingsNavCounts();
+  fillLinesForOperator();
+  showToast('Бренд удалён');
+};
+
+/* --- Обработчики (контейнер статичный, содержимое перерисовывается) --- */
+$('#brandsList')?.addEventListener('input', (e) => {
+  if (e.target.id !== 'brandsSearch') return;
+  brandsQuery = e.target.value;
+  const pos = e.target.selectionStart;
+  renderBrandsSettings();
+  const s = $('#brandsSearch');
+  if (s) { s.focus(); s.setSelectionRange(pos, pos); }
+});
+
+$('#brandsList')?.addEventListener('keydown', (e) => {
+  if (e.target.id === 'newBrandInlineInput' && e.key === 'Enter') {
+    e.preventDefault();
+    addBrandInline();
+  }
+});
+
+$('#brandsList')?.addEventListener('click', (e) => {
+  const f = e.target.closest('[data-brands-filter]');
+  if (f) {
+    settingsState.brandsWs = f.dataset.brandsFilter;
+    if (f.dataset.brandsFilter !== 'all' && f.dataset.brandsFilter !== '__none__') brandsAddWs = f.dataset.brandsFilter;
+    return renderBrandsSettings();
+  }
+  const addWs = e.target.closest('[data-brand-add-ws]');
+  if (addWs) {
+    brandsAddWs = addWs.dataset.brandAddWs;
+    const v = $('#newBrandInlineInput')?.value || '';
+    renderBrandsSettings();
+    const inp = $('#newBrandInlineInput');
+    if (inp) { inp.value = v; inp.focus(); }
+    return;
+  }
+  if (e.target.closest('#newBrandInlineBtn')) return addBrandInline();
+  const setWs = e.target.closest('[data-brand-ws]');
+  if (setWs) {
+    setBrandWorkshop(setWs.dataset.brand, setWs.dataset.brandWs);
+    renderBrandsSettings();
+    if (typeof renderStructureSettings === 'function') renderStructureSettings();
+    return;
+  }
+  const del = e.target.closest('[data-brand-delete]');
+  if (del) return window.deleteBrand(del.dataset.brandDelete);
+  const ren = e.target.closest('[data-brand-rename]');
+  if (ren) {
+    const old = ren.dataset.brandRename;
+    startInlineEdit(ren, old, (v) => renameBrand(old, v));
   }
 });
 
@@ -431,7 +280,7 @@ $('#brandsFileInput')?.addEventListener('change', async (e) => {
     showImportReport(result, 'brandsList');
     if (result.added > 0) {
       renderBrandsSettings();
-      renderLineBrandsSettings();
+      updateSettingsNavCounts();
       showToast(`Добавлено брендов: ${result.added}`);
     } else {
       showToast('Новых брендов не найдено', true);

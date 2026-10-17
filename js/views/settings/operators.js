@@ -205,13 +205,3 @@ $('#addOperatorBtn')?.addEventListener('click', () => {
   closeAddOperatorModal();
   showToast('Оператор добавлен');
 });
-
-/* Обёртка openTopLossItemModal, чтобы после сохранения обновить содержимое модалки */
-const _origOpenTopLossItemModal = window.openTopLossItemModal;
-
-$('#topLossCategoryModalName')?.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    $('#topLossCategoryModalSave')?.click();
-  }
-});

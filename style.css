@@ -8,15 +8,11 @@
 @import url('css/components/ui-base.css');
 @import url('css/views/cocl-panel.css');
 @import url('css/components/forms.css');
-@import url('css/views/settings-line-brands.css');
 @import url('css/components/points.css');
 @import url('css/views/settings-photo-card.css');
 @import url('css/views/dashboard.css');
 @import url('css/components/photos.css');
 @import url('css/components/theme-transition.css');
-@import url('css/views/settings-blocks.css');
-@import url('css/views/settings-toplosses.css');
-@import url('css/views/settings-machines.css');
 @import url('css/views/editor-table.css');
 @import url('css/views/toploss.css');
 @import url('css/views/cl-electronic.css');
@@ -32,6 +28,7 @@
 @import url('css/views/schedule-time.css');
 @import url('css/views/standard-page.css');
 @import url('css/views/eparam-page.css');
+@import url('css/views/settings.css');
 
 /* ============================================================
    ГЛОБАЛЬНЫЕ ПРАВИЛА (после модулей)

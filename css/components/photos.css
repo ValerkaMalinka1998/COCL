@@ -518,3 +518,14 @@
   background: rgba(255, 255, 255, 0.1);
   transform: translateY(-50%) scale(1);
 }
+
+/* === Лайтбокс: счётчик фото === */
+.lb-counter {
+  font-size: 13px;
+  color: var(--text-second);
+  white-space: nowrap;
+}
+.lb-counter strong {
+  color: var(--accent-cyan);
+  font-variant-numeric: tabular-nums;
+}

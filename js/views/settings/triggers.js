@@ -13,142 +13,91 @@ function renderCustomTriggersSettings() {
   if (!container) return;
 
   const list = getCustomTriggers();
-  const workshops = getWorkshops();
+  const ws = settingsState.triggersWs;
+  const q = (settingsState.triggersQuery || '').trim().toLowerCase();
+  const counter = $('#triggersCount');
+  if (counter) counter.textContent = `(${list.length})`;
 
-  let openIds = getCtOpenGroups();
-  if (openIds === null) { openIds = []; setCtOpenGroups(openIds); }
+  const addWs = (ws !== 'all') ? ws : (settingsState.triggersAddWs || getWorkshops()[0]?.id || '');
+  settingsState.triggersAddWs = addWs;
 
-  // Каждый цех — свой блок со своими триггерами (показываем и пустые)
-  container.innerHTML = '<div class="bl-groups">' + workshops.map(ws => {
-    const wsTriggers = list.filter(t => t.workshop === ws.id);
-    const open = openIds.includes(ws.id);
-    return `<div class="bl-group bl-group-workshop ${open ? 'expanded' : ''}">
-      <div class="bl-group-head" data-ct-toggle="${escapeAttr(ws.id)}">
-        <span class="bl-group-toggle"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
-        <span class="bl-group-name">${escapeHtml(ws.name)}</span>
-        <span class="bl-group-count">${wsTriggers.length} триг.</span>
-        <button type="button" class="btn btn-secondary btn-sm brands-group-add" data-ct-add="${escapeAttr(ws.id)}" title="Добавить триггер в ${escapeAttr(ws.name)}">+ Триггер</button>
-      </div>
-      <div class="bl-group-body">${wsTriggers.length
-        ? renderCtList(wsTriggers, ws.id)
-        : '<div class="tl-cat-empty">Триггеров пока нет</div>'}</div>
-    </div>`;
-  }).join('') + '</div>';
+  const shown = list
+    .filter(t => ws === 'all' || t.workshop === ws)
+    .filter(t => !q || t.label.toLowerCase().includes(q));
 
-  container.querySelectorAll('[data-ct-toggle]').forEach(head => {
-    head.addEventListener('click', (e) => {
-      if (e.target.closest('[data-ct-add]')) return;
-      const id = head.dataset.ctToggle;
-      let open = getCtOpenGroups() || [];
-      if (open.includes(id)) open = open.filter(x => x !== id);
-      else open.push(id);
-      setCtOpenGroups(open);
-      renderCustomTriggersSettings();
-    });
-  });
-  container.querySelectorAll('[data-ct-add]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      openCustomTriggerModal(null, btn.dataset.ctAdd);
-    });
-  });
-  container.querySelectorAll('[data-ct-edit]').forEach(btn => {
-    btn.addEventListener('click', () => openCustomTriggerModal(btn.dataset.ctEdit));
-  });
-  container.querySelectorAll('[data-ct-delete]').forEach(btn => {
-    btn.addEventListener('click', () => deleteCustomTrigger(btn.dataset.ctDelete));
-  });
-}
+  const PARTS = [['', 'Любая часть'], ['Maker', 'Maker'], ['Packer', 'Packer']];
+  const partSeg = (t) => PARTS.map(([v, l]) => `
+    <button type="button" class="settings-seg-btn ${(t.part || '') === v ? 'active' : ''}" data-ct-part="${escapeAttr(v)}" data-ct-id="${escapeAttr(t.id)}">${l}</button>`).join('');
 
-function renderCtList(arr, workshopId) {
-  return arr.map(t => {
-    // Часть линии имеет смысл только в SMD
-    const partChip = workshopId === 'smd'
-      ? (t.part
-          ? `<span class="et-part-chip et-part-${escapeAttr(t.part.toLowerCase())}">${escapeHtml(t.part)}</span>`
-          : '<span class="tl-loss-ws-chip">любая часть</span>')
-      : '';
+  const usage = (t) =>
+    getStandards().filter(s => (s.triggers || []).includes(t.value)).length +
+    getElectronicParams().filter(p => (p.triggers || []).includes(t.value)).length;
+
+  const rows = shown.map(t => {
+    const n = usage(t);
     return `
-      <div class="tl-loss-inline-row" data-trigger-id="${escapeAttr(t.id)}">
-        <span class="tl-loss-inline-name">${escapeHtml(t.label)}</span>
-        ${partChip}
-        <div class="tl-loss-inline-actions">
-          <button type="button" class="tl-row-action-btn tl-row-edit-btn" data-ct-edit="${escapeAttr(t.id)}" title="Изменить">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
-          </button>
-          <button type="button" class="tl-row-action-btn tl-row-delete-btn" data-ct-delete="${escapeAttr(t.id)}" title="Удалить">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-    `;
+      <div class="settings-row">
+        <span class="settings-row-name" data-ct-rename="${escapeAttr(t.id)}" title="Нажмите, чтобы переименовать">${settingsHighlight(t.label, q)}</span>
+        ${ws === 'all' ? `<span class="settings-ws-badge">${escapeHtml(getWorkshopName(t.workshop) || '—')}</span>` : ''}
+        <span class="settings-row-meta">${n ? n + ' ' + pluralizeStandards(n) : 'не назначен'}</span>
+        ${t.workshop === 'smd' ? `<span class="settings-seg settings-seg-sm" title="Для какой части линии">${partSeg(t)}</span>` : ''}
+        <button type="button" class="st-icon-btn st-icon-danger" data-ct-delete="${escapeAttr(t.id)}" title="Удалить триггер">${SETTINGS_ICON_DELETE}</button>
+      </div>`;
   }).join('');
+
+  const wsSeg = getWorkshops().map(w => `
+    <button type="button" class="settings-seg-btn ${addWs === w.id ? 'active' : ''}" data-ct-add-ws="${escapeAttr(w.id)}">${escapeHtml(w.name)}</button>`).join('');
+
+  container.innerHTML = `
+    <div class="settings-toolbar">
+      ${settingsSearchHtml('triggersSearch', 'Поиск триггера…', settingsState.triggersQuery || '')}
+      <div class="settings-chips">${settingsChipsHtml(
+        settingsWorkshopChipItems(id => list.filter(t => t.workshop === id).length, true, list.length),
+        ws, 'data-ct-filter')}</div>
+    </div>
+    <div class="settings-add-row">
+      <input type="text" id="newTriggerInput" placeholder="Новый триггер, например «Смена фильтра», Enter" autocomplete="off">
+      <span class="settings-seg">${wsSeg}</span>
+      <button type="button" class="btn btn-primary btn-sm" id="newTriggerBtn">Добавить</button>
+    </div>
+    <div class="settings-list">
+      ${rows || `<div class="st-empty">${q ? 'Ничего не найдено' : 'Триггеров пока нет'}</div>`}
+    </div>`;
 }
 
-function getCtOpenGroups() {
-  try { return JSON.parse(localStorage.getItem('cl_ct_open_groups')) || null; } catch(e) { return null; }
-}
-function setCtOpenGroups(arr) {
-  try { localStorage.setItem('cl_ct_open_groups', JSON.stringify(arr)); } catch(e) {}
-}
-
-let currentEditingTriggerId = null;
-
-function openCustomTriggerModal(id, presetWorkshop) {
-  const modal = $('#customTriggerModal');
-  if (!modal) return;
-
-  currentEditingTriggerId = id || null;
-
-  const titleEl = $('#customTriggerModalTitle');
-  const saveBtn = $('#customTriggerModalSave');
-  const wsEl = $('#customTriggerModalWorkshop');
-  // Цех обязателен — без варианта «все цеха»
-  if (wsEl) {
-    wsEl.innerHTML = getWorkshops()
-      .map(w => `<option value="${escapeAttr(w.id)}">${escapeHtml(w.name)}</option>`).join('');
-    wsEl.value = presetWorkshop || 'smd';
+function addCustomTriggerInline() {
+  const label = ($('#newTriggerInput')?.value || '').trim();
+  const workshop = settingsState.triggersAddWs;
+  if (!label) return showToast('Введите название триггера', true);
+  if (!workshop) return showToast('Выберите цех', true);
+  const list = getCustomTriggers();
+  if (list.some(t => t.workshop === workshop && t.label.toLowerCase() === label.toLowerCase())) {
+    return showToast('Такой триггер в этом цехе уже есть', true);
   }
+  const stamp = Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+  list.push({ id: 'ct_' + stamp, label, value: 'ct_' + stamp, part: '', workshop });
+  setCustomTriggers(list);
+  renderCustomTriggersSettings();
+  updateSettingsNavCounts();
+  if (typeof fillEditorFilters === 'function') fillEditorFilters();
+  $('#newTriggerInput')?.focus();
+  showToast('Триггер добавлен');
+}
 
-  if (id) {
-    const t = getCustomTriggers().find(x => x.id === id);
-    if (!t) return;
-    if (titleEl) titleEl.textContent = 'Изменить триггер';
-    if (saveBtn) saveBtn.textContent = 'Сохранить';
-    $('#customTriggerModalId').value = t.id;
-    $('#customTriggerModalLabel').value = t.label || '';
-    $('#customTriggerModalPart').value = t.part || '';
-    if (wsEl) wsEl.value = t.workshop || '';
-  } else {
-    if (titleEl) titleEl.textContent = 'Добавить триггер';
-    if (saveBtn) saveBtn.textContent = 'Добавить';
-    $('#customTriggerModalId').value = '';
-    $('#customTriggerModalLabel').value = '';
-    $('#customTriggerModalPart').value = '';
+function updateCustomTrigger(id, patch) {
+  const list = getCustomTriggers();
+  const t = list.find(x => x.id === id);
+  if (!t) return false;
+  if (patch.label != null &&
+      list.some(x => x.id !== id && x.workshop === t.workshop && x.label.toLowerCase() === patch.label.toLowerCase())) {
+    showToast('Такой триггер в этом цехе уже есть', true);
+    return false;
   }
-  updateCustomTriggerPartField();
-
-  openModal(modal);
-  setTimeout(() => $('#customTriggerModalLabel')?.focus(), 100);
-}
-
-/* «Часть линии» в модалке триггера — только для SMD */
-function updateCustomTriggerPartField() {
-  const field = $('#customTriggerModalPartField');
-  const ws = $('#customTriggerModalWorkshop')?.value || '';
-  if (field) field.style.display = ws === 'smd' ? '' : 'none';
-}
-$('#customTriggerModalWorkshop')?.addEventListener('change', updateCustomTriggerPartField);
-
-function closeCustomTriggerModal() {
-  closeModal('#customTriggerModal');
-  currentEditingTriggerId = null;
+  Object.assign(t, patch);
+  setCustomTriggers(list);
+  renderCustomTriggersSettings();
+  if (typeof fillEditorFilters === 'function') fillEditorFilters();
+  return true;
 }
 
 function deleteCustomTrigger(id) {
@@ -171,59 +120,53 @@ function deleteCustomTrigger(id) {
 
   setCustomTriggers(getCustomTriggers().filter(x => x.id !== id));
   renderCustomTriggersSettings();
+  updateSettingsNavCounts();
   showToast('Триггер удалён');
 }
 
-$('#addCustomTriggerBtn')?.addEventListener('click', () => openCustomTriggerModal(null));
-$('#customTriggerModalClose')?.addEventListener('click', closeCustomTriggerModal);
-$('#customTriggerModalCancel')?.addEventListener('click', closeCustomTriggerModal);
-$('#customTriggerModal')?.addEventListener('click', (e) => {
-  if (e.target.id === 'customTriggerModal') closeCustomTriggerModal();
-});
-
-$('#customTriggerModalLabel')?.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    $('#customTriggerModalSave')?.click();
-  }
-});
-
-$('#customTriggerModalSave')?.addEventListener('click', () => {
-  const id = $('#customTriggerModalId').value;
-  const label = ($('#customTriggerModalLabel').value || '').trim();
-  const workshop = ($('#customTriggerModalWorkshop')?.value || '').trim();
-  const part = workshop === 'smd' ? $('#customTriggerModalPart').value : '';
-
-  if (!label) return showToast('Введите название триггера', true);
-  if (!workshop) return showToast('Выберите цех', true);
-
-  const list = getCustomTriggers();
-
-  // Дубликат по названию — в пределах цеха
-  const dup = list.find(t => t.id !== id && t.workshop === workshop && t.label.toLowerCase() === label.toLowerCase());
-  if (dup) return showToast('Такой триггер в этом цехе уже есть', true);
-
-  if (id) {
-    const t = list.find(x => x.id === id);
-    if (!t) return;
-    t.label = label;
-    t.part = part;
-    t.workshop = workshop;
-  } else {
-    list.push({
-      id: 'ct_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-      label,
-      value: 'ct_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-      part,
-      workshop
-    });
-  }
-
-  setCustomTriggers(list);
+/* --- Обработчики --- */
+$('#customTriggersContainer')?.addEventListener('input', (e) => {
+  if (e.target.id !== 'triggersSearch') return;
+  settingsState.triggersQuery = e.target.value;
+  const pos = e.target.selectionStart;
   renderCustomTriggersSettings();
-  if (typeof fillEditorFilters === 'function') fillEditorFilters();
-  closeCustomTriggerModal();
-  showToast(id ? 'Триггер обновлён' : 'Триггер добавлен');
+  const s = $('#triggersSearch');
+  if (s) { s.focus(); s.setSelectionRange(pos, pos); }
+});
+
+$('#customTriggersContainer')?.addEventListener('keydown', (e) => {
+  if (e.target.id === 'newTriggerInput' && e.key === 'Enter') {
+    e.preventDefault();
+    addCustomTriggerInline();
+  }
+});
+
+$('#customTriggersContainer')?.addEventListener('click', (e) => {
+  const f = e.target.closest('[data-ct-filter]');
+  if (f) {
+    settingsState.triggersWs = f.dataset.ctFilter;
+    if (f.dataset.ctFilter !== 'all') settingsState.triggersAddWs = f.dataset.ctFilter;
+    return renderCustomTriggersSettings();
+  }
+  const aw = e.target.closest('[data-ct-add-ws]');
+  if (aw) {
+    settingsState.triggersAddWs = aw.dataset.ctAddWs;
+    const v = $('#newTriggerInput')?.value || '';
+    renderCustomTriggersSettings();
+    const inp = $('#newTriggerInput');
+    if (inp) { inp.value = v; inp.focus(); }
+    return;
+  }
+  if (e.target.closest('#newTriggerBtn')) return addCustomTriggerInline();
+  const part = e.target.closest('[data-ct-part]');
+  if (part) return updateCustomTrigger(part.dataset.ctId, { part: part.dataset.ctPart });
+  const del = e.target.closest('[data-ct-delete]');
+  if (del) return deleteCustomTrigger(del.dataset.ctDelete);
+  const ren = e.target.closest('[data-ct-rename]');
+  if (ren) {
+    const t = getCustomTriggers().find(x => x.id === ren.dataset.ctRename);
+    if (t) startInlineEdit(ren, t.label, (v) => updateCustomTrigger(t.id, { label: v }));
+  }
 });
 
 /* Линии, у которых есть хотя бы один бренд */
