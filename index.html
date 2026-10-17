@@ -351,7 +351,6 @@
 
 </div>
 
-</div>
 <!-- ======================= ВКЛАДКА ЧЕК-ЛИСТ CL ======================= -->
 <div class="tab active" id="tab-electronic">
 
@@ -1163,64 +1162,75 @@
 <!-- ======================= ВКЛАДКА ИСТОРИЯ ======================= -->
 <div class="tab" id="tab-history">
 
-  <div class="card">
-    <h2>Фильтры</h2>
-    <div class="filters">
-      <div class="field">
-        <label>Период</label>
-        <select id="periodSelect">
-          <option value="all">Все время</option>
-          <option value="week">Последняя неделя</option>
-          <option value="month">Последний месяц</option>
-          <option value="custom">Произвольный</option>
-        </select>
+  <!-- ===== Лента проверок / журнал отклонений ===== -->
+  <div id="histMainView">
+    <div class="card hist-head-card">
+      <div class="hist-head">
+        <div class="hist-title">История <small id="histSubtitle"></small></div>
+        <span class="hist-sp"></span>
+        <div class="hist-seg" id="histViewSeg">
+          <button type="button" data-hist-view="feed">По проверкам</button>
+          <button type="button" data-hist-view="dev">По отклонениям</button>
+        </div>
+        <div class="hist-seg" id="histPeriodSeg">
+          <button type="button" data-hist-period="shift">Смена</button>
+          <button type="button" data-hist-period="today">Сегодня</button>
+          <button type="button" data-hist-period="7">7 дней</button>
+          <button type="button" data-hist-period="30">30 дней</button>
+          <button type="button" data-hist-period="all">Всё</button>
+          <button type="button" data-hist-period="custom">Период…</button>
+        </div>
+        <div class="et-excel" id="historyExcelMenu">
+          <button class="btn btn-secondary btn-icon-text et-excel-toggle" type="button" title="Экспорт и очистка истории">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13l3 4M12 13l-3 4"/></svg>
+            <span>Excel</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="et-excel-menu">
+            <button class="et-excel-item" id="exportXlsxBtn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Экспорт XLSX</span>
+            </button>
+            <button class="et-excel-item" id="exportCsvBtn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Экспорт CSV</span>
+            </button>
+            <button class="et-excel-item hist-danger-item" id="clearHistoryBtn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+              <span>Очистить историю</span>
+            </button>
+          </div>
+        </div>
       </div>
-      <div class="field" id="dateFromField" style="display:none">
-        <label>С даты</label>
-        <input type="date" id="dateFrom">
+      <div class="hist-custom hist-hidden" id="histCustomRange">
+        <label>С <input type="date" id="dateFrom"></label>
+        <label>По <input type="date" id="dateTo"></label>
       </div>
-      <div class="field" id="dateToField" style="display:none">
-        <label>По дату</label>
-        <input type="date" id="dateTo">
-      </div>
-      <div class="field">
-        <label>Линия</label>
-        <select id="filterLine"><option value="">Все</option></select>
-      </div>
-      <div class="field">
-        <label>Тип перехода</label>
-          <select id="filterType">
-            <option value="">Все</option>
-            <option>ChangeOver</option>
-            <option>CL_TO</option>
-            <option>CL_Conversion</option>
-          </select>
-      </div>
-      <div class="field">
-        <label>Тип проверки</label>
-        <select id="filterMode">
-          <option value="">Все</option>
-          <option value="changeover">COCL (смена сорта)</option>
-          <option value="toploss">Top Losses</option>
-          <option value="electronic">CL Electronic</option>
-        </select>
-      </div>
-      <div class="field" style="flex:0 0 auto; min-width:auto">
-        <button class="btn btn-primary" id="applyFilterBtn">Применить</button>
+      <div class="hist-kpis" id="histKpis"></div>
+      <div class="hist-fbar">
+        <label class="hist-search">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="histSearch" placeholder="Поиск: OPL, стандарт, машина, комментарий…">
+        </label>
+        <select id="filterLine" class="hist-select" title="Линия"></select>
+        <div class="hist-kind-chips" id="histKindChips"></div>
+        <select id="histBrigade" class="hist-select" title="Бригада"></select>
+        <select id="histMachine" class="hist-select" title="Машина"></select>
+        <label class="hist-toggle" title="Показать только проверки с отклонениями">
+          <input type="checkbox" id="histOnlyDev"><span class="hist-toggle-sw"></span>только с отклонениями
+        </label>
       </div>
     </div>
-    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px">
-      <button class="btn btn-secondary" id="exportCsvBtn">Экспорт CSV</button>
-      <button class="btn btn-secondary" id="exportXlsxBtn">Экспорт XLSX</button>
-      <button class="btn btn-danger" id="clearHistoryBtn">Очистить историю</button>
-    </div>
+
+    <div class="card hist-cov-card" id="histCoverage"></div>
+    <div id="historyList"></div>
   </div>
 
-  <div class="card">
-    <h2>Записи (<span id="historyCount">0</span>)</h2>
-    <div id="historyList"></div>
-    <div class="pagination-bar" id="historyPagination"></div>
-  </div>
+  <!-- ===== Страница проверки ===== -->
+  <div id="histRecordView" class="hist-hidden"></div>
+
+  <!-- ===== История стандарта ===== -->
+  <div id="histStdView" class="hist-hidden"></div>
 
 </div>
 
@@ -1795,29 +1805,6 @@
     </div>
   </div>
 </div>
-<!-- ======================= МОДАЛЬНОЕ ОКНО: ПРОСМОТР ЗАПИСИ ======================= -->
-<div class="modal-overlay" id="recordModal">
-  <div class="modal modal-wide">
-    <div class="modal-header">
-      <h3>Просмотр проверки</h3>
-      <button class="modal-close" id="recordModalClose">✕</button>
-    </div>
-    <div class="modal-body" id="recordModalBody"></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary btn-icon-text" id="recordPrintBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="6 9 6 2 18 2 18 9"/>
-          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-          <rect x="6" y="14" width="12" height="8"/>
-        </svg>
-        <span>Печать</span>
-      </button>
-      <button class="btn btn-primary" id="recordCloseBtn">Закрыть</button>
-    </div>
-  </div>
-</div>
-
-
 <!-- ======================= МОДАЛЬНОЕ ОКНО: ДОБАВИТЬ ОПЕРАТОРА ======================= -->
 <div class="modal-overlay" id="addOperatorModal">
   <div class="modal">
@@ -2229,10 +2216,12 @@
 <script src="js/views/cocl/cocl-save.js"></script>
 <script src="js/views/cl-checklist/cl-checklist.js"></script>
 <script src="js/views/cl-checklist/quick-check.js"></script>
-<script src="js/views/cl-checklist/cl-save.js"></script>
 <script src="js/views/toploss/toploss.js"></script>
 <script src="js/views/toploss/toploss-check.js"></script>
+<script src="js/views/history/history-data.js"></script>
 <script src="js/views/history/history.js"></script>
+<script src="js/views/history/history-record.js"></script>
+<script src="js/views/history/history-standard.js"></script>
 <script src="js/views/history/history-export.js"></script>
 <script src="js/views/dashboard.js"></script>
 <script src="js/views/editor/editor-core.js"></script>

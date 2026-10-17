@@ -604,7 +604,7 @@ function renderClRow(row, num, zone, cells, hist, isElec) {
       if (c.clickable) cls += ' cl-cell-clickable';
       inner = `<button type="button" class="${cls}"
         data-row-id="${escapeAttr(row.id)}" data-date="${escapeAttr(c.dateStr)}" data-shift="${c.shift}"
-        data-planned="${c.planned ? '1' : '0'}" data-clickable="${c.clickable ? '1' : '0'}"
+        data-planned="${c.planned ? '1' : '0'}" data-clickable="${c.clickable ? '1' : '0'}" data-status="${escapeAttr(c.status)}"
         title="${escapeAttr(tip)}">${content}${c.comment ? '<i class="cil-dot"></i>' : ''}</button>`;
     }
     html += `<td class="${cilTdClass(c.shift, c.isToday)}">${inner}</td>`;
@@ -619,10 +619,15 @@ function fmtNum(n) {
   return parseFloat(n.toFixed(6)).toString();
 }
 
+/* Режим записи истории для текущего режима чек-листа */
+function clRecordMode() {
+  return clState.mode === 'mech' ? 'cl' : 'electronic';
+}
+
 function findExistingCheck(stdId, dateStr, shiftLetter) {
   const hist = getHistory();
   const record = hist.find(h =>
-    (h.mode === 'electronic' || h.mode === 'cl') &&
+    h.mode === clRecordMode() &&
     h.line === clState.line &&
     h.date === dateStr &&
     h.shift === shiftLetter
@@ -646,6 +651,11 @@ function bindClCells() {
     cell.addEventListener('click', (e) => {
       const clickable = cell.dataset.clickable === '1';
       if (!clickable) {
+        // Уже есть результат или смена пропущена — карточка с итогом
+        if (['OK', 'FAIL', 'UNCHECKED', 'missed'].includes(cell.dataset.status)) {
+          showClPeek(cell);
+          return;
+        }
         // Подсказка почему не кликается
         const planned = cell.dataset.planned === '1';
         if (!planned) return;
@@ -674,6 +684,90 @@ function bindClCells() {
     });
   });
 }
+
+/* ============================================================
+   КАРТОЧКА ЯЧЕЙКИ: итог прошлой проверки
+   ============================================================ */
+function closeClPeek() {
+  $('#clPeek')?.remove();
+}
+
+function showClPeek(cell) {
+  closeClPeek();
+  const rowId = cell.dataset.rowId;
+  const dateStr = cell.dataset.date;
+  const shift = cell.dataset.shift;
+  const row = clState.rows.find(r => r.id === rowId);
+  if (!row) return;
+  const letter = getShiftsForDate(dateStr)[shift];
+  const draft = clState.quickDraft[`${rowId}|${dateStr}|${shift}`];
+  const record = getHistory().find(h => h.mode === clRecordMode() && h.line === clState.line &&
+    h.date === dateStr && h.shift === letter);
+  const it = record ? (record.items || []).find(x => x.standardId === rowId) : null;
+  const status = cell.dataset.status;
+
+  let symCls = 'u', sym = '?';
+  if (status === 'OK') { symCls = 'o'; sym = CIL_ICONS.check; }
+  if (status === 'FAIL') { symCls = 'x'; sym = CIL_ICONS.x; }
+
+  let body;
+  if (draft && !it) {
+    body = 'Отметка ещё не сохранена — нажмите «Закончить проверку».';
+  } else if (status === 'missed' || !it) {
+    body = '<span class="hist-c-warn">Проверка не выполнена — смена прошла без отметки.</span>';
+  } else if (it.status === 'UNCHECKED') {
+    body = 'Отмечено «не проверено».';
+  } else {
+    const pts = histItemPoints(record, it);
+    body = '<div class="hist-pts">' + (pts
+      ? pts.map((p, i) => `<span class="hist-pt ${p.bad ? 'bad' : ''}">${pts.length > 1 ? 'т.' + (i + 1) + ' ' : ''}<b>${escapeHtml(p.value || '—')}</b></span>`).join('') +
+        (pts.length === 1 && pts[0].label ? ` <span class="hist-sub">норма ${escapeHtml(pts[0].label)}</span>` : '')
+      : `<span class="hist-pt ${it.status === 'FAIL' ? 'bad' : ''}"><b>${it.status === 'FAIL' ? 'Не ОК' : 'ОК'}</b></span>`) + '</div>';
+  }
+  if (it && it.comment) body += `<div class="hist-com">💬 ${escapeHtml(it.comment)}</div>`;
+
+  const title = row.oplNumber ? `<span class="hist-opl">${escapeHtml(row.oplNumber)}</span> · ${escapeHtml(row.title || row.paramName || '')}` : escapeHtml(row.title || row.paramName || '');
+  const el = document.createElement('div');
+  el.id = 'clPeek';
+  el.className = 'cl-peek';
+  el.innerHTML = `
+    <div class="cl-peek-h"><span class="hist-st hist-st-${symCls}">${sym}</span>
+      <div><b>${title}</b><div class="hist-sub">${histDayName(dateStr)} ${fmtShortDate(dateStr)} · ${shift === 'day' ? 'день' : 'ночь'} · бр. ${escapeHtml(letter)}${record ? ' · ' + histTime(record) : ''}</div></div>
+      <button type="button" class="cl-peek-x" data-peek-close title="Закрыть">✕</button></div>
+    <div class="cl-peek-body">${body}</div>
+    <div class="cl-peek-btns">
+      <button type="button" class="btn btn-primary btn-sm" data-peek-shift>Открыть проверку смены</button>
+      <button type="button" class="btn btn-secondary btn-sm" data-peek-hist>История стандарта</button>
+    </div>`;
+  document.body.appendChild(el);
+
+  // Позиция: под ячейкой, не выходя за экран
+  const r = cell.getBoundingClientRect();
+  const w = el.offsetWidth, hgt = el.offsetHeight;
+  let left = Math.min(window.innerWidth - w - 12, Math.max(12, r.left + r.width / 2 - w / 2));
+  let top = r.bottom + 8;
+  if (top + hgt > window.innerHeight - 12) top = Math.max(12, r.top - hgt - 8);
+  el.style.left = left + 'px';
+  el.style.top = top + 'px';
+
+  el.addEventListener('click', (e) => {
+    if (e.target.closest('[data-peek-close]')) return closeClPeek();
+    if (e.target.closest('[data-peek-shift]')) {
+      closeClPeek();
+      return openHistoryShift(clState.line, dateStr, shift, { from: 'electronic' });
+    }
+    if (e.target.closest('[data-peek-hist]')) {
+      closeClPeek();
+      return openStandardHistory(rowId, clState.line, { from: 'electronic' });
+    }
+  });
+}
+
+document.addEventListener('mousedown', (e) => {
+  if ($('#clPeek') && !e.target.closest('#clPeek') && !e.target.closest('.cl-cell')) closeClPeek();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeClPeek(); });
+window.addEventListener('scroll', closeClPeek, true);
 
 function quickSetClCell(rowId, dateStr, shift, status) {
   const row = clState.rows.find(r => r.id === rowId);
@@ -749,7 +843,7 @@ function saveClDraftToHistory() {
   Object.entries(groups).forEach(([gk, group]) => {
     const shiftLetter = getShiftsForDate(group.date)[group.shift];
     let record = hist.find(h =>
-      (h.mode === 'electronic' || h.mode === 'cl') &&
+      h.mode === clRecordMode() &&
       h.line === clState.line &&
       h.date === group.date &&
       h.shift === shiftLetter
@@ -759,7 +853,7 @@ function saveClDraftToHistory() {
       record = {
         id: uid(),
         timestamp: new Date().toISOString(),
-        mode: clState.mode === 'mech' ? 'cl' : 'electronic',
+        mode: clRecordMode(),
         operator: '—',
         line: clState.line,
         shift: shiftLetter,
