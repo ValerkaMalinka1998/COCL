@@ -132,7 +132,7 @@
   border-radius: 50%;
 }
 .cil-brig.now {
-  color: #04121f;
+  color: var(--blue-deep);
   background: var(--accent-cyan);
   border-color: var(--accent-cyan);
   box-shadow: var(--glow-cyan-sm);
@@ -378,7 +378,7 @@ button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentCol
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 .cil-plan:hover { color: var(--accent-cyan); border-color: var(--accent-cyan); }
-.cil-plan.on.cil-plan-day { color: #04121f; background: var(--accent-cyan); border: 1.5px solid var(--accent-cyan); }
+.cil-plan.on.cil-plan-day { color: var(--blue-deep); background: var(--accent-cyan); border: 1.5px solid var(--accent-cyan); }
 .cil-plan.on.cil-plan-night { color: var(--on-accent); background: var(--accent-purple); border: 1.5px solid var(--accent-purple); }
 .cil-plan.locked { cursor: not-allowed; opacity: 0.45; }
 .cil-plan.locked:not(.on) { background: repeating-linear-gradient(45deg, transparent 0 4px, var(--border) 4px 5px); }

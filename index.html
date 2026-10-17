@@ -492,7 +492,14 @@
             </svg>
             <span>Создать стандарт</span>
           </button>
-          <button class="btn btn-secondary btn-icon-text btn-sm" id="editorMechUploadBtn" type="button">
+          <div class="et-excel" id="editorMechExcelMenu">
+            <button class="btn btn-secondary btn-icon-text et-excel-toggle" type="button" title="Импорт, шаблон и экспорт Excel">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13l3 4M12 13l-3 4"/></svg>
+              <span>Excel</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="et-excel-menu">
+          <button class="et-excel-item" id="editorMechUploadBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="17 8 12 3 7 8"/>
@@ -501,7 +508,7 @@
             <span>Импорт</span>
           </button>
           <input type="file" id="editorMechUploadInput" accept=".xlsx,.xls" style="display:none">
-          <button class="btn btn-secondary btn-icon-text btn-sm" id="editorMechTemplateBtn" type="button">
+          <button class="et-excel-item" id="editorMechTemplateBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="7 10 12 15 17 10"/>
@@ -509,7 +516,7 @@
             </svg>
             <span>Шаблон</span>
           </button>
-          <button class="btn btn-secondary btn-icon-text btn-sm" id="editorMechExportBtn" type="button">
+          <button class="et-excel-item" id="editorMechExportBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="17 8 12 3 7 8"/>
@@ -517,6 +524,8 @@
             </svg>
             <span>Экспорт</span>
           </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -578,66 +587,31 @@
 
       <div class="editor-panel-divider"></div>
 
-      <!-- Фильтры -->
-      <div class="editor-filters">
-        <div class="editor-filter-field">
-          <label>Цех</label>
-          <select id="emFilterWorkshop"><option value="">Все</option></select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Участок</label>
-          <select id="emFilterArea"><option value="">Все</option></select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Линия</label>
-          <select id="emFilterLine"><option value="">Все</option></select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Машина</label>
-          <select id="emFilterMachine"><option value="">Все</option></select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Узел</label>
-          <select id="emFilterNode"><option value="">Все</option></select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Тип</label>
-          <select id="emFilterType">
-            <option value="">Все</option>
-            <option value="ChangeOver">Change Over</option>
-            <option value="CL_TO">CL в ТО</option>
-            <option value="CL_Conversion">CL в Конвертацию</option>
-            <option value="__none">Без привязки</option>
-          </select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Часть линии</label>
-          <select id="emFilterPart">
-            <option value="">Все</option>
-            <option value="Maker">Maker</option>
-            <option value="Packer">Packer</option>
-          </select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Статус</label>
-          <select id="emFilterActive">
-            <option value="">Все</option>
-            <option value="active">Только активные</option>
-            <option value="inactive">Только неактивные</option>
-          </select>
-        </div>
-        <div class="editor-filter-field editor-filter-field-wide">
-          <label>Поиск</label>
-          <div class="editor-filter-search-row">
-            <input type="text" id="emFilterSearch" placeholder="Название, OPL №, узел...">
-            <button class="editor-filter-reset-btn" id="emFilterResetBtn" type="button" title="Сбросить фильтры">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="23 4 23 10 17 10"/>
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-              </svg>
-            </button>
-          </div>
-        </div>
+      <!-- Фильтры одной строкой -->
+      <div class="et-filterbar">
+        <label class="et-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="emFilterSearch" placeholder="Поиск: OPL, название, узел…" autocomplete="off"></label>
+        <div class="et-fchips" id="emMachineChips"></div>
+        <input type="hidden" id="emFilterMachine">
+        <input type="hidden" id="emFilterPart">
+        <select class="et-fsel" id="emFilterNode" title="Узел"><option value="">Узел: все</option></select>
+        <select class="et-fsel" id="emFilterType" title="Применять к">
+          <option value="">Применять к: все</option>
+          <option value="ChangeOver">Change Over</option>
+          <option value="CL_TO">CL в ТО</option>
+          <option value="CL_Conversion">CL в Конвертацию</option>
+          <option value="__none">Без привязки</option>
+        </select>
+        <select class="et-fsel" id="emFilterSchedule" title="Расписание">
+          <option value="">Расписание: все</option>
+          <option value="in">В расписании</option>
+          <option value="out">Не в расписании</option>
+        </select>
+        <select class="et-fsel" id="emFilterActive" title="Статус">
+          <option value="">Статус: все</option>
+          <option value="active">Активные</option>
+          <option value="inactive">Неактивные</option>
+        </select>
+        <button class="et-reset" id="emFilterResetBtn" type="button" title="Сбросить фильтры">Сбросить</button>
       </div>
     </div>
 
@@ -672,7 +646,14 @@
             </svg>
             <span>Создать параметр</span>
           </button>
-          <button class="btn btn-secondary btn-icon-text btn-sm" id="editorElecUploadBtn" type="button">
+          <div class="et-excel" id="editorElecExcelMenu">
+            <button class="btn btn-secondary btn-icon-text et-excel-toggle" type="button" title="Импорт, шаблон и экспорт Excel">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13l3 4M12 13l-3 4"/></svg>
+              <span>Excel</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="et-excel-menu">
+          <button class="et-excel-item" id="editorElecUploadBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="17 8 12 3 7 8"/>
@@ -681,7 +662,7 @@
             <span>Импорт</span>
           </button>
           <input type="file" id="editorElecUploadInput" accept=".xlsx,.xls" style="display:none">
-          <button class="btn btn-secondary btn-icon-text btn-sm" id="editorElecTemplateBtn" type="button">
+          <button class="et-excel-item" id="editorElecTemplateBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="7 10 12 15 17 10"/>
@@ -689,7 +670,7 @@
             </svg>
             <span>Шаблон</span>
           </button>
-          <button class="btn btn-secondary btn-icon-text btn-sm" id="editorElecExportBtn" type="button">
+          <button class="et-excel-item" id="editorElecExportBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="17 8 12 3 7 8"/>
@@ -697,6 +678,8 @@
             </svg>
             <span>Экспорт</span>
           </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -755,62 +738,36 @@
 
       <div class="editor-panel-divider"></div>
 
-      <!-- Фильтры -->
-      <div class="editor-filters">
-        <div class="editor-filter-field">
-          <label>Цех</label>
-          <select id="eeFilterWorkshop"><option value="">Все</option></select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Участок</label>
-          <select id="eeFilterArea"><option value="">Все</option></select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Линия</label>
-          <select id="eeFilterLine"><option value="">Все</option></select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Машина</label>
-          <select id="eeFilterMachine"><option value="">Все</option></select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Тип контроля</label>
-          <select id="eeFilterControlType">
-            <option value="">Все</option>
-            <option value="fixed">Фиксированный</option>
-            <option value="variable">Вариабельный</option>
-            <option value="interval">Контролируемый интервал</option>
-          </select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Периодичность</label>
-          <select id="eeFilterFreq">
-            <option value="">Все</option>
-            <option value="daily">Каждый день</option>
-            <option value="weekly">По дням недели</option>
-            <option value="once">Разовые даты</option>
-          </select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Статус</label>
-          <select id="eeFilterActive">
-            <option value="">Все</option>
-            <option value="active">Только активные</option>
-            <option value="inactive">Только неактивные</option>
-          </select>
-        </div>
-        <div class="editor-filter-field editor-filter-field-wide">
-          <label>Поиск</label>
-          <div class="editor-filter-search-row">
-            <input type="text" id="eeFilterSearch" placeholder="Название параметра...">
-            <button class="editor-filter-reset-btn" id="eeFilterResetBtn" type="button" title="Сбросить фильтры">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="23 4 23 10 17 10"/>
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-              </svg>
-            </button>
-          </div>
-        </div>
+      <!-- Фильтры одной строкой -->
+      <div class="et-filterbar">
+        <label class="et-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="eeFilterSearch" placeholder="Поиск: параметр, машина…" autocomplete="off"></label>
+        <div class="et-fchips" id="eeMachineChips"></div>
+        <input type="hidden" id="eeFilterMachine">
+        <input type="hidden" id="eeFilterPart">
+        <select class="et-fsel" id="eeFilterControlType" title="Тип контроля">
+          <option value="">Тип: все</option>
+          <option value="fixed">Фиксированный</option>
+          <option value="variable">Вариабельный</option>
+          <option value="interval">Контролируемый интервал</option>
+        </select>
+        <select class="et-fsel" id="eeFilterType" title="Применять к">
+          <option value="">Применять к: все</option>
+          <option value="ChangeOver">Change Over</option>
+          <option value="CL_TO">CL в ТО</option>
+          <option value="CL_Conversion">CL в Конвертацию</option>
+          <option value="__none">Без привязки</option>
+        </select>
+        <select class="et-fsel" id="eeFilterSchedule" title="Расписание">
+          <option value="">Расписание: все</option>
+          <option value="in">В расписании</option>
+          <option value="out">Не в расписании</option>
+        </select>
+        <select class="et-fsel" id="eeFilterActive" title="Статус">
+          <option value="">Статус: все</option>
+          <option value="active">Активные</option>
+          <option value="inactive">Неактивные</option>
+        </select>
+        <button class="et-reset" id="eeFilterResetBtn" type="button" title="Сбросить фильтры">Сбросить</button>
       </div>
     </div>
 
