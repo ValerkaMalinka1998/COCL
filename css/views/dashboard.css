@@ -1,0 +1,699 @@
+/* ============================================================ */
+/* === ДАШБОРД: карточки-счётчики ============================== */
+/* ============================================================ */
+
+.dash-workshop-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.dash-ws-tab {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-hi);
+  background: var(--bg-card);
+  color: var(--text-second);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.dash-ws-tab:hover {
+  border-color: var(--accent-cyan);
+  color: var(--text-main);
+}
+.dash-ws-tab.active {
+  border-color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.12);
+  color: var(--accent-cyan);
+  font-weight: 700;
+}
+
+.dash-stats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.dash-stat {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+.dash-stat:hover {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 4px 16px rgba(0, 212, 255, 0.15);
+  transform: translateY(-2px);
+}
+.dash-stat::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--accent-cyan);
+  border-radius: 0 3px 3px 0;
+}
+.dash-stat.dash-stat-green::before   { background: var(--accent-green); }
+.dash-stat.dash-stat-red::before     { background: var(--accent-red); }
+.dash-stat.dash-stat-purple::before  { background: var(--accent-purple); }
+.dash-stat.dash-stat-cyan::before { background: var(--accent-cyan); }
+
+.dash-stat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-second);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.dash-stat-head svg {
+  width: 18px;
+  height: 18px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.dash-stat:hover .dash-stat-head svg {
+  color: var(--accent-cyan);
+}
+.dash-stat-value {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+}
+.dash-stat-sub {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+.dash-stat-sub strong {
+  color: var(--text-second);
+  font-weight: 700;
+}
+
+@media (max-width: 1300px) {
+  .dash-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 900px) {
+  .dash-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 500px) {
+  .dash-stats {
+    grid-template-columns: 1fr;
+  }
+}
+/* ============================================================ */
+/* === ДАШБОРД: двухколоночный layout + виджеты ================ */
+/* ============================================================ */
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+@media (max-width: 1000px) {
+  .dash-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dash-widget {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+}
+.dash-widget + .dash-widget {
+  margin-top: 16px;
+}
+.dash-widget-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--blue-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.dash-widget-title svg {
+  width: 16px;
+  height: 16px;
+  color: var(--accent-cyan);
+  flex-shrink: 0;
+}
+.dash-widget-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* --- Последние проверки --- */
+.dash-recent {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.dash-recent td {
+  padding: 8px 4px;
+  border-bottom: 1px dashed var(--border);
+  vertical-align: middle;
+  color: var(--text-main);
+}
+.dash-recent tr:last-child td {
+  border-bottom: none;
+}
+.dash-recent tr:hover td {
+  background: var(--bg-hover);
+}
+.dash-recent-date {
+  color: var(--text-second);
+  font-size: 12px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.dash-recent-line {
+  font-weight: 700;
+  color: var(--accent-cyan);
+  white-space: nowrap;
+}
+.dash-recent-operator {
+  color: var(--text-main);
+}
+.dash-recent-fails {
+  text-align: right;
+  white-space: nowrap;
+}
+.dash-recent-btn {
+  background: none;
+  border: 1px solid var(--border-hi);
+  color: var(--text-second);
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.dash-recent-btn:hover {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
+/* --- Топ проблемных стандартов --- */
+.dash-top-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dash-top-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dash-top-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+.dash-top-opl {
+  font-weight: 700;
+  color: var(--accent-cyan);
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 12px;
+}
+.dash-top-title {
+  color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+.dash-top-count {
+  color: var(--accent-red);
+  font-weight: 700;
+  font-size: 12px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.dash-top-bar-outer {
+  height: 6px;
+  background: var(--bg-hover);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.dash-top-bar-inner {
+  height: 100%;
+  background: linear-gradient(90deg, #e63052, #ff4d6d);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+/* ============================================================ */
+/* === ДАШБОРД: бары по линиям и операторам =================== */
+/* ============================================================ */
+
+.dash-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dash-bar-item {
+  display: grid;
+  grid-template-columns: 70px 1fr 70px;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.dash-bar-label {
+  font-weight: 700;
+  color: var(--accent-cyan);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 12px;
+}
+.dash-bar-label.dash-bar-label-plain {
+  font-family: inherit;
+  color: var(--text-main);
+  font-weight: 500;
+  font-size: 13px;
+}
+.dash-bar-track {
+  height: 20px;
+  background: var(--bg-hover);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+}
+/* Для двухцветного бара (ОК + fail) */
+.dash-bar-track-ok {
+  background: var(--bg-hover);
+}
+.dash-bar-fill-ok {
+  height: 100%;
+  background: linear-gradient(90deg, #00a865, #00c47a);
+  box-shadow: inset 0 0 8px rgba(0, 196, 122, 0.25);
+  transition: width 0.4s ease;
+}
+.dash-bar-fill-fail {
+  height: 100%;
+  background: linear-gradient(90deg, #e63052, #ff4d6d);
+  box-shadow: inset 0 0 8px rgba(255, 77, 109, 0.3);
+  transition: width 0.4s ease;
+}
+.dash-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+  position: relative;
+}
+.dash-bar-fill-cyan {
+  background: linear-gradient(90deg, #00a8cc, #00d4ff);
+  box-shadow: inset 0 0 8px rgba(0, 212, 255, 0.3);
+}
+.dash-bar-fill-purple {
+  background: linear-gradient(90deg, #6347d4, #7b5cff);
+  box-shadow: inset 0 0 8px rgba(123, 92, 255, 0.3);
+}
+.dash-bar-fill-green {
+  background: linear-gradient(90deg, #00a865, #00c47a);
+  box-shadow: inset 0 0 8px rgba(0, 196, 122, 0.3);
+}
+.dash-bar-fill-amber {
+  background: linear-gradient(90deg, #d98a00, #ffb800);
+  box-shadow: inset 0 0 8px rgba(255, 184, 0, 0.3);
+}
+.dash-bar-fill-red {
+  background: linear-gradient(90deg, #e63052, #ff4d6d);
+  box-shadow: inset 0 0 8px rgba(255, 77, 109, 0.3);
+}
+.dash-bar-value {
+  text-align: right;
+  font-weight: 700;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.dash-bar-sub {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-dim);
+  margin-top: 2px;
+  letter-spacing: 0.2px;
+}
+/* ============================================================ */
+/* === ДАШБОРД: столбики по дням =============================== */
+/* ============================================================ */
+
+.dash-days-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 140px;
+  padding: 8px 0 0;
+  border-bottom: 1px solid var(--border);
+}
+.dash-day-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  justify-content: flex-end;
+  position: relative;
+}
+.dash-day-bar-wrap {
+  width: 100%;
+  max-width: 40px;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  position: relative;
+  cursor: default;
+}
+.dash-day-bar {
+  width: 100%;
+  max-width: 40px;
+  min-height: 2px;
+  border-radius: 3px 3px 0 0;
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.dash-day-bar-wrap:hover .dash-day-bar {
+  transform: scaleY(1.02) translateY(-2px);
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.4);
+}
+.dash-day-bar.dash-day-bar-empty {
+  background: var(--border);
+  min-height: 2px;
+}
+.dash-day-bar-wrap:hover .dash-day-bar.dash-day-bar-empty {
+  background: var(--border-hi);
+  box-shadow: none;
+  transform: none;
+}
+
+/* Внутренний контейнер для двух сегментов */
+.dash-day-bar-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+.dash-day-bar-fail {
+  background: linear-gradient(180deg, #ff4d6d, #e63052);
+  min-height: 2px;
+  width: 100%;
+}
+.dash-day-bar-ok {
+  background: linear-gradient(180deg, #00c47a, #00a865);
+  min-height: 2px;
+  width: 100%;
+}
+
+/* Число над столбиком */
+.dash-day-bar-value {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+  white-space: nowrap;
+  margin-bottom: 4px;
+}
+.dash-day-bar-wrap:hover .dash-day-bar-value {
+  opacity: 1;
+}
+.dash-day-label {
+  font-size: 9px;
+  color: var(--text-dim);
+  text-align: center;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================ */
+/* === ДАШБОРД: круговая по типам ============================== */
+/* ============================================================ */
+
+.dash-donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 8px 0;
+}
+.dash-donut {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  position: relative;
+  background: conic-gradient(var(--bg-hover) 0deg 360deg);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+}
+.dash-donut-hole {
+  position: absolute;
+  inset: 28px;
+  background: var(--bg-card);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.dash-donut-total {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.dash-donut-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+.dash-donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.dash-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.dash-legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.dash-legend-name {
+  flex: 1;
+  color: var(--text-main);
+  font-weight: 600;
+}
+.dash-legend-count {
+  color: var(--text-second);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.dash-legend-percent {
+  color: var(--text-dim);
+  font-size: 11px;
+  min-width: 42px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================ */
+/* === ДАШБОРД: быстрые действия =============================== */
+/* ============================================================ */
+
+.dash-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+.dash-action-btn {
+  flex: 1;
+  min-width: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 20px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-hi);
+  border-radius: 8px;
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+.dash-action-btn:hover {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0, 212, 255, 0.2);
+}
+.dash-action-btn svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+.dash-action-btn.dash-action-green:hover {
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+  box-shadow: 0 4px 14px rgba(0, 196, 122, 0.2);
+}
+.dash-action-btn.dash-action-purple:hover {
+  border-color: var(--accent-purple);
+  color: var(--accent-purple);
+  box-shadow: 0 4px 14px rgba(123, 92, 255, 0.2);
+}
+/* ============================================================ */
+/* === ДАШБОРД: «Требует внимания» ============================= */
+/* ============================================================ */
+
+.dash-attention {
+  border-left: 4px solid var(--accent-red);
+}
+.dash-attention .dash-widget-title svg {
+  color: var(--accent-red);
+}
+.dash-attention-ok {
+  border-left-color: var(--accent-green);
+}
+.dash-attention-ok .dash-widget-title svg {
+  color: var(--accent-green);
+}
+.dash-attention-ok-text {
+  padding: 20px 8px;
+  color: var(--accent-green);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+}
+.dash-attention-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dash-attention-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(230, 36, 79, 0.06);
+  border: 1px solid rgba(230, 36, 79, 0.2);
+  border-radius: 6px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.dash-attention-item:hover {
+  background: rgba(230, 36, 79, 0.1);
+  border-color: rgba(230, 36, 79, 0.4);
+}
+.dash-attention-icon {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-red);
+  flex-shrink: 0;
+}
+.dash-attention-icon svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+.dash-attention-text {
+  flex: 1;
+  min-width: 0;
+}
+.dash-attention-main {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+.dash-attention-hint {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+.dash-attention-btn {
+  padding: 6px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-hi);
+  border-radius: 5px;
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.dash-attention-btn:hover {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}

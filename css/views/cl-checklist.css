@@ -1,0 +1,609 @@
+/* ============================================================ */
+/* === ПРОВЕРКА CL: контекстная строка ======================== */
+/* ============================================================ */
+
+.cl-context-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  padding: 12px 20px;
+  background: rgba(0, 212, 255, 0.04);
+  border-top: 1px solid var(--border);
+  align-items: center;
+}
+
+.cl-context-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  margin-right: 8px
+}
+
+.cl-context-label {
+  color: var(--text-second);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.cl-context-value {
+  color: var(--text-main);
+  font-weight: 700;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cl-shift-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-family: 'Courier New', Consolas, monospace;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.4px;
+}
+.cl-shift-A { color: var(--accent-cyan);   background: rgba(0, 212, 255, 0.12);   border: 1px solid rgba(0, 212, 255, 0.4); }
+.cl-shift-B { color: var(--accent-purple); background: rgba(123, 92, 255, 0.12);  border: 1px solid rgba(123, 92, 255, 0.4); }
+.cl-shift-C { color: var(--accent-amber);  background: rgba(232, 154, 0, 0.12);   border: 1px solid rgba(232, 154, 0, 0.4); }
+.cl-shift-D { color: var(--accent-green);  background: rgba(0, 196, 122, 0.12);   border: 1px solid rgba(0, 196, 122, 0.4); }
+
+.cl-brand-value {
+  font-family: 'Courier New', Consolas, monospace;
+  color: var(--accent-cyan);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.cl-brand-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.cl-brand-edit-btn svg { width: 12px; height: 12px; display: block; pointer-events: none; }
+.cl-brand-edit-btn:hover { color: var(--accent-cyan); border-color: rgba(0, 212, 255, 0.4); }
+
+/* ============================================================ */
+/* === ПРОВЕРКА CL: расширенная сетка с инфо-колонками ======== */
+/* ============================================================ */
+
+/* Переопределяем .sch-matrix специально для проверки CL */
+.cl-matrix-wrap {
+  padding: 16px 20px;
+  overflow-x: auto;
+}
+
+.cl-week-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  min-width: max-content;
+}
+.cl-week-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border-hi);
+  background: var(--bg-card);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cl-week-nav-btn svg { width: 18px; height: 18px; }
+.cl-week-nav-btn:hover {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.08);
+}
+.cl-week-nav-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+  text-align: center;
+}
+.cl-week-nav-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: 0.3px;
+}
+.cl-week-nav-sub {
+  font-size: 11px;
+  color: var(--accent-cyan);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.cl-week-nav-today {
+  margin-left: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.1);
+  color: var(--accent-cyan);
+  cursor: pointer;
+}
+.cl-week-nav-today:hover {
+  background: rgba(0, 212, 255, 0.18);
+}
+
+.cl-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 1800px;   /* шире, из-за доп. колонок */
+}
+
+.cl-row {
+  display: grid;
+  grid-template-columns:
+    48px      /* № */
+    100px     /* OPL */
+    80px      /* Машина */
+    240px     /* Узел */
+    280px     /* Название */
+    100px     /* Время */
+    80px      /* Run/Stop */
+    180px     /* Норма */
+    repeat(14, minmax(48px, 1fr));
+  gap: 2px;
+  align-items: stretch;
+  border-radius: 6px;
+  transition: background 0.12s;
+}
+
+.cl-row:hover {
+  background: rgba(0, 212, 255, 0.03);
+}
+
+/* Шапка — двухрядная, но с учётом 8 левых колонок */
+.cl-head-grid {
+  display: grid;
+  grid-template-columns:
+    48px 100px 80px 240px 280px 100px 80px 180px
+    repeat(14, minmax(48px, 1fr));
+  grid-template-rows: auto auto;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+/* Левая информационная колонка в шапке */
+.cl-head-info {
+  grid-column: 1 / 9;
+  grid-row: 1 / 3;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--bg-hover);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-second);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.cl-head-info > div {
+  text-align: center;
+}
+/* Информационные ячейки в теле */
+.cl-info-cell {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--bg-card);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text-main);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.cl-info-opl {
+  justify-content: center;
+  font-family: 'Courier New', Consolas, monospace;
+  font-weight: 800;
+  color: var(--accent-cyan);
+  font-size: 12px;
+}
+
+.cl-info-machine {
+  justify-content: center;
+  font-family: 'Courier New', Consolas, monospace;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--blue-mid);
+  font-size: 12px;
+  letter-spacing: 0.3px;
+}
+
+.cl-info-node {
+  font-size: 12px;
+  color: var(--text-second);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cl-info-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cl-info-time {
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-family: 'Courier New', Consolas, monospace;
+  font-weight: 700;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cl-time-empty {
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.cl-time-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Дневная смена — синие */
+.cl-time-chip-day {
+  color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.45);
+}
+
+/* Ночная смена — фиолетовые */
+.cl-time-chip-night {
+  color: var(--accent-purple);
+  background: rgba(123, 92, 255, 0.1);
+  border: 1px solid rgba(123, 92, 255, 0.45);
+}
+
+.cl-info-work {
+  justify-content: center;
+}
+
+.cl-work-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.cl-work-badge-run  { background: rgba(0, 196, 122, 0.15); color: var(--accent-green); border: 1px solid rgba(0, 196, 122, 0.4); }
+.cl-work-badge-stop { background: rgba(255, 169, 77, 0.15); color: var(--accent-amber); border: 1px solid rgba(255, 169, 77, 0.4); }
+
+.cl-info-norm {
+  font-size: 12px;
+  color: var(--text-second);
+  font-family: 'Courier New', Consolas, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  justify-content: center;
+  text-align: center;
+}
+.cl-info-norm strong {
+  color: var(--accent-purple);
+  font-weight: 800;
+}
+/* Галочка для типа ok_not_ok */
+.cl-norm-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 184, 0, 0.15);
+  color: var(--accent-amber);
+  border: 1px solid rgba(255, 184, 0, 0.6);
+  font-size: 13px;
+  font-weight: 900;
+  box-shadow: 0 0 6px rgba(255, 184, 0, 0.25);
+}
+/* Ячейки дней */
+.cl-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-input);
+  cursor: default;
+  font-size: 15px;
+  font-weight: 900;
+  color: transparent;
+  transition: all 0.12s;
+  padding: 0;
+}
+
+.cl-cell-na {
+  color: var(--text-dim);
+  font-weight: 400;
+  font-size: 13px;
+  background: var(--bg-hover);
+}
+
+.cl-cell-due {
+  background: rgba(0, 212, 255, 0.05);
+  border-color: rgba(0, 212, 255, 0.2);
+}
+
+.cl-cell-today {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: -2px;
+}
+
+.cl-cell-ok {
+  background: rgba(0, 196, 122, 0.15);
+  border-color: rgba(0, 196, 122, 0.5);
+  color: var(--accent-green);
+}
+
+.cl-cell-fail {
+  background: rgba(255, 45, 111, 0.15);
+  border-color: rgba(255, 45, 111, 0.5);
+  color: var(--accent-red);
+}
+
+.cl-cell-unchecked {
+  background: rgba(255, 184, 0, 0.15);
+  border-color: rgba(255, 184, 0, 0.5);
+  color: var(--accent-amber);
+}
+
+.cl-cell-missed {
+  background: rgba(255, 170, 0, 0.2);
+  border-color: rgba(255, 170, 0, 0.65);
+  color: var(--accent-amber);
+  font-weight: 900;
+}
+
+.cl-cell-clickable {
+  cursor: pointer;
+}
+.cl-cell-clickable:hover {
+  border-color: var(--accent-cyan);
+  box-shadow: inset 0 0 0 1px var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.12);
+}
+
+/* ============================================================ */
+/* === БЫСТРАЯ ПРОВЕРКА: точки замера ========================= */
+/* ============================================================ */
+
+.qc-points-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.qc-point-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: border-color 0.15s;
+}
+
+.qc-point-row.qc-point-ok {
+  border-color: var(--accent-green);
+  background: rgba(0, 196, 122, 0.05);
+}
+.qc-point-row.qc-point-fail {
+  border-color: var(--accent-red);
+  background: rgba(255, 45, 111, 0.05);
+}
+
+.qc-point-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.qc-point-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 11px;
+  background: rgba(0, 212, 255, 0.1);
+  color: var(--accent-cyan);
+  font-size: 11px;
+  font-weight: 800;
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  flex-shrink: 0;
+}
+
+.qc-point-norm {
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-main);
+  word-break: break-word;
+}
+
+.qc-point-range {
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.qc-point-status {
+  margin-left: auto;
+  font-size: 16px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+.qc-point-status.ok { color: var(--accent-green); }
+.qc-point-status.fail { color: var(--accent-red); }
+
+.qc-point-input-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.qc-point-input {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+  font-family: 'Courier New', Consolas, monospace;
+  color: var(--text-main);
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
+  border-radius: 6px;
+}
+.qc-point-input:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.15);
+}
+.qc-point-input::placeholder {
+  color: var(--text-dim);
+  font-weight: 400;
+}
+/* ============================================================ */
+/* === БЫСТРАЯ ПРОВЕРКА: блок «Как проверять» ================= */
+/* ============================================================ */
+
+.qc-collapsible {
+  margin: 12px 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.qc-collapsible:hover {
+  border-color: var(--border-hi);
+}
+
+.qc-collapsible-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--bg-hover);
+  transition: background 0.15s;
+  flex-wrap: wrap;
+}
+.qc-collapsible-header:hover {
+  background: rgba(0, 212, 255, 0.06);
+}
+
+.qc-collapsible-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--text-second);
+  transition: transform 0.2s ease, color 0.15s;
+}
+.qc-collapsible-toggle svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  pointer-events: none;
+}
+.qc-collapsible.expanded .qc-collapsible-toggle {
+  transform: rotate(90deg);
+  color: var(--accent-cyan);
+}
+
+.qc-collapsible-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.qc-collapsible-hint {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-style: italic;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qc-collapsible.expanded .qc-collapsible-hint {
+  display: none;
+}
+
+.qc-collapsible-body {
+  display: none;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+}
+
+.qc-collapsible.expanded .qc-collapsible-body {
+  display: block;
+}
+
+.qc-control-text {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-main);
+  white-space: pre-wrap;
+  word-break: break-word;
+}

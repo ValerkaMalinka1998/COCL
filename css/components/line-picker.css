@@ -1,0 +1,311 @@
+/* ============================================================ */
+/* === МОДАЛКА-ВЫБОР ЛИНИИ (компактный dropdown) ============== */
+/* ============================================================ */
+
+.line-picker-overlay {
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.line-picker-modal {
+  max-width: 420px;
+  width: 100%;
+  max-height: 520px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border-hi);
+  border-radius: 14px;
+  background: var(--bg-card);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  animation: linePickerIn 0.15s ease-out;
+}
+
+@keyframes linePickerIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.line-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.line-picker-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: 0.3px;
+}
+
+.line-picker-close {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.line-picker-close:hover {
+  background: rgba(230, 36, 79, 0.1);
+  color: var(--accent-red);
+}
+.line-picker-close svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+  pointer-events: none;
+}
+
+.line-picker-search-wrap {
+  position: relative;
+  padding: 12px 18px 0;
+}
+
+.line-picker-search-icon {
+  position: absolute;
+  left: 30px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+.line-picker-search-wrap input {
+  width: 100%;
+  padding: 9px 12px 9px 36px;
+  font-size: 13px;
+  border: 1px solid var(--border-hi);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-main);
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.line-picker-search-wrap input:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.15);
+}
+
+.line-picker-body {
+  padding: 14px 18px 18px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Недавние */
+.line-picker-recent {
+  margin-bottom: 14px;
+}
+
+.line-picker-recent-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 8px;
+}
+
+.line-picker-recent-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.line-picker-recent-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-hi);
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'Courier New', Consolas, monospace;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.line-picker-recent-chip:hover {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+.line-picker-recent-chip svg {
+  width: 12px;
+  height: 12px;
+  color: var(--text-dim);
+  display: block;
+  pointer-events: none;
+}
+.line-picker-recent-chip:hover svg {
+  color: var(--accent-cyan);
+}
+
+/* Плитки цехов/участков/блоков */
+.line-picker-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.line-picker-tile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-hi);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.line-picker-tile:hover {
+  border-color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.05);
+}
+
+.line-picker-tile-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(46, 82, 136, 0.15), rgba(0, 212, 255, 0.1));
+  color: var(--accent-cyan);
+  flex-shrink: 0;
+}
+.line-picker-tile-icon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.line-picker-tile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.line-picker-tile-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.line-picker-tile-sub {
+  font-size: 11px;
+  color: var(--text-second);
+}
+
+/* Строки линий */
+.line-picker-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.line-picker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  background: transparent;
+  border: none;
+  text-align: left;
+  transition: background 0.15s;
+}
+.line-picker-row:hover {
+  background: rgba(0, 212, 255, 0.06);
+}
+
+.line-picker-row-line {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  font-family: 'Courier New', Consolas, monospace;
+  letter-spacing: 0.3px;
+}
+.line-picker-row:hover .line-picker-row-line {
+  color: var(--accent-cyan);
+}
+
+.line-picker-row-context {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-align: right;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Крошки внутри dropdown */
+.line-picker-breadcrumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 0 10px;
+  font-size: 11px;
+  border-bottom: 1px dashed var(--border);
+  margin-bottom: 10px;
+}
+
+.line-picker-crumb {
+  background: transparent;
+  border: none;
+  color: var(--accent-cyan);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: background 0.15s;
+}
+.line-picker-crumb:hover {
+  background: rgba(0, 212, 255, 0.1);
+}
+
+.line-picker-crumb-current {
+  color: var(--text-main);
+  font-weight: 700;
+  padding: 2px 4px;
+}
+
+.line-picker-crumb-sep {
+  color: var(--text-dim);
+}
+
+/* Пустое состояние */
+.line-picker-empty {
+  text-align: center;
+  padding: 30px 16px;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-style: italic;
+}

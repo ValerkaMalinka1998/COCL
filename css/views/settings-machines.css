@@ -1,0 +1,478 @@
+/* ============================================================ */
+/* === МАШИНЫ ДЛЯ ЛИНИЙ — строки + аккордеон по блокам ========= */
+/* ============================================================ */
+
+/* --- Тулбар: поиск + счётчик --- */
+.lm-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+/* --- Кнопка «Развернуть / Свернуть всё» --- */
+.lm-toggle-all-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.lm-toggle-all-btn svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  flex-shrink: 0;
+}
+
+@media (max-width: 700px) {
+  .lm-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .lm-toggle-all-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+.lm-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+  max-width: 420px;
+}
+
+.lm-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+.lm-search-wrap input {
+  width: 100%;
+  padding: 9px 36px 9px 36px;
+  font-size: 13px;
+  border: 1px solid var(--border-hi);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-main);
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.lm-search-wrap input:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.15);
+}
+
+.lm-search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.15s, color 0.15s;
+}
+.lm-search-clear:hover {
+  background: rgba(230, 36, 79, 0.1);
+  color: var(--accent-red);
+}
+.lm-search-clear svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+
+.lm-counter {
+  font-size: 13px;
+  color: var(--text-second);
+  white-space: nowrap;
+}
+.lm-counter strong {
+  color: var(--accent-cyan);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Список групп --- */
+.lm-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lm-group {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-input);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.lm-group.expanded {
+  border-color: var(--border-hi);
+}
+
+/* --- Заголовок группы --- */
+.lm-group-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--bg-hover);
+  transition: background 0.15s;
+}
+.lm-group-head:hover {
+  background: rgba(0, 212, 255, 0.06);
+}
+
+.lm-group-toggle {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--text-second);
+  transition: transform 0.2s ease, color 0.15s;
+}
+.lm-group-toggle svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  pointer-events: none;
+}
+.lm-group.expanded > .lm-group-head .lm-group-toggle {
+  transform: rotate(90deg);
+  color: var(--accent-cyan);
+}
+
+.lm-group-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: 0.2px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lm-group-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  padding: 3px 10px;
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  border-radius: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Тело группы: строки --- */
+.lm-group-body {
+  display: none;
+  padding: 4px 0;
+}
+/* Прямой потомок: раскрытие цеха НЕ раскрывает вложенные участки. */
+.lm-group.expanded > .lm-group-body {
+  display: block;
+}
+/* --- Вложенный уровень: участок внутри цеха --- */
+.lm-group-workshop > .lm-group-body {
+  padding: 6px 0 6px 8px;
+}
+
+.lm-group-area {
+  margin: 4px 8px;
+  border-radius: 8px;
+  border-left: 3px solid var(--border-hi);
+}
+.lm-group-area.expanded {
+  border-left-color: var(--accent-cyan);
+}
+
+.lm-group-area-head {
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border-radius: 6px;
+}
+.lm-group-area-head:hover {
+  background: rgba(0, 212, 255, 0.06);
+}
+
+/* Стиль цеха — только у верхнего уровня */
+.lm-groups > .lm-group-workshop > .lm-group-head .lm-group-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--blue-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* Стиль участка — на всех уровнях вложенности */
+.lm-group-area > .lm-group-head .lm-group-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-second);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.lm-groups > .lm-group-workshop > .lm-group-head {
+  background: linear-gradient(90deg, rgba(46,82,136,0.1), transparent);
+  border-left: 3px solid var(--blue-mid);
+}
+
+/* --- Заголовок блока (не кликабельный) --- */
+.lm-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 16px 4px;
+  margin-top: 4px;
+  border-top: 1px dashed var(--border);
+}
+
+.lm-block-head:first-child {
+  border-top: none;
+  margin-top: 0;
+}
+
+.lm-block-name {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.lm-block-count {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Строка линии --- */
+.lm-row {
+  display: grid;
+  grid-template-columns: 80px 50px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px dashed var(--border);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.lm-row:last-child {
+  border-bottom: none;
+}
+.lm-row:hover {
+  background: rgba(0, 212, 255, 0.04);
+}
+
+.lm-row-line {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  font-family: 'Courier New', Consolas, monospace;
+  letter-spacing: 0.4px;
+}
+
+.lm-row-count-wrap {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.lm-row-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 11px;
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  background: rgba(0, 196, 122, 0.15);
+  color: var(--accent-green);
+  border: 1px solid rgba(0, 196, 122, 0.4);
+}
+
+.lm-row-count-empty {
+  background: var(--bg-hover);
+  color: var(--text-dim);
+  border-color: var(--border);
+}
+
+.lm-row-machines-wrap {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.lm-row-machines {
+  display: block;
+  font-size: 13px;
+  color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lm-row-empty {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.lm-row-btn {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+/* --- Адаптив --- */
+@media (max-width: 640px) {
+  .lm-row {
+    grid-template-columns: 60px 40px 1fr;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+  .lm-row-btn {
+    grid-column: 1 / -1;
+    justify-self: end;
+    margin-top: 4px;
+  }
+  .lm-row-count {
+    min-width: 22px;
+    padding: 0 6px;
+    font-size: 10px;
+  }
+}
+.lm-group-name {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lm-group-context {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+/* ============ Машины внутри модалки ============ */
+.machine-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 6px;
+  transition:
+    border-color 0.15s,
+    background 0.35s ease,
+    color 0.35s ease;
+}
+.machine-row:hover {
+  border-color: var(--accent-cyan);
+}
+.machine-row-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: 0.3px;
+}
+.machine-row-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* ============ Линии производства — компактная сетка ============ */
+#linesList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.line-tile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  transition:
+    border-color 0.15s,
+    background 0.35s ease,
+    color 0.35s ease,
+    box-shadow 0.35s ease;
+}
+.line-tile:hover {
+  border-color: var(--accent-cyan);
+}
+.line-tile-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: 0.3px;
+}
+.line-tile-remove {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.15s;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.line-tile-remove svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  pointer-events: none;
+}
+.line-tile-remove:hover {
+  background: rgba(230, 36, 79, 0.15);
+  color: var(--accent-red);
+}

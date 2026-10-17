@@ -1,0 +1,304 @@
+/* ============================================================ */
+/* === TOP LOSSES — категории (аккордеон + inline-потери) ===== */
+/* ============================================================ */
+
+/* --- Тулбар --- */
+.tl-cat-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.tl-cat-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+  max-width: 420px;
+}
+
+.tl-cat-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+.tl-cat-search-wrap input {
+  width: 100%;
+  padding: 9px 36px 9px 36px;
+  font-size: 13px;
+  border: 1px solid var(--border-hi);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-main);
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.tl-cat-search-wrap input:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.15);
+}
+
+.tl-cat-search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.15s, color 0.15s;
+}
+.tl-cat-search-clear:hover {
+  background: rgba(230, 36, 79, 0.1);
+  color: var(--accent-red);
+}
+.tl-cat-search-clear svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+
+.tl-cat-toggle-all-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.tl-cat-toggle-all-btn svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  flex-shrink: 0;
+}
+
+/* --- Список категорий --- */
+.tl-cat-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tl-cat-group {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-input);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.tl-cat-group.expanded {
+  border-color: var(--border-hi);
+}
+
+/* --- Заголовок категории --- */
+.tl-cat-group-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--bg-hover);
+  transition: background 0.15s;
+}
+.tl-cat-group-head:hover {
+  background: rgba(232, 154, 0, 0.06);
+}
+
+.tl-cat-group-toggle {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--text-second);
+  transition: transform 0.2s ease, color 0.15s;
+}
+.tl-cat-group-toggle svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  pointer-events: none;
+}
+.tl-cat-group.expanded > .tl-cat-group-head .tl-cat-group-toggle {
+  transform: rotate(90deg);
+  color: var(--accent-amber);
+}
+
+.tl-cat-group-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: 0.2px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tl-cat-group-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-amber);
+  padding: 3px 10px;
+  background: rgba(232, 154, 0, 0.1);
+  border: 1px solid rgba(232, 154, 0, 0.35);
+  border-radius: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Тело категории --- */
+.tl-cat-group-body {
+  display: none;
+  padding: 6px 0;
+}
+/* Прямой потомок: категории вложены в блоки цехов, поэтому дочерний
+   селектор обязателен — иначе раскрытие цеха раскрывало бы все категории. */
+.tl-cat-group.expanded > .tl-cat-group-body {
+  display: block;
+}
+
+.tl-cat-losses {
+  display: flex;
+  flex-direction: column;
+}
+
+.tl-loss-inline-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px dashed var(--border);
+  transition: background 0.12s;
+}
+.tl-loss-inline-row:last-child {
+  border-bottom: none;
+}
+.tl-loss-inline-row:hover {
+  background: rgba(0, 212, 255, 0.04);
+}
+
+.tl-loss-inline-name {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-main);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tl-loss-ws-chip {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  background: rgba(0, 212, 255, 0.1);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0, 212, 255, 0.4);
+}
+.tl-loss-inline-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.tl-row-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-second);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.tl-row-action-btn svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  pointer-events: none;
+}
+.tl-row-edit-btn:hover {
+  background: rgba(0, 212, 255, 0.1);
+  border-color: rgba(0, 212, 255, 0.4);
+  color: var(--accent-cyan);
+}
+.tl-row-delete-btn:hover {
+  background: rgba(230, 36, 79, 0.1);
+  border-color: rgba(230, 36, 79, 0.4);
+  color: var(--accent-red);
+}
+
+.tl-cat-empty {
+  padding: 12px 16px;
+  font-size: 12px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.tl-cat-group-footer {
+  padding: 10px 16px 12px;
+  border-top: 1px dashed var(--border);
+}
+
+.tl-cat-add-loss-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.tl-cat-add-loss-btn svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  flex-shrink: 0;
+}
+
+/* --- Адаптив --- */
+@media (max-width: 640px) {
+  .tl-cat-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .tl-cat-toggle-all-btn {
+    justify-content: center;
+  }
+  .tl-loss-inline-row {
+    padding: 8px 12px;
+  }
+}

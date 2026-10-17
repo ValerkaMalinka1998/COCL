@@ -1,0 +1,290 @@
+/* ============================================================ */
+/* === COCL: карточка «Сформировать проверку» ================= */
+/* ============================================================ */
+
+.build-checklist-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-second);
+  font-size: 14px;
+  font-weight: 500;
+  flex: 1;
+  min-width: 220px;
+}
+
+.build-checklist-info svg {
+  width: 22px;
+  height: 22px;
+  color: var(--accent-cyan);
+  flex-shrink: 0;
+}
+
+#buildChecklistBtn {
+  flex-shrink: 0;
+  padding: 12px 24px;
+  font-size: 14px;
+  box-shadow: 0 0 16px rgba(0, 212, 255, 0.35);
+}
+#buildChecklistBtn:disabled {
+  box-shadow: none;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .cocl-build {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  #buildChecklistBtn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ============================================================ */
+/* === COCL: аккордеон чек-листа у оператора ================== */
+/* ============================================================ */
+
+#checklistContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cocl-acc-item {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent-amber);
+  border-radius: 8px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.cocl-acc-item.expanded {
+  border-left-color: var(--accent-cyan);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* --- Цвет полоски в зависимости от статуса --- */
+.cocl-acc-item[data-status="ok"] {
+  border-left-color: var(--accent-green);
+}
+.cocl-acc-item[data-status="fail"] {
+  border-left-color: var(--accent-red);
+}
+
+/* --- Шапка --- */
+.cocl-acc-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s;
+}
+.cocl-acc-header:hover {
+  background: var(--bg-hover);
+}
+
+.cocl-status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--accent-amber);
+  box-shadow: 0 0 8px rgba(232, 154, 0, 0.5);
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.cocl-status-dot.cocl-status-ok {
+  background: var(--accent-green);
+  box-shadow: 0 0 8px rgba(0, 196, 122, 0.6);
+}
+.cocl-status-dot.cocl-status-fail {
+  background: var(--accent-red);
+  box-shadow: 0 0 8px rgba(230, 36, 79, 0.6);
+}
+
+.cocl-acc-title-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.cocl-acc-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cocl-acc-meta {
+  font-size: 11px;
+  color: var(--text-second);
+  font-family: 'Courier New', Consolas, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cocl-acc-view-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--border-hi);
+  border-radius: 50%;
+  color: var(--accent-purple);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  flex-shrink: 0;
+}
+.cocl-acc-view-btn:hover {
+  background: var(--accent-purple);
+  border-color: var(--accent-purple);
+  color: #ffffff;
+  transform: scale(1.05);
+}
+.cocl-acc-view-btn svg { display: block; pointer-events: none; }
+
+.cocl-acc-caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  transition: transform 0.2s ease, color 0.15s;
+}
+
+.cocl-acc-item.expanded .cocl-acc-caret {
+  color: var(--accent-cyan);
+}
+
+/* --- Тело --- */
+.cocl-acc-body {
+  display: none;
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--border);
+}
+
+.cocl-acc-item.expanded .cocl-acc-body {
+  display: block;
+}
+
+.cocl-acc-answer {
+  margin: 10px 0;
+  padding: 8px 0;
+  border-top: 1px dashed var(--border);
+}
+
+.cocl-acc-answer .radio-group {
+  display: flex;
+  gap: 12px;
+}
+
+.cocl-acc-answer .radio-group label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  text-transform: none;
+  letter-spacing: 0;
+  margin: 0;
+  transition: border-color 0.15s;
+}
+.cocl-acc-answer .radio-group label:hover {
+  border-color: var(--accent-cyan);
+}
+
+.cocl-acc-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+/* --- Статусный значок в шапке ячейки, перед номером --- */
+.checklist-point-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 900;
+  color: #ffffff;
+  flex-shrink: 0;
+  /* Пока значения нет — занимает место, но невидим */
+  background: transparent;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+.checklist-point-status.ok {
+  background: var(--accent-green);
+  opacity: 1;
+}
+.checklist-point-status.fail {
+  background: var(--accent-red);
+  opacity: 1;
+}
+
+/* ============================================================ */
+/* === COCL: кнопка комментария в шапке аккордеона ============ */
+/* ============================================================ */
+
+.cocl-acc-comment-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--border-hi);
+  border-radius: 50%;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.15s;
+  flex-shrink: 0;
+}
+.cocl-acc-comment-btn svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+  pointer-events: none;
+}
+.cocl-acc-comment-btn:hover {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  transform: scale(1.05);
+}
+
+/* Индикация: комментарий оставлен */
+.cocl-acc-comment-btn.has-comment {
+  background: var(--accent-amber);
+  border-color: var(--accent-amber);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 184, 0, 0.5);
+}
+.cocl-acc-comment-btn.has-comment:hover {
+  background: #ffb800;
+  border-color: #ffb800;
+  transform: scale(1.1);
+  box-shadow: 0 0 14px rgba(255, 184, 0, 0.7);
+}

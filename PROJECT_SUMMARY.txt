@@ -140,31 +140,44 @@ OPL № уникален в пределах ЛИНИИ + МАШИНЫ.
 ================================================================
 
 checklist-app/
-├── index.html              — основная страница (SPA)
-├── style.css               — точка входа (@import + anti-flash
-│                              + @media print)
+├── index.html              — основная страница (SPA); внизу —
+│                              <script> всех модулей в порядке
+│                              загрузки (важен!)
+├── style.css               — точка входа: @import всех CSS в
+│                              порядке каскада + anti-flash + print
 ├── css/
-│   ├── base.css            — переменные темы, body, формы,
-│   │                          ЕДИНЫЙ TRANSITION
+│   ├── base.css            — переменные темы, body, формы
 │   ├── layout.css          — header, sidebar, main, footer
-│   └── components.css      — карточки, кнопки, модалки, таблицы,
-│                              дашборд, top losses, чек-лист CL,
-│                              редактор, расписание CL,
-│                              сворачиваемые блоки (sf-collapsible),
-│                              аккордеон (cocl-acc-item)
+│   ├── components/         — общие блоки: ui-base (карточки,
+│   │                          кнопки, таблицы, бейджи, модалки),
+│   │                          forms, points, photos, line-picker…
+│   └── views/              — по вкладкам: cocl-*, cl-checklist,
+│                              cl-electronic, schedule*, toploss*,
+│                              dashboard, editor*, settings-*,
+│                              standard-page, eparam-page
 ├── js/
 │   ├── router.js           — навигация между вкладками (hash)
-│   └── exceljs.min.js      — библиотека для экспорта XLSX
-├── photos/                 — фотографии стандартов
-│   └── <line>/
-│       ├── Maker/
-│       └── Packer/
-├── app.js                  — вся логика (~19 000 строк)
+│   ├── exceljs.min.js      — библиотека XLSX
+│   ├── core/               — utils ($, showToast, load/save),
+│   │                          state (STORAGE_KEYS, DEFAULT_WORKSHOPS,
+│   │                          clState), dates (недели, смены), modal
+│   ├── data/               — standards, workshops, catalog
+│   │                          (справочники, E-Param, бренды,
+│   │                          триггеры, TL), schedule (недели)
+│   ├── components/         — pickers, line-picker, standard-view
+│   ├── io/                 — Excel: шаблоны, импорт/экспорт OPL
+│   ├── views/              — по вкладкам: cocl/, cl-checklist/,
+│   │                          schedule/, editor/, standard-page/,
+│   │                          history/, settings/, toploss,
+│   │                          dashboard, brand-schedule
+│   └── app.js              — init(), тема, часы; подключается
+│                              последним
+├── photos/                 — фотографии стандартов (не в git)
 ├── CLAUDE.md               — правила для Claude (грузятся сами)
 ├── Handoff.md              — где остановились и что дальше
-├── PROJECT_MAP.md          — карта: разделы app.js с функциями
-│                              и строками, блоки CSS, ключи
-│                              localStorage (генерируется скриптом)
+├── PROJECT_MAP.md          — карта: модули и функции со строками,
+│                              CSS-файлы, ключи localStorage
+│                              (генерируется скриптом)
 ├── .claude/skills/         — проектные скиллы: cocl-smoke-test,
 │                              cocl-review, cocl-session-close
 ├── ROADMAP.txt             — отложенные задачи
@@ -173,8 +186,18 @@ checklist-app/
 Все файлы кода и этот файл — в переводах строк CRLF.
 Репозиторий: github.com/ValerkaMalinka1998/COCL.
 
-ВАЖНО: JS пока НЕ разбиваем на модули — всё в app.js.
-Если задача требует отдельного файла — согласовать.
+МОДУЛИ (с сессии 7). Это обычные <script> с общим глобальным
+пространством имён (file:// не поддерживает import/export).
+Правила:
+- Код, выполняемый при загрузке (addEventListener('click', f),
+  вызовы на верхнем уровне), не может ссылаться на функцию из
+  модуля, подключённого позже → () => f() или перенести функцию
+  в более ранний модуль. Проверка:
+  node .claude/skills/cocl-review/scripts/check_load_order.js
+- Новый код — в модуль своей вкладки; общее — в core/ или data/.
+  Новый файл — <script> в index.html в нужное место.
+- CSS: порядок @import в style.css = порядок каскада, не менять;
+  новые правила — в конец файла своей вкладки.
 
 ================================================================
 4. СТРУКТУРА МЕХАНИЧЕСКОГО СТАНДАРТА (OPL)
@@ -247,7 +270,7 @@ standard = {
 - interval  — «Контролируемый интервал». Формат «5 до 8»,
               «5.5 - 8.5», «-65 до -55», «5.5…8.5».
 
-Миграция legacy-типов (migrateControlType в app.js):
+Миграция legacy-типов (migrateControlType в js/data/standards.js):
 - ok_not_ok    → fixed
 - range_input  → interval
 - tolerance    → variable
@@ -360,7 +383,7 @@ electronicParam = {
 localStorage cl_electronic_shiftcfg_v1:
 { dayCycle: [...], nightCycle: [...], startDate: '2026-10-01' }
 
-ВАЖНО: при смене DEFAULT_ELECTRONIC_SHIFT_CFG в app.js —
+ВАЖНО: при смене DEFAULT_ELECTRONIC_SHIFT_CFG в js/core/state.js —
 обязательно чистить localStorage:
   localStorage.removeItem('cl_electronic_shiftcfg_v1');
   location.reload();
@@ -920,7 +943,7 @@ STORAGE_KEYS = {
 14.8. ЧТО НЕЛЬЗЯ БЕЗ ОБСУЖДЕНИЯ
 ----------------------------------------------------------------
 
-1. Разбивать app.js на модули.
+1. Менять порядок модулей / @import без проверки (см. раздел 3).
 2. Менять STORAGE_KEYS без миграции.
 3. Удалять функции, которые могут использоваться в других
    вкладках — сначала проверить.
@@ -1298,6 +1321,17 @@ Backend — у IT-специалиста (если есть API) или свой
 COCL-панель, смена ночью, недели расписания, просмотр стандарта,
 триггеры/Top Losses/бренды по цехам, аккордеоны, линии PMD,
 создание стандарта и E-Param страницами, цвета Maker/Packer.
+
+Сессия 7 — разбивка на модули:
+- app.js (19 400 строк) → 41 JS-модуль в js/ без изменения
+  поведения (перенос целыми инструкциями, порядок загрузки проверен
+  разбором кода); components.css (12 600 строк) → 27 файлов в
+  css/components и css/views в прежнем порядке каскада.
+- Проверка: смоук-тест 17/17, сценарии расписания/создания
+  стандарта/E-Param/смен, попиксельное сравнение всех вкладок до и
+  после (совпадают).
+- Новый инструмент: check_load_order.js (входит в cocl-review);
+  генератор PROJECT_MAP.md переписан под модули.
 
 НЕ ДОДЕЛАНО: см. раздел 16 и Handoff.md.
 

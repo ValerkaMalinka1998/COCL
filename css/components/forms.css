@@ -1,0 +1,183 @@
+/* ============ Компактные чекбоксы типов (Редактор) ============ */
+.type-checkbox {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px !important;
+  border-radius: 16px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+}
+.type-checkbox span {
+  text-transform: uppercase;
+  font-size: 11px;
+}
+.type-checkbox input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+/* --- Change Over — Циан --- */
+.type-checkbox-changeover {
+  color: rgba(0, 212, 255, 0.7);
+  border-color: rgba(0, 212, 255, 0.3) !important;
+  background: rgba(0, 212, 255, 0.04) !important;
+}
+.type-checkbox-changeover:hover {
+  border-color: rgba(0, 212, 255, 0.6) !important;
+  color: #00d4ff;
+}
+.type-checkbox-changeover.checked {
+  background: linear-gradient(135deg, #00a8cc 0%, #00d4ff 100%) !important;
+  border-color: #00d4ff !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 14px rgba(0, 212, 255, 0.6), 0 2px 6px rgba(0, 168, 204, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
+}
+
+/* --- CL в ТО — Фиолетовый --- */
+.type-checkbox-clto {
+  color: rgba(123, 92, 255, 0.7);
+  border-color: rgba(123, 92, 255, 0.3) !important;
+  background: rgba(123, 92, 255, 0.04) !important;
+}
+.type-checkbox-clto:hover {
+  border-color: rgba(123, 92, 255, 0.6) !important;
+  color: #7b5cff;
+}
+.type-checkbox-clto.checked {
+  background: linear-gradient(135deg, #6347d4 0%, #7b5cff 100%) !important;
+  border-color: #7b5cff !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 14px rgba(123, 92, 255, 0.6), 0 2px 6px rgba(99, 71, 212, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
+}
+
+/* --- CL в Конвертацию — Изумрудный --- */
+.type-checkbox-clconv {
+  color: rgba(16, 185, 129, 0.7);
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  background: rgba(16, 185, 129, 0.04) !important;
+}
+.type-checkbox-clconv:hover {
+  border-color: rgba(16, 185, 129, 0.6) !important;
+  color: #10b981;
+}
+.type-checkbox-clconv.checked {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
+  border-color: #10b981 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.6), 0 2px 6px rgba(5, 150, 105, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
+}
+
+.type-checkbox.checked span::before {
+  content: '✓ ';
+  font-weight: 800;
+  margin-right: 2px;
+}
+
+/* ============ Автокомплит ============ */
+.autocomplete-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-main);
+  border-bottom: 1px solid var(--border);
+  transition: background 0.12s;
+}
+.autocomplete-item:last-child {
+  border-bottom: none;
+}
+.autocomplete-item:hover,
+.autocomplete-item.active {
+  background: rgba(0, 212, 255, 0.12);
+  color: var(--accent-cyan);
+}
+.autocomplete-item strong {
+  color: var(--accent-cyan);
+  font-weight: 700;
+}
+.autocomplete-empty {
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* ============ Импорт: отчёт по ошибкам ============ */
+.import-report {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-main);
+}
+.import-report.success {
+  border-color: var(--accent-green);
+  background: rgba(0, 196, 122, 0.08);
+}
+.import-report.error {
+  border-color: var(--accent-red);
+  background: rgba(230, 36, 79, 0.08);
+}
+.import-report h4 {
+  font-size: 14px;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+.import-report ul {
+  margin: 6px 0 0 18px;
+  padding: 0;
+}
+.import-report li {
+  margin-bottom: 3px;
+}
+.import-report code {
+  background: var(--bg-hover);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  color: var(--accent-cyan);
+}
+
+/* ============ Компактный список с поиском ============ */
+
+.list-counter {
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.scrollable-list {
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--bg-input);
+}
+.scrollable-list::-webkit-scrollbar {
+  width: 8px;
+}
+.scrollable-list::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb, #c4d2e8);
+  border-radius: 4px;
+}
+.scrollable-list::-webkit-scrollbar-thumb:hover {
+  background: var(--scroll-thumb-hover, #2e5288);
+}

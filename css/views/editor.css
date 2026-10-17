@@ -1,0 +1,901 @@
+/* ============================================================ */
+/* === Редактор: список линий в блоке ========================= */
+/* ============================================================ */
+
+#lineEditorList,
+#editorLinesList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.line-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.line-row:hover {
+  border-color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.04);
+}
+
+.line-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
+  font-family: 'Courier New', Consolas, monospace;
+  letter-spacing: 0.4px;
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.line-brands-preview {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.line-counter {
+  font-size: 13px;
+  color: var(--text-second);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.line-row .btn {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* ============================================================ */
+/* === CL Electronic: аккордеон в «Параметры на сегодня» ====== */
+/* ============================================================ */
+
+#elecChecklistContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.elec-acc-item .cocl-acc-header {
+  padding: 10px 14px;
+}
+
+.elec-acc-item .cocl-acc-body {
+  padding: 10px 14px 14px;
+}
+
+.elec-acc-item .elec-check-answer {
+  margin-top: 8px;
+}
+
+.elec-acc-item[data-status="ok"] {
+  border-left-color: var(--accent-green);
+}
+.elec-acc-item[data-status="fail"] {
+  border-left-color: var(--accent-red);
+}
+
+/* ============================================================ */
+/* === РЕДАКТОР: чипы типов (ChangeOver / CL_TO / CL_Conv) ==== */
+/* ============================================================ */
+
+.et-type-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.et-type-chip.et-type-changeover {
+  background: rgba(0, 212, 255, 0.12);
+  color: #00d4ff;
+  border: 1px solid rgba(0, 212, 255, 0.5);
+}
+.et-type-chip.et-type-clto {
+  background: rgba(123, 92, 255, 0.12);
+  color: #7b5cff;
+  border: 1px solid rgba(123, 92, 255, 0.5);
+}
+.et-type-chip.et-type-clconv {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.5);
+}
+.et-type-chip.et-type-none {
+  background: var(--bg-hover);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  font-style: italic;
+}
+/* ============================================================ */
+/* === РЕДАКТОР: единая панель + фильтры + таблица ============ */
+/* ============================================================ */
+
+
+/* --- Единая панель (заголовок + действия + фильтры) --- */
+.editor-panel-card {
+  padding: 0;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+/* Шапка панели: заголовок слева, действия справа */
+.editor-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+}
+
+.editor-panel-title-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.editor-panel-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--blue-mid);
+  margin: 0;
+  padding: 0;
+  border: none;
+  letter-spacing: 0.3px;
+}
+
+.editor-panel-title svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+  flex-shrink: 0;
+  color: var(--accent-cyan);
+  stroke: var(--accent-cyan);
+}
+
+.editor-panel-count {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.editor-panel-count:empty { display: none; }
+
+.editor-panel-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.editor-panel-actions .btn {
+  padding: 8px 14px;
+  font-size: 11px;
+  letter-spacing: 0.3px;
+}
+
+/* Разделитель между шапкой и фильтрами */
+.editor-panel-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0 20px;
+}
+
+/* Фильтры внутри панели */
+.editor-panel-card .editor-filters {
+  padding: 16px 20px;
+}
+
+/* ============================================================ */
+/* === РЕДАКТОР: сетка фильтров =============================== */
+/* ============================================================ */
+
+.editor-filters {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px 14px;
+  align-items: end;
+}
+
+/* Кнопка сброса — 1 колонка */
+.editor-filter-reset-wrap {
+  grid-column: span 1;
+}
+
+.editor-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.editor-filter-field label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.editor-filter-field select,
+.editor-filter-field input[type="text"] {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 13px;
+  border: 1px solid var(--border-hi);
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--text-main);
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  min-width: 0;
+}
+
+.editor-filter-field select:focus,
+.editor-filter-field input[type="text"]:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12);
+}
+
+/* Поиск занимает 2 колонки */
+.editor-filter-field-wide {
+  grid-column: span 4;
+}
+
+
+/* ============================================================ */
+/* === РЕДАКТОР: карточка таблицы ============================= */
+/* ============================================================ */
+
+.editor-table-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.editor-table-wrap {
+  overflow-x: auto;
+}
+
+.editor-table-card .pagination-bar {
+  padding: 12px 20px;
+  margin-top: 0;
+  border-top: 1px solid var(--border);
+}
+
+/* ============================================================ */
+/* === РЕДАКТОР: таблица стандартов =========================== */
+/* ============================================================ */
+
+.editor-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 1100px;
+}
+
+.editor-table thead th {
+  background: var(--bg-hover);
+  color: var(--text-second);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.editor-table tbody td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  color: var(--text-main);
+}
+
+.editor-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.editor-table tbody tr:hover {
+  background: rgba(0, 212, 255, 0.03);
+}
+
+/* --- Колонка «№» — служебная, визуально отделена --- */
+
+/* Заголовок */
+.editor-table thead th.et-col-num {
+  background: var(--bg-hover);
+  color: var(--text-dim);
+  border-right: 1px solid var(--border);
+  font-family: 'Courier New', Consolas, monospace;
+  letter-spacing: 0;
+}
+
+/* Ячейки */
+.editor-table td.et-col-num {
+  width: 48px;
+  min-width: 48px;
+  text-align: center;
+  color: var(--text-dim);
+  font-family: 'Courier New', Consolas, monospace;
+  font-weight: 700;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  background: var(--bg-hover);
+  border-right: 1px solid var(--border);
+  user-select: none;
+  padding: 12px 6px;
+}
+
+/* При наведении на строку — слегка подсветить */
+.editor-table tbody tr:hover td.et-col-num {
+  color: var(--text-second);
+  background: rgba(0, 212, 255, 0.04);
+}
+.editor-table .et-col-check { width: 44px; text-align: center; }
+.editor-table .et-col-title { min-width: 240px; }
+.editor-table .et-col-opl   { width: 100px; }
+.editor-table .et-col-struct { width: 260px; }
+.editor-table .et-col-types { width: 140px; }
+.editor-table .et-col-machine { width: 100px; }
+.editor-table .et-col-status { width: 110px; }
+.editor-table .et-col-author { width: 140px; }
+.editor-table .et-col-date  { width: 110px; }
+.editor-table .et-col-actions { width: 100px; text-align: right; white-space: nowrap; }
+.editor-table .et-col-work { width: 80px; text-align: center; }
+
+/* Название */
+.et-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+.et-title-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--accent-cyan);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.et-title-text {
+  font-weight: 600;
+  color: var(--text-main);
+  word-break: break-word;
+  line-height: 1.35;
+}
+
+/* OPL */
+.et-opl {
+  font-weight: 700;
+  color: var(--accent-cyan);
+  font-family: 'Courier New', Consolas, monospace;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.et-opl:hover {
+  color: var(--blue-mid);
+  text-decoration: underline;
+}
+
+/* Структура */
+.et-struct {
+  font-size: 12px;
+  color: var(--text-second);
+  line-height: 1.4;
+  font-family: 'Courier New', Consolas, monospace;
+  word-break: break-word;
+}
+
+/* Типы */
+.et-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Машина */
+.et-machine {
+  font-family: 'Courier New', Consolas, monospace;
+  font-weight: 700;
+  color: var(--blue-mid);
+  font-size: 12px;
+  letter-spacing: 0.3px;
+}
+
+/* Статус */
+.et-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.et-status:hover {
+  transform: scale(1.05);
+}
+.et-status-active {
+  background: rgba(0, 196, 122, 0.15);
+  color: var(--accent-green);
+  border: 1px solid rgba(0, 196, 122, 0.5);
+}
+.et-status-inactive {
+  background: var(--bg-hover);
+  color: var(--text-dim);
+  border: 1px solid var(--border-hi);
+}
+/* Неактивные строки — приглушаем, чтобы отличались от активных */
+.editor-table tbody tr.et-row-inactive td {
+  opacity: 0.55;
+  filter: grayscale(0.4);
+}
+.editor-table tbody tr.et-row-inactive:hover td {
+  opacity: 0.8;
+  filter: grayscale(0.15);
+}
+.et-status::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* Автор */
+.et-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-main);
+}
+.et-author svg {
+  width: 14px;
+  height: 14px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+/* Дата */
+.et-date {
+  font-size: 12px;
+  color: var(--text-second);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Действия */
+.et-actions {
+  display: inline-flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+.et-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--border-hi);
+  border-radius: 6px;
+  color: var(--text-second);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.et-action-btn svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  pointer-events: none;
+}
+.et-action-edit:hover {
+  background: rgba(0, 212, 255, 0.1);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+.et-action-copy:hover {
+  background: rgba(123, 92, 255, 0.1);
+  border-color: var(--accent-purple);
+  color: var(--accent-purple);
+}
+.et-action-delete:hover {
+  background: rgba(230, 36, 79, 0.1);
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+}
+/* RUN/STOP в таблице редактора — компактные чипы */
+/* Пустое состояние */
+.editor-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-dim);
+  font-size: 14px;
+  font-style: italic;
+}
+
+/* ============================================================ */
+/* === РЕДАКТОР: чипы типов и Maker/Packer ==================== */
+/* ============================================================ */
+
+.et-type-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.et-type-chip.et-type-changeover {
+  background: rgba(0, 212, 255, 0.12);
+  color: #00d4ff;
+  border: 1px solid rgba(0, 212, 255, 0.5);
+}
+.et-type-chip.et-type-clto {
+  background: rgba(123, 92, 255, 0.12);
+  color: #7b5cff;
+  border: 1px solid rgba(123, 92, 255, 0.5);
+}
+.et-type-chip.et-type-clconv {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.5);
+}
+.et-type-chip.et-type-none {
+  background: var(--bg-hover);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  font-style: italic;
+}
+
+.et-part-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.et-part-maker {
+  background: var(--part-maker-bg);
+  color: var(--part-maker-fg);
+  border: 1px solid var(--part-maker-bg);
+}
+.et-part-packer {
+  background: var(--part-packer-bg);
+  color: var(--part-packer-fg);
+  border: 1px solid var(--part-packer-bg);
+}
+
+/* ============================================================ */
+/* === РЕДАКТОР: адаптив ====================================== */
+/* ============================================================ */
+
+@media (max-width: 1400px) {
+  .editor-filters {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .editor-filter-field-wide { grid-column: span 2; }
+}
+
+@media (max-width: 900px) {
+  .editor-filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .editor-filter-field-wide { grid-column: span 2; }
+}
+
+@media (max-width: 600px) {
+  .editor-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .editor-filter-field-wide { grid-column: span 2; }
+}
+
+@media (max-width: 400px) {
+  .editor-filters {
+    grid-template-columns: 1fr;
+  }
+  .editor-filter-field-wide { grid-column: span 1; }
+}
+
+@media (max-width: 700px) {
+  .editor-panel-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .editor-panel-actions {
+    justify-content: flex-start;
+  }
+}
+
+/* ============================================================ */
+/* === РЕДАКТОР: строка поиска + кнопка сброса ================ */
+/* ============================================================ */
+
+.editor-filter-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.editor-filter-search-row input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+
+.editor-filter-reset-btn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 212, 255, 0.06);
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  border-radius: 6px;
+  color: var(--accent-cyan);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.editor-filter-reset-btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  pointer-events: none;
+  transition: transform 0.35s ease;
+  stroke: currentColor;
+}
+
+.editor-filter-reset-btn:hover {
+  border-color: var(--accent-cyan);
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--blue-mid), var(--blue-light));
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.35);
+}
+
+.editor-filter-reset-btn:hover svg {
+  transform: rotate(-180deg);
+}
+
+.editor-filter-reset-btn:active {
+  transform: scale(0.95);
+}
+/* ============================================================ */
+/* === РЕДАКТОР: крошки ======================================= */
+/* ============================================================ */
+
+.editor-crumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 20px 12px;
+  font-size: 13px;
+  border-bottom: 1px dashed var(--border);
+  margin-bottom: 4px;
+}
+
+.editor-crumbs:empty {
+  display: none;
+}
+
+.editor-crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: var(--accent-cyan);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.editor-crumb:hover {
+  background: rgba(0, 212, 255, 0.08);
+}
+.editor-crumb svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.editor-crumb-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  color: var(--text-main);
+  font-weight: 800;
+  font-size: 13px;
+}
+.editor-crumb-current svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  flex-shrink: 0;
+  color: var(--accent-cyan);
+}
+
+.editor-crumb-sep {
+  color: var(--text-dim);
+  font-weight: 500;
+  font-size: 12px;
+  user-select: none;
+}
+
+/* ============================================================ */
+/* === РЕДАКТОР: контекстная строка (чип + переключатель + счётчики) */
+/* ============================================================ */
+
+.editor-context-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 14px 20px;
+}
+
+/* --- Чип линии --- */
+.editor-line-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 8px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-hi);
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--text-main);
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.editor-line-pill:hover {
+  border-color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.04);
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.15);
+}
+
+.editor-line-pill-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  color: var(--accent-cyan);
+}
+.editor-line-pill-icon svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.editor-line-pill-code {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  font-family: 'Courier New', Consolas, monospace;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
+.editor-line-pill-caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--text-dim);
+  transition: transform 0.2s ease;
+}
+.editor-line-pill-caret svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+.editor-line-pill:hover .editor-line-pill-caret {
+  color: var(--accent-cyan);
+  transform: translateY(1px);
+}
+
+/* ============================================================ */
+/* === РЕДАКТОР: инлайн-переключатель Механические/Электронные */
+/* ============================================================ */
+
+.editor-mode-inline {
+  display: inline-flex;
+  padding: 4px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.editor-mode-inline-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--text-second);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.editor-mode-inline-btn:hover {
+  color: var(--accent-cyan);
+}
+.editor-mode-inline-btn svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+.editor-mode-inline-btn.active {
+  background: linear-gradient(135deg, var(--blue-mid), var(--blue-light));
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(46, 82, 136, 0.35);
+}
+.editor-mode-inline-btn.active svg {
+  stroke: #ffffff;
+}
