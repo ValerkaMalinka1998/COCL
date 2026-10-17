@@ -12,7 +12,8 @@ const stState = {
   line: null,        // выбранная линия (карточка справа)
   ws: 'all',         // фильтр цеха
   query: '',         // поиск
-  adding: null       // куда сейчас вводится новая линия: 'b:<blockId>' | 'a:<areaId>' | 'blk:<areaId>'
+  adding: null,      // куда сейчас вводится новая линия: 'b:<blockId>' | 'a:<areaId>' | 'blk:<areaId>'
+  moving: false      // открыта панель переноса линии в карточке
 };
 
 /* ============================================================ */
@@ -88,12 +89,20 @@ function stMoveLine(line, ownerKey) {
   const workshops = getWorkshops();
   const owner = stFindOwner(workshops, ownerKey);
   if (!owner) return;
+  const target = `${owner.area.name}${owner.block ? ' · ' + owner.block.name : ''}`;
+  const ctx = getBlockForLine(line);
+  if (ctx) {
+    const from = `${ctx.area.name}${ctx.block ? ' · ' + ctx.block.name : ''}`;
+    if (!confirm(`Перенести линию ${line}?\n\n${from}  →  ${target}\n\n` +
+      'Стандарты, E-Param, машины, бренды и история останутся у линии.')) return;
+  }
+  stState.moving = false;
   stDetachLine(workshops, line);
   if (!Array.isArray(owner.holder.lines)) owner.holder.lines = [];
   owner.holder.lines.push(line);
   setWorkshops(workshops);
   stAfterChange();
-  showToast(`Линия ${line} → ${owner.area.name}${owner.block ? ' · ' + owner.block.name : ''}`);
+  showToast(`Линия ${line} → ${target}`);
 }
 
 function stDeleteLine(line) {
@@ -415,20 +424,26 @@ function renderStructureLineCard() {
   const machines = getLineMachines()[line] || [];
   const lineBrands = getLineBrands()[line] || [];
 
-  // Место: блоки (или участки без блоков) того же цеха; для линии вне структуры — всех цехов
-  const places = [];
+  // Куда можно перенести: блоки (или участки без блоков) того же цеха, кроме текущего;
+  // для линии вне структуры — места всех цехов
+  const placeGroups = [];
   getWorkshops().forEach(w => {
     if (wsId && w.id !== wsId) return;
+    const items = [];
     (w.areas || []).forEach(a => {
       if (Array.isArray(a.blocks)) {
-        a.blocks.forEach(b => places.push({ key: 'b:' + b.id, label: `${a.name} · ${b.name}`, ws: w.name,
-          on: !!(ctx && ctx.block && ctx.block.id === b.id) }));
-      } else {
-        places.push({ key: 'a:' + a.id, label: a.name, ws: w.name,
-          on: !!(ctx && !ctx.block && ctx.area.id === a.id) });
+        a.blocks.forEach(b => {
+          if (!(ctx && ctx.block && ctx.block.id === b.id)) items.push({ key: 'b:' + b.id, label: `${a.name} · ${b.name}` });
+        });
+      } else if (!(ctx && !ctx.block && ctx.area.id === a.id)) {
+        items.push({ key: 'a:' + a.id, label: a.name });
       }
     });
+    if (items.length) placeGroups.push({ ws: w.name, items });
   });
+  const placeOptions = placeGroups.map(g => `<optgroup label="${escapeAttr(g.ws)}">${
+    g.items.map(p => `<option value="${escapeAttr(p.key)}">${escapeHtml(p.label)}</option>`).join('')}</optgroup>`).join('');
+  const showMover = !ctx || stState.moving;
 
   // Бренды: свои цеха + без цеха + уже выбранные из чужих цехов
   const allBrands = getBrands().slice().sort((a, b) => a.localeCompare(b, 'ru'));
@@ -460,10 +475,23 @@ function renderStructureLineCard() {
     </div>
 
     <div class="st-lc-section">
-      <div class="st-lc-label">${ctx ? 'Место в структуре' : 'Разместить в блок'}</div>
-      <div class="st-chip-set">
-        ${places.map(p => `<button type="button" class="st-chip ${p.on ? 'on' : ''}" data-st-place="${escapeAttr(p.key)}" ${p.on ? 'disabled' : ''} title="${escapeAttr(p.ws)}">${escapeHtml(p.label)}</button>`).join('')}
-      </div>
+      <div class="st-lc-label">${ctx ? 'Место в структуре' : 'Разместить в структуре'}</div>
+      ${ctx ? `
+        <div class="st-place-row">
+          <span class="st-place-current">${escapeHtml(crumbs)}</span>
+          ${stState.moving ? '' : `<button type="button" class="st-link-btn" data-st-move-open title="Перенести линию в другой блок или участок">Перенести…</button>`}
+        </div>` : ''}
+      ${showMover ? (placeOptions ? `
+        <div class="st-mover">
+          <select id="stMoveTarget" aria-label="Новое место линии">
+            <option value="">— выберите ${ctx ? 'новое ' : ''}место —</option>
+            ${placeOptions}
+          </select>
+          <button type="button" class="btn btn-primary btn-sm" data-st-move-apply>${ctx ? 'Перенести' : 'Разместить'}</button>
+          ${ctx ? '<button type="button" class="btn btn-secondary btn-sm" data-st-move-cancel>Отмена</button>' : ''}
+        </div>
+        ${ctx ? '<div class="st-mover-hint">Стандарты, E-Param, машины, бренды и история останутся у линии.</div>' : ''}`
+        : '<span class="st-muted">В этом цехе нет другого блока или участка</span>') : ''}
     </div>
 
     <div class="st-lc-section">
@@ -483,8 +511,10 @@ function renderStructureLineCard() {
     <div class="st-lc-section">
       <div class="st-lc-label">Бренды линии <span class="st-lc-count">${lineBrands.length}</span></div>
       ${lineBrands.length ? '' : '<div class="st-warn">Без брендов линия не появится у оператора в COCL и TOP Losses.</div>'}
-      <div class="st-chip-set">
-        ${offer.map(b => `<button type="button" class="st-chip st-chip-brand ${lineBrands.includes(b) ? 'on' : ''}" data-st-brand="${escapeAttr(b)}">${lineBrands.includes(b) ? '✓ ' : ''}${escapeHtml(b)}</button>`).join('') || '<span class="st-muted">В справочнике нет брендов этого цеха</span>'}
+      ${offer.length > 12 ? `<input type="search" class="st-brand-filter" id="stBrandFilter" placeholder="Найти бренд среди ${offer.length}…" autocomplete="off">` : ''}
+      <div class="st-chip-set ${offer.length > 12 ? 'st-chip-scroll' : ''}">
+        ${offer.slice().sort((a, b) => lineBrands.includes(b) - lineBrands.includes(a))
+          .map(b => `<button type="button" class="st-chip st-chip-brand ${lineBrands.includes(b) ? 'on' : ''}" data-st-brand="${escapeAttr(b)}">${lineBrands.includes(b) ? '✓ ' : ''}${escapeHtml(b)}</button>`).join('') || '<span class="st-muted">В справочнике нет брендов этого цеха</span>'}
       </div>
       <div class="settings-add-row st-add-row">
         <input type="text" id="stBrandInput" placeholder="Новый бренд для линии, Enter" autocomplete="off">
@@ -515,6 +545,7 @@ $('#stTree')?.addEventListener('click', (e) => {
   if (lineBtn) {
     stState.line = lineBtn.dataset.stLine;
     stState.adding = null;
+    stState.moving = false;
     renderStructureSettings();
     return;
   }
@@ -571,8 +602,20 @@ $('#stTree')?.addEventListener('focusout', (e) => {
 $('#stLineCard')?.addEventListener('click', (e) => {
   const line = stState.line;
   if (!line) return;
-  const place = e.target.closest('[data-st-place]');
-  if (place) return stMoveLine(line, place.dataset.stPlace);
+  if (e.target.closest('[data-st-move-open]')) {
+    stState.moving = true;
+    renderStructureLineCard();
+    return $('#stMoveTarget')?.focus();
+  }
+  if (e.target.closest('[data-st-move-cancel]')) {
+    stState.moving = false;
+    return renderStructureLineCard();
+  }
+  if (e.target.closest('[data-st-move-apply]')) {
+    const key = $('#stMoveTarget')?.value;
+    if (!key) return showToast('Выберите, куда перенести линию', true);
+    return stMoveLine(line, key);
+  }
   const brand = e.target.closest('[data-st-brand]');
   if (brand) return stToggleBrand(line, brand.dataset.stBrand);
   const rm = e.target.closest('[data-st-machine-remove]');
@@ -589,6 +632,15 @@ $('#stLineCard')?.addEventListener('click', (e) => {
     localStorage.setItem('cl_editor_line', line);
     if (typeof switchTab === 'function') switchTab('editor');
   }
+});
+
+/* Фильтр брендов на карточке — без перерисовки, только скрывает чипы */
+$('#stLineCard')?.addEventListener('input', (e) => {
+  if (e.target.id !== 'stBrandFilter') return;
+  const q = e.target.value.trim().toLowerCase();
+  $$('#stLineCard [data-st-brand]').forEach(ch => {
+    ch.hidden = !!q && !ch.dataset.stBrand.toLowerCase().includes(q);
+  });
 });
 
 $('#stLineCard')?.addEventListener('keydown', (e) => {
