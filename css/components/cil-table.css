@@ -1,0 +1,439 @@
+/* ============================================================ */
+/* === ТАБЛИЦА НЕДЕЛИ В СТИЛЕ CIL ============================= */
+/* === Чек-лист CL и Расписание CL ============================ */
+/* ============================================================ */
+
+.cil-wrap {
+  --cil-head-bg: var(--blue-deep);
+  --cil-head-bg-2: #22386a;
+  --cil-head-today: #1d4a7c;
+  --cil-head-text: #e0e7ff;
+  --cil-head-dim: #93a2c6;
+  --cil-zone-w: 76px;
+  --cil-std-w: 350px;
+  --cil-third-w: 124px;
+  padding: 14px 16px 16px;
+}
+:root[data-theme="dark"] .cil-wrap {
+  --cil-head-bg: #050810;
+  --cil-head-bg-2: #0b1222;
+  --cil-head-today: #0f2a48;
+}
+
+/* --- Панель над таблицей: неделя + легенда --- */
+.cil-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 12px;
+}
+.cil-week {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: var(--card-shadow);
+}
+.cil-week-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: var(--text-second);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.cil-week-btn:hover { color: var(--accent-cyan); background: var(--bg-hover); }
+.cil-week-label { display: flex; flex-direction: column; align-items: center; min-width: 170px; padding: 0 6px; }
+.cil-week-title { font-size: 13px; font-weight: 800; color: var(--text-main); white-space: nowrap; }
+.cil-week-sub { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent-cyan); }
+.cil-week-today {
+  margin: 0 4px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--accent-cyan);
+  background: transparent;
+  border: 1px solid var(--accent-cyan);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.cil-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  font-size: 12px;
+  color: var(--text-second);
+}
+.cil-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+
+/* --- Прокрутка и таблица --- */
+.cil-scroll {
+  max-height: calc(100vh - 260px);
+  min-height: 240px;
+  overflow: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.cil-table {
+  width: 100%;
+  min-width: calc(var(--cil-zone-w) + var(--cil-std-w) + var(--cil-third-w) + 14 * 60px);
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* --- Шапка --- */
+.cil-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  padding: 8px 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--cil-head-text);
+  background: var(--cil-head-bg);
+}
+.cil-table thead tr:nth-child(2) th {
+  top: 31px;
+  padding: 6px 4px 7px;
+  background: var(--cil-head-bg-2);
+}
+.cil-table thead th.cil-today { background: var(--cil-head-today); }
+.cil-day { border-left: 1px solid rgba(255, 255, 255, 0.14); }
+.cil-day-name { margin-right: 6px; color: var(--cil-head-dim); }
+.cil-shift { min-width: 56px; }
+.cil-shift-day { border-left: 1px solid rgba(255, 255, 255, 0.14); }
+.cil-shift-night { border-left: 1px dashed rgba(255, 255, 255, 0.22); }
+.cil-brig {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--cil-head-dim);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+}
+.cil-brig.now {
+  color: #04121f;
+  background: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+  box-shadow: var(--glow-cyan-sm);
+}
+.cil-shift-sub {
+  display: block;
+  margin-top: 4px;
+  font-size: 9px;
+  letter-spacing: 0.3px;
+  color: var(--cil-head-dim);
+}
+.cil-prog {
+  display: block;
+  height: 3px;
+  margin: 5px 8px 0;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+}
+.cil-prog i { display: block; height: 100%; background: var(--accent-green); }
+
+/* --- Закреплённые левые колонки --- */
+.cil-c-zone, .cil-c-std, .cil-c-norm, .cil-c-cnt { position: sticky; z-index: 2; }
+.cil-table thead .cil-c-zone, .cil-table thead .cil-c-std,
+.cil-table thead .cil-c-norm, .cil-table thead .cil-c-cnt { z-index: 4; }
+.cil-c-zone { left: 0; width: var(--cil-zone-w); min-width: var(--cil-zone-w); }
+.cil-c-std { left: var(--cil-zone-w); width: var(--cil-std-w); min-width: var(--cil-std-w); text-align: left !important; }
+.cil-c-norm, .cil-c-cnt {
+  left: calc(var(--cil-zone-w) + var(--cil-std-w));
+  width: var(--cil-third-w);
+  min-width: var(--cil-third-w);
+  border-right: 2px solid var(--border-hi);
+}
+.cil-table thead .cil-c-norm, .cil-table thead .cil-c-cnt { border-right-color: rgba(255, 255, 255, 0.2); }
+
+/* --- Тело --- */
+.cil-table tbody td {
+  height: 56px;
+  padding: 0;
+  text-align: center;
+  vertical-align: middle;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+}
+.cil-table tbody tr:hover td { background: var(--bg-hover); }
+.cil-table tbody td.cil-c-norm:hover { z-index: 20; }
+
+/* Цветная полоса группы (машины) */
+.cil-z0 { --cil-z: var(--accent-cyan); }
+.cil-z1 { --cil-z: var(--accent-purple); }
+.cil-z2 { --cil-z: var(--accent-amber); }
+.cil-z3 { --cil-z: var(--accent-green); }
+.cil-z4 { --cil-z: var(--blue-light); }
+.cil-z5 { --cil-z: var(--text-second); }
+.cil-table tbody td.cil-c-zone {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--cil-z) 13%, var(--bg-card));
+  border-left: 5px solid var(--cil-z);
+}
+.cil-c-zone small { display: block; font-size: 10px; font-weight: 600; color: var(--text-dim); }
+
+/* Ячейка стандарта */
+.cil-table tbody td.cil-c-std { padding: 7px 12px; }
+.cil-std-title { font-size: 13px; font-weight: 700; line-height: 1.35; color: var(--text-main); }
+.cil-std-title > * { margin-right: 6px; vertical-align: middle; }
+.cil-std-m { font-weight: 800; }
+.cil-std-name { font: inherit; color: inherit; }
+.cil-std-link {
+  display: inline;
+  padding: 0;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.cil-std-link:hover { color: var(--accent-cyan); text-decoration: underline; }
+.cil-std-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.cil-opl { font-family: Consolas, 'Courier New', monospace; font-weight: 700; color: var(--accent-cyan); }
+.cil-node { display: inline-flex; align-items: center; gap: 4px; }
+
+.cil-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+  border-radius: 999px;
+}
+.cil-tag-run { color: var(--accent-green); background: color-mix(in srgb, var(--accent-green) 12%, transparent); }
+.cil-tag-stop { color: var(--accent-amber); background: color-mix(in srgb, var(--accent-amber) 14%, transparent); }
+.cil-tag-time { color: var(--accent-cyan); background: color-mix(in srgb, var(--accent-cyan) 12%, transparent); }
+.cil-tag-time.night { color: var(--accent-purple); background: color-mix(in srgb, var(--accent-purple) 12%, transparent); }
+.cil-tag-dev { color: var(--accent-red); background: color-mix(in srgb, var(--accent-red) 12%, transparent); }
+.cil-tag-add { color: var(--text-dim); background: transparent; border: 1px dashed var(--border-hi); }
+button.cil-tag { font: inherit; font-size: 10px; font-weight: 800; border: 0; cursor: pointer; }
+button.cil-tag-add { border: 1px dashed var(--border-hi); }
+button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentColor; }
+
+/* Норма / точки */
+.cil-norm-val {
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text-main);
+  word-break: break-word;
+}
+.cil-norm-val small { display: block; font-weight: 600; color: var(--text-dim); }
+.cil-norm-pts {
+  position: relative;
+  display: inline-flex;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--accent-purple);
+  background: color-mix(in srgb, var(--accent-purple) 12%, transparent);
+  border-radius: 999px;
+  cursor: help;
+  outline: none;
+}
+.cil-norm-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  z-index: 10;
+  display: none;
+  min-width: 150px;
+  padding: 8px 10px;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  color: var(--text-main);
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  transform: translateX(-50%);
+}
+.cil-norm-pts:hover .cil-norm-pop, .cil-norm-pts:focus .cil-norm-pop { display: block; }
+.cil-norm-pop div { display: flex; justify-content: space-between; gap: 12px; padding: 1px 0; }
+.cil-norm-pop span { color: var(--text-dim); }
+.cil-norm-visual {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent-amber);
+}
+.cil-dim { color: var(--text-dim); }
+
+/* Колонки смен: день / ночь */
+.cil-table tbody td.cil-td-day { border-left: 1.5px solid var(--border-hi); }
+.cil-table tbody td.cil-td-night {
+  border-left: 1px dashed var(--border-hi);
+  background: color-mix(in srgb, var(--accent-purple) 4%, var(--bg-card));
+}
+.cil-table tbody td.cil-today { background: color-mix(in srgb, var(--accent-cyan) 6%, var(--bg-card)); }
+.cil-table tbody td.cil-td-night.cil-today {
+  background: color-mix(in srgb, var(--accent-purple) 5%, color-mix(in srgb, var(--accent-cyan) 6%, var(--bg-card)));
+}
+.cil-na { color: var(--text-dim); opacity: 0.6; }
+
+/* --- Ячейка проверки --- */
+.cil-cell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 900;
+  font-style: normal;
+  color: var(--text-dim);
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-hi);
+  border-radius: 8px;
+  cursor: default;
+}
+.cil-cell-mini { width: 20px; height: 20px; font-size: 11px; border-radius: 5px; }
+.cil-cell-mini svg { width: 11px; height: 11px; }
+.cil-cell-future { opacity: 0.55; }
+.cil-cell-now { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+.cil-cell-active {
+  color: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-cyan) 20%, transparent);
+  cursor: pointer;
+}
+.cil-cell-active:hover { background: color-mix(in srgb, var(--accent-cyan) 12%, var(--bg-card)); }
+.cil-cell-ok { color: var(--on-accent); background: var(--accent-green); border-color: var(--accent-green); }
+.cil-cell-fail { color: var(--on-accent); background: var(--accent-red); border-color: var(--accent-red); }
+.cil-cell-missed {
+  color: var(--accent-amber);
+  background: color-mix(in srgb, var(--accent-amber) 14%, var(--bg-card));
+  border-color: var(--accent-amber);
+}
+.cil-cell-unchecked { color: var(--accent-amber); border-style: dashed; border-color: var(--accent-amber); }
+.cl-cell-clickable.cil-cell-ok, .cl-cell-clickable.cil-cell-fail,
+.cl-cell-clickable.cil-cell-unchecked { cursor: pointer; }
+.cil-dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 9px;
+  height: 9px;
+  background: var(--accent-purple);
+  border: 2px solid var(--bg-card);
+  border-radius: 50%;
+}
+
+/* --- Расписание: ячейка «запланировано» --- */
+.cil-plan {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 30px;
+  padding: 0;
+  color: transparent;
+  background: transparent;
+  border: 1.5px dashed var(--border-hi);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.cil-plan:hover { color: var(--accent-cyan); border-color: var(--accent-cyan); }
+.cil-plan.on.cil-plan-day { color: #04121f; background: var(--accent-cyan); border: 1.5px solid var(--accent-cyan); }
+.cil-plan.on.cil-plan-night { color: var(--on-accent); background: var(--accent-purple); border: 1.5px solid var(--accent-purple); }
+.cil-plan.locked { cursor: not-allowed; opacity: 0.45; }
+.cil-plan.locked:not(.on) { background: repeating-linear-gradient(45deg, transparent 0 4px, var(--border) 4px 5px); }
+.cil-table tbody td.cil-past { background: color-mix(in srgb, var(--text-dim) 6%, var(--bg-card)); }
+
+.cil-table thead th[data-sch-col-day] { cursor: pointer; }
+.cil-table thead th[data-sch-col-day]:hover .cil-brig { color: var(--accent-cyan); border-color: var(--accent-cyan); }
+
+/* Колонка «Смен» */
+.cil-cnt-val { font-size: 13px; font-weight: 800; color: var(--text-main); }
+.cil-cnt-val small { font-weight: 600; color: var(--text-dim); }
+.cil-cnt-bar { display: block; width: 72px; height: 4px; margin: 4px auto 0; overflow: hidden; background: var(--border); border-radius: 2px; }
+.cil-cnt-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple)); }
+.cil-quick { display: flex; justify-content: center; gap: 3px; margin-top: 5px; }
+.cil-quick button {
+  padding: 2px 5px;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--text-second);
+  background: transparent;
+  border: 1px solid var(--border-hi);
+  border-radius: 5px;
+  cursor: pointer;
+}
+.cil-quick button:hover { color: var(--accent-cyan); border-color: var(--accent-cyan); }
+
+/* Строка расписания: кнопка «убрать» появляется при наведении */
+.cil-std-box { position: relative; padding-right: 28px; }
+.cil-row-del {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: var(--text-dim);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0;
+}
+.cil-row:hover .cil-row-del, .cil-row-del:focus { opacity: 1; }
+.cil-row-del:hover { color: var(--accent-red); background: var(--bg-hover); }
+
+.cil-readonly .cil-plan, .cil-readonly .cil-quick button { cursor: not-allowed; }
+
+/* Счётчик текущей смены на кнопках Maker / Packer */
+.cil-part-cnt { margin-left: 6px; font-size: 11px; font-weight: 800; opacity: 0.85; }
+.cil-part-cnt:empty { display: none; }
+
+/* Расписание: подсказка, куда попадут изменения */
+.sch-cil-toolbar .sch-scope { margin-left: 0; }
+.sch-cil-hint { margin: -4px 0 10px 4px; font-size: 12px; color: var(--text-dim); }
