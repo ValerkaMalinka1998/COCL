@@ -59,6 +59,9 @@ function normalizeElectronicParam(p) {
     // --- Триггеры Change Over ---
     triggers: Array.isArray(p.triggers) ? p.triggers.filter(t => typeof t === 'string') : [],
 
+    // --- Top Losses: id потерь, которые контролирует параметр ---
+    topLosses: Array.isArray(p.topLosses) ? p.topLosses.filter(t => typeof t === 'string') : [],
+
     frequency: normalizeElectronicFrequency(p.frequency),
 
     // --- НОВОЕ: в расписании технолога ---

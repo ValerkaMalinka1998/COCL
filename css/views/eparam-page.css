@@ -96,3 +96,19 @@
   margin-top: 10px;
   width: 100%;
 }
+
+/* Top Losses параметра — чипы с крестиком */
+.ep-tl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-amber);
+  background: color-mix(in srgb, var(--accent-amber) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-amber) 40%, transparent);
+  border-radius: 999px;
+}
+.ep-tl-remove { padding: 0 2px; font-size: 12px; color: inherit; background: none; border: 0; cursor: pointer; opacity: 0.7; }
+.ep-tl-remove:hover { opacity: 1; color: var(--accent-red); }

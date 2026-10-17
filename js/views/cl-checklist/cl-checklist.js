@@ -702,18 +702,22 @@ function startClCheck() {
 function stopClCheck() {
   if (!confirm('Закончить проверку и сохранить результаты?')) return;
 
-  saveClDraftToHistory();
+  const fails = saveClDraftToHistory();
 
   clState.checkMode = false;
   clState.quickDraft = {};
   updateClCheckButtons();
   renderClMatrix();
   showToast('Проверка сохранена');
+  showMachineJournalNotice(fails, {
+    line: clState.line,
+    source: clState.mode === 'mech' ? 'Чек-лист CL · механические' : 'Чек-лист CL · электронные'
+  });
 }
 
 function saveClDraftToHistory() {
   const drafts = Object.entries(clState.quickDraft);
-  if (!drafts.length) return;
+  if (!drafts.length) return [];
 
   const groups = {};
   drafts.forEach(([key, val]) => {
@@ -731,6 +735,7 @@ function saveClDraftToHistory() {
       node: row.node || '',
       nodePart: row.nodePart || '',
       controlType: migrateControlType(row.controlType, row.measurements),
+      kind: clState.mode === 'mech' ? 'mech' : 'elec',
       answer: val.answer,
       value: val.value,
       status: val.status,
@@ -779,6 +784,7 @@ function saveClDraftToHistory() {
   updateNavHistoryCounter();
 
   if (added > 0) showToast(`Создано записей: ${added}`);
+  return Object.values(groups).flatMap(g => g.items).filter(it => it.status === 'FAIL');
 }
 
 /* ============================================================

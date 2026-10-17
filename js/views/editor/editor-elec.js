@@ -278,7 +278,7 @@ async function editorElecDownloadTemplate() {
   const ws = wb.addWorksheet('Параметры');
 
   const headers = ['Параметр', 'Линия', 'Узел/часть', 'Машина', 'Тип контроля', 'Норма',
-    'Работа', 'Время с', 'Время по', 'Применять к', 'Значения по брендам', 'Активен'];
+    'Работа', 'Время с', 'Время по', 'Применять к', 'Значения по брендам', 'Активен', 'Top Losses'];
   ws.addRow(headers);
 
   // Пример
@@ -288,10 +288,11 @@ async function editorElecDownloadTemplate() {
     'Run', '09:10', '10:00',
     'ChangeOver, CL_TO',
     'Kent|92|5; |90|3',
-    'Да'
+    'Да',
+    ''
   ]);
 
-  const widths = [30, 10, 18, 10, 14, 16, 8, 10, 10, 22, 40, 8];
+  const widths = [30, 10, 18, 10, 14, 16, 8, 10, 10, 22, 40, 8, 36];
   ws.columns.forEach((col, i) => { col.width = widths[i] || 14; });
 
   const headerRow = ws.getRow(1);
@@ -314,6 +315,7 @@ async function editorElecDownloadTemplate() {
     ['   Пустой бренд (||допуск) — применяется ко всем брендам.'],
     ['3. Тип контроля: fixed (Фиксированный), variable (Вариабельный), interval (Интервал).'],
     ['4. «Применять к» — через запятую: ChangeOver, CL_TO, CL_Conversion.'],
+    ['5. «Top Losses» — названия потерь цеха линии через запятую (как в Настройках).'],
     [''],
     ['ОБЯЗАТЕЛЬНЫЕ ПОЛЯ: Параметр, Линия, Машина, Тип контроля.']
   ];
@@ -338,7 +340,7 @@ async function editorElecExport() {
   const ws = wb.addWorksheet('Параметры');
 
   const headers = ['Параметр', 'Линия', 'Узел/часть', 'Машина', 'Тип контроля', 'Норма',
-    'Работа', 'Время с', 'Время по', 'Применять к', 'Значения по брендам', 'Активен'];
+    'Работа', 'Время с', 'Время по', 'Применять к', 'Значения по брендам', 'Активен', 'Top Losses'];
   ws.addRow(headers);
 
   const headerRow = ws.getRow(1);
@@ -358,11 +360,13 @@ async function editorElecExport() {
       p.work || 'Run', p.timeFrom || '', p.timeTo || '',
       (Array.isArray(p.appliesTo) ? p.appliesTo.join(', ') : ''),
       serializeValuesByBrand(p.valuesByBrand),
-      p.active !== false ? 'Да' : 'Нет'
+      p.active !== false ? 'Да' : 'Нет',
+      (Array.isArray(p.topLosses) ? p.topLosses : [])
+        .map(id => findLossById(id)?.name).filter(Boolean).join(', ')
     ]);
   });
 
-  const widths = [30, 10, 18, 10, 14, 16, 8, 10, 10, 22, 40, 8];
+  const widths = [30, 10, 18, 10, 14, 16, 8, 10, 10, 22, 40, 8, 36];
   ws.columns.forEach((col, i) => { col.width = widths[i] || 14; });
 
   // Инструкция
@@ -390,7 +394,7 @@ async function parseElectronicParamsExcel(file, targetLine) {
   ws.eachRow((row, rowNum) => {
     if (rowNum < 2) return; // skip header
     const vals = [];
-    for (let c = 1; c <= 12; c++) vals.push(row.getCell(c).text || '');
+    for (let c = 1; c <= 13; c++) vals.push(row.getCell(c).text || '');
     const name = vals[0].trim();
     if (!name) return;
     rows.push(vals);
@@ -426,6 +430,12 @@ async function parseElectronicParamsExcel(file, targetLine) {
 
     const valuesByBrand = parseValuesByBrand(brandValuesStr);
 
+    // Top Losses — по названию среди потерь цеха линии
+    const wsLosses = getTopLossesForWorkshop(getWorkshopIdForLine(line)).flatMap(c => c.items || []);
+    const topLosses = String(vals[12] || '').split(/[,;]/).map(x => x.trim()).filter(Boolean)
+      .map(name => wsLosses.find(l => l.name.toLowerCase() === name.toLowerCase())?.id)
+      .filter(Boolean);
+
     const id = makeElectronicParamId();
     const p = {
       id, active,
@@ -435,6 +445,7 @@ async function parseElectronicParamsExcel(file, targetLine) {
       controlType, normText,
       valuesByBrand,
       appliesTo,
+      topLosses,
       frequency: { type: 'weekly', schedule: [], shifts: ['day', 'night'], daysOfWeek: [], dates: [] },
       inSchedule: false,
       author: '',
