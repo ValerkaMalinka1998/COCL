@@ -850,10 +850,14 @@ $('#epPageSaveBtn')?.addEventListener('click', () => {
     for (const r of filled) {
       if (!r.brand) return showToast('Выберите бренд в каждой строке нормы', true);
       if (p.controlType === 'interval') {
-        if (r.min === '' || r.max === '') return showToast(`Бренд ${r.brand}: укажите «от» и «до»`, true);
+        if (r.min === '' || r.max === '' || !Number.isFinite(Number(r.min)) || !Number.isFinite(Number(r.max))) {
+          return showToast(`Бренд ${r.brand}: укажите числа «от» и «до»`, true);
+        }
         if (Number(r.min) > Number(r.max)) return showToast(`Бренд ${r.brand}: «от» больше, чем «до»`, true);
       } else {
-        if (r.target === '' || r.tolerance === '') return showToast(`Бренд ${r.brand}: укажите норму и допуск`, true);
+        if (r.target === '' || r.tolerance === '' || !Number.isFinite(Number(r.target)) || !Number.isFinite(Number(r.tolerance))) {
+          return showToast(`Бренд ${r.brand}: укажите числа нормы и допуска`, true);
+        }
         if (Number(r.tolerance) < 0) return showToast(`Бренд ${r.brand}: допуск не может быть отрицательным`, true);
       }
     }
@@ -2494,14 +2498,10 @@ function getClWeekDays(offset = 0) {
   return getWeekDays(offset, new Date(getCurrentShiftPeriod().date + 'T12:00:00'));
 }
 
-/* Текущая неделя (offset = 0) */
-function getCurrentWeekDays() {
-  return getWeekDays(0);
-}
 
 /* Название недели: «16–22.06» */
 function getWeekLabel(offset = 0) {
-  const days = getWeekDays(offset);
+  const days = getClWeekDays(offset);
   const first = fmtShortDate(days[0]);
   const last = fmtShortDate(days[6]);
   return `${first} – ${last}`;
@@ -2528,7 +2528,8 @@ function getWeekLabel(offset = 0) {
 
 /* Понедельник недели по смещению (0 = текущая) */
 function getSchWeekStart(offset = 0) {
-  return getWeekDays(offset)[0];
+  // Как в Чек-листе CL: неделя считается от даты текущей смены
+  return getClWeekDays(offset)[0];
 }
 
 function getScheduleWeeks() {
@@ -3038,7 +3039,7 @@ function openClCheckModal(rowId, dateStr, shift) {
   $('#qcTime').textContent = (timeFrom && timeTo) ? `${timeFrom}–${timeTo}` : '—';
 
   const workEl = $('#qcWork');
-  const workVal = row.work === 'Stop' ? 'Stop' : 'Run';
+  const workVal = getClRowFreq(row).work === 'Stop' ? 'Stop' : 'Run';
   workEl.textContent = workVal;
   workEl.className = 'qc-work-badge ' + (workVal === 'Run' ? 'qc-work-run' : 'qc-work-stop');
 
@@ -15441,6 +15442,9 @@ function copyStandardNew(id) {
   copy.id = uid();
   copy.oplNumber = (st.oplNumber || '') + '-copy';
   copy.number = '';
+  // Копия — новый стандарт: в расписание его добавляют отдельно
+  copy.inSchedule = false;
+  copy.frequency = { type: 'weekly', schedule: [], shifts: ['day', 'night'], daysOfWeek: [], dates: [], timeWindows: [] };
   copy.createdAt = new Date().toISOString();
   copy.updatedAt = new Date().toISOString();
 
@@ -16070,7 +16074,7 @@ function renderScheduleMatrix() {
     { idx: 0, name: 'Вс' }
   ];
 
-  const weekDays = getWeekDays(schState.weekOffset);
+  const weekDays = getClWeekDays(schState.weekOffset);
   const dateByDayIdx = {};
   [1, 2, 3, 4, 5, 6, 0].forEach((dayIdx, i) => {
     dateByDayIdx[dayIdx] = weekDays[i];
@@ -16692,7 +16696,7 @@ function saveSchedule() {
     saveScheduleWeekOverride(weekOffset);
     msg = `Сохранено только для недели ${weekLabel}`;
   } else {
-    saveScheduleForward(weekOffset);
+    if (saveScheduleForward(weekOffset) === false) return;
     msg = weekOffset === 0
       ? 'Сохранено: оставшиеся смены этой недели и шаблон со следующей недели'
       : `Шаблон сохранён с недели ${weekLabel}`;
@@ -16736,6 +16740,15 @@ function saveScheduleForward(weekOffset) {
   const all = isMech ? getStandards() : getElectronicParams().map(normalizeElectronicParam);
   const states = {};
   all.forEach(r => { if (touched.has(r.id)) states[r.id] = stateOf(r); });
+
+  // Более поздние версии шаблона заменятся — предупреждаем
+  const later = all.filter(r => states[r.id] &&
+    ((r.frequency && r.frequency.templates) || []).some(v => v.from > from));
+  if (later.length && !confirm(
+    `У ${later.length} строк(и) уже запланированы изменения на более поздние недели. ` +
+    'Сохранение «с этой недели и далее» заменит их. Продолжить?')) {
+    return false;
+  }
 
   if (weekOffset === 0) {
     saveScheduleWeekOverride(0);
@@ -19332,7 +19345,10 @@ $('#svFullSaveBtn')?.addEventListener('click', () => {
     active: activeEl ? activeEl.checked : st.active,
     updatedAt: new Date().toISOString()
   };
-  if (isNew) updated.createdAt = updated.updatedAt;
+  if (isNew) {
+    updated.createdAt = updated.updatedAt;
+    if (!updated.author) updated.author = '—';
+  }
 
   // Сохраняем в массив
   const idx = all.findIndex(s => s.id === id);
