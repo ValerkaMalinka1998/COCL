@@ -331,8 +331,7 @@ function renderClMatrix() {
   const wrap = $('#clMatrixWrap');
   if (!wrap) return;
 
-  // Меняем класс: с .sch-matrix-wrap на .cl-matrix-wrap
-  wrap.className = 'cl-matrix-wrap';
+  wrap.className = 'cil-wrap';
 
   if (!clState.line) {
     wrap.innerHTML = '<div class="editor-empty">Выберите линию для начала проверки</div>';
@@ -365,11 +364,7 @@ function renderClMatrix() {
       .filter(p => isMember(p) || checkedIds.has(p.id));
   }
 
-  rows.sort((a, b) => {
-    const oa = String(a.oplNumber || a.paramName || '').toLowerCase();
-    const ob = String(b.oplNumber || b.paramName || '').toLowerCase();
-    return oa.localeCompare(ob, 'ru', { numeric: true });
-  });
+  rows = cilSortRows(rows);
 
   clState.rows = rows;
   updateClPanelCount();
@@ -390,83 +385,165 @@ function renderClMatrix() {
     return;
   }
 
-  const DAYS = [
-    { idx: 1, name: 'Пн' }, { idx: 2, name: 'Вт' }, { idx: 3, name: 'Ср' },
-    { idx: 4, name: 'Чт' }, { idx: 5, name: 'Пт' }, { idx: 6, name: 'Сб' },
-    { idx: 0, name: 'Вс' }
-  ];
-
   const weekDays = getClWeekDays(clState.weekOffset);
-  const dateByDayIdx = {};
-  [1, 2, 3, 4, 5, 6, 0].forEach((dayIdx, i) => {
-    dateByDayIdx[dayIdx] = weekDays[i];
-  });
+  const dateByDayIdx = cilDateByDayIdx(weekDays);
+  const isElec = clState.mode !== 'mech';
+  const hist = clHistoryIndex();
+  const zones = cilZoneMap(rows);
 
-  // Панель навигации по неделям
-  const weekLabel = `${fmtShortDate(weekDays[0])} – ${fmtShortDate(weekDays[6])}`;
+  // Ячейки всех строк — заранее, чтобы посчитать прогресс смен для шапки
+  const cellsByRow = rows.map(row => clRowCells(row, dateByDayIdx, hist));
+  updateClPartCounts(dateByDayIdx, hist, isMember, checkedIds);
+  const prog = {};
+  cellsByRow.forEach(cells => cells.forEach(c => {
+    if (c.status === 'na') return;
+    const k = `${c.dateStr}|${c.shift}`;
+    if (!prog[k]) prog[k] = { done: 0, planned: 0 };
+    prog[k].planned++;
+    if (c.status === 'OK' || c.status === 'FAIL' || c.status === 'UNCHECKED') prog[k].done++;
+  }));
+
+  // Панель недели + легенда
   const isCurrentWeek = clState.weekOffset === 0;
+  const weekNo = cilIsoWeek(weekDays[0]);
   let html = `
-    <div class="cl-week-nav">
-      <button type="button" class="cl-week-nav-btn" id="clWeekPrev" title="Предыдущая неделя">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-      <div class="cl-week-nav-label">
-        <span class="cl-week-nav-title">${escapeHtml(weekLabel)}</span>
-        ${isCurrentWeek ? '<span class="cl-week-nav-sub">текущая неделя</span>' : ''}
+    <div class="cil-toolbar">
+      <div class="cil-week">
+        <button type="button" class="cil-week-btn" id="clWeekPrev" title="Предыдущая неделя">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="cil-week-label">
+          <span class="cil-week-title">Нед. ${weekNo} · ${escapeHtml(fmtShortDate(weekDays[0]))} – ${escapeHtml(fmtShortDate(weekDays[6]))}</span>
+          <span class="cil-week-sub">${isCurrentWeek ? 'текущая неделя' : (clState.weekOffset < 0 ? 'прошедшая неделя' : 'будущая неделя')}</span>
+        </div>
+        <button type="button" class="cil-week-btn" id="clWeekNext" title="Следующая неделя">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+        ${!isCurrentWeek ? '<button type="button" class="cil-week-today" id="clWeekToday">Сегодня</button>' : ''}
       </div>
-      <button type="button" class="cl-week-nav-btn" id="clWeekNext" title="Следующая неделя">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-      ${!isCurrentWeek ? '<button type="button" class="cl-week-nav-today" id="clWeekToday">Сегодня</button>' : ''}
+      <div class="cil-legend">
+        <span><i class="cil-cell cil-cell-ok cil-cell-mini">${CIL_ICONS.check}</i>ОК</span>
+        <span><i class="cil-cell cil-cell-fail cil-cell-mini">${CIL_ICONS.x}</i>Отклонение</span>
+        <span><i class="cil-cell cil-cell-missed cil-cell-mini">?</i>Пропущено</span>
+        <span><i class="cil-cell cil-cell-mini">${CIL_ICONS.ruler}</i>Замер</span>
+        <span><i class="cil-cell cil-cell-mini">${CIL_ICONS.eye}</i>Визуально</span>
+      </div>
     </div>
-    <div class="cl-matrix">`;
+    <div class="cil-scroll"><table class="cil-table">`;
 
-  // ===== Шапка =====
-  html += '<div class="cl-head-grid">';
-
-  // Левая объединённая шапка (8 колонок)
-  html += `<div class="cl-head-info">
-    <div style="width:48px;text-align:center">№</div>
-    <div style="width:100px;text-align:center">OPL №</div>
-    <div style="width:80px;text-align:center">Машина</div>
-    <div style="width:240px;text-align:left">Узел</div>
-    <div style="width:280px;text-align:left">Название</div>
-    <div style="width:100px;text-align:center">Время</div>
-    <div style="width:80px;text-align:center">Работа</div>
-    <div style="width:180px;text-align:center">Норма / точки</div>
-  </div>`;
-
-  // Дни и смены (14 колонок)
-  DAYS.forEach((d, i) => {
-    const dateStr = dateByDayIdx[d.idx];
-    const shortDate = dateStr ? fmtShortDate(dateStr) : '';
-    const colStart = 9 + i * 2;   // 8 колонок инфо + смещение
-
-    // Бригады для этой даты
-    const shifts = dateStr ? getShiftsForDate(dateStr) : { day: '—', night: '—' };
-
-    html += `<div class="sch-head-day" style="grid-column: ${colStart} / ${colStart + 2}; grid-row: 1;">
-      ${d.name} <span style="color:var(--text-dim);font-weight:500">${shortDate}</span>
-    </div>`;
-    html += `<div class="sch-head-shift sch-head-shift-day" style="grid-column: ${colStart}; grid-row: 2;">
-      <span class="sch-head-shift-label">День ·</span> ${escapeHtml(shifts.day)}
-    </div>`;
-    html += `<div class="sch-head-shift sch-head-shift-night" style="grid-column: ${colStart + 1}; grid-row: 2;">
-      <span class="sch-head-shift-label">Ночь ·</span> ${escapeHtml(shifts.night)}
-    </div>`;
-  });
-  html += '</div>';
-
-  // ===== Тело =====
-  rows.forEach((row, idx) => {
-    html += renderClRow(row, idx + 1, DAYS, dateByDayIdx);
+  html += cilHeadHtml(dateByDayIdx, {
+    activeDate: isCurrentWeek ? clState.activeDate : '',
+    activeShift: clState.shiftType,
+    infoHeads: `<th class="cil-c-zone" rowspan="2">Машина<br>/ №</th>
+      <th class="cil-c-std" rowspan="2">${isElec ? 'Параметр' : 'Стандарт'}</th>
+      <th class="cil-c-norm" rowspan="2">Норма / точки</th>`,
+    shiftSub: (dateStr, shift) => {
+      const p = prog[`${dateStr}|${shift}`] || { done: 0, planned: 0 };
+      return cilShiftProgress(shift, p.done, p.planned);
+    }
   });
 
-  html += '</div>';
+  html += '<tbody>';
+  const numInZone = {};
+  rows.forEach((row, i) => {
+    const m = row.machine || '—';
+    numInZone[m] = (numInZone[m] || 0) + 1;
+    html += renderClRow(row, numInZone[m], zones[m], cellsByRow[i], hist, isElec);
+  });
+  html += '</tbody></table></div>';
   wrap.innerHTML = html;
 
   bindClCells();
   bindClWeekNav();
+}
+
+/* Счётчики «сделано / надо» текущей смены на кнопках Maker / Packer */
+function updateClPartCounts(dateByDayIdx, hist, isMember, checkedIds) {
+  const btns = document.querySelectorAll('#clPartSwitch .editor-part-switch-btn');
+  const isElec = clState.mode !== 'mech';
+  const all = isElec ? [] : getStandards()
+    .filter(s => s.line === clState.line)
+    .filter(s => s.active !== false || checkedIds.has(s.id))
+    .filter(s => isMember(s) || checkedIds.has(s.id));
+  btns.forEach(btn => {
+    let cnt = btn.querySelector('.cil-part-cnt');
+    if (isElec || clState.weekOffset !== 0) { if (cnt) cnt.remove(); return; }
+    const part = btn.dataset.part || '';
+    let done = 0, need = 0;
+    all.filter(s => !part || s.nodePart === part).forEach(s => {
+      const c = clRowCells(s, dateByDayIdx, hist).find(x => x.isNow);
+      if (!c || c.status === 'na') return;
+      need++;
+      if (c.status === 'OK' || c.status === 'FAIL' || c.status === 'UNCHECKED') done++;
+    });
+    if (!cnt) {
+      cnt = document.createElement('span');
+      cnt.className = 'cil-part-cnt';
+      btn.appendChild(cnt);
+    }
+    cnt.textContent = need ? `${done}/${need}` : '';
+    cnt.title = 'Проверено в текущую смену';
+  });
+}
+
+/* Номер недели ISO 8601 */
+function cilIsoWeek(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const day = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - day + 3);
+  const firstThu = new Date(d.getFullYear(), 0, 4, 12);
+  return 1 + Math.round(((d - firstThu) / 86400000 - 3 + ((firstThu.getDay() + 6) % 7)) / 7);
+}
+
+/* История CL линии: результат по ключу «дата|бригада|id» и последний статус стандарта */
+function clHistoryIndex() {
+  const cell = new Map();
+  const last = {};
+  const lastOrder = {};
+  getHistory().forEach(h => {
+    if (!(h.mode === 'cl' || h.mode === 'electronic') || h.line !== clState.line) return;
+    const order = `${h.date}|${getShiftsForDate(h.date).day === h.shift ? 0 : 1}`;
+    (h.items || []).forEach(it => {
+      cell.set(`${h.date}|${h.shift}|${it.standardId}`, it);
+      if (!lastOrder[it.standardId] || order > lastOrder[it.standardId]) {
+        lastOrder[it.standardId] = order;
+        last[it.standardId] = it.status;
+      }
+    });
+  });
+  return { cell, last };
+}
+
+/* Состояние 14 ячеек строки */
+function clRowCells(row, dateByDayIdx, hist) {
+  const freq = getClRowFreq(row);
+  const schedule = Array.isArray(freq.schedule) ? freq.schedule : [];
+  const cells = [];
+  CIL_DAYS.forEach(d => {
+    const dateStr = dateByDayIdx[d.idx];
+    ['day', 'night'].forEach(shift => {
+      const planned = schedule.some(x => x.day === d.idx && x.shift === shift);
+      const letter = getShiftsForDate(dateStr)[shift];
+      const existing = hist.cell.get(`${dateStr}|${letter}|${row.id}`);
+      const draft = clState.quickDraft[`${row.id}|${dateStr}|${shift}`];
+      const past = isShiftPast(dateStr, shift);
+      const isNow = clState.weekOffset === 0 && dateStr === clState.activeDate && shift === clState.shiftType;
+
+      // Смена закончилась, а проверки нет — «пропущено»
+      let status = 'na';
+      if (draft) status = draft.status;
+      else if (existing) status = existing.status;
+      else if (planned) status = past ? 'missed' : 'due';
+
+      cells.push({
+        dateStr, shift, dayName: d.name, planned, past, isNow, status,
+        comment: !!((draft && draft.comment) || (existing && existing.comment)),
+        clickable: planned && isNow && clState.checkMode,
+        isToday: dateStr === clState.activeDate && clState.weekOffset === 0
+      });
+    });
+  });
+  return cells;
 }
 
 function bindClWeekNav() {
@@ -484,219 +561,56 @@ function bindClWeekNav() {
   });
 }
 
-function renderClRow(row, num, DAYS, dateByDayIdx) {
+function renderClRow(row, num, zone, cells, hist, isElec) {
   const freq = getClRowFreq(row);
-  const schedule = Array.isArray(freq.schedule) ? freq.schedule : [];
-  const isInSchedule = (dayIdx, shift) => schedule.some(x => x.day === dayIdx && x.shift === shift);
-
   const title = row.title || row.paramName || '—';
-  const node = row.node || '';
-  const machine = row.machine || '';
-  const oplNumber = row.oplNumber || '';
-  const work = freq.work === 'Stop' ? 'Stop' : 'Run';
+  const machine = row.machine || '—';
+  const norm = cilNorm(row, clState.brand, isElec);
+  const icon = norm.visual ? CIL_ICONS.eye : CIL_ICONS.ruler;
+  const devBadge = hist.last[row.id] === 'FAIL'
+    ? `<span class="cil-tag cil-tag-dev" title="Последняя проверка — с отклонением">${CIL_ICONS.warn}Отклонение в прошлую проверку</span>` : '';
+  const nameHtml = isElec
+    ? `<span class="cil-std-name">${escapeHtml(title)}</span>`
+    : `<button type="button" class="cil-std-name cil-std-link" data-cl-view="${escapeAttr(row.id)}" title="Открыть стандарт">${escapeHtml(title)}</button>`;
 
-  // Время проверки — из frequency.timeWindows
-  const timeWindows = Array.isArray(freq.timeWindows) ? freq.timeWindows : [];
+  let html = `<tr class="cil-row" data-row-id="${escapeAttr(row.id)}">
+    <td class="cil-c-zone cil-z${zone}">${escapeHtml(machine)}<small>№ ${num}</small></td>
+    <td class="cil-c-std">
+      <div class="cil-std-title"><span class="cil-std-m">${escapeHtml(machine)} ·</span>${nameHtml}${devBadge}</div>
+      <div class="cil-std-sub">
+        ${row.oplNumber ? `<span class="cil-opl">${escapeHtml(row.oplNumber)}</span>` : ''}
+        ${row.node ? `<span class="cil-node">${CIL_ICONS.gear}${escapeHtml(row.node)}</span>` : ''}
+        ${cilWorkTag(freq.work === 'Stop' ? 'Stop' : 'Run')}
+        ${cilTimeChips(freq.timeWindows)}
+      </div>
+    </td>
+    <td class="cil-c-norm">${norm.html}</td>`;
 
-  // Норма/точки
-  const normHtml = renderClRowNorm(row);
-
-  let html = `<div class="cl-row" data-row-id="${escapeAttr(row.id)}">`;
-
-  // №
-  html += `<div class="cl-info-cell" style="justify-content:center;font-family:'Courier New';font-weight:800;color:var(--text-second)">${num}</div>`;
-  // OPL
-  html += `<div class="cl-info-cell cl-info-opl">${escapeHtml(oplNumber)}</div>`;
-  // Машина
-  html += `<div class="cl-info-cell cl-info-machine">${escapeHtml(machine)}</div>`;
-  // Узел
-  html += `<div class="cl-info-cell cl-info-node" title="${escapeAttr(node)}">${escapeHtml(node)}</div>`;
-  // Название
-  html += `<div class="cl-info-cell cl-info-title" title="${escapeAttr(title)}">${escapeHtml(title)}</div>`;
-  // Время — чипы из timeWindows
-  let timeHtml = '';
-  if (!timeWindows.length) {
-    timeHtml = '<span class="cl-time-empty">—</span>';
-  } else {
-    timeHtml = timeWindows.map(w => {
-      const shift = getTimeWindowShift(w.from);
-      return `<span class="cl-time-chip cl-time-chip-${shift}">${escapeHtml(w.from)}–${escapeHtml(w.to)}</span>`;
-    }).join('');
-  }
-  html += `<div class="cl-info-cell cl-info-time">${timeHtml}</div>`;
-  // Run/Stop
-  html += `<div class="cl-info-cell cl-info-work"><span class="cl-work-badge cl-work-badge-${work.toLowerCase()}">${work}</span></div>`;
-  // Норма
-  html += `<div class="cl-info-cell cl-info-norm" title="${escapeAttr(normHtml.title || '')}">${normHtml.text}</div>`;
-
-  // 14 ячеек дней
-  DAYS.forEach(d => {
-    const dateStr = dateByDayIdx[d.idx];
-
-    ['day', 'night'].forEach(shift => {
-      const planned = isInSchedule(d.idx, shift);
-      const shiftLetter = getShiftsForDate(dateStr)[shift];
-      const existing = findExistingCheck(row.id, dateStr, shiftLetter);
-
-      const draftKey = `${row.id}|${dateStr}|${shift}`;
-      const draft = clState.quickDraft[draftKey];
-
-      const dateInPast = !!(dateStr && clState.todayISO && dateStr < clState.todayISO);
-
-      // Текущая неделя: активны только дни с даты начала активной смены
-      // (например, в Пт утром — с Чт·ночь) и далее. Прошедшие дни текущей
-      // недели НЕ считаются запланированными → нет жёлтого «?»/missed.
-      // На других неделях расписание действует целиком.
-      const isCurrentWeek = clState.weekOffset === 0;
-      const activeFrom = isCurrentWeek ? clState.activeDate : null;
-      const effectivelyPlanned = planned && (!activeFrom || dateStr >= activeFrom);
-
-      let status = 'na';
-      if (draft) {
-        status = draft.status;
-      } else if (existing) {
-        status = existing.status;
-      } else if (effectivelyPlanned) {
-        status = (!isCurrentWeek && dateInPast) ? 'missed' : 'due';
-      }
-
-      const isActiveCell = dateStr === clState.activeDate && shift === clState.shiftType;
-      const isClickable = effectivelyPlanned && isActiveCell && clState.checkMode;
-
-      let cls = 'cl-cell';
-      let content = '—';
-
-      if (status === 'due') {
-        cls += ' cl-cell-due';
-        content = '';
-      } else if (status === 'OK') {
-        cls += ' cl-cell-ok';
-        content = '✓';
-      } else if (status === 'FAIL') {
-        cls += ' cl-cell-fail';
-        content = '✕';
-      } else if (status === 'UNCHECKED') {
-        cls += ' cl-cell-unchecked';
-        content = '?';
-      } else if (status === 'missed') {
-        cls += ' cl-cell-missed';
-        content = '?';
-      } else {
-        cls += ' cl-cell-na';
-        content = '—';
-      }
-
-      if (effectivelyPlanned && isActiveCell) cls += ' cl-cell-today';
-      if (isClickable) cls += ' cl-cell-clickable';
-
-      const cellTitle = `${d.name} · ${shift === 'day' ? 'День' : 'Ночь'}${status === 'missed' ? ' — пропущено' : ''}`;
-
-      html += `<div class="${cls}"
-        data-row-id="${escapeAttr(row.id)}"
-        data-date="${escapeAttr(dateStr)}"
-        data-shift="${escapeAttr(shift)}"
-        data-planned="${planned ? '1' : '0'}"
-        data-clickable="${isClickable ? '1' : '0'}"
-        title="${cellTitle}">${content}</div>`;
-    });
+  cells.forEach(c => {
+    const title = `${c.dayName} · ${c.shift === 'day' ? 'день' : 'ночь'}`;
+    let inner;
+    if (c.status === 'na') {
+      inner = '<span class="cil-na">—</span>';
+    } else {
+      let cls = 'cl-cell cil-cell';
+      let content = icon;
+      let tip = title;
+      if (c.status === 'OK') { cls += ' cil-cell-ok'; content = CIL_ICONS.check; tip += ' — ОК'; }
+      else if (c.status === 'FAIL') { cls += ' cil-cell-fail'; content = CIL_ICONS.x; tip += ' — отклонение'; }
+      else if (c.status === 'UNCHECKED') { cls += ' cil-cell-unchecked'; content = '?'; tip += ' — отмечено «не проверено»'; }
+      else if (c.status === 'missed') { cls += ' cil-cell-missed'; content = '?'; tip += ' — пропущено'; }
+      else if (c.isNow) { cls += clState.checkMode ? ' cil-cell-active' : ' cil-cell-now'; tip += ' — текущая смена'; }
+      else if (!c.past) cls += ' cil-cell-future';
+      if (c.clickable) cls += ' cl-cell-clickable';
+      inner = `<button type="button" class="${cls}"
+        data-row-id="${escapeAttr(row.id)}" data-date="${escapeAttr(c.dateStr)}" data-shift="${c.shift}"
+        data-planned="${c.planned ? '1' : '0'}" data-clickable="${c.clickable ? '1' : '0'}"
+        title="${escapeAttr(tip)}">${content}${c.comment ? '<i class="cil-dot"></i>' : ''}</button>`;
+    }
+    html += `<td class="${cilTdClass(c.shift, c.isToday)}">${inner}</td>`;
   });
 
-  html += '</div>';
-  return html;
-}
-
-/* Сводка по норме для строки матрицы CL */
-function renderClRowNorm(row) {
-  const controlType = migrateControlType(row.controlType, row.measurements);
-  const measurements = Array.isArray(row.measurements) ? row.measurements : [];
-
-  // --- Фиксированный без точек → ОК / Не ОК ---
-  if (controlType === 'fixed') {
-    const hasPoints = measurements.some(b =>
-      b && Array.isArray(b.points) && b.points.length > 0
-    );
-    if (!hasPoints) {
-      return {
-        text: '<span class="cl-norm-check">✓</span>',
-        title: 'Фиксированный — ОК / Не ОК'
-      };
-    }
-  }
-
-  // --- Если нет точек — «—» ---
-  if (!measurements.length) {
-    return { text: '<span style="color:var(--text-dim)">—</span>', title: '' };
-  }
-
-  // Берём первый блок (по бренду или "Все бренды")
-  let block = null;
-  if (clState.brand) {
-    block = measurements.find(b => b.brand === clState.brand);
-  }
-  if (!block) block = measurements.find(b => !b.brand) || measurements[0];
-
-  const points = Array.isArray(block.points) ? block.points : [];
-  if (!points.length) {
-    return { text: '<span style="color:var(--text-dim)">—</span>', title: '' };
-  }
-
-  // --- Вариабельный → «target ± tolerance» ---
-  if (controlType === 'variable') {
-    if (points.length === 1) {
-      const norm = parseNorm(points[0].value);
-      if (norm) {
-        const center = (norm.min + norm.max) / 2;
-        const tol = (norm.max - norm.min) / 2;
-        const text = tol > 0 ? `${fmtNum(center)} ± ${fmtNum(tol)}` : `${fmtNum(center)}`;
-        return { text: escapeHtml(text), title: points[0].value || '' };
-      }
-      return { text: escapeHtml(points[0].value || '—'), title: '' };
-    }
-    return {
-      text: `<strong>${points.length} точки</strong>`,
-      title: `${points.length} точек замера — у каждой своя норма`
-    };
-  }
-
-  // --- Контролируемый интервал → «от … до …» ---
-  if (controlType === 'interval') {
-    if (points.length === 1) {
-      const norm = parseNorm(points[0].value);
-      if (norm && norm.min !== norm.max) {
-        return { text: escapeHtml(`${fmtNum(norm.min)}…${fmtNum(norm.max)}`), title: points[0].value || '' };
-      }
-      if (norm) {
-        return { text: escapeHtml(fmtNum(norm.min)), title: points[0].value || '' };
-      }
-      return { text: escapeHtml(points[0].value || '—'), title: '' };
-    }
-    return {
-      text: `<strong>${points.length} точки</strong>`,
-      title: `${points.length} точек замера — у каждой свой интервал`
-    };
-  }
-
-  // --- Фиксированный с точками → точное значение (без допуска) ---
-  if (controlType === 'fixed') {
-    if (points.length === 1) {
-      const norm = parseNorm(points[0].value);
-      const val = norm != null ? fmtNum(norm.max) : (points[0].value || '—');
-      return { text: escapeHtml(val), title: points[0].value || '' };
-    }
-    return {
-      text: `<strong>${points.length} точки</strong>`,
-      title: `${points.length} точек замера — точные значения`
-    };
-  }
-
-  // --- Резерв: точки без типа ---
-  if (points.length === 1) {
-    return { text: escapeHtml(points[0].value || '—'), title: '' };
-  }
-  return {
-    text: `<strong>${points.length} точки</strong>`,
-    title: `${points.length} точек замера`
-  };
+  return html + '</tr>';
 }
 
 /* Формат числа: убирает «.0» и лишние нули */
@@ -720,6 +634,13 @@ function findExistingCheck(stdId, dateStr, shiftLetter) {
 function bindClCells() {
   const wrap = $('#clMatrixWrap');
   if (!wrap) return;
+
+  // Клик по названию — просмотр стандарта
+  wrap.querySelectorAll('[data-cl-view]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (typeof openStandardView === 'function') openStandardView(btn.dataset.clView);
+    });
+  });
 
   wrap.querySelectorAll('.cl-cell').forEach(cell => {
     cell.addEventListener('click', (e) => {
