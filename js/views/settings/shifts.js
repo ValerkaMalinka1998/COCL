@@ -67,54 +67,97 @@ function setElectronicShiftConfig(cfg) {
 }
 
 /* ============================================================
-   CL ELECTRONIC — карточка «График смен»
+   НАСТРОЙКИ: раздел «Смены» — редактор цикла бригад
+   Черновик (shfDraft) правится кликами, в хранилище попадает
+   только по «Сохранить».
    ============================================================ */
+const SHF_BRIGADES = ['A', 'B', 'C', 'D'];
+let shfDraft = null;
+
+function shfIsDirty() {
+  return JSON.stringify(shfDraft) !== JSON.stringify(getElectronicShiftConfig());
+}
+
+/* Бригады на дату по черновику (та же формула, что в getDayShiftForDate) */
+function shfBrigadesFor(dateStr) {
+  const len = shfDraft.dayCycle.length;
+  const diff = Math.floor((new Date(dateStr + 'T00:00:00') - new Date(shfDraft.startDate + 'T00:00:00')) / 86400000);
+  const pos = diff < 0 ? 0 : diff % len;
+  return { day: shfDraft.dayCycle[pos], night: shfDraft.nightCycle[pos], pos };
+}
+
 function renderElectronicShiftSettings() {
-  const cfg = getElectronicShiftConfig();
-
-  const dayEl   = $('#elecShiftDayCycle');
-  const nightEl = $('#elecShiftNightCycle');
-  const startEl = $('#elecShiftStart');
-
-  if (dayEl)   dayEl.value   = cfg.dayCycle.join(', ');
-  if (nightEl) nightEl.value = cfg.nightCycle.join(', ');
-  if (startEl) startEl.value = cfg.startDate;
-
+  shfDraft = getElectronicShiftConfig();
   renderElectronicShiftPreview();
 }
 
-/* Предпросмотр — 8 дней от даты старта, с обеими сменами */
 function renderElectronicShiftPreview() {
-  const box = $('#elecShiftPreview');
-  if (!box) return;
+  if (!shfDraft) shfDraft = getElectronicShiftConfig();
+  const len = shfDraft.dayCycle.length;
+  const now = getCurrentShiftPeriod();
+  const cur = shfBrigadesFor(now.date);
+  const startEl = $('#elecShiftStart');
+  if (startEl && startEl.value !== shfDraft.startDate) startEl.value = shfDraft.startDate;
+  const lenEl = $('#shfLenVal');
+  if (lenEl) lenEl.textContent = `${len} ${len === 1 ? 'день' : len < 5 ? 'дня' : 'дней'}`;
+  const dirty = $('#shfDirty');
+  if (dirty) dirty.hidden = !shfIsDirty();
 
-  const cfg = getElectronicShiftConfig();
-  const start = new Date(cfg.startDate + 'T00:00:00');
-
-  let html = '';
-  for (let i = 0; i < 8; i++) {
-    const d = new Date(start.getTime() + i * 86400000);
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const yyyy = d.getFullYear();
-    const dateStr = `${yyyy}-${mm}-${dd}`;
-    const day   = getDayShiftForDate(dateStr);
-    const night = getNightShiftForDate(dateStr);
-
-    html += `
-      <div class="elec-shift-day">
-        <span class="elec-shift-day-date">${dd}.${mm}.${yyyy}</span>
-        <span style="font-size:10px;color:var(--text-dim)">день · ночь</span>
-        <span style="display:flex;gap:6px;align-items:baseline">
-          <span class="elec-shift-day-shift elec-shift-${day}" style="font-size:14px">${day}</span>
-          <span style="color:var(--text-dim);font-size:12px">/</span>
-          <span class="elec-shift-day-shift elec-shift-${night}" style="font-size:14px;opacity:0.75">${night}</span>
-        </span>
+  /* Сейчас на смене */
+  const nowBox = $('#shfNow');
+  if (nowBox) {
+    const brigade = now.shiftType === 'day' ? cur.day : cur.night;
+    nowBox.innerHTML = `
+      <div class="shf-now-main">
+        <span class="shf-badge shf-b-${brigade}">${brigade}</span>
+        <div>
+          <div class="shf-now-label">Сейчас на смене</div>
+          <div class="shf-now-text">Бригада ${brigade} · ${now.shiftType === 'day' ? 'день 09:00–21:00' : 'ночь 21:00–09:00'} · ${fmtISODate(now.date)}</div>
+        </div>
       </div>
-    `;
+      <div class="shf-now-pos">День цикла ${cur.pos + 1} из ${len}</div>`;
   }
-  box.innerHTML = html;
+
+  /* Цикл: столбец на день цикла, две строки — день и ночь */
+  const cycle = $('#shfCycle');
+  if (cycle) {
+    const cell = (kind, i) => {
+      const b = shfDraft[kind + 'Cycle'][i];
+      return `<button type="button" class="shf-cell shf-b-${b}" data-shf-kind="${kind}" data-shf-i="${i}" title="${kind === 'day' ? 'День' : 'Ночь'}, день цикла ${i + 1}: бригада ${b}">${b}</button>`;
+    };
+    let html = '<div class="shf-row-label"></div>';
+    for (let i = 0; i < len; i++) html += `<div class="shf-col-head ${i === cur.pos ? 'shf-today' : ''}">${i + 1}</div>`;
+    html += '<div class="shf-row-label">День<small>09–21</small></div>';
+    for (let i = 0; i < len; i++) html += cell('day', i);
+    html += '<div class="shf-row-label">Ночь<small>21–09</small></div>';
+    for (let i = 0; i < len; i++) html += cell('night', i);
+    cycle.style.setProperty('--shf-cols', len);
+    cycle.innerHTML = html;
+  }
+
+  /* Ближайшие 14 дней от даты текущей смены */
+  const cal = $('#elecShiftPreview');
+  if (cal) {
+    const wd = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+    let html = '';
+    for (let i = 0; i < 14; i++) {
+      const ds = addDaysISO(now.date, i);
+      const s = shfBrigadesFor(ds);
+      const dow = new Date(ds + 'T00:00:00').getDay();
+      const isNow = (t) => i === 0 && now.shiftType === t ? ' shf-now-cell' : '';
+      html += `
+        <div class="shf-day ${dow === 0 || dow === 6 ? 'shf-weekend' : ''} ${i === 0 ? 'shf-day-today' : ''}">
+          <div class="shf-day-date">${wd[dow]} ${fmtShortDate(ds)}</div>
+          <div class="shf-day-pair">
+            <span class="shf-mini shf-b-${s.day}${isNow('day')}" title="День">${s.day}</span>
+            <span class="shf-mini shf-mini-night shf-b-${s.night}${isNow('night')}" title="Ночь">${s.night}</span>
+          </div>
+        </div>`;
+    }
+    cal.innerHTML = html;
+  }
 }
+
 /* Склонение: 1 линия / 2 линии / 5 линий */
 function pluralizeLines(n) {
   const m10 = n % 10;
@@ -123,58 +166,52 @@ function pluralizeLines(n) {
   if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'линии';
   return 'линий';
 }
-/* --- CL Electronic: график смен (v2: день/ночь) --- */
 
-function parseCycleString(str) {
-  return String(str || '')
-    .split(/[\s,;]+/)
-    .map(s => s.trim().toUpperCase())
-    .filter(s => ['A','B','C','D'].includes(s));
-}
+/* --- Обработчики --- */
+$('#shfCycle')?.addEventListener('click', (e) => {
+  const c = e.target.closest('[data-shf-kind]');
+  if (!c) return;
+  const arr = shfDraft[c.dataset.shfKind + 'Cycle'];
+  const i = Number(c.dataset.shfI);
+  arr[i] = SHF_BRIGADES[(SHF_BRIGADES.indexOf(arr[i]) + 1) % SHF_BRIGADES.length];
+  renderElectronicShiftPreview();
+});
+
+$('#shfLenPlus')?.addEventListener('click', () => {
+  if (shfDraft.dayCycle.length >= 28) return showToast('Цикл не может быть длиннее 28 дней', true);
+  shfDraft.dayCycle.push(shfDraft.dayCycle[shfDraft.dayCycle.length - 1]);
+  shfDraft.nightCycle.push(shfDraft.nightCycle[shfDraft.nightCycle.length - 1]);
+  renderElectronicShiftPreview();
+});
+
+$('#shfLenMinus')?.addEventListener('click', () => {
+  if (shfDraft.dayCycle.length <= 1) return;
+  shfDraft.dayCycle.pop();
+  shfDraft.nightCycle.pop();
+  renderElectronicShiftPreview();
+});
+
+$('#elecShiftStart')?.addEventListener('change', (e) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)) return;
+  shfDraft.startDate = e.target.value;
+  renderElectronicShiftPreview();
+});
 
 $('#elecShiftSaveBtn')?.addEventListener('click', () => {
-  const dayCycle   = parseCycleString($('#elecShiftDayCycle')?.value);
-  const nightCycle = parseCycleString($('#elecShiftNightCycle')?.value);
-  const start      = ($('#elecShiftStart')?.value || '').trim();
-
-  if (!dayCycle.length) {
-    return showToast('Дневной цикл пуст или содержит недопустимые значения (A–D)', true);
-  }
-  if (!nightCycle.length) {
-    return showToast('Ночной цикл пуст или содержит недопустимые значения (A–D)', true);
-  }
-  if (!start) {
-    return showToast('Укажите дату старта цикла', true);
-  }
-
-  setElectronicShiftConfig({ dayCycle, nightCycle, startDate: start });
-
+  if (!shfIsDirty()) return showToast('Изменений нет');
+  if (!confirm('Сохранить график? Буквы бригад в Чек-листе, Расписании и COCL пересчитаются по новому циклу.')) return;
+  setElectronicShiftConfig(shfDraft);
+  shfDraft = getElectronicShiftConfig();
   renderElectronicShiftPreview();
   showToast('График смен сохранён');
 });
 
 $('#elecShiftResetBtn')?.addEventListener('click', () => {
-  if (!confirm('Сбросить график смен к стандартному (D D A A C C B B / C C B B D D A A, старт 01.01.2026)?')) return;
-
-  setElectronicShiftConfig({ ...DEFAULT_ELECTRONIC_SHIFT_CFG });
-  renderElectronicShiftSettings();
-  showToast('График смен сброшен');
-});
-
-function updateShiftPreviewTemporary() {
-  const dayCycle   = parseCycleString($('#elecShiftDayCycle')?.value);
-  const nightCycle = parseCycleString($('#elecShiftNightCycle')?.value);
-  const start      = ($('#elecShiftStart')?.value || '').trim() || DEFAULT_ELECTRONIC_SHIFT_CFG.startDate;
-
-  if (!dayCycle.length || !nightCycle.length) return;
-
-  const backup = getElectronicShiftConfig();
-  setElectronicShiftConfig({ dayCycle, nightCycle, startDate: start });
+  if (!confirm(`Вернуть стандартный график (цикл ${DEFAULT_ELECTRONIC_SHIFT_CFG.dayCycle.length} дней с ${fmtISODate(DEFAULT_ELECTRONIC_SHIFT_CFG.startDate)})? Изменения нужно будет сохранить.`)) return;
+  shfDraft = {
+    dayCycle: [...DEFAULT_ELECTRONIC_SHIFT_CFG.dayCycle],
+    nightCycle: [...DEFAULT_ELECTRONIC_SHIFT_CFG.nightCycle],
+    startDate: DEFAULT_ELECTRONIC_SHIFT_CFG.startDate
+  };
   renderElectronicShiftPreview();
-  setElectronicShiftConfig(backup);
-}
-
-$('#elecShiftDayCycle')?.addEventListener('input', updateShiftPreviewTemporary);
-$('#elecShiftNightCycle')?.addEventListener('input', updateShiftPreviewTemporary);
-$('#elecShiftStart')?.addEventListener('input', updateShiftPreviewTemporary);
-
+});

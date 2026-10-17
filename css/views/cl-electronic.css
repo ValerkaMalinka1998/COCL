@@ -1,41 +1,4 @@
 /* ============================================================ */
-/* === CL Electronic: график смен ============================= */
-/* ============================================================ */
-
-.elec-shift-preview {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
-  font-family: 'Courier New', Consolas, monospace;
-}
-.elec-shift-day {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 6px 10px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  min-width: 72px;
-}
-.elec-shift-day-date {
-  font-size: 11px;
-  color: var(--text-dim);
-  font-variant-numeric: tabular-nums;
-}
-.elec-shift-day-shift {
-  font-size: 16px;
-  font-weight: 800;
-  letter-spacing: 1px;
-}
-.elec-shift-day-shift.elec-shift-A { color: var(--accent-cyan);   }
-.elec-shift-day-shift.elec-shift-B { color: var(--accent-purple); }
-.elec-shift-day-shift.elec-shift-C { color: var(--accent-amber);  }
-.elec-shift-day-shift.elec-shift-D { color: var(--accent-green);  }
-
-/* ============================================================ */
 /* === CL ELECTRONIC: дерево в редакторе ====================== */
 /* ============================================================ */
 
