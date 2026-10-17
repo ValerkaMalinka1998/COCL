@@ -195,7 +195,12 @@ function renderHistCoverage() {
     box.innerHTML = `<div class="hist-cov-empty">Выберите линию — здесь появится покрытие смен Чек-листа CL за неделю.</div>`;
     return;
   }
-  const week = histCoverage(histState.line, histState.covWeek);
+  box.innerHTML = histCoverageHtml(histState.line, histState.covWeek, 'data-hist-week');
+}
+
+/* Неделя смен Чек-листа CL (Пн–Вс × день/ночь); weekAttr — атрибут кнопок недели */
+function histCoverageHtml(line, weekOffset, weekAttr) {
+  const week = histCoverage(line, weekOffset);
   const sum = { past: 0, ok: 0, partial: 0, missed: 0, fail: 0 };
   const missedList = [];
   week.forEach(d => ['day', 'night'].forEach(s => {
@@ -231,15 +236,15 @@ function renderHistCoverage() {
   };
 
   const first = week[0].date, last = week[6].date;
-  const isCur = histState.covWeek === 0;
-  box.innerHTML = `
+  const isCur = weekOffset === 0;
+  return `
     <div class="hist-cov-h">
       <span class="hist-cov-title">Покрытие смен Чек-листа CL</span>
-      <span class="hist-cov-sub">${escapeHtml(histState.line)} · ${fmtShortDate(first)} – ${fmtShortDate(last)}${isCur ? ' · текущая неделя' : ''}</span>
+      <span class="hist-cov-sub">${escapeHtml(line)} · ${fmtShortDate(first)} – ${fmtShortDate(last)}${isCur ? ' · текущая неделя' : ''}</span>
       <span class="hist-sp"></span>
-      <button type="button" class="cil-week-btn" data-hist-week="-1" title="Предыдущая неделя"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
-      ${!isCur ? '<button type="button" class="cil-week-today" data-hist-week="0">Сегодня</button>' : ''}
-      <button type="button" class="cil-week-btn" data-hist-week="1" title="Следующая неделя" ${isCur ? 'disabled' : ''}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+      <button type="button" class="cil-week-btn" ${weekAttr}="-1" title="Предыдущая неделя"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      ${!isCur ? `<button type="button" class="cil-week-today" ${weekAttr}="0">Сегодня</button>` : ''}
+      <button type="button" class="cil-week-btn" ${weekAttr}="1" title="Следующая неделя" ${isCur ? 'disabled' : ''}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
     </div>
     <div class="hist-cw">
       <span></span>

@@ -1,1393 +1,592 @@
 /* ============================================================
    ВКЛАДКА «Дашборд»
+   Главный экран — «Карта производства»: показатели периода,
+   плитки цех → участок → линия, «Требует внимания», динамика по
+   неделям, повторяющиеся отклонения.
+   Клик по линии — «Паспорт линии».
+   Расчёты опираются на функции Истории (history-data.js).
    Модуль общего пространства имён: функции и переменные видны
    во всех файлах. Порядок подключения — index.html.
    ============================================================ */
 
+const DASH_PERIODS = { shift: 1, day: 2, '7': 14, '30': 60 };
+const DASH_PERIOD_LABELS = { shift: 'текущая смена', day: 'последние сутки', '7': '7 дней', '30': '30 дней' };
+const DASH_NEAR_LIMIT = 0.15;   // запас до границы нормы < 15%
+const DASH_STALE_DAYS = 30;
+
+const dashState = {
+  period: (() => { try { return localStorage.getItem('cl_dashboard_period') || '7'; } catch (e) { return '7'; } })(),
+  line: null,          // открыт паспорт линии
+  week: 0,             // неделя покрытия в паспорте
+  keepLine: false      // вернуться в паспорт после Истории
+};
+if (!DASH_PERIODS[dashState.period]) dashState.period = '7';
+
 /* ============================================================
-   ДАШБОРД
+   ДАННЫЕ
    ============================================================ */
-function renderDashboardWorkshopBar() {
+
+/* Смены периода: последние N смен до текущей (back — сдвиг на N назад) */
+function dashSlots(period, back = 0) {
+  const n = DASH_PERIODS[period] || 14;
+  const cur = getCurrentShiftPeriod();
+  let date = cur.date, shift = cur.shiftType;
+  const step = () => {
+    if (shift === 'night') shift = 'day';
+    else { shift = 'night'; date = addDaysISO(date, -1); }
+  };
+  for (let i = 0; i < n * back; i++) step();
+  const out = [];
+  for (let i = 0; i < n; i++) { out.push({ date, shift }); step(); }
+  return out;
+}
+
+function dashSlotKey(s) { return s.date + '|' + s.shift; }
+
+/* Линии выбранного цеха (или всех) с контекстом */
+function dashLines() {
+  return getAllLinesWithContext().filter(x => !dashboardWorkshop || x.workshopId === dashboardWorkshop);
+}
+
+/* Показатели Чек-листа CL линии за смены: выполнение и пропуски */
+function dashClMetrics(line, slots, includeCurrent) {
+  const rows = histClRows(line);
+  const idx = histClIndex(line);
+  const cur = getCurrentShiftPeriod();
+  const m = { planned: 0, done: 0, fail: 0, missed: [], hasPlan: false };
+  slots.forEach(s => {
+    const isNow = s.date === cur.date && s.shift === cur.shiftType;
+    if (!isNow && !isShiftPast(s.date, s.shift)) return;
+    if (isNow && !includeCurrent) return;
+    const letter = getShiftsForDate(s.date)[s.shift];
+    let planned = 0, done = 0;
+    rows.forEach(({ row }) => {
+      const res = idx.get(`${s.date}|${letter}|${row.id}`);
+      if (!histIsPlanned(row, line, s.date, s.shift) && !res) return;
+      planned++;
+      if (res && (res.it.status === 'OK' || res.it.status === 'FAIL')) done++;
+      if (res && res.it.status === 'FAIL') m.fail++;
+    });
+    if (!planned) return;
+    m.hasPlan = true;
+    m.planned += planned;
+    m.done += done;
+    if (!done && !isNow) m.missed.push({ ...s, letter });
+  });
+  return m;
+}
+
+/* Все записи истории за смены периода */
+function dashRecords(slots, lineSet) {
+  const keys = new Set(slots.map(dashSlotKey));
+  return getHistory().filter(h => (!lineSet || lineSet.has(h.line)) && keys.has(dashSlotKey(histShift(h))));
+}
+
+/* Запас последнего замера до границы нормы (0…0.5) или null */
+function dashMargin(h, it) {
+  if (it.status !== 'OK') return null;
+  const pts = histItemPoints(h, it);
+  if (!pts) return null;
+  let best = null;
+  pts.forEach((p, i) => {
+    const v = histNum(p.value);
+    if (v == null || !p.range) return;
+    const w = p.range.max - p.range.min;
+    if (w <= 0) return;
+    const m = Math.min(v - p.range.min, p.range.max - v) / w;
+    if (best == null || m < best.m) best = { m, i, p, n: pts.length };
+  });
+  return best;
+}
+
+/* Сводка периода по набору линий */
+function dashSummary(lines, slots) {
+  const includeCurrent = dashState.period === 'shift';
+  const lineSet = new Set(lines.map(x => x.line));
+  const perLine = {};
+  let planned = 0, done = 0, missed = 0;
+  lines.forEach(x => {
+    const m = dashClMetrics(x.line, slots, includeCurrent);
+    perLine[x.line] = { ...m, fails: 0 };
+    planned += m.planned; done += m.done; missed += m.missed.length;
+  });
+  const recs = dashRecords(slots, lineSet);
+  let ok = 0, fail = 0;
+  const rep = {};
+  recs.forEach(h => (h.items || []).forEach(it => {
+    if (it.status === 'OK') ok++;
+    if (it.status === 'FAIL') {
+      fail++;
+      if (perLine[h.line]) perLine[h.line].fails++;
+      const k = h.line + '|' + it.standardId;
+      if (!rep[k]) rep[k] = { line: h.line, it, n: 0, last: h };
+      rep[k].n++;
+      if (histOrderKey(h) > histOrderKey(rep[k].last)) { rep[k].last = h; rep[k].it = it; }
+    }
+  }));
+  return {
+    perLine, recs,
+    compliance: planned ? Math.round(done / planned * 100) : null,
+    okPct: ok + fail ? Math.round(ok / (ok + fail) * 100) : null,
+    fail, missed,
+    repeats: Object.values(rep).filter(r => r.n >= 2).sort((a, b) => b.n - a.n)
+  };
+}
+
+/* Сколько последних проверок стандарта подряд — с отклонением */
+function dashFailStreak(list) {
+  let n = 0;
+  for (let i = list.length - 1; i >= 0 && list[i].it.status === 'FAIL'; i--) n++;
+  return n;
+}
+
+/* «Требует внимания»: конкретные пункты */
+function dashAttention(lines, sum) {
+  const items = [];
+  const lineSet = new Set(lines.map(x => x.line));
+
+  // 1. Повторяющиеся отклонения
+  sum.repeats.slice(0, 4).forEach(r => {
+    const list = (histStdEntries(r.line).get(r.it.standardId)) || [];
+    const streak = dashFailStreak(list);
+    const s = histShift(r.last);
+    items.push({
+      sev: 3, kind: 'red',
+      title: `${r.line} · ${r.it.oplNumber ? r.it.oplNumber + ' ' : ''}${histItemTitle(r.it)} — ${streak >= 2 ? streak + ' откл. подряд' : r.n + ' откл. за период'}`,
+      sub: `${[r.it.machine, r.it.nodePart].filter(Boolean).join(' · ')} · последнее ${fmtShortDate(s.date)} ${s.shift === 'day' ? 'день' : 'ночь'}, бр. ${s.letter}`,
+      act: `data-dash-std="${escapeAttr(r.it.standardId)}" data-dash-line="${escapeAttr(r.line)}"`
+    });
+  });
+
+  // 2. Пропущенные смены
+  lines.forEach(x => {
+    const m = sum.perLine[x.line];
+    if (!m || !m.missed.length) return;
+    const list = m.missed.slice(0, 4).map(s => `${histDayName(s.date)} ${s.shift === 'day' ? 'день' : 'ночь'} (${s.letter})`);
+    items.push({
+      sev: 2, kind: 'amber',
+      title: `${x.line} — ${m.missed.length} ${pluralRu(m.missed.length, 'пропущенная смена', 'пропущенные смены', 'пропущенных смен')}`,
+      sub: list.join(', ') + (m.missed.length > 4 ? '…' : ''),
+      act: `data-dash-open-line="${escapeAttr(x.line)}"`
+    });
+  });
+
+  // 3. Значения у границы нормы (последний замер)
+  const near = [];
+  lines.forEach(x => {
+    histStdEntries(x.line).forEach(list => {
+      const last = list[list.length - 1];
+      if (!last) return;
+      const mg = dashMargin(last.h, last.it);
+      if (mg && mg.m < DASH_NEAR_LIMIT) near.push({ line: x.line, last, mg });
+    });
+  });
+  near.sort((a, b) => a.mg.m - b.mg.m).slice(0, 3).forEach(({ line, last, mg }) => {
+    items.push({
+      sev: 1.5, kind: 'amber',
+      title: `${line} — значение у границы нормы`,
+      sub: `${last.it.oplNumber ? last.it.oplNumber + ' ' : ''}${histItemTitle(last.it)}${mg.n > 1 ? ' т.' + (mg.i + 1) : ''}: запас ${Math.round(mg.m * 100)}% (${mg.p.value} при ${mg.p.label})`,
+      act: `data-dash-std="${escapeAttr(last.it.standardId)}" data-dash-line="${escapeAttr(line)}"`
+    });
+  });
+
+  // 4. Потери без проверки 30+ дней
+  const cats = dashboardWorkshop ? getTopLossesForWorkshop(dashboardWorkshop) : getTopLosses();
+  const lastTl = {};
+  getHistory().forEach(h => {
+    if (h.mode !== 'toploss' || (lineSet.size && !lineSet.has(h.line))) return;
+    (h.topLosses || []).forEach(id => { if (!lastTl[id] || h.timestamp > lastTl[id]) lastTl[id] = h.timestamp; });
+  });
+  const border = Date.now() - DASH_STALE_DAYS * 86400000;
+  const stale = [];
+  cats.forEach(c => (c.items || []).forEach(l => {
+    if (!lastTl[l.id] || new Date(lastTl[l.id]).getTime() < border) stale.push(l.name);
+  }));
+  if (stale.length) {
+    items.push({
+      sev: 1, kind: 'purple',
+      title: `TOP Losses: ${stale.length} ${pluralRu(stale.length, 'потеря', 'потери', 'потерь')} без проверки ${DASH_STALE_DAYS}+ дней`,
+      sub: stale.slice(0, 4).join(', ') + (stale.length > 4 ? '…' : ''),
+      act: 'data-dash-go="toploss"'
+    });
+  }
+
+  // 5. Активные стандарты вне расписания
+  const weekStart = getSchWeekStart(0);
+  lines.forEach(x => {
+    const n = histClRows(x.line).filter(({ row }) => !getRowForWeek(row, weekStart, x.line).member).length;
+    if (!n) return;
+    items.push({
+      sev: 0.5, kind: 'cyan',
+      title: `${x.line} — ${n} ${pluralRu(n, 'стандарт', 'стандарта', 'стандартов')} не в расписании`,
+      sub: 'Активны, но не проверяются регулярно',
+      act: `data-dash-schedule="${escapeAttr(x.line)}"`
+    });
+  });
+
+  return items.sort((a, b) => b.sev - a.sev);
+}
+
+/* Динамика: последние 6 недель (выполнение и отклонения) */
+function dashWeeks(lines) {
+  const out = [];
+  const lineSet = new Set(lines.map(x => x.line));
+  for (let w = -5; w <= 0; w++) {
+    const days = getClWeekDays(w);
+    const slots = [];
+    days.forEach(d => ['day', 'night'].forEach(s => slots.push({ date: d, shift: s })));
+    let planned = 0, done = 0;
+    lines.forEach(x => {
+      const m = dashClMetrics(x.line, slots, false);
+      planned += m.planned; done += m.done;
+    });
+    let fail = 0;
+    dashRecords(slots, lineSet).forEach(h => (h.items || []).forEach(it => { if (it.status === 'FAIL') fail++; }));
+    out.push({ label: 'W' + cilIsoWeek(days[0]), compliance: planned ? Math.round(done / planned * 100) : null, fail });
+  }
+  return out;
+}
+
+/* ============================================================
+   РЕНДЕР: ГЛАВНЫЙ ЭКРАН
+   ============================================================ */
+function renderDashboard() {
+  const box = $('#dashboardContent');
+  if (!box) return;
+  dashboardWorkshop = localStorage.getItem('cl_dashboard_workshop') || '';
+  renderDashboardHead();
+
+  if (dashState.keepLine && dashState.line) {
+    dashState.keepLine = false;
+    return renderDashboardLine();
+  }
+  dashState.keepLine = false;
+  dashState.line = null;
+  renderDashboardHead();
+
+  const lines = dashLines();
+  const slots = dashSlots(dashState.period);
+  const sum = dashSummary(lines, slots);
+  const prev = dashSummary(lines, dashSlots(dashState.period, 1));
+
+  box.innerHTML = `
+    ${dashKpisHtml(sum, prev)}
+    <div class="dash-g3">
+      <div class="card dash-card">
+        <h3 class="dash-h">Цеха и линии <small>% — выполнение расписания CL · цвет — состояние · клик — паспорт линии</small></h3>
+        ${dashMapHtml(sum)}
+      </div>
+      <div class="card dash-card">
+        <h3 class="dash-h">Требует внимания</h3>
+        ${dashAttentionHtml(dashAttention(lines, sum))}
+      </div>
+    </div>
+    <div class="dash-g2">
+      <div class="card dash-card">
+        <h3 class="dash-h">Динамика по неделям <small>линия — выполнение расписания CL, столбики — отклонения</small></h3>
+        ${dashTrendHtml(dashWeeks(lines))}
+      </div>
+      <div class="card dash-card">
+        <h3 class="dash-h">Повторяющиеся отклонения <small>≥ 2 раз за период</small></h3>
+        ${sum.repeats.length ? sum.repeats.slice(0, 8).map(r => `
+          <button type="button" class="dash-li" data-dash-std="${escapeAttr(r.it.standardId)}" data-dash-line="${escapeAttr(r.line)}">
+            <span>${r.it.oplNumber ? `<span class="hist-opl">${escapeHtml(r.it.oplNumber)}</span> ` : ''}${escapeHtml(histItemTitle(r.it))}
+              ${histIsElecItem(r.last, r.it) ? '<span class="hist-tag hist-tag-elec">E-Param</span>' : ''}
+              <span class="hist-sub"> · ${escapeHtml([r.line, r.it.machine].filter(Boolean).join(' · '))}</span></span>
+            <span class="hist-tag hist-tag-fail">×${r.n}</span>
+          </button>`).join('') : '<div class="dash-empty">Повторов нет</div>'}
+      </div>
+    </div>`;
+}
+
+function renderDashboardHead() {
   const bar = $('#dashboardWorkshopBar');
   if (!bar) return;
-
-  const workshops = getWorkshops();
-  const tabs = [{ id: '', name: 'Общий' }].concat(
-    workshops.map(w => ({ id: w.id, name: w.name }))
-  );
-
-  bar.innerHTML = tabs.map(t => {
-    const active = t.id === dashboardWorkshop;
-    return `<button type="button" class="dash-ws-tab ${active ? 'active' : ''}" data-dash-ws="${escapeAttr(t.id)}">${escapeHtml(t.name)}</button>`;
-  }).join('');
-
-  bar.querySelectorAll('[data-dash-ws]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const ws = btn.dataset.dashWs;
-      if (ws === dashboardWorkshop) return;
-      dashboardWorkshop = ws;
-      try { localStorage.setItem('cl_dashboard_workshop', ws); } catch (e) {}
-      renderDashboard();
-    });
-  });
+  const tabs = [{ id: '', name: 'Общий' }].concat(getWorkshops().map(w => ({ id: w.id, name: w.name })));
+  const scope = dashState.line ? dashState.line
+    : (dashboardWorkshop ? (getWorkshop(dashboardWorkshop)?.name || '') : 'весь завод');
+  bar.innerHTML = `
+    <div class="dash-title">Дашборд <small>${escapeHtml(scope)} · ${DASH_PERIOD_LABELS[dashState.period]}</small></div>
+    <span class="hist-sp"></span>
+    ${dashState.line ? '' : `<div class="hist-seg">${tabs.map(t =>
+      `<button type="button" class="${t.id === dashboardWorkshop ? 'on' : ''}" data-dash-ws="${escapeAttr(t.id)}">${escapeHtml(t.name)}</button>`).join('')}</div>`}
+    <div class="hist-seg">${['shift', 'day', '7', '30'].map(p =>
+      `<button type="button" class="${p === dashState.period ? 'on' : ''}" data-dash-period="${p}">${p === 'shift' ? 'Смена' : p === 'day' ? 'Сутки' : p + ' дней'}</button>`).join('')}</div>`;
 }
 
-function renderDashboard() {
-  const container = $('#dashboardContent');
-  if (!container) return;
-
-  // Восстанавливаем выбранный цех
-  dashboardWorkshop = localStorage.getItem('cl_dashboard_workshop') || '';
-
-  // --- Панель выбора цеха ---
-  renderDashboardWorkshopBar();
-
-  const stats = calculateDashboardStats(dashboardWorkshop);
-
-  container.innerHTML = `
-    ${renderDashboardStats(stats)}
-    ${renderDashboardMainBlock(stats)}
-    ${renderDashboardSecondaryBlock(stats)}
-    ${renderDashboardTertiaryBlock(stats)}
-    ${renderDashboardAttention(stats.attentionItems)}
-  `;
-
-  // Кнопки «Открыть» в списке последних проверок
-  container.querySelectorAll('[data-dash-open-record]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.dashOpenRecord;
-      if (typeof viewRecord === 'function') viewRecord(id);
-    });
-  });
-
-  // Быстрые действия
-  container.querySelector('[data-dash-action="check"]')?.addEventListener('click', () => {
-    if (typeof switchTab === 'function') switchTab('check');
-  });
-  container.querySelector('[data-dash-action="editor"]')?.addEventListener('click', () => {
-    if (typeof switchTab === 'function') switchTab('editor');
-  });
-  container.querySelector('[data-dash-action="photos"]')?.addEventListener('click', () => {
-    if (typeof switchTab === 'function') switchTab('settings');
-    setTimeout(() => {
-      const btn = $('#checkPhotosBtn');
-      if (btn) btn.click();
-    }, 200);
-  });
-
-  // --- Кнопки в блоке «Требует внимания» ---
-  container.querySelectorAll('[data-dash-attention-btn]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const action = btn.dataset.dashAttentionBtn;
-      if (action === 'editor') {
-        if (typeof switchTab === 'function') switchTab('editor');
-      } else if (action === 'settings') {
-        if (typeof switchTab === 'function') switchTab('settings');
-      } else if (action === 'photos-check') {
-        if (typeof switchTab === 'function') switchTab('settings');
-        setTimeout(() => {
-          const pbtn = $('#checkPhotosBtn');
-          if (pbtn) pbtn.click();
-        }, 200);
-      } else if (action === 'toploss') {
-        if (typeof switchTab === 'function') switchTab('toploss');
-      }
-    });
-  });
+function dashDelta(cur, prev, goodUp, unit = '') {
+  if (cur == null || prev == null) return '';
+  const d = cur - prev;
+  if (!d) return '<em class="dash-d">= как раньше</em>';
+  const good = goodUp ? d > 0 : d < 0;
+  return `<em class="dash-d ${good ? 'hist-c-ok' : 'hist-c-fail'}" title="К предыдущему периоду">${d > 0 ? '▲' : '▼'} ${Math.abs(d)}${unit}</em>`;
 }
 
-/* Третий блок: графики и быстрые действия */
-function renderDashboardTertiaryBlock(stats) {
-  return `
-    <div class="dash-grid">
-      <div>${renderDashboardDaysChart(stats.daysSeries, stats.daysSeriesMax)}</div>
-      <div>${renderDashboardTypesDonut(stats.typeSegments, stats.typesTotal)}</div>
-    </div>
-    <div class="dash-grid">
-      <div>${renderDashboardMachineStats(stats.machineStats)}</div>
-      <div>${renderDashboardWeekDynamics(stats.weekStats)}</div>
-    </div>
-    <div class="dash-grid">
-      <div>${renderDashboardTopLossesStats(stats.topLossStats)}</div>
-      <div>${renderDashboardClParamStats(stats.clParamStats)}</div>
-    </div>
-    ${renderDashboardActions()}
-  `;
+function dashKpisHtml(sum, prev) {
+  return `<div class="dash-kpis">
+    <div class="dash-kpi"><b class="${sum.compliance == null ? '' : sum.compliance >= 90 ? 'hist-c-ok' : sum.compliance >= 70 ? 'hist-c-warn' : 'hist-c-fail'}">${sum.compliance == null ? '—' : sum.compliance + '%'}</b>
+      <span>выполнение расписания CL</span>${dashDelta(sum.compliance, prev.compliance, true, '%')}</div>
+    <div class="dash-kpi"><b>${sum.okPct == null ? '—' : sum.okPct + '%'}</b><span>пунктов в норме</span>${dashDelta(sum.okPct, prev.okPct, true, '%')}</div>
+    <div class="dash-kpi"><b class="${sum.fail ? 'hist-c-fail' : ''}">${sum.fail}</b><span>${pluralRu(sum.fail, 'отклонение', 'отклонения', 'отклонений')}</span>${dashDelta(sum.fail, prev.fail, false)}</div>
+    <div class="dash-kpi"><b class="${sum.missed ? 'hist-c-warn' : ''}">${sum.missed}</b><span>пропущенных смен</span>${dashDelta(sum.missed, prev.missed, false)}</div>
+    <div class="dash-kpi"><b class="${sum.repeats.length ? 'hist-c-fail' : ''}">${sum.repeats.length}</b><span>повторяющихся отклонений</span></div>
+  </div>`;
 }
 
-/* Виджет: столбики по дням (7 дней, двухцветные) */
-function renderDashboardDaysChart(series, maxCount) {
-  if (!series.length) {
-    return `
-      <div class="dash-widget">
-        <div class="dash-widget-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="20" x2="18" y2="10"/>
-            <line x1="12" y1="20" x2="12" y2="4"/>
-            <line x1="6" y1="20" x2="6" y2="14"/>
-          </svg>
-          Проверки по дням (7 дней)
-        </div>
-        <div class="dash-widget-empty">Нет данных</div>
-      </div>
-    `;
-  }
-
-  const cols = series.map(d => {
-    const isEmpty = d.total === 0;
-    const heightPercent = maxCount > 0 ? (d.total / maxCount) * 100 : 0;
-
-    // Пропорции зелёной и красной части в столбике
-    const failShare = d.total > 0 ? (d.withFails / d.total) : 0;
-    const okShare = 1 - failShare;
-
-    // Общая высота столбика
-    const barStyle = isEmpty ? '' : `height: ${Math.max(heightPercent, 4)}%;`;
-
-    // Tooltip
-    const tooltip = isEmpty
-      ? `${d.label}: проверок не было`
-      : `${d.label}: ${d.total} ${d.total === 1 ? 'проверка' : 'проверок'}, из них ${d.withFails} с отклонениями`;
-
-    // Содержимое столбика — два сегмента (внутренний flex по вертикали)
-    let inner = '';
-    if (!isEmpty) {
-      // Верх столбика — красный (fail), низ — зелёный (ok).
-      // Это визуально удобно: положительный результат снизу, проблемы сверху — как в реальности.
-      inner = `
-        <div class="dash-day-bar-inner">
-          ${d.withFails > 0 ? `<div class="dash-day-bar-fail" style="height:${failShare * 100}%"></div>` : ''}
-          ${d.withoutFails > 0 ? `<div class="dash-day-bar-ok" style="height:${okShare * 100}%"></div>` : ''}
-        </div>
-      `;
-    }
-
-    return `
-      <div class="dash-day-col">
-        <div class="dash-day-bar-wrap" title="${escapeAttr(tooltip)}">
-          ${d.total > 0 ? `<span class="dash-day-bar-value">${d.total}</span>` : ''}
-          <div class="dash-day-bar ${isEmpty ? 'dash-day-bar-empty' : ''}" style="${barStyle}">
-            ${inner}
-          </div>
-        </div>
-        <span class="dash-day-label">${d.label}</span>
-      </div>
-    `;
-  }).join('');
-
-  return `
-    <div class="dash-widget">
-      <div class="dash-widget-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="20" x2="18" y2="10"/>
-          <line x1="12" y1="20" x2="12" y2="4"/>
-          <line x1="6" y1="20" x2="6" y2="14"/>
-        </svg>
-        Проверки по дням (7 дней)
-      </div>
-      <div class="dash-days-chart">${cols}</div>
-    </div>
-  `;
-}
-/* Виджет: Отклонения по машинам (30 дней) */
-function renderDashboardMachineStats(items) {
-  if (!items.length) {
-    return `
-      <div class="dash-widget">
-        <div class="dash-widget-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-          </svg>
-          Отклонения по машинам (30 дней)
-        </div>
-        <div class="dash-widget-empty">Отклонений за месяц не зафиксировано</div>
-      </div>
-    `;
-  }
-
-  const rows = items.map(item => {
-    const failsPct = item.percent;
-    const oksPct = 100 - failsPct;
-
-    const percentText = failsPct.toFixed(1) + '%';
-    const numbersText = `${item.fails} из ${item.total}`;
-
-    const failWidth = Math.max(failsPct, 1.5);
-
-    return `
-      <div class="dash-bar-item">
-        <span class="dash-bar-label">${escapeHtml(item.machine)}</span>
-        <div class="dash-bar-track dash-bar-track-ok">
-          <div class="dash-bar-fill-ok" style="width:${oksPct}%"></div>
-          <div class="dash-bar-fill-fail" style="width:${failWidth}%"></div>
-        </div>
-        <span class="dash-bar-value">
-          ${percentText}
-          <span class="dash-bar-sub">${numbersText}</span>
-        </span>
-      </div>
-    `;
-  }).join('');
-
-  return `
-    <div class="dash-widget">
-      <div class="dash-widget-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-        </svg>
-        Отклонения по машинам (30 дней)
-      </div>
-      <div class="dash-bars">${rows}</div>
-    </div>
-  `;
-}
-/* Виджет: Динамика % отклонений по ISO-неделям (4 недели) */
-function renderDashboardWeekDynamics(items) {
-  if (!items.length) {
-    return `
-      <div class="dash-widget">
-        <div class="dash-widget-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-          </svg>
-          Динамика отклонений по неделям
-        </div>
-        <div class="dash-widget-empty">За последний месяц проверок не было</div>
-      </div>
-    `;
-  }
-
-  const rows = items.map(item => {
-    const failsPct = item.percent;
-    const oksPct = 100 - failsPct;
-
-    const percentText = failsPct.toFixed(1) + '%';
-    const numbersText = `${item.fails} из ${item.total}`;
-
-    const failWidth = Math.max(failsPct, 1.5);
-
-    const label = `${item.label} (${item.range})`;
-
-    return `
-      <div class="dash-bar-item dash-bar-item-week">
-        <span class="dash-bar-label dash-bar-label-week" title="${escapeAttr(label)}">${escapeHtml(item.label)}</span>
-        <div class="dash-bar-track dash-bar-track-ok">
-          <div class="dash-bar-fill-ok" style="width:${oksPct}%"></div>
-          <div class="dash-bar-fill-fail" style="width:${failWidth}%"></div>
-        </div>
-        <span class="dash-bar-value">
-          ${percentText}
-          <span class="dash-bar-sub">${numbersText}</span>
-        </span>
-      </div>
-    `;
-  }).join('');
-
-  return `
-    <div class="dash-widget">
-      <div class="dash-widget-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-        </svg>
-        Динамика отклонений по неделям
-      </div>
-      <div class="dash-bars">${rows}</div>
-    </div>
-  `;
+function dashLineColor(m) {
+  if (!m) return 'none';
+  const pct = m.planned ? m.done / m.planned * 100 : null;
+  if (m.fails > 1 || (pct != null && pct < 70)) return 'red';
+  if (m.fails || (pct != null && pct < 90)) return 'amber';
+  if (pct == null) return 'none';
+  return 'green';
 }
 
-/* Виджет: Топ-5 потерь по отклонениям (30 дней) */
-function renderDashboardTopLossesStats(items) {
-  if (!items.length) {
-    return `
-      <div class="dash-widget">
-        <div class="dash-widget-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-            <line x1="12" y1="9" x2="12" y2="13"/>
-            <line x1="12" y1="17" x2="12.01" y2="17"/>
-          </svg>
-          Топ-5 потерь по отклонениям (30 дней)
-        </div>
-        <div class="dash-widget-empty">Отклонений по потерям за месяц не зафиксировано</div>
-      </div>
-    `;
-  }
-
-  const rows = items.map(item => {
-    const failsPct = item.percent;
-    const oksPct = 100 - failsPct;
-
-    const percentText = failsPct.toFixed(1) + '%';
-    const numbersText = `${item.fails} из ${item.total}`;
-
-    const failWidth = Math.max(failsPct, 1.5);
-
-    return `
-      <div class="dash-bar-item">
-        <span class="dash-bar-label dash-bar-label-plain" title="${escapeAttr(item.name)}">${escapeHtml(item.name)}</span>
-        <div class="dash-bar-track dash-bar-track-ok">
-          <div class="dash-bar-fill-ok" style="width:${oksPct}%"></div>
-          <div class="dash-bar-fill-fail" style="width:${failWidth}%"></div>
-        </div>
-        <span class="dash-bar-value">
-          ${percentText}
-          <span class="dash-bar-sub">${numbersText}</span>
-        </span>
-      </div>
-    `;
-  }).join('');
-
-  return `
-    <div class="dash-widget">
-      <div class="dash-widget-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-          <line x1="12" y1="9" x2="12" y2="13"/>
-          <line x1="12" y1="17" x2="12.01" y2="17"/>
-        </svg>
-        Топ-5 потерь по отклонениям (30 дней)
-      </div>
-      <div class="dash-bars">${rows}</div>
-    </div>
-  `;
-}
-
-/* Виджет: Топ-5 параметров CL по отклонениям (30 дней) */
-function renderDashboardClParamStats(items) {
-  if (!items.length) {
-    return `
-      <div class="dash-widget">
-        <div class="dash-widget-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="19" y1="5" x2="5" y2="19"/>
-            <circle cx="6.5" cy="6.5" r="2.5"/>
-            <circle cx="17.5" cy="17.5" r="2.5"/>
-          </svg>
-          Топ-5 параметров по отклонениям (30 дней)
-        </div>
-        <div class="dash-widget-empty">Отклонений по параметрам CL за месяц не зафиксировано</div>
-      </div>
-    `;
-  }
-
-  const rows = items.map(item => {
-    const failsPct = item.percent;
-    const oksPct = 100 - failsPct;
-    const percentText = failsPct.toFixed(1) + '%';
-    const numbersText = `${item.fails} из ${item.total}`;
-    const failWidth = Math.max(failsPct, 1.5);
-    const label = item.machine ? `${item.name} [${item.machine}]` : item.name;
-
-    return `
-      <div class="dash-bar-item">
-        <span class="dash-bar-label dash-bar-label-plain" title="${escapeAttr(label)}">${escapeHtml(label)}</span>
-        <div class="dash-bar-track dash-bar-track-ok">
-          <div class="dash-bar-fill-ok" style="width:${oksPct}%"></div>
-          <div class="dash-bar-fill-fail" style="width:${failWidth}%"></div>
-        </div>
-        <span class="dash-bar-value">
-          ${percentText}
-          <span class="dash-bar-sub">${numbersText}</span>
-        </span>
-      </div>
-    `;
-  }).join('');
-
-  return `
-    <div class="dash-widget">
-      <div class="dash-widget-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="19" y1="5" x2="5" y2="19"/>
-          <circle cx="6.5" cy="6.5" r="2.5"/>
-          <circle cx="17.5" cy="17.5" r="2.5"/>
-        </svg>
-        Топ-5 параметров по отклонениям (30 дней)
-      </div>
-      <div class="dash-bars">${rows}</div>
-    </div>
-  `;
-}
-
-/* Виджет: круговая по типам */
-function renderDashboardTypesDonut(segments, total) {
-  if (!total) {
-    return `
-      <div class="dash-widget">
-        <div class="dash-widget-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>
-            <path d="M22 12A10 10 0 0 0 12 2v10z"/>
-          </svg>
-          Типы переходов (30 дней)
-        </div>
-        <div class="dash-widget-empty">За месяц проверок не было</div>
-      </div>
-    `;
-  }
-
-  // Собираем conic-gradient
-  const gradientStops = segments.map(s => {
-    return `${s.color} ${s.startAngle}deg ${s.endAngle}deg`;
-  }).join(', ');
-
-  const legend = segments.map(s => `
-    <div class="dash-legend-row">
-      <span class="dash-legend-dot" style="background:${s.color}"></span>
-      <span class="dash-legend-name">${escapeHtml(s.type)}</span>
-      <span class="dash-legend-count">${s.count}</span>
-      <span class="dash-legend-percent">${s.percent}%</span>
-    </div>
-  `).join('');
-
-  return `
-    <div class="dash-widget">
-      <div class="dash-widget-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>
-          <path d="M22 12A10 10 0 0 0 12 2v10z"/>
-        </svg>
-        Типы переходов (30 дней)
-      </div>
-      <div class="dash-donut-wrap">
-        <div class="dash-donut" style="background: conic-gradient(${gradientStops})">
-          <div class="dash-donut-hole">
-            <div class="dash-donut-total">${total}</div>
-            <div class="dash-donut-label">проверок</div>
-          </div>
-        </div>
-        <div class="dash-donut-legend">${legend}</div>
-      </div>
-    </div>
-  `;
-}
-
-/* Виджет: быстрые действия */
-function renderDashboardActions() {
-  return `
-    <div class="dash-widget">
-      <div class="dash-widget-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-        </svg>
-        Быстрые действия
-      </div>
-      <div class="dash-actions">
-        <button class="dash-action-btn dash-action-green" data-dash-action="check" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-            <polyline points="22 4 12 14.01 9 11.01"/>
-          </svg>
-          <span>Начать проверку</span>
-        </button>
-        <button class="dash-action-btn" data-dash-action="editor" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-          </svg>
-          <span>Открыть редактор</span>
-        </button>
-        <button class="dash-action-btn dash-action-purple" data-dash-action="photos" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5"/>
-            <polyline points="21 15 16 10 5 21"/>
-          </svg>
-          <span>Проверить фото</span>
-        </button>
-      </div>
-    </div>
-  `;
-}
-/* Виджет: «Требует внимания» */
-function renderDashboardAttention(items) {
-  // Иконки для разных типов проблем
-  const iconSvg = (key) => {
-    switch (key) {
-      case 'image':
-        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
-      case 'image-off':
-        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="2" x2="22" y2="22"/><path d="M10.41 10.41a2 2 0 1 1-2.83-2.83"/><line x1="13.5" y1="13.5" x2="6" y2="21"/><line x1="18" y1="12" x2="21" y2="15"/><path d="M3.59 3.59A2 2 0 0 0 3 5v14a2 2 0 0 0 2 2h14a2 2 0 0 0 1.41-.59"/></svg>';
-      case 'clock':
-        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
-      case 'user-x':
-        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>';
-      case 'message':
-        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
-      default:
-        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
-    }
+function dashMapHtml(sum) {
+  const ws = getWorkshops().filter(w => !dashboardWorkshop || w.id === dashboardWorkshop);
+  const tile = (line) => {
+    const m = sum.perLine[line];
+    const color = dashLineColor(m);
+    const pct = m && m.planned ? Math.round(m.done / m.planned * 100) : null;
+    const sub = m && m.fails ? `${m.fails} откл.` : (pct == null ? (m && m.hasPlan ? 'нет смен в периоде' : 'нет расписания') : 'без откл.');
+    return `<button type="button" class="dash-ln dash-ln-${color}" data-dash-open-line="${escapeAttr(line)}" title="Паспорт линии">
+      <b>${escapeHtml(line)}</b>
+      <span class="dash-ln-p">${pct == null ? '—' : pct + '%'}</span>
+      <span class="dash-ln-s">${sub}${m && m.missed.length ? ` · ${m.missed.length} проп.` : ''}</span>
+    </button>`;
   };
+  return `<div class="dash-ws">${ws.map(w => `
+    <div class="dash-wsc">
+      <h4>${escapeHtml(w.name)}<span>${escapeHtml(w.subtitle || '')}</span></h4>
+      ${(w.areas || []).map(a => {
+        const lines = Array.isArray(a.blocks) ? a.blocks.flatMap(b => b.lines || []) : (a.lines || []);
+        return `<div class="dash-area"><div class="dash-area-h">${escapeHtml(a.name)}</div>
+          ${lines.length ? `<div class="dash-lines">${lines.map(tile).join('')}</div>` : '<div class="hist-sub">линий нет</div>'}</div>`;
+      }).join('')}
+    </div>`).join('')}</div>`;
+}
 
-  if (!items.length) {
-    return `
-      <div class="dash-widget dash-attention dash-attention-ok">
-        <div class="dash-widget-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-            <polyline points="22 4 12 14.01 9 11.01"/>
-          </svg>
-          Требует внимания
-        </div>
-        <div class="dash-attention-ok-text">
-          ✅ Всё в порядке — проблем не обнаружено
-        </div>
-      </div>
-    `;
-  }
+function dashAttentionHtml(items) {
+  if (!items.length) return '<div class="dash-empty">Всё в порядке — замечаний нет</div>';
+  return items.slice(0, 8).map(it => `
+    <button type="button" class="dash-att dash-att-${it.kind}" ${it.act}>
+      <b>${escapeHtml(it.title)}</b>
+      <span>${escapeHtml(it.sub)}</span>
+    </button>`).join('') + (items.length > 8 ? `<div class="hist-sub">И ещё ${items.length - 8}…</div>` : '');
+}
 
-  const rows = items.map(it => `
-    <div class="dash-attention-item" data-dash-attention="${it.action}">
-      <span class="dash-attention-icon">${iconSvg(it.key === 'brokenPhotos' ? 'image' : it.icon)}</span>
-      <div class="dash-attention-text">
-        <div class="dash-attention-main">${escapeHtml(it.text)}</div>
-        <div class="dash-attention-hint">${escapeHtml(it.hint)}</div>
-      </div>
-      <button class="dash-attention-btn" type="button" data-dash-attention-btn="${it.action}">
-        Перейти →
+function dashTrendHtml(weeks) {
+  const W = 600, H = 180, L = 40, R = 20, B = 24, T = 12;
+  const x = i => L + 20 + i * (W - L - R - 40) / (weeks.length - 1);
+  const y = v => T + (100 - v) / 100 * (H - T - B);
+  const maxF = Math.max(1, ...weeks.map(w => w.fail));
+  const bh = f => f / maxF * (H - T - B) * 0.55;
+  let s = '';
+  [0, 50, 100].forEach(v => {
+    s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" class="dash-ch-grid"/><text x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${v}%</text>`;
+  });
+  weeks.forEach((w, i) => {
+    const h = bh(w.fail);
+    if (w.fail) s += `<rect x="${x(i) - 12}" y="${H - B - h}" width="24" height="${h}" rx="3" class="dash-ch-bar"><title>${w.label}: ${w.fail} откл.</title></rect>
+      <text x="${x(i)}" y="${H - B - h - 4}" text-anchor="middle">${w.fail}</text>`;
+    s += `<text x="${x(i)}" y="${H - 6}" text-anchor="middle">${w.label}</text>`;
+  });
+  const pts = weeks.map((w, i) => w.compliance == null ? null : [x(i), y(w.compliance), w]).filter(Boolean);
+  if (pts.length > 1) s += `<polyline class="dash-ch-line" points="${pts.map(p => p[0] + ',' + p[1]).join(' ')}"/>`;
+  pts.forEach(p => { s += `<circle cx="${p[0]}" cy="${p[1]}" r="4" class="dash-ch-pt"><title>${p[2].label}: ${p[2].compliance}%</title></circle>`; });
+  return `<svg class="dash-chart" viewBox="0 0 ${W} ${H}" width="100%">${s}</svg>`;
+}
+
+/* ============================================================
+   ПАСПОРТ ЛИНИИ
+   ============================================================ */
+function openDashboardLine(line) {
+  dashState.line = line;
+  dashState.week = 0;
+  renderDashboardLine();
+  window.scrollTo(0, 0);
+}
+
+function renderDashboardLine() {
+  const box = $('#dashboardContent');
+  const line = dashState.line;
+  renderDashboardHead();
+  const ctx = getBlockForLine(line);
+  const siblings = ctx ? ((ctx.block ? ctx.block.lines : ctx.area.lines) || []) : [line];
+  const slots = dashSlots(dashState.period);
+  const sum = dashSummary([{ line }], slots);
+  const m = sum.perLine[line];
+  const pct = m.planned ? Math.round(m.done / m.planned * 100) : null;
+
+  // Состояние стандартов
+  const weekStart = getSchWeekStart(0);
+  const rows = histClRows(line);
+  const entries = histStdEntries(line);
+  const staleBorder = addDaysISO(getCurrentShiftPeriod().date, -DASH_STALE_DAYS);
+  let inMech = 0, inElec = 0, outSch = 0, noPoints = 0, stale = 0;
+  rows.forEach(({ row, isElec }) => {
+    const member = getRowForWeek(row, weekStart, line).member;
+    if (member) { if (isElec) inElec++; else inMech++; } else outSch++;
+    if (!isElec) {
+      const t = migrateControlType(row.controlType, row.measurements);
+      const hasPts = (row.measurements || []).some(b => (b.points || []).length);
+      if ((t === 'variable' || t === 'interval') && !hasPts) noPoints++;
+    }
+    if (member) {
+      const list = entries.get(row.id) || [];
+      const last = list[list.length - 1];
+      if (!last || histShift(last.h).date < staleBorder) stale++;
+    }
+  });
+
+  // Проблемные стандарты
+  const problems = [];
+  sum.repeats.forEach(r => problems.push({ id: r.it.standardId, it: r.it, tag: `×${r.n}`, cls: 'fail', why: `${r.n} откл. за период` }));
+  entries.forEach((list, id) => {
+    const last = list[list.length - 1];
+    const mg = last && dashMargin(last.h, last.it);
+    if (mg && mg.m < DASH_NEAR_LIMIT && !problems.some(p => p.id === id)) {
+      problems.push({ id, it: last.it, tag: 'граница', cls: 'warn', why: `запас ${Math.round(mg.m * 100)}%${mg.n > 1 ? ' по т.' + (mg.i + 1) : ''}` });
+    }
+  });
+  const idx = histClIndex(line);
+  const cur = getCurrentShiftPeriod();
+  rows.forEach(({ row }) => {
+    if (problems.some(p => p.id === row.id)) return;
+    let miss = 0;
+    slots.forEach(s => {
+      if (!isShiftPast(s.date, s.shift) || (s.date === cur.date && s.shift === cur.shiftType)) return;
+      const letter = getShiftsForDate(s.date)[s.shift];
+      if (histIsPlanned(row, line, s.date, s.shift) && !idx.has(`${s.date}|${letter}|${row.id}`)) miss++;
+    });
+    if (miss >= 2) problems.push({ id: row.id, it: { oplNumber: row.oplNumber, title: row.title || row.paramName }, tag: 'пропуски', cls: 'warn', why: `пропущен ${miss} ${pluralRu(miss, 'смену', 'смены', 'смен')}` });
+  });
+
+  // Машины
+  const machines = {};
+  rows.forEach(({ row }) => {
+    const k = [row.machine || 'Без машины', row.nodePart].filter(Boolean).join(' · ');
+    if (!machines[k]) machines[k] = { n: 0, fail: 0 };
+    machines[k].n++;
+  });
+  sum.recs.forEach(h => (h.items || []).forEach(it => {
+    if (it.status !== 'FAIL') return;
+    const k = [it.machine || 'Без машины', it.nodePart].filter(Boolean).join(' · ');
+    if (!machines[k]) machines[k] = { n: 0, fail: 0 };
+    machines[k].fail++;
+  }));
+  const maxFail = Math.max(1, ...Object.values(machines).map(x => x.fail));
+
+  const recent = getHistory().filter(h => h.line === line)
+    .map(h => ({ h, key: histOrderKey(h) })).sort((a, b) => b.key.localeCompare(a.key)).slice(0, 6).map(x => x.h);
+
+  const ctxText = ctx ? [ctx.workshop.name, ctx.area.name, ctx.block && ctx.block.name].filter(Boolean).join(' · ') : '';
+
+  box.innerHTML = `
+    <div class="card dash-card dash-line-head">
+      <button type="button" class="btn btn-secondary" data-dash-back>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Карта
       </button>
+      <b class="dash-line-name">${escapeHtml(line)}</b><span class="hist-sub">${escapeHtml(ctxText)}</span>
+      <span class="hist-sp"></span>
+      ${siblings.length > 1 ? `<div class="hist-seg">${siblings.map(l =>
+        `<button type="button" class="${l === line ? 'on' : ''}" data-dash-open-line="${escapeAttr(l)}">${escapeHtml(l)}</button>`).join('')}</div>` : ''}
     </div>
-  `).join('');
-
-  return `
-    <div class="dash-widget dash-attention">
-      <div class="dash-widget-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-          <line x1="12" y1="9" x2="12" y2="13"/>
-          <line x1="12" y1="17" x2="12.01" y2="17"/>
-        </svg>
-        Требует внимания (${items.length})
-      </div>
-      <div class="dash-attention-list">${rows}</div>
-    </div>
-  `;
-}
-/* Двухколоночный блок (шаг 3) */
-function renderDashboardMainBlock(stats) {
-  return `
-    <div class="dash-grid">
-      <div>${renderDashboardRecentChecks(stats.recentChecks)}</div>
-      <div>${renderDashboardTopProblems(stats.topProblems, stats.topProblemsMax)}</div>
-    </div>
-  `;
-}
-
-/* Второй двухколоночный блок: линии + операторы */
-function renderDashboardSecondaryBlock(stats) {
-  return `
-    <div class="dash-grid">
-      <div>${renderDashboardLineStats(stats.lineStats)}</div>
-      <div>${renderDashboardOperatorStats(stats.operatorStats)}</div>
-    </div>
-  `;
-}
-
-/* Виджет: % отклонений по линиям (7 дней) — двухцветный бар */
-function renderDashboardLineStats(items) {
-  if (!items.length) {
-    return `
-      <div class="dash-widget">
-        <div class="dash-widget-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="20" x2="18" y2="10"/>
-            <line x1="12" y1="20" x2="12" y2="4"/>
-            <line x1="6" y1="20" x2="6" y2="14"/>
-          </svg>
-          Отклонения по линиям (7 дней)
+    ${dashKpisHtml(sum, dashSummary([{ line }], dashSlots(dashState.period, 1)))}
+    <div class="dash-g3">
+      <div class="card dash-card">
+        ${histCoverageHtml(line, dashState.week, 'data-dash-week')}
+        <div class="dash-pass">
+          <div class="hist-ring dash-ring" style="--p:${pct || 0}%"><div>${pct == null ? '—' : pct + '%'}<small>выполнено</small></div></div>
+          <div class="dash-pass-list">
+            <div class="dash-li"><span>В расписании</span><b>${inMech} мех · ${inElec} E-Param</b></div>
+            <button type="button" class="dash-li" data-dash-schedule="${escapeAttr(line)}"><span>Активных, но не в расписании</span><b class="${outSch ? 'hist-c-warn' : ''}">${outSch}</b></button>
+            <button type="button" class="dash-li" data-dash-editor="${escapeAttr(line)}"><span>Без точек замера (вариабельный / интервал)</span><b class="${noPoints ? 'hist-c-warn' : ''}">${noPoints}</b></button>
+            <div class="dash-li"><span>Не проверялись ${DASH_STALE_DAYS}+ дней</span><b class="${stale ? 'hist-c-fail' : ''}">${stale}</b></div>
+          </div>
         </div>
-        <div class="dash-widget-empty">За неделю проверок не было</div>
       </div>
-    `;
-  }
-
-  const rows = items.map(item => {
-    // Процент ОК и процент отклонений — сумма всегда 100
-    const failsPct = item.total > 0 ? (item.fails / item.total) * 100 : 0;
-    const oksPct = 100 - failsPct;
-
-    const percentText = failsPct.toFixed(1) + '%';
-    const numbersText = `${item.fails} из ${item.total}`;
-
-    // Красная часть — узкая, если 0% — не показываем вообще
-    const failWidth = failsPct > 0 ? Math.max(failsPct, 1.5) : 0; // мин. 1.5% — чтобы тонкая полоска была видна
-
-    return `
-      <div class="dash-bar-item">
-        <span class="dash-bar-label">${escapeHtml(item.line)}</span>
-        <div class="dash-bar-track dash-bar-track-ok">
-          <div class="dash-bar-fill-ok" style="width:${oksPct}%"></div>
-          <div class="dash-bar-fill-fail" style="width:${failWidth}%"></div>
-        </div>
-        <span class="dash-bar-value">
-          ${percentText}
-          <span class="dash-bar-sub">${numbersText}</span>
-        </span>
+      <div class="card dash-card">
+        <h3 class="dash-h">Проблемные стандарты <small>клик — история стандарта</small></h3>
+        ${problems.length ? problems.slice(0, 10).map(p => `
+          <button type="button" class="dash-li" data-dash-std="${escapeAttr(p.id)}" data-dash-line="${escapeAttr(line)}">
+            <span>${p.it.oplNumber ? `<span class="hist-opl">${escapeHtml(p.it.oplNumber)}</span> ` : ''}${escapeHtml(histItemTitle(p.it))}<div class="hist-sub">${escapeHtml(p.why)}</div></span>
+            <span class="hist-tag hist-tag-${p.cls}">${escapeHtml(p.tag)}</span>
+          </button>`).join('') : '<div class="dash-empty">Проблемных стандартов нет</div>'}
       </div>
-    `;
-  }).join('');
-
-  return `
-    <div class="dash-widget">
-      <div class="dash-widget-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="20" x2="18" y2="10"/>
-          <line x1="12" y1="20" x2="12" y2="4"/>
-          <line x1="6" y1="20" x2="6" y2="14"/>
-        </svg>
-        Отклонения по линиям (7 дней)
-      </div>
-      <div class="dash-bars">${rows}</div>
     </div>
-  `;
+    <div class="dash-g2">
+      <div class="card dash-card">
+        <h3 class="dash-h">Машины линии <small>стандартов · отклонений за период</small></h3>
+        ${Object.entries(machines).sort((a, b) => b[1].fail - a[1].fail || a[0].localeCompare(b[0], 'ru', { numeric: true })).map(([k, v]) => `
+          <div class="dash-li dash-li-bar"><div><span>${escapeHtml(k)} <span class="hist-sub">— ${v.n} ${pluralRu(v.n, 'стандарт', 'стандарта', 'стандартов')}</span></span>
+            <b class="${v.fail ? 'hist-c-fail' : 'hist-c-ok'}">${v.fail ? v.fail + ' откл.' : '0'}</b></div>
+            <div class="dash-bar"><i style="width:${v.fail / maxFail * 100}%"></i></div></div>`).join('') || '<div class="dash-empty">Нет стандартов</div>'}
+      </div>
+      <div class="card dash-card">
+        <h3 class="dash-h">Последние проверки</h3>
+        ${recent.length ? recent.map(h => {
+          const c = histCounts(h);
+          const s = histShift(h);
+          return `<button type="button" class="dash-li" data-dash-rec="${escapeAttr(h.id)}">
+            <span>${fmtShortDate(s.date)} ${histTime(h)} · ${escapeHtml(histKindLabel(h))} <span class="hist-sub">· бр. ${escapeHtml(s.letter || '—')}</span></span>
+            ${c.fail ? `<span class="hist-tag hist-tag-fail">${c.fail} откл.</span>` : c.unchecked ? '<span class="hist-tag hist-tag-warn">не всё</span>' : '<span class="hist-tag hist-tag-ok">в норме</span>'}
+          </button>`;
+        }).join('') : '<div class="dash-empty">Проверок пока нет</div>'}
+      </div>
+    </div>`;
 }
 
-/* Виджет: Топ операторов по отклонениям (30 дней) */
-function renderDashboardOperatorStats(items) {
-  if (!items.length) {
-    return `
-      <div class="dash-widget">
-        <div class="dash-widget-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
-          Топ операторов по отклонениям (30 дней)
-        </div>
-        <div class="dash-widget-empty">Отклонений за месяц не зафиксировано</div>
-      </div>
-    `;
+/* ============================================================
+   ОБРАБОТЧИКИ
+   ============================================================ */
+$('#tab-dashboard')?.addEventListener('click', (e) => {
+  const t = e.target;
+  const ws = t.closest('[data-dash-ws]');
+  if (ws) {
+    dashboardWorkshop = ws.dataset.dashWs;
+    try { localStorage.setItem('cl_dashboard_workshop', dashboardWorkshop); } catch (err) { /* нет доступа */ }
+    return renderDashboard();
   }
-
-  const rows = items.map(item => {
-    const failsPct = item.percent;
-    const oksPct = 100 - failsPct;
-
-    const percentText = failsPct.toFixed(1) + '%';
-    const numbersText = `${item.fails} из ${item.total}`;
-
-    // Минимальная ширина красной части, чтобы тонкая полоска была заметна
-    const failWidth = Math.max(failsPct, 1.5);
-
-    return `
-      <div class="dash-bar-item">
-        <span class="dash-bar-label dash-bar-label-plain" title="${escapeAttr(item.name)}">${escapeHtml(item.name)}</span>
-        <div class="dash-bar-track dash-bar-track-ok">
-          <div class="dash-bar-fill-ok" style="width:${oksPct}%"></div>
-          <div class="dash-bar-fill-fail" style="width:${failWidth}%"></div>
-        </div>
-        <span class="dash-bar-value">
-          ${percentText}
-          <span class="dash-bar-sub">${numbersText}</span>
-        </span>
-      </div>
-    `;
-  }).join('');
-
-  return `
-    <div class="dash-widget">
-      <div class="dash-widget-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-        </svg>
-        Топ операторов по отклонениям (30 дней)
-      </div>
-      <div class="dash-bars">${rows}</div>
-    </div>
-  `;
-}
-
-/* Виджет: последние 5 проверок */
-function renderDashboardRecentChecks(checks) {
-  if (!checks.length) {
-    return `
-      <div class="dash-widget">
-        <div class="dash-widget-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="12 6 12 12 16 14"/>
-          </svg>
-          Последние проверки
-        </div>
-        <div class="dash-widget-empty">Проверок пока нет</div>
-      </div>
-    `;
+  const per = t.closest('[data-dash-period]');
+  if (per) {
+    dashState.period = per.dataset.dashPeriod;
+    try { localStorage.setItem('cl_dashboard_period', dashState.period); } catch (err) { /* нет доступа */ }
+    return dashState.line ? renderDashboardLine() : renderDashboard();
   }
-
-  const rows = checks.map(c => {
-    const failsHtml = c.fails > 0
-      ? `<span class="badge badge-fail">${c.fails}</span>`
-      : `<span class="badge badge-ok">0</span>`;
-    return `
-      <tr>
-        <td class="dash-recent-date">${fmtDate(c.timestamp)}</td>
-        <td class="dash-recent-line">${escapeHtml(c.line)}</td>
-        <td class="dash-recent-operator">${escapeHtml(c.operator)}</td>
-        <td>${escapeHtml(c.type)}</td>
-        <td class="dash-recent-fails">${failsHtml}</td>
-        <td style="text-align:right">
-          <button class="dash-recent-btn" data-dash-open-record="${escapeAttr(c.id)}">Открыть</button>
-        </td>
-      </tr>
-    `;
-  }).join('');
-
-  return `
-    <div class="dash-widget">
-      <div class="dash-widget-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <polyline points="12 6 12 12 16 14"/>
-        </svg>
-        Последние проверки
-      </div>
-      <table class="dash-recent">
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
-  `;
-}
-
-/* Виджет: топ-5 проблемных стандартов */
-function renderDashboardTopProblems(problems, maxCount) {
-  if (!problems.length) {
-    return `
-      <div class="dash-widget">
-        <div class="dash-widget-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-            <line x1="12" y1="9" x2="12" y2="13"/>
-            <line x1="12" y1="17" x2="12.01" y2="17"/>
-          </svg>
-          Топ проблемных стандартов
-        </div>
-        <div class="dash-widget-empty">Отклонений за месяц не зафиксировано</div>
-      </div>
-    `;
+  if (t.closest('[data-dash-back]')) { dashState.line = null; return renderDashboard(); }
+  const wk = t.closest('[data-dash-week]');
+  if (wk) {
+    const d = parseInt(wk.dataset.dashWeek, 10);
+    dashState.week = d === 0 ? 0 : Math.min(0, dashState.week + d);
+    return renderDashboardLine();
   }
-
-  const items = problems.map(p => {
-    const width = maxCount > 0 ? Math.round((p.count / maxCount) * 100) : 0;
-    // Показываем OPL + машину, если машина есть
-    const oplDisplay = p.machine
-      ? `${p.opl} [${p.machine}]`
-      : p.opl;
-
-    return `
-      <div class="dash-top-item">
-        <div class="dash-top-head">
-          <span class="dash-top-opl">${escapeHtml(oplDisplay)}</span>
-          <span class="dash-top-title" title="${escapeAttr(p.title)}">${escapeHtml(p.title || '—')}</span>
-          <span class="dash-top-count">${p.count} откл.</span>
-        </div>
-        <div class="dash-top-bar-outer">
-          <div class="dash-top-bar-inner" style="width:${width}%"></div>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  return `
-    <div class="dash-widget">
-      <div class="dash-widget-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-          <line x1="12" y1="9" x2="12" y2="13"/>
-          <line x1="12" y1="17" x2="12.01" y2="17"/>
-        </svg>
-        Топ проблемных стандартов (30 дней)
-      </div>
-      <div class="dash-top-list">${items}</div>
-    </div>
-  `;
-}
-
-/* Расчёт всех показателей дашборда */
-function calculateDashboardStats(workshopId) {
-  let standards = getStandards();
-  let history = getHistory();
-  const brands = getBrands();
-  const operators = getOperators();
-
-  // --- Фильтр по цеху: оставляем только линии выбранного цеха ---
-  if (workshopId) {
-    standards = standards.filter(s => getWorkshopIdForLine(s.line) === workshopId);
-    history = history.filter(h => getWorkshopIdForLine(h.line) === workshopId);
+  const ln = t.closest('[data-dash-open-line]');
+  if (ln) return openDashboardLine(ln.dataset.dashOpenLine);
+  const std = t.closest('[data-dash-std]');
+  if (std) {
+    dashState.keepLine = !!dashState.line;
+    return openStandardHistory(std.dataset.dashStd, std.dataset.dashLine, { from: 'dashboard' });
   }
-
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const weekAgo = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
-
-  // --- Стандарты ---
-  const totalStandards = standards.length;
-  const activeStandards = standards.filter(s => s.active !== false).length;
-
-  // --- Проверки за сегодня ---
-  const checksToday = history.filter(h => {
-    const ts = new Date(h.timestamp);
-    return ts >= todayStart;
-  }).length;
-
-  // --- Отклонения за неделю (сумма всех «Не ОК» по всем проверкам) ---
-  const checksWeek = history.filter(h => {
-    const ts = new Date(h.timestamp);
-    return ts >= weekAgo;
-  });
-    // --- Проверок потерь за неделю ---
-  const topLossChecksWeek = checksWeek.filter(h => h.mode === 'toploss').length;
-    // --- Проверок CL (мех + электро) за неделю ---
-  const clChecksWeek = checksWeek.filter(h => h.mode === 'cl' || h.mode === 'electronic').length;
-
-  // --- Топ-5 потерь по отклонениям (30 дней) ---
-  const monthAgoForLosses = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
-  const monthChecksForLosses = history.filter(h =>
-    h.mode === 'toploss' &&
-    new Date(h.timestamp) >= monthAgoForLosses
-  );
-
-  // { lossId: { total, fails, name } }
-  const lossAgg = {};
-  monthChecksForLosses.forEach(h => {
-    h.items.forEach(it => {
-      const st = standards.find(s => s.id === it.standardId);
-      if (!st || !Array.isArray(st.topLosses)) return;
-      st.topLosses.forEach(lid => {
-        // учитываем только те потери, что были выбраны в этой проверке
-        if (!(h.topLosses || []).includes(lid)) return;
-        if (!lossAgg[lid]) {
-          const l = findLossById(lid);
-          lossAgg[lid] = { name: l ? l.name : lid, total: 0, fails: 0 };
-        }
-        lossAgg[lid].total++;
-        if (it.status === 'FAIL') lossAgg[lid].fails++;
-      });
-    });
-  });
-
-  const topLossStats = Object.entries(lossAgg)
-    .map(([id, v]) => ({
-      id,
-      name: v.name,
-      total: v.total,
-      fails: v.fails,
-      percent: v.total > 0 ? (v.fails / v.total) * 100 : 0
-    }))
-    .filter(x => x.fails > 0)
-    .sort((a, b) => b.fails - a.fails)
-    .slice(0, 5);
-
-  // --- Топ-5 параметров CL (мех + электро) по отклонениям (30 дней) ---
-  const clMonthParamChecks = history.filter(h =>
-    (h.mode === 'cl' || h.mode === 'electronic') &&
-    new Date(h.timestamp) >= monthAgoForLosses
-  );
-  const clParamAgg = {};
-  clMonthParamChecks.forEach(h => {
-    h.items.forEach(it => {
-      const isElec = h.mode === 'electronic';
-      const name = isElec ? (it.paramName || '—') : (it.title || it.oplNumber || '—');
-      const key = it.machine ? name + ' [' + it.machine + ']' : name;
-      if (!clParamAgg[key]) clParamAgg[key] = { name: name, machine: it.machine || '', total: 0, fails: 0 };
-      clParamAgg[key].total++;
-      if (it.status === 'FAIL') clParamAgg[key].fails++;
-    });
-  });
-  const clParamStats = Object.values(clParamAgg)
-    .map(function(v) { return { name: v.name, machine: v.machine, total: v.total, fails: v.fails, percent: v.total > 0 ? (v.fails / v.total) * 100 : 0 }; })
-    .filter(function(v) { return v.fails > 0; })
-    .sort(function(a, b) { return b.fails - a.fails; })
-    .slice(0, 5);
-
-  // --- Потери без проверок за 30 дней ---
-  const allLosses = getAllLossItems();
-  const checkedLossIds = new Set();
-  monthChecksForLosses.forEach(h => {
-    (h.topLosses || []).forEach(lid => checkedLossIds.add(lid));
-  });
-  const lossesNeverChecked = allLosses.filter(l => !checkedLossIds.has(l.id)).length;
-
-  // --- Стандарты без связи с потерями (активные, topLosses пуст) ---
-  const standardsWithoutLosses = standards.filter(s =>
-    s.active !== false &&
-    (!Array.isArray(s.topLosses) || s.topLosses.length === 0)
-  ).length;
-  const failsWeek = checksWeek.reduce((sum, h) => {
-    return sum + h.items.filter(i => i.status === 'FAIL').length;
-  }, 0);
-  const checksWeekCount = checksWeek.length;
-
-  // --- Фото ---
-  const totalPhotos = standards.reduce((sum, s) => {
-    return sum + (Array.isArray(s.photos) ? s.photos.length : 0);
-  }, 0);
-  const standardsWithPhoto = standards.filter(s =>
-    Array.isArray(s.photos) && s.photos.length > 0
-  ).length;
-  const photoCoverage = totalStandards > 0
-    ? Math.round((standardsWithPhoto / totalStandards) * 100)
-    : 0;
-
-  // --- Последние 5 проверок ---
-  const recentChecks = [...history]
-    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-    .slice(0, 5)
-    .map(h => ({
-      id: h.id,
-      timestamp: h.timestamp,
-      line: h.line,
-      operator: h.operator,
-      type: h.type,
-      fails: h.items.filter(i => i.status === 'FAIL').length
-    }));
-
-  // --- Топ-5 проблемных стандартов за месяц ---
-  const monthAgo = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
-  const monthChecks = history.filter(h => new Date(h.timestamp) >= monthAgo);
-
-  const stdFails = {};   // ключ = "OPL [machine]"
-  monthChecks.forEach(h => {
-    h.items.forEach(it => {
-      if (it.status !== 'FAIL') return;
-
-      const oplNumber = it.oplNumber || it.number || '—';
-      const machine = it.machine || '';
-      // Ключ: OPL + машина — чтобы одинаковые OPL на разных машинах не сливались
-      const key = machine ? `${oplNumber} [${machine}]` : oplNumber;
-
-      if (!stdFails[key]) {
-        stdFails[key] = {
-          opl: oplNumber,
-          machine: machine,
-          title: it.title || '',
-          node: it.node || '',
-          line: h.line || '',
-          count: 0
-        };
-      }
-      stdFails[key].count++;
-    });
-  });
-
-  const topProblems = Object.values(stdFails)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
-
-  // Максимум для расчёта ширины баров
-  const topProblemsMax = topProblems.length ? topProblems[0].count : 1;
-
-  // --- % отклонений по линиям за неделю ---
-  const lineCounts = {};   // { line: { total: N, fails: N } }
-  checksWeek.forEach(h => {
-    const line = h.line || '—';
-    if (!lineCounts[line]) lineCounts[line] = { total: 0, fails: 0 };
-    lineCounts[line].total += h.items.length;
-    lineCounts[line].fails += h.items.filter(i => i.status === 'FAIL').length;
-  });
-  const lineStats = Object.entries(lineCounts)
-    .map(([line, v]) => ({
-      line,
-      total: v.total,
-      fails: v.fails,
-      percent: v.total > 0 ? (v.fails / v.total) * 100 : 0
-    }))
-    .sort((a, b) => b.percent - a.percent);   // худшие сверху
-
-  // --- Топ операторов по отклонениям (30 дней) ---
-  const opCounts = {};   // { operator: { total: N, fails: N } }
-  monthChecks.forEach(h => {
-    const op = h.operator || '—';
-    if (!opCounts[op]) opCounts[op] = { total: 0, fails: 0 };
-    opCounts[op].total += h.items.length;
-    opCounts[op].fails += h.items.filter(i => i.status === 'FAIL').length;
-  });
-  // Оставляем только тех, у кого есть хотя бы 1 отклонение
-  const operatorStats = Object.entries(opCounts)
-    .filter(([_, v]) => v.fails > 0)
-    .map(([name, v]) => ({
-      name,
-      total: v.total,
-      fails: v.fails,
-      percent: v.total > 0 ? (v.fails / v.total) * 100 : 0
-    }))
-    .sort((a, b) => b.percent - a.percent)   // худшие сверху
-    .slice(0, 5);
-
-  // --- Столбики по дням (7 дней, двухцветные) ---
-  const daysSeries = [];
-  for (let i = 6; i >= 0; i--) {
-    const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-    const dayEnd = new Date(dayStart.getTime() + 24 * 3600 * 1000);
-    const dayChecks = history.filter(h => {
-      const ts = new Date(h.timestamp);
-      return ts >= dayStart && ts < dayEnd;
-    });
-
-    // Проверка "с отклонениями" = есть хотя бы один FAIL в items
-    const withFails = dayChecks.filter(h =>
-      h.items.some(i => i.status === 'FAIL')
-    ).length;
-    const withoutFails = dayChecks.length - withFails;
-
-    // Подпись: день + месяц, например «24.09»
-    const dd = String(dayStart.getDate()).padStart(2, '0');
-    const mm = String(dayStart.getMonth() + 1).padStart(2, '0');
-
-    daysSeries.push({
-      label: `${dd}.${mm}`,
-      date: dayStart,
-      total: dayChecks.length,
-      withFails,
-      withoutFails
-    });
+  const rec = t.closest('[data-dash-rec]');
+  if (rec) { dashState.keepLine = true; return openHistoryRecord(rec.dataset.dashRec, { from: 'dashboard' }); }
+  const sh = t.closest('[data-hist-shift]');
+  if (sh && dashState.line) {
+    const [date, shift] = sh.dataset.histShift.split('|');
+    dashState.keepLine = true;
+    return openHistoryShift(dashState.line, date, shift, { from: 'dashboard' });
   }
-  const daysSeriesMax = daysSeries.reduce((max, d) => Math.max(max, d.total), 0) || 1;
-
-  // --- Круговая по типам переходов (30 дней) ---
-  const typeCounts = { ChangeOver: 0, CL_TO: 0, CL_Conversion: 0 };
-  monthChecks.forEach(h => {
-    if (h.type && typeCounts[h.type] !== undefined) {
-      typeCounts[h.type]++;
-    }
-  });
-  const typesTotal = typeCounts.ChangeOver + typeCounts.CL_TO + typeCounts.CL_Conversion;
-
-  // Проценты для conic-gradient
-  const typeColors = {
-    ChangeOver: '#00d4ff',
-    CL_TO: '#7b5cff',
-    CL_Conversion: '#10b981'
-  };
-  let acc = 0;
-  const typeSegments = [];
-  ['ChangeOver', 'CL_TO', 'CL_Conversion'].forEach(type => {
-    const count = typeCounts[type];
-    const percent = typesTotal > 0 ? (count / typesTotal) * 360 : 0;
-    typeSegments.push({
-      type,
-      count,
-      color: typeColors[type],
-      startAngle: acc,
-      endAngle: acc + percent,
-      percent: typesTotal > 0 ? Math.round((count / typesTotal) * 100) : 0
-    });
-    acc += percent;
-  });
-  // --- Отклонения по машинам (30 дней) ---
-  const machineCounts = {};
-  monthChecks.forEach(h => {
-    h.items.forEach(it => {
-      const m = it.machine || '—';
-      if (!machineCounts[m]) machineCounts[m] = { total: 0, fails: 0 };
-      machineCounts[m].total++;
-      if (it.status === 'FAIL') machineCounts[m].fails++;
-    });
-  });
-  const machineStats = Object.entries(machineCounts)
-    .map(([machine, v]) => ({
-      machine,
-      total: v.total,
-      fails: v.fails,
-      percent: v.total > 0 ? (v.fails / v.total) * 100 : 0
-    }))
-    .filter(m => m.fails > 0)
-    .sort((a, b) => b.fails - a.fails)
-    .slice(0, 5);
-
-  // --- Динамика по ISO-неделям (4 последние) ---
-  const getIsoWeek = (date) => {
-    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    const weekNum = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-    return { year: d.getUTCFullYear(), week: weekNum };
-  };
-
-  const getIsoWeekRange = (year, week) => {
-    const jan4 = new Date(Date.UTC(year, 0, 4));
-    const jan4Day = jan4.getUTCDay() || 7;
-    const week1Mon = new Date(jan4.getTime() - (jan4Day - 1) * 86400000);
-    const mon = new Date(week1Mon.getTime() + (week - 1) * 7 * 86400000);
-    const sun = new Date(mon.getTime() + 6 * 86400000);
-    return { mon, sun };
-  };
-
-  const nowForWeeks = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const currentWeek = getIsoWeek(nowForWeeks);
-
-  const weekStats = [];
-  for (let i = 0; i < 4; i++) {
-    let w = currentWeek.week - i;
-    let y = currentWeek.year;
-    while (w < 1) {
-      y -= 1;
-      w += 52;
-    }
-
-    const { mon, sun } = getIsoWeekRange(y, w);
-    const upperBound = i === 0
-      ? new Date(nowForWeeks.getTime() + 86400000)
-      : new Date(sun.getTime() + 86400000);
-
-    const weekChecks = history.filter(h => {
-      const ts = new Date(h.timestamp);
-      return ts >= mon && ts < upperBound;
-    });
-
-    const total = weekChecks.reduce((s, h) => s + h.items.length, 0);
-    const fails = weekChecks.reduce((s, h) => s + h.items.filter(it => it.status === 'FAIL').length, 0);
-    const checksCount = weekChecks.length;
-
-    const fmtShort = (d) => {
-      const dd = String(d.getUTCDate()).padStart(2, '0');
-      const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-      return `${dd}.${mm}`;
-    };
-    const rangeText = `${fmtShort(mon)}–${fmtShort(sun)}`;
-
-    weekStats.push({
-      week: w,
-      year: y,
-      label: `W${w}`,
-      range: rangeText,
-      total,
-      fails,
-      checksCount,
-      percent: total > 0 ? (fails / total) * 100 : 0
-    });
+  const sch = t.closest('[data-dash-schedule]');
+  if (sch) {
+    try { localStorage.setItem('cl_schedule_line', sch.dataset.dashSchedule); } catch (err) { /* нет доступа */ }
+    return switchTab('schedule');
   }
-  const weekStatsFiltered = weekStats.filter(w => w.checksCount > 0);
-    // --- «Требует внимания» — агрегируем проблемы ---
-  const monthAgo2 = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
-
-  // 1) Битые ссылки (из localStorage, обновляется при «Проверить фото»)
-  const brokenPhotosCount = parseInt(localStorage.getItem('cl_photos_broken_count') || '0', 10);
-
-  // 2) Стандарты без фото (только активные — неактивные не важны)
-  const activeStandardsList = standards.filter(s => s.active !== false);
-  const standardsWithoutPhoto = activeStandardsList.filter(s =>
-    !Array.isArray(s.photos) || s.photos.length === 0
-  ).length;
-
-  // 3) Стандарты без проверок за 30 дней
-  // Собираем все standardId, которые встречались в истории за 30 дней
-  const usedStandardIds = new Set();
-  history.forEach(h => {
-    if (new Date(h.timestamp) < monthAgo2) return;
-    h.items.forEach(it => {
-      if (it.standardId) usedStandardIds.add(it.standardId);
-    });
-  });
-  const standardsNeverChecked = activeStandardsList.filter(s =>
-    !usedStandardIds.has(s.id)
-  ).length;
-
-  // 4) Операторы без активности 7 дней
-  const activeOperators = new Set();
-  history.forEach(h => {
-    if (new Date(h.timestamp) < weekAgo) return;
-    if (h.operator) activeOperators.add(h.operator);
-  });
-  const operatorsInactive = operators.filter(o =>
-    !activeOperators.has(o)
-  ).length;
-
-  // 5) Стандарты с комментарием к деактивации (деактивированы, но с записанной причиной)
-  const standardsWithDeactivationComment = standards.filter(s =>
-    s.active === false &&
-    s.deactivationComment &&
-    s.deactivationComment.trim() !== ''
-  ).length;
-
-  const attentionItems = [];
-  if (brokenPhotosCount > 0) {
-    attentionItems.push({
-      key: 'brokenPhotos',
-      icon: 'image',
-      text: `Битых ссылок на фото: ${brokenPhotosCount}`,
-      hint: 'Проверьте фотографии в Настройках',
-      action: 'photos-check'
-    });
+  const ed = t.closest('[data-dash-editor]');
+  if (ed) {
+    try { localStorage.setItem('cl_editor_line', ed.dataset.dashEditor); } catch (err) { /* нет доступа */ }
+    return switchTab('editor');
   }
-  if (standardsWithoutPhoto > 0) {
-    attentionItems.push({
-      key: 'noPhoto',
-      icon: 'image-off',
-      text: `Активных стандартов без фото: ${standardsWithoutPhoto}`,
-      hint: 'Добавьте фото в редакторе стандартов',
-      action: 'editor'
-    });
-  }
-  if (standardsNeverChecked > 0) {
-    attentionItems.push({
-      key: 'neverChecked',
-      icon: 'clock',
-      text: `Стандартов не проверялись более 30 дней: ${standardsNeverChecked}`,
-      hint: 'Проверьте, актуальны ли они',
-      action: 'editor'
-    });
-  }
-  if (operatorsInactive > 0) {
-    attentionItems.push({
-      key: 'opInactive',
-      icon: 'user-x',
-      text: `Операторов без активности >7 дней: ${operatorsInactive}`,
-      hint: 'Из общего списка операторов',
-      action: 'settings'
-    });
-  }
-  if (standardsWithDeactivationComment > 0) {
-    attentionItems.push({
-      key: 'deactComment',
-      icon: 'message',
-      text: `Деактивированных стандартов с комментарием: ${standardsWithDeactivationComment}`,
-      hint: 'Возможно, пора вернуть их в работу',
-      action: 'editor'
-    });
-  }
-    if (lossesNeverChecked > 0) {
-    attentionItems.push({
-      key: 'lossesNeverChecked',
-      icon: 'clock',
-      text: `Потерь без проверок >30 дней: ${lossesNeverChecked}`,
-      hint: 'Откройте вкладку TOP Losses и проведите проверку',
-      action: 'toploss'
-    });
-  }
-  if (standardsWithoutLosses > 0) {
-    attentionItems.push({
-      key: 'standardsWithoutLosses',
-      icon: 'message',
-      text: `Стандартов без связи с потерями: ${standardsWithoutLosses}`,
-      hint: 'Привяжите их к потерям в редакторе стандартов',
-      action: 'editor'
-    });
-  }
-  return {
-    totalStandards,
-    activeStandards,
-    checksToday,
-    failsWeek,
-    checksWeek,
-    checksWeekCount,
-    totalPhotos,
-    standardsWithPhoto,
-    photoCoverage,
-    totalBrands: brands.length,
-    totalOperators: operators.length,
-
-    recentChecks,
-    topProblems,
-    topProblemsMax,
-    lineStats,
-    operatorStats,
-    daysSeries,
-    daysSeriesMax,
-    typeSegments,
-    typesTotal,
-    attentionItems,
-
-    // --- НОВОЕ ---
-    machineStats,
-    weekStats: weekStatsFiltered,
-
-    // --- TOP LOSSES ---
-    topLossChecksWeek,
-    topLossStats,
-    lossesNeverChecked,
-    standardsWithoutLosses,
-
-    // --- CL (мех + электро) ---
-    clChecksWeek,
-    clParamStats
-  };
-}
-
-/* Отрисовка верхнего ряда карточек */
-function renderDashboardStats(stats) {
-  return `
-    <div class="dash-stats">
-
-      <div class="dash-stat">
-        <div class="dash-stat-head">
-          <span>Стандарты активные</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-          </svg>
-        </div>
-        <div class="dash-stat-value">${stats.activeStandards}</div>
-        <div class="dash-stat-sub">из <strong>${stats.totalStandards}</strong> всего</div>
-      </div>
-
-      <div class="dash-stat dash-stat-green">
-        <div class="dash-stat-head">
-          <span>Проверок сегодня</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-            <polyline points="22 4 12 14.01 9 11.01"/>
-          </svg>
-        </div>
-        <div class="dash-stat-value">${stats.checksToday}</div>
-        <div class="dash-stat-sub">за текущие сутки</div>
-      </div>
-
-      <div class="dash-stat dash-stat-cyan">
-        <div class="dash-stat-head">
-          <span>Проверок за неделю</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="20" x2="18" y2="10"/>
-            <line x1="12" y1="20" x2="12" y2="4"/>
-            <line x1="6" y1="20" x2="6" y2="14"/>
-          </svg>
-        </div>
-        <div class="dash-stat-value">${stats.checksWeekCount}</div>
-        <div class="dash-stat-sub">за последние 7 дней</div>
-      </div>
-
-      <div class="dash-stat dash-stat-red">
-        <div class="dash-stat-head">
-          <span>Отклонений</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-            <line x1="12" y1="9" x2="12" y2="13"/>
-            <line x1="12" y1="17" x2="12.01" y2="17"/>
-          </svg>
-        </div>
-        <div class="dash-stat-value">${stats.failsWeek}</div>
-        <div class="dash-stat-sub">за последние 7 дней</div>
-      </div>
-
-<div class="dash-stat dash-stat-amber">
-        <div class="dash-stat-head">
-          <span>Проверок потерь</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-            <line x1="12" y1="9" x2="12" y2="13"/>
-            <line x1="12" y1="17" x2="12.01" y2="17"/>
-          </svg>
-        </div>
-        <div class="dash-stat-value">${stats.topLossChecksWeek}</div>
-        <div class="dash-stat-sub">за последние 7 дней</div>
-      </div>
-
-      <div class="dash-stat dash-stat-purple">
-        <div class="dash-stat-head">
-          <span>Проверок CL</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-          </svg>
-        </div>
-        <div class="dash-stat-value">${stats.clChecksWeek}</div>
-        <div class="dash-stat-sub">за последние 7 дней</div>
-      </div>
-
-    </div>
-  `;
-}
+  const go = t.closest('[data-dash-go]');
+  if (go) return switchTab(go.dataset.dashGo);
+});
