@@ -1,0 +1,897 @@
+/* ============================================================ */
+/* === РАСПИСАНИЕ CL: матрица (с инфо-колонками) ============== */
+/* ============================================================ */
+
+.sch-matrix-wrap {
+  padding: 16px 20px;
+  overflow-x: auto;
+}
+
+/* Навигация по неделям в Расписании CL — закреплена слева при прокрутке */
+.sch-week-nav {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+
+/* Расписание CL: подпись недели слева, быстрые кнопки недель и
+   выбор «как сохранить» — справа */
+.sch-week-nav .cl-week-nav-label {
+  min-width: 260px;
+  text-align: left;
+}
+.sch-week-nav .cl-week-nav-sub {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12px;
+}
+.sch-week-quick {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  margin-left: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-input);
+}
+.sch-week-chip,
+.sch-scope-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  color: var(--text-second);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.sch-week-chip:hover,
+.sch-scope-btn:hover {
+  color: var(--text-main);
+  background: var(--bg-hover);
+}
+.sch-week-chip.active {
+  color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.12);
+  border-color: var(--accent-cyan);
+}
+.sch-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 3px 3px 10px;
+  margin-left: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-input);
+}
+.sch-scope-label {
+  margin-right: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.sch-scope-btn.active {
+  color: var(--text-main);
+  background: var(--bg-card);
+  border-color: var(--border-hi);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+/* Прошедшая неделя: только просмотр */
+.sch-matrix-readonly .sch-info-time,
+.sch-matrix-readonly .sch-info-work,
+.sch-matrix-readonly .sch-row-remove {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.sch-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 1800px;
+}
+
+/* ===== Тулбар над матрицей: фильтр+поиск слева, счётчики+легенда справа ===== */
+.sch-matrix-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 14px 20px;
+  background: var(--bg-hover);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Левая часть — фильтры */
+.sch-matrix-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 280px;
+}
+
+.sch-matrix-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+}
+
+.sch-matrix-filter-field label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.sch-matrix-filter-field select,
+.sch-matrix-filter-field input {
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid var(--border-hi);
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--text-main);
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  height: 34px;
+  box-sizing: border-box;
+}
+.sch-matrix-filter-field select:focus,
+.sch-matrix-filter-field input:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12);
+}
+
+.sch-matrix-filter-search {
+  min-width: 240px;
+  flex: 1;
+  max-width: 360px;
+}
+
+/* Правая часть — счётчики + легенда */
+.sch-matrix-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.sch-matrix-counters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.sch-counter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
+  color: var(--text-second);
+  font-variant-numeric: tabular-nums;
+}
+.sch-counter-chip strong {
+  font-weight: 800;
+  margin-left: 2px;
+  color: var(--text-main);
+}
+.sch-counter-chip-with {
+  background: rgba(0, 196, 122, 0.1);
+  border-color: rgba(0, 196, 122, 0.4);
+  color: var(--accent-green);
+}
+.sch-counter-chip-with strong {
+  color: var(--accent-green);
+}
+.sch-counter-chip-cells {
+  background: rgba(0, 212, 255, 0.08);
+  border-color: rgba(0, 212, 255, 0.35);
+  color: var(--accent-cyan);
+}
+.sch-counter-chip-cells strong {
+  color: var(--accent-cyan);
+}
+
+/* Легенда */
+.sch-matrix-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 11px;
+  color: var(--text-second);
+}
+.sch-matrix-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sch-matrix-legend-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+.sch-matrix-legend-day   { background: linear-gradient(135deg, rgba(0, 212, 255, 0.25), rgba(0, 212, 255, 0.12)); border-color: var(--accent-cyan); }
+.sch-matrix-legend-night { background: linear-gradient(135deg, rgba(123, 92, 255, 0.25), rgba(123, 92, 255, 0.12)); border-color: var(--accent-purple); }
+
+/* ===== Строка матрицы: 8 инфо-колонок + 14 смен ===== */
+.sch-row {
+  display: grid;
+  grid-template-columns:
+    48px      /* № */
+    100px     /* OPL № */
+    80px      /* Машина */
+    180px     /* Узел */
+    280px     /* Название */
+    100px     /* Время */
+    70px      /* Run/Stop */
+    90px      /* Расписание */
+    50px      /* Действия */
+    repeat(14, minmax(48px, 1fr));
+  gap: 2px;
+  align-items: stretch;
+  border-radius: 6px;
+  transition: background 0.12s;
+}
+
+.sch-row:not(.sch-row-head):hover {
+  background: rgba(0, 212, 255, 0.04);
+}
+
+.sch-row-selected {
+  background: rgba(0, 212, 255, 0.08) !important;
+}
+
+/* ===== Шапка: grid 2 ряда, 8 инфо + 14 смен ===== */
+.sch-head-grid {
+  display: grid;
+  grid-template-columns:
+    48px 100px 80px 180px 280px 100px 70px 90px 50px
+    repeat(14, minmax(48px, 1fr));
+  grid-template-rows: auto auto;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+/* Инфо-ячейка в шапке — на всю высоту (2 ряда) */
+.sch-head-info {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 8px 10px;
+  background: var(--bg-hover);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-second);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* Инфо-ячейка в теле */
+.sch-info-cell {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--bg-card);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text-main);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.sch-info-opl,
+.sch-info-num {
+  justify-content: center;
+  font-family: 'Courier New', Consolas, monospace;
+  font-weight: 800;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.sch-info-opl { color: var(--accent-cyan); }
+.sch-info-num { color: var(--text-second); }
+
+.sch-info-machine {
+  justify-content: center;
+  font-family: 'Courier New', Consolas, monospace;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--blue-mid);
+  font-size: 12px;
+  letter-spacing: 0.3px;
+}
+
+.sch-info-node {
+  font-size: 12px;
+  color: var(--text-second);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sch-info-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sch-info-time {
+  justify-content: center;
+  font-family: 'Courier New', Consolas, monospace;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  flex-wrap: wrap;
+  gap: 4px;
+  transition: background 0.15s;
+}
+.sch-info-time:hover {
+  background: rgba(0, 212, 255, 0.06);
+}
+
+.sch-info-work {
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.sch-info-work:hover {
+  background: rgba(0, 212, 255, 0.06);
+}
+.sch-info-work:hover .sch-work-badge {
+  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.25);
+}
+
+.sch-work-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.sch-work-badge-run  { background: rgba(0, 196, 122, 0.15); color: var(--accent-green); border: 1px solid rgba(0, 196, 122, 0.4); }
+.sch-work-badge-stop { background: rgba(255, 169, 77, 0.15); color: var(--accent-amber); border: 1px solid rgba(255, 169, 77, 0.4); }
+
+.sch-info-schedule {
+  justify-content: center;
+}
+
+.sch-info-actions {
+  justify-content: center;
+}
+
+/* ===== Ячейки смен ===== */
+.sch-cell-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-input);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 900;
+  color: transparent;
+  transition: all 0.12s;
+  padding: 0;
+}
+
+.sch-cell-cell:hover {
+  border-color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.06);
+}
+
+/* Прошедшие дни текущей недели — заблокированы для планирования */
+.sch-cell-cell.sch-cell-locked {
+  background: var(--bg-hover);
+  border-color: var(--border);
+  cursor: not-allowed;
+  opacity: 0.45;
+  color: transparent;
+}
+.sch-cell-cell.sch-cell-locked:hover {
+  border-color: var(--border);
+  background: var(--bg-hover);
+}
+.sch-cell-cell.sch-cell-locked.on {
+  background: var(--bg-hover);
+  border-color: var(--border);
+  color: var(--text-dim);
+  box-shadow: none;
+  opacity: 0.45;
+}
+
+.sch-cell-cell-day.on {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.25), rgba(0, 212, 255, 0.12));
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.25);
+}
+
+.sch-cell-cell-night.on {
+  background: linear-gradient(135deg, rgba(123, 92, 255, 0.25), rgba(123, 92, 255, 0.12));
+  border-color: var(--accent-purple);
+  color: var(--accent-purple);
+  box-shadow: 0 0 8px rgba(123, 92, 255, 0.25);
+}
+
+/* ===== Шапка дней/смен ===== */
+.sch-head-day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 4px;
+  background: var(--bg-hover);
+  border-radius: 4px 4px 0 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: var(--text-main);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sch-head-shift {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  background: var(--bg-hover);
+  border-radius: 0 0 4px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.sch-head-shift-label {
+  font-size: 9px;
+  opacity: 0.75;
+  font-weight: 600;
+  text-transform: none;
+}
+
+.sch-head-shift-day   { color: var(--accent-cyan); }
+.sch-head-shift-night { color: var(--accent-purple); }
+
+/* ===== Кнопка «убрать из расписания» ===== */
+.sch-row-remove {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+.sch-row-remove svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+  pointer-events: none;
+}
+.sch-row-remove:hover {
+  background: rgba(230, 36, 79, 0.15);
+  color: var(--accent-red);
+}
+
+/* ===== Бейдж «N из 14» ===== */
+.sch-row-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  padding: 1px 8px;
+  border-radius: 8px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2px;
+}
+.sch-row-badge-empty {
+  color: var(--text-dim);
+  background: var(--bg-hover);
+  border-color: var(--border);
+}
+
+/* ===== Пустое состояние ===== */
+.sch-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 20px;
+  text-align: center;
+}
+.sch-empty svg {
+  width: 48px;
+  height: 48px;
+  color: var(--text-dim);
+  opacity: 0.5;
+}
+.sch-empty-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+.sch-empty-sub {
+  font-size: 13px;
+  color: var(--text-second);
+  max-width: 400px;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+/* ===== Панель массовых операций ===== */
+.sch-bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 20px;
+  background: rgba(0, 212, 255, 0.04);
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.sch-bulk-info {
+  font-size: 13px;
+  color: var(--text-second);
+}
+.sch-bulk-info strong {
+  color: var(--accent-cyan);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.sch-bulk-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ===== Адаптив ===== */
+@media (max-width: 1400px) {
+  .sch-row,
+  .sch-head-grid {
+    grid-template-columns:
+      90px 70px 140px 180px 90px 60px 80px 44px
+      repeat(14, minmax(40px, 1fr));
+    min-width: 1400px;
+  }
+  .sch-info-title { font-size: 12px; }
+  .sch-info-node  { font-size: 11px; }
+  .sch-head-day   { font-size: 10px; }
+  .sch-head-shift { font-size: 9px; }
+  .sch-cell-cell  { min-height: 34px; font-size: 13px; }
+  .sch-matrix     { min-width: 1400px; }
+}
+/* ============================================================ */
+/* === РАСПИСАНИЕ CL: модалка добавления стандартов =========== */
+/* ============================================================ */
+
+.sch-add-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  background: var(--bg-hover);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.sch-add-check-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+  color: var(--text-main);
+  margin: 0;
+}
+.sch-add-check-all input {
+  accent-color: var(--accent-cyan);
+  cursor: pointer;
+}
+
+.sch-add-counter {
+  font-weight: 700;
+  color: var(--accent-cyan);
+  font-variant-numeric: tabular-nums;
+}
+
+.sch-add-list {
+  max-height: 60vh;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  padding: 6px;
+}
+
+.sch-add-group {
+  margin-bottom: 8px;
+}
+
+.sch-add-group-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg-hover);
+  border-radius: 6px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sch-add-group-head:hover {
+  background: rgba(0, 212, 255, 0.06);
+}
+
+.sch-add-group-name {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-second);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.sch-add-group-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sch-add-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s;
+  user-select: none;
+}
+
+.sch-add-item:hover {
+  background: rgba(0, 212, 255, 0.04);
+}
+
+.sch-add-item input {
+  accent-color: var(--accent-cyan);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sch-add-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.sch-add-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sch-add-item-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-family: 'Courier New', Consolas, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sch-add-item-already {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent-green);
+  background: rgba(0, 196, 122, 0.1);
+  padding: 2px 8px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.sch-add-item.is-already {
+  opacity: 0.6;
+}
+.sch-add-item.is-already input {
+  pointer-events: none;
+}
+
+/* ============================================================ */
+/* === РАСПИСАНИЕ CL: улучшения строк ========================= */
+/* ============================================================ */
+
+.sch-row-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  padding: 1px 8px;
+  border-radius: 8px;
+  margin-left: 6px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2px;
+}
+.sch-row-badge-empty {
+  color: var(--text-dim);
+  background: var(--bg-hover);
+  border-color: var(--border);
+}
+
+.sch-cell-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.sch-row-remove {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+.sch-row-remove svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+  pointer-events: none;
+}
+.sch-row:hover .sch-row-remove {
+  opacity: 1;
+}
+.sch-row-remove:hover {
+  background: rgba(230, 36, 79, 0.15);
+  color: var(--accent-red);
+}
+
+/* Пустое состояние */
+.sch-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 20px;
+  text-align: center;
+}
+.sch-empty svg {
+  width: 48px;
+  height: 48px;
+  color: var(--text-dim);
+  opacity: 0.5;
+}
+.sch-empty-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+.sch-empty-sub {
+  font-size: 13px;
+  color: var(--text-second);
+  max-width: 400px;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+/* Даты в шапке */
+.sch-day-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 4px !important;
+}
+.sch-day-name {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+}
+.sch-day-date {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  text-transform: none;
+  letter-spacing: 0;
+}
+/* ============================================================ */
+/* === РАСПИСАНИЕ CL: режим просмотра ========================= */
+/* ============================================================ */
+
+.sch-row-preview:hover {
+  background: transparent !important;
+}
+
+.sch-day-cell-view {
+  cursor: default !important;
+  pointer-events: none;
+}
+
+.sch-day-cell-view:hover {
+  /* Отключаем hover-эффекты */
+  border-color: var(--border) !important;
+  background: var(--bg-input) !important;
+}
+
+.sch-day-cell-view.on:hover {
+  /* Но если включено — оставляем подсветку */
+  background: inherit !important;
+}
+
+.sch-matrix-preview .sch-day-cell {
+  opacity: 0.85;
+}

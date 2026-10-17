@@ -4,7 +4,31 @@
 
 @import url('css/base.css');
 @import url('css/layout.css');
-@import url('css/components.css');
+/* Компоненты и вкладки — порядок важен для каскада (как в бывшем components.css) */
+@import url('css/components/ui-base.css');
+@import url('css/views/cocl-panel.css');
+@import url('css/components/forms.css');
+@import url('css/components/points.css');
+@import url('css/views/settings-photo-card.css');
+@import url('css/views/dashboard.css');
+@import url('css/components/photos.css');
+@import url('css/components/theme-transition.css');
+@import url('css/views/editor-table.css');
+@import url('css/views/toploss.css');
+@import url('css/views/cl-electronic.css');
+@import url('css/views/settings-brands-operators.css');
+@import url('css/components/points-table.css');
+@import url('css/views/cocl-accordion.css');
+@import url('css/views/toploss-accordion.css');
+@import url('css/views/editor.css');
+@import url('css/components/line-picker.css');
+@import url('css/views/editor-part-switch.css');
+@import url('css/views/schedule.css');
+@import url('css/views/cl-checklist.css');
+@import url('css/views/schedule-time.css');
+@import url('css/views/standard-page.css');
+@import url('css/views/eparam-page.css');
+@import url('css/views/settings.css');
 
 /* ============================================================
    ГЛОБАЛЬНЫЕ ПРАВИЛА (после модулей)

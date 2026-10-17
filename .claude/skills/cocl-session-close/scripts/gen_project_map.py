@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Генерирует PROJECT_MAP.md — карту проекта COCL:
-  • разделы app.js и router.js: строки + функции раздела;
+  • JS-модули (порядок подключения) и их разделы с функциями;
   • разделы CSS: файл, строки, за что отвечают;
   • ключи localStorage и где они объявлены.
 
@@ -60,94 +60,117 @@ def functions(lines):
     return res
 
 
-def js_map(path):
+def js_sections(path):
+    """Строки таблицы разделов модуля: строки, раздел, функции"""
     lines = read(path)
     heads = sections(lines)
     funcs = functions(lines)
     rows = []
-    bounds = heads + [(len(lines) + 1, None)]
-    if not heads or heads[0][0] > 1:
-        bounds = [(1, '(начало файла)')] + bounds
+    # первый заголовок модуля — его шапка, разделы — следующие
+    body_heads = heads[1:] if heads and heads[0][0] <= 2 else heads
+    bounds = body_heads + [(len(lines) + 1, None)]
+    if not body_heads or body_heads[0][0] > 12:
+        bounds = [(1, '(начало модуля)')] + bounds
     for (start, title), (nxt, _) in zip(bounds, bounds[1:]):
         if title is None:
             break
         fs = [n for ln, n in funcs if start <= ln < nxt]
-        if not fs and nxt - start < 15:
+        if not fs:
             continue
         shown = ', '.join(f'`{n}`' for n in fs[:MAX_FUNCS_INLINE])
         if len(fs) > MAX_FUNCS_INLINE:
             shown += f' … +{len(fs) - MAX_FUNCS_INLINE}'
-        rows.append(f'| {start}–{nxt - 1} | {title[:70]} | {shown or "—"} |')
-    return rows, len(lines), len(funcs)
+        rows.append(f'| {path}:{start} | {title[:60]} | {shown} |')
+    return rows, len(lines), len(funcs), (heads[0][1] if heads else '')
 
 
-def css_map(path):
+def css_blocks(path):
     lines = read(path)
     heads = sections(lines, 'css')
-    rows = []
-    bounds = heads + [(len(lines) + 1, None)]
-    for (start, title), (nxt, _) in zip(bounds, bounds[1:]):
-        if title is None or nxt - start < 70:
-            continue
-        rows.append(f'| {path} | {start}–{nxt - 1} | {title[:80]} |')
-    return rows, len(lines)
+    titles = [t for _, t in heads if not t.startswith('COMPONENTS')]
+    shown = '; '.join(t[:40] for t in titles[:6])
+    if len(titles) > 6:
+        shown += f' … +{len(titles) - 6}'
+    return len(lines), shown
 
 
-def storage_keys():
-    lines = read('app.js')
-    text = '\n'.join(lines)
+def js_order():
+    html = '\n'.join(read('index.html'))
+    return [m for m in re.findall(r'<script\s+src="([^"]+)"', html) if not m.endswith('.min.js')]
+
+
+def css_order():
+    files = ['css/base.css', 'css/layout.css']
+    files += [m for m in re.findall(r"@import url\('([^']+)'\)", '\n'.join(read('style.css')))
+              if m not in files]
+    return files
+
+
+def storage_keys(js_files):
     keys = {}
-    m = re.search(r'const STORAGE_KEYS\s*=\s*\{(.*?)\};', text, re.S)
-    if m:
-        for km in re.finditer(r"(\w+)\s*:\s*'([^']+)'", m.group(1)):
-            keys[km.group(2)] = f'STORAGE_KEYS.{km.group(1)}'
-    for path in ['app.js', 'js/router.js', 'index.html']:
+    for path in js_files:
+        text = '\n'.join(read(path))
+        m = re.search(r'const STORAGE_KEYS\s*=\s*\{(.*?)\};', text, re.S)
+        if m:
+            for km in re.finditer(r"(\w+)\s*:\s*'([^']+)'", m.group(1)):
+                keys[km.group(2)] = f'STORAGE_KEYS.{km.group(1)} ({path})'
+    for path in js_files + ['index.html']:
         for i, l in enumerate(read(path)):
             for km in re.finditer(r"['\"](cl_[a-z0-9_]+)['\"]", l):
-                k = km.group(1)
-                keys.setdefault(k, f'{path}:{i + 1}')
+                keys.setdefault(km.group(1), f'{path}:{i + 1}')
     return sorted(keys.items())
 
 
 def main():
     commit = subprocess.run(['git', 'log', '-1', '--format=%h %s'], capture_output=True, text=True).stdout.strip()
-    app_rows, app_len, app_funcs = js_map('app.js')
-    router_rows, router_len, router_funcs = js_map('js/router.js')
+    jsf = js_order()
+    mod_rows, sec_rows = [], []
+    total_lines = total_funcs = 0
+    for f in jsf:
+        rows, n, nf, title = js_sections(f)
+        total_lines += n
+        total_funcs += nf
+        mod_rows.append(f'| `{f}` | {n} | {nf} | {title[:70]} |')
+        sec_rows += rows
     css_rows = []
     css_total = 0
-    for p in ['css/base.css', 'css/layout.css', 'css/components.css']:
-        r, n = css_map(p)
-        css_rows += r
+    for f in css_order():
+        n, shown = css_blocks(f)
         css_total += n
-    keys = storage_keys()
+        css_rows.append(f'| `{f}` | {n} | {shown} |')
+    keys = storage_keys(jsf)
 
     out = []
     out.append('# Карта проекта COCL')
     out.append('')
     out.append(f'Сгенерировано {datetime.date.today().isoformat()} по коммиту `{commit}` скриптом '
-               '`.claude/skills/cocl-session-close/scripts/gen_project_map.py`. '
-               'Номера строк сдвигаются после правок — пересоздайте карту после крупных изменений.')
+               '`.claude/skills/cocl-session-close/scripts/gen_project_map.py` — пересоздавайте после крупных правок.')
     out.append('')
-    out.append(f'app.js — {app_len} строк, {app_funcs} функций · router.js — {router_len} строк · CSS — {css_total} строк.')
-    out.append('Как искать: найдите раздел по смыслу, затем `Grep` по имени функции внутри указанного диапазона строк.')
+    out.append(f'JS — {len(jsf)} модулей, {total_lines} строк, {total_funcs} функций · CSS — {len(css_rows)} файлов, {css_total} строк.')
+    out.append('Как искать: модуль по назначению → раздел в таблице ниже → `Grep` по имени функции в этом файле.')
     out.append('')
-    out.append('## app.js — разделы и функции')
+    out.append('## JS-модули (в порядке подключения в index.html)')
     out.append('')
-    out.append('| Строки | Раздел | Функции |')
+    out.append('Все модули — обычные `<script>` с общим пространством имён. Код, выполняемый при загрузке, '
+               'не может ссылаться на модули, подключённые позже — проверка: '
+               '`node .claude/skills/cocl-review/scripts/check_load_order.js`.')
+    out.append('')
+    out.append('| Модуль | Строк | Функций | Назначение |')
+    out.append('| --- | --- | --- | --- |')
+    out += mod_rows
+    out.append('')
+    out.append('## JS — разделы и функции')
+    out.append('')
+    out.append('| Файл:строка | Раздел | Функции |')
     out.append('| --- | --- | --- |')
-    out += app_rows
+    out += sec_rows
     out.append('')
-    out.append('## js/router.js')
+    out.append('## CSS (в порядке каскада)')
     out.append('')
-    out.append('| Строки | Раздел | Функции |')
-    out.append('| --- | --- | --- |')
-    out += router_rows or [f'| 1–{router_len} | Роутер вкладок | `switchTab`, `initRouter` |']
+    out.append('Точка входа `style.css`: @import в этом порядке + anti-flash + печать. Переменные темы — `css/base.css`. '
+               'Порядок @import менять нельзя — от него зависит каскад.')
     out.append('')
-    out.append('## CSS — блоки')
-    out.append('')
-    out.append('Точка входа `style.css` (@import + anti-flash + печать). Переменные темы — `css/base.css`.')
-    out.append('')
-    out.append('| Файл | Строки | Блок |')
+    out.append('| Файл | Строк | Блоки |')
     out.append('| --- | --- | --- |')
     out += css_rows
     out.append('')

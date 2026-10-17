@@ -8,6 +8,7 @@
 """
 import argparse
 import re
+import os
 import subprocess
 import sys
 
@@ -39,6 +40,21 @@ def added_lines(base, path):
     return [l[1:] for l in diff.splitlines() if l.startswith('+') and not l.startswith('+++')]
 
 
+def js_files_at(base):
+    """JS-файлы приложения в коммите base (без библиотек)"""
+    out = subprocess.run(['git', 'ls-tree', '-r', '--name-only', base], capture_output=True, text=True).stdout
+    return [f for f in out.split() if f.endswith('.js') and (f == 'app.js' or f.startswith('js/'))
+            and not f.endswith('.min.js')]
+
+
+def js_files_now():
+    import glob
+    files = [f for f in glob.glob('js/**/*.js', recursive=True) if not f.endswith('.min.js')]
+    if os.path.exists('app.js'):
+        files.append('app.js')
+    return sorted(files)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--base', default='origin/main')
@@ -52,12 +68,14 @@ def main():
     print('Изменённые файлы:', ', '.join(changed))
 
     issues, notes = [], []
-    app_old, app_new = show(base, 'app.js'), read('app.js')
-    html_new, router_new = read('index.html'), read('js/router.js')
-    everything = app_new + html_new + router_new
+    # Весь JS приложения одним текстом (модули js/**, раньше — один app.js)
+    app_old = '\n'.join(show(base, f) for f in js_files_at(base))
+    app_new = '\n'.join(read(f) for f in js_files_now())
+    html_new, router_new = read('index.html'), ''
+    everything = app_new + html_new
 
     # 1. Удалённые функции, на которые ещё есть ссылки
-    old_funcs = set(FUNC_RE.findall(app_old)) | set(FUNC_RE.findall(show(base, 'js/router.js')))
+    old_funcs = set(FUNC_RE.findall(app_old))
     new_funcs = set(FUNC_RE.findall(app_new)) | set(FUNC_RE.findall(router_new))
     for name in sorted(old_funcs - new_funcs):
         refs = len(re.findall(r'\b' + re.escape(name) + r'\b', everything))
@@ -87,10 +105,17 @@ def main():
         (r'console\.log\(', 'console.log в коде'),
     ]
     for rx, label in patterns:
-        before = len(re.findall(rx, app_old + show(base, 'js/router.js')))
+        before = len(re.findall(rx, app_old))
         after = len(re.findall(rx, app_new + router_new))
         if after > before:
             issues.append(f'{label}: было {before}, стало {after}')
+
+    # Порядок загрузки модулей: при загрузке ничего не должно требовать
+    # функций из модулей, подключённых позже
+    lo = subprocess.run(['node', os.path.join(os.path.dirname(__file__), 'check_load_order.js')],
+                        capture_output=True, text=True)
+    if lo.returncode != 0:
+        issues.append('порядок загрузки модулей: ' + (lo.stdout.strip() or lo.stderr.strip())[:1500])
 
     # Перевод строк: файлы проекта в CRLF, переписанный в LF файл даёт diff на весь файл
     for path in changed:

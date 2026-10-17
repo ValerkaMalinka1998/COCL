@@ -1,0 +1,1017 @@
+/* ============================================================ */
+/* === ПОЛНОЭКРАННЫЙ СТАНДАРТ (sv-full) ======================= */
+/* ============================================================ */
+
+/* ===== Шапка ===== */
+.sv-full-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sv-full-header-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sv-full-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
+  border-radius: 8px;
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.sv-full-back-btn:hover {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  transform: translateX(-2px);
+}
+.sv-full-back-btn svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+  pointer-events: none;
+}
+
+.sv-full-header-title-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.sv-full-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0 0 6px;
+  padding: 0;
+  border: none;
+  letter-spacing: 0.3px;
+  line-height: 1.2;
+  word-wrap: break-word;
+}
+
+.sv-full-crumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-second);
+}
+.sv-full-crumbs .sv-full-crumb {
+  color: var(--accent-cyan);
+  font-weight: 700;
+}
+.sv-full-crumbs .sv-full-crumb-sep {
+  color: var(--text-dim);
+  font-weight: 500;
+  margin: 0 2px;
+}
+.sv-full-crumbs .sv-full-crumb-current {
+  color: var(--text-main);
+  font-weight: 800;
+}
+.sv-full-crumbs .sv-full-crumb-id {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 11px;
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  color: var(--accent-cyan);
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 12px;
+  font-weight: 800;
+  margin-right: 4px;
+}
+
+/* Экшены в шапке */
+.sv-full-header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.sv-full-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.sv-full-action-btn svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+  pointer-events: none;
+}
+
+.sv-full-action-view {
+  background: var(--bg-card);
+  border-color: var(--border-hi);
+  color: var(--text-main);
+}
+.sv-full-action-view:hover {
+  border-color: var(--accent-purple);
+  color: var(--accent-purple);
+}
+
+.sv-full-action-edit {
+  background: linear-gradient(135deg, var(--blue-mid), var(--blue-light));
+  border-color: var(--accent-cyan);
+  color: #ffffff;
+}
+.sv-full-action-edit:hover {
+  box-shadow: 0 4px 14px rgba(0, 212, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.sv-full-action-proposal {
+  background: linear-gradient(135deg, #d98a00, #ffb800);
+  border-color: var(--accent-amber);
+  color: #1a1204;
+}
+.sv-full-action-proposal:hover {
+  box-shadow: 0 4px 14px rgba(255, 184, 0, 0.4);
+  transform: translateY(-1px);
+}
+
+.sv-full-action-save {
+  background: linear-gradient(135deg, #00a865, #00c47a);
+  border-color: var(--accent-green);
+  color: #ffffff;
+}
+.sv-full-action-save:hover {
+  box-shadow: 0 4px 14px rgba(0, 196, 122, 0.4);
+  transform: translateY(-1px);
+}
+
+.sv-full-action-cancel {
+  background: var(--bg-card);
+  border-color: var(--border-hi);
+  color: var(--text-second);
+}
+.sv-full-action-cancel:hover {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+}
+
+/* ===== Вкладки внутри ===== */
+.sv-full-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+
+.sv-full-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--text-second);
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.sv-full-tab-btn svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+.sv-full-tab-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
+}
+.sv-full-tab-btn.active {
+  background: linear-gradient(135deg, var(--blue-mid), var(--blue-light));
+  border-color: var(--accent-cyan);
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(0, 212, 255, 0.3);
+}
+.sv-full-tab-btn.active svg {
+  stroke: #ffffff;
+}
+
+.sv-full-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  background: rgba(0, 212, 255, 0.15);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  font-variant-numeric: tabular-nums;
+}
+.sv-full-tab-btn.active .sv-full-tab-badge {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.sv-full-tab-badge-new {
+  background: linear-gradient(135deg, #d98a00, #ffb800);
+  color: #1a1204;
+  border-color: #ffb800;
+  animation: svBadgePulse 2s infinite;
+}
+@keyframes svBadgePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 184, 0, 0.5); }
+  50%      { box-shadow: 0 0 0 6px rgba(255, 184, 0, 0); }
+}
+
+/* ===== Контент ===== */
+.sv-full-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sv-full-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Двухколоночный layout */
+.sv-full-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1000px) {
+  .sv-full-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sv-full-col-main,
+.sv-full-col-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* ===== Карточки ===== */
+.sv-full-card {
+  margin-bottom: 0;
+  padding: 16px 18px;
+}
+
+.sv-full-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--blue-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.sv-full-card-title svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex-shrink: 0;
+  color: var(--accent-cyan);
+}
+
+.sv-full-card-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.sv-full-card-head-row .sv-full-card-title {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+/* ===== Поля «Основная информация» ===== */
+.sv-full-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.sv-full-field {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.sv-full-field:last-child {
+  border-bottom: none;
+}
+.sv-full-field-label {
+  min-width: 160px;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-second);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.sv-full-field-value {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--text-main);
+  font-weight: 500;
+  word-wrap: break-word;
+}
+.sv-full-field-value.sv-empty {
+  color: var(--text-dim);
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* Поля в режиме редактирования */
+.sv-full-field-edit {
+  display: block;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.sv-full-field-edit:last-child {
+  border-bottom: none;
+}
+/* Поле со списком и кнопкой «+» справа */
+.sv-field-with-btn {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.sv-field-with-btn select {
+  flex: 1;
+  min-width: 0;
+}
+.sv-field-with-btn .btn {
+  flex-shrink: 0;
+  min-width: 40px;
+  font-size: 16px;
+}
+.sv-full-field-edit label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-second);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+.sv-full-field-edit input[type="text"],
+.sv-full-field-edit input[type="number"],
+.sv-full-field-edit select,
+.sv-full-field-edit textarea {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text-main);
+  background: var(--bg-input);
+  border: 1px solid var(--border-hi);
+  border-radius: 6px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.sv-full-field-edit input:focus,
+.sv-full-field-edit select:focus,
+.sv-full-field-edit textarea:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12);
+}
+.sv-full-field-edit textarea {
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.5;
+}
+
+/* Чипы статуса */
+.sv-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.sv-status-chip::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.sv-status-active {
+  background: rgba(0, 196, 122, 0.12);
+  color: var(--accent-green);
+  border: 1px solid rgba(0, 196, 122, 0.5);
+}
+.sv-status-inactive {
+  background: var(--bg-hover);
+  color: var(--text-dim);
+  border: 1px solid var(--border-hi);
+}
+
+/* ===== Фото в правом блоке ===== */
+.sv-full-photos {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.sv-full-photo {
+  aspect-ratio: 1 / 1;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  position: relative;
+}
+.sv-full-photo:hover {
+  border-color: var(--accent-cyan);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+}
+.sv-full-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.sv-full-photo .photo-missing {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-amber);
+}
+.sv-full-photo .photo-missing svg {
+  width: 24px;
+  height: 24px;
+}
+
+.sv-full-photos-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-style: italic;
+  background: var(--bg-input);
+  border: 1px dashed var(--border-hi);
+  border-radius: 6px;
+}
+
+/* ===== Related (Связанные объекты) ===== */
+.sv-full-related {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.sv-full-related-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--border);
+  font-size: 12px;
+}
+.sv-full-related-row:last-child {
+  border-bottom: none;
+}
+.sv-full-related-label {
+  color: var(--text-second);
+  flex-shrink: 0;
+  font-weight: 500;
+}
+.sv-full-related-value {
+  color: var(--text-main);
+  font-weight: 600;
+  text-align: right;
+  word-break: break-word;
+}
+.sv-full-related-value.sv-empty {
+  color: var(--text-dim);
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* ===== Дополнительная информация ===== */
+.sv-full-extra {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sv-full-extra-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.sv-full-extra-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-second);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.sv-full-extra-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sv-full-extra-empty {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+/* Флажок «Всегда показывать в Change Over» */
+.sv-force-co {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-second);
+  cursor: pointer;
+}
+.sv-force-co input {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+/* Флажок внутри поля формы: не наследует вид подписи поля */
+.sv-full-field-edit label.sv-force-co {
+  display: flex;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-main);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ===== Таблицы внутри вкладок ===== */
+.sv-full-table-wrap {
+  overflow-x: auto;
+}
+.sv-full-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.sv-full-table thead th {
+  background: var(--bg-hover);
+  color: var(--text-second);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.sv-full-table tbody td {
+  padding: 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-main);
+  vertical-align: middle;
+}
+.sv-full-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.sv-full-table tbody tr:hover {
+  background: rgba(0, 212, 255, 0.03);
+}
+
+.sv-full-version-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 800;
+  font-family: 'Courier New', Consolas, monospace;
+  background: rgba(0, 212, 255, 0.12);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0, 212, 255, 0.4);
+}
+
+.sv-full-empty-table {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 20px;
+  color: var(--text-dim);
+  font-size: 13px;
+  text-align: center;
+}
+.sv-full-empty-table svg {
+  width: 40px;
+  height: 40px;
+  color: var(--text-dim);
+  opacity: 0.5;
+}
+
+/* ===== Блоки «Точки контроля» — свёрнутые секции ===== */
+.sv-full-content-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sv-content-block {
+  padding: 10px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-cyan);
+  border-radius: 6px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.sv-content-block-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 6px;
+}
+.sv-content-block-text {
+  font-size: 13px;
+  color: var(--text-main);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.sv-content-block-text.sv-empty {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* Точки по брендам в просмотре */
+.sv-brand-blocks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: stretch;
+}
+.sv-brand-block {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: var(--bg-card);
+  flex: 0 1 auto;
+  width: max-content;
+  max-width: 100%;
+  min-height: 90px;   /* ← НОВОЕ: минимальная высота */
+}
+.sv-brand-block-head {
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px dashed var(--border);
+}
+.sv-brand-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  background: rgba(0, 212, 255, 0.12);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0, 212, 255, 0.45);
+}
+.sv-points-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.sv-point-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-hi);
+  border-radius: 4px;
+  font-size: 12px;
+  flex-shrink: 0;
+  max-width: 220px;
+}
+.sv-point-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(0, 212, 255, 0.12);
+  color: var(--accent-cyan);
+  font-weight: 700;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  flex-shrink: 0;
+}
+.sv-point-value {
+  font-family: 'Courier New', Consolas, monospace;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text-main);
+  word-break: break-word;
+}
+/* ============================================================ */
+/* === ПОЛНОЭКРАННЫЙ СТАНДАРТ: textarea в блоках контента ===== */
+/* ============================================================ */
+
+.sv-content-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-main);
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
+  border-radius: 6px;
+  resize: vertical;
+  min-height: 70px;
+  line-height: 1.5;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  flex: 1 1 auto;
+}
+.sv-content-textarea:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12);
+}
+
+/* ============================================================ */
+/* === ПОЛНОЭКРАННЫЙ СТАНДАРТ: доп. инфо — редактирование ===== */
+/* ============================================================ */
+
+/* Чипы применяемости в редактировании */
+.sv-edit-chips-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.trigger-picker-hint {
+  font-size: 12px;
+  color: var(--text-second);
+  margin: 0 0 10px;
+}
+
+/* Top Losses и триггеры — чипы в редактировании */
+.sv-toploss-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  background: rgba(232, 154, 0, 0.08);
+  border: 1px solid rgba(232, 154, 0, 0.45);
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-amber);
+  max-width: 100%;
+}
+.sv-toploss-item > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.sv-toploss-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: var(--accent-amber);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.sv-toploss-remove:hover {
+  background: rgba(232, 154, 0, 0.25);
+  color: #ffffff;
+}
+
+/* ============================================================ */
+/* === ПОЛНОЭКРАННЫЙ СТАНДАРТ: чипы триггеров (синие) ========= */
+/* ============================================================ */
+
+.sv-trigger-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(0, 212, 255, 0.1);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0, 212, 255, 0.45);
+  white-space: nowrap;
+}
+
+/* ============================================================ */
+/* === ПОЛНОЭКРАННЫЙ СТАНДАРТ: редактор фото ================== */
+/* ============================================================ */
+
+/* Кнопка удаления на миниатюре */
+.sv-full-photo-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(230, 36, 79, 0.9);
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.sv-full-photo:hover .sv-full-photo-remove {
+  opacity: 1;
+}
+.sv-full-photo-remove:hover {
+  transform: scale(1.1);
+}
+.sv-full-photo-remove svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+  pointer-events: none;
+}
+
+/* Форма добавления фото */
+.sv-photo-add-form {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+  margin-top: 4px;
+}
+
+.sv-photo-add-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-family: 'Courier New', Consolas, monospace;
+  color: var(--text-main);
+  background: var(--bg-input);
+  border: 1px solid var(--border-hi);
+  border-radius: 6px;
+  resize: vertical;
+  min-height: 50px;
+  line-height: 1.4;
+}
+.sv-photo-add-textarea:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12);
+}
+
+.sv-photo-add-form .btn {
+  align-self: stretch;
+}
+
+/* ============================================================ */
+/* === ПОЛНОЭКРАННЫЙ СТАНДАРТ: сетка блоков =================== */
+/* ============================================================ */
+
+.sv-points-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.sv-content-blocks-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: stretch;
+}
+@media (max-width: 700px) {
+  .sv-content-blocks-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sv-content-blocks-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* Блоки «Цель» и «Знаю почему» всегда одной высоты, даже если текст
+   в одном короче — сетка не должна «ехать». */
+.sv-content-blocks-grid > .sv-content-blocks-col > .sv-content-block {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+.sv-content-blocks-grid > .sv-content-blocks-col > .sv-content-block > .sv-content-block-text {
+  flex: 1 1 auto;
+}
+
+/* Убеждаемся, что sv-content-block внутри grid не растягивается */
+.sv-content-blocks-col .sv-content-block {
+  margin: 0;
+}

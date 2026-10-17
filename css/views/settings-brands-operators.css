@@ -1,0 +1,103 @@
+/* ============================================================ */
+/* === ОБЩИЙ СПИСОК БРЕНДОВ — группы по цехам ================= */
+/* ============================================================ */
+
+
+
+
+
+
+
+/* ============================================================ */
+/* === ОПЕРАТОРЫ — строки + inline + пагинация ================ */
+/* ============================================================ */
+
+.operators-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  overflow: hidden;
+}
+
+.operators-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  border-bottom: 1px dashed var(--border);
+  transition: background 0.12s, border-color 0.12s;
+  position: relative;
+}
+.operators-row:last-child {
+  border-bottom: none;
+}
+
+.operators-row:hover {
+  background: rgba(0, 212, 255, 0.04);
+}
+.operators-row:hover::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--accent-cyan);
+}
+
+.operators-row-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-main);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operators-row-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.operators-row-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-second);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.operators-row-action-btn svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  pointer-events: none;
+}
+
+.operators-row-delete-btn:hover {
+  background: rgba(230, 36, 79, 0.1);
+  border-color: rgba(230, 36, 79, 0.4);
+  color: var(--accent-red);
+}
+
+/* ============================================================ */
+/* === Подсветка совпадений поиска ============================= */
+/* ============================================================ */
+
+.hl-match {
+  background: rgba(0, 212, 255, 0.15);
+  color: var(--accent-cyan);
+  font-weight: 700;
+  padding: 0 1px;
+  border-radius: 2px;
+}

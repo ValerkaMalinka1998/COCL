@@ -1,0 +1,344 @@
+/* ============================================================ */
+/* === Чек-лист: блок точек замера ============================ */
+/* ============================================================ */
+
+.checklist-points {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0 10px;
+  padding: 10px 12px;
+  background: var(--bg-hover);
+  border-left: 3px solid var(--accent-cyan);
+  border-radius: 6px;
+}
+
+.checklist-points-header {
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.checklist-point-brand-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  background: rgba(0, 212, 255, 0.12);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0, 212, 255, 0.45);
+}
+
+.checklist-point {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+  padding: 3px 0;
+}
+
+.checklist-point-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  color: var(--accent-cyan);
+  font-weight: 700;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  flex-shrink: 0;
+}
+
+.checklist-point-value {
+  color: var(--text-main);
+  font-family: 'Courier New', Consolas, monospace;
+  font-weight: 600;
+  font-size: 13px;
+  word-break: break-word;
+}
+
+/* ============================================================ */
+/* === Точки замера: таблица по брендам ======================= */
+/* ============================================================ */
+
+.brands-table-wrap {
+  overflow-x: auto;
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+}
+
+.brands-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 500px;
+}
+
+.brands-table thead th {
+  background: var(--bg-hover);
+  color: var(--text-second);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 8px 10px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.brands-table thead th:last-child { border-right: none; }
+
+.bt-th-brand {
+  text-align: left !important;
+  min-width: 180px;
+  position: sticky;
+  left: 0;
+  background: var(--bg-hover);
+  z-index: 3;
+}
+
+.bt-th-point {
+  min-width: 100px;
+  position: relative;
+}
+
+.bt-th-point > span {
+  display: block;
+  padding-right: 16px;
+}
+
+.bt-remove-point {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: var(--text-dim);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.bt-remove-point:hover {
+  background: rgba(230, 36, 79, 0.15);
+  color: var(--accent-red);
+}
+.bt-remove-point svg { display: block; pointer-events: none; }
+
+.bt-th-actions {
+  min-width: 100px;
+  background: var(--bg-hover);
+}
+
+.bt-add-point-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(0, 212, 255, 0.08);
+  border: 1px dashed rgba(0, 212, 255, 0.5);
+  border-radius: 14px;
+  color: var(--accent-cyan);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.bt-add-point-btn:hover {
+  background: rgba(0, 212, 255, 0.15);
+  border-style: solid;
+  border-color: var(--accent-cyan);
+}
+
+/* --- Тело --- */
+.brands-table tbody td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  vertical-align: middle;
+}
+.brands-table tbody tr:last-child td { border-bottom: none; }
+.brands-table tbody td:last-child { border-right: none; }
+
+.bt-row:hover td { background: rgba(0, 212, 255, 0.02); }
+
+.bt-td-brand {
+  position: sticky;
+  left: 0;
+  background: var(--bg-input);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+}
+.bt-row:hover .bt-td-brand { background: var(--bg-hover); }
+
+.bt-brand-select {
+  flex: 1;
+  min-width: 100px;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
+  border-radius: 4px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.bt-brand-select:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.15);
+}
+
+.bt-remove-brand {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.bt-remove-brand:hover {
+  background: rgba(230, 36, 79, 0.1);
+  border-color: rgba(230, 36, 79, 0.4);
+  color: var(--accent-red);
+}
+.bt-remove-brand svg { display: block; pointer-events: none; }
+
+.bt-td-value { text-align: center; }
+
+.bt-point-input {
+  width: 100%;
+  min-width: 70px;
+  padding: 5px 8px;
+  font-size: 13px;
+  font-family: 'Courier New', Consolas, monospace;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text-main);
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
+  border-radius: 4px;
+}
+.bt-point-input:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.15);
+}
+.bt-point-input::placeholder { color: var(--text-dim); font-weight: 400; }
+
+.bt-td-actions { background: var(--bg-hover); }
+
+.bt-empty {
+  text-align: center;
+  color: var(--text-dim);
+  font-style: italic;
+  padding: 20px !important;
+}
+
+/* ============================================================ */
+/* === Модалка просмотра стандарта: блоки брендов ============= */
+/* ============================================================ */
+
+.sv-brand-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sv-brand-block {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--bg-input);
+}
+
+.sv-brand-block-head {
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.sv-brand-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  background: rgba(0, 212, 255, 0.12);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0, 212, 255, 0.45);
+}
+
+.sv-points-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 6px;
+}
+
+.sv-point-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.sv-point-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0, 212, 255, 0.12);
+  color: var(--accent-cyan);
+  font-weight: 700;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid rgba(0, 212, 255, 0.4);
+  flex-shrink: 0;
+}
+
+.sv-point-value {
+  font-family: 'Courier New', Consolas, monospace;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-main);
+  word-break: break-word;
+}

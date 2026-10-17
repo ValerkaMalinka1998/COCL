@@ -17,7 +17,7 @@ description: Закрытие рабочей сессии в проекте COCL
    ```bash
    git log --oneline origin/main..HEAD      # коммиты сессии (или от начала сессии)
    git diff --stat origin/main
-   git diff origin/main -- app.js | grep -E '^[+-]\s*(async )?function '
+   git diff origin/main -- js | grep -E '^[+-]\s*(async )?function '
    ```
    Плюс то, что пользователь решил в разговоре (договорённости, отказ от идей,
    новые приоритеты) — это тоже факты, их нет в diff.
@@ -44,7 +44,7 @@ description: Закрытие рабочей сессии в проекте COCL
    ```bash
    python3 .claude/skills/cocl-session-close/scripts/gen_project_map.py
    ```
-   — пересоздаёт `PROJECT_MAP.md` (разделы app.js с функциями и строками,
+   — пересоздаёт `PROJECT_MAP.md` (JS-модули и их функции со строками,
    блоки CSS, ключи localStorage). В `Handoff.md` перепиши разделы «Где
    остановились» и «Что делать дальше» — его читает следующая сессия первым.
 
