@@ -1507,44 +1507,48 @@
     </section>
     <section class="settings-panel" data-panel="shifts">
       <div class="card">
-        <h2>График смен CL Electronic</h2>
-        <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
-          Определяет автоматический расчёт смены по дате для вкладки «CL Electronic».
-          Порядок смен и количество дней на смену фиксированы, дата старта задаётся один раз.
+        <h2>График смен и бригад</h2>
+        <p class="shf-intro">
+          Две смены: <b>день 09:00–21:00</b> и <b>ночь 21:00–09:00</b>. A, B, C, D — бригады.
+          По этому графику Чек-лист CL, Расписание CL и COCL показывают, какая бригада на смене.
         </p>
 
-        <div class="row">
-          <div class="field">
-            <label>Порядок смен в цикле</label>
-            <input type="text" id="elecShiftCycle" placeholder="D, A, C, B" readonly
-                   style="background:var(--bg-hover);font-family:'Courier New',Consolas,monospace;letter-spacing:1px">
-          </div>
-          <div class="field" style="max-width:180px">
-            <label class="required">Дней на одну смену</label>
-            <input type="number" id="elecShiftDays" min="1" max="14" value="2" placeholder="2">
-          </div>
-          <div class="field" style="max-width:220px">
-            <label class="required">Дата старта цикла</label>
-            <input type="date" id="elecShiftStart" value="2026-01-01">
+        <div id="shfNow" class="shf-now"></div>
+
+        <div class="shf-section-head">
+          <div class="shf-section-title">Цикл бригад</div>
+          <div class="shf-legend">Нажмите на букву, чтобы сменить бригаду</div>
+        </div>
+        <div id="shfCycle" class="shf-cycle"></div>
+
+        <div class="shf-controls">
+          <label class="shf-start">
+            <span>Первый день цикла</span>
+            <input type="date" id="elecShiftStart">
+          </label>
+          <div class="shf-len">
+            <span>Длина цикла</span>
+            <button type="button" class="btn btn-secondary btn-sm" id="shfLenMinus" title="Убрать последний день цикла">−</button>
+            <span id="shfLenVal" class="shf-len-val"></span>
+            <button type="button" class="btn btn-secondary btn-sm" id="shfLenPlus" title="Добавить день в конец цикла">+</button>
           </div>
         </div>
 
-        <div class="photo-path-block" style="margin-top:14px">
-          <div class="photo-path-label">Предпросмотр — ближайшие 8 дней от выбранной даты старта:</div>
-          <div id="elecShiftPreview" class="elec-shift-preview"></div>
+        <div class="shf-section-head">
+          <div class="shf-section-title">Ближайшие 14 дней</div>
         </div>
+        <div id="elecShiftPreview" class="shf-calendar"></div>
 
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px">
-          <button class="btn btn-primary btn-icon-text" id="elecShiftSaveBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <div class="shf-actions">
+          <span id="shfDirty" class="shf-dirty" hidden>Есть несохранённые изменения</span>
+          <button class="btn btn-secondary" id="elecShiftResetBtn" type="button">Сбросить к стандартному</button>
+          <button class="btn btn-primary btn-icon-text" id="elecShiftSaveBtn" type="button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
               <polyline points="17 21 17 13 7 13 7 21"/>
               <polyline points="7 3 7 8 15 8"/>
             </svg>
             <span>Сохранить</span>
-          </button>
-          <button class="btn btn-secondary" id="elecShiftResetBtn" type="button">
-            Сбросить к стандартному
           </button>
         </div>
       </div>
