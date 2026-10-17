@@ -14,6 +14,16 @@ function switchTab(tabName, pushHistory = true) {
   const tabEl = document.getElementById('tab-' + tabName);
   if (!tabEl) tabName = 'electronic';
 
+  // Страницы стандарта и E-Param открываются только из редактора:
+  // после перезагрузки их данных нет — возвращаемся к таблице стандартов.
+  const isDetailPage = tabName === 'standard-view' || tabName === 'eparam-edit';
+  if (isDetailPage) {
+    const hasData = tabName === 'standard-view'
+      ? (typeof svFullState !== 'undefined' && svFullState.standardId)
+      : (typeof epPageState !== 'undefined' && epPageState.data);
+    if (!hasData) tabName = 'editor';
+  }
+
   // Переключаем активные классы
   document.querySelectorAll('nav a[data-tab]').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -86,8 +96,10 @@ if (tabName === 'editor') {
     // Просто показываем вкладку
   }
 
-  // Сохраняем активную вкладку в localStorage
-  localStorage.setItem('cl_active_tab', tabName);
+  // Сохраняем активную вкладку (страницы-детали не запоминаем)
+  if (tabName !== 'standard-view' && tabName !== 'eparam-edit') {
+    localStorage.setItem('cl_active_tab', tabName);
+  }
 }
 
 /**
