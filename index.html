@@ -313,51 +313,43 @@
 <!-- ======================= ВКЛАДКА TOP LOSSES ======================= -->
 <div class="tab" id="tab-toploss">
 
-  <!-- ЭКРАН 1: ВЫБОР ПОТЕРЬ -->
+  <!-- ЭКРАН 1: РАЗБОР ПОТЕРЬ ЛИНИИ -->
   <div id="tlSelectView">
-
-    <div class="card">
-      <h2>1. Линия</h2>
-      <div class="row">
-        <div class="field">
-          <label class="required">Линия</label>
-          <select id="tlLine"><option value="">— выберите —</option></select>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="tl-header-row">
-        <h2>2. Выберите потери для проверки</h2>
-        <div class="tl-selected-counter" id="tlSelectedCounter" style="display:none">
-          Выбрано: <strong id="tlSelectedCount">0</strong>
-        </div>
-      </div>
-      <p class="tl-hint">
-        Отметьте одну или несколько потерь. Будут собраны все стандарты,
-        которые их контролируют (дубликаты исключаются).
-      </p>
-      <div id="tlCategoriesContainer" class="tl-select-categories"></div>
-    </div>
-
-    <div class="tl-select-footer">
-      <button class="btn btn-secondary" id="tlResetSelectionBtn">Сбросить выбор</button>
-      <button class="btn btn-primary btn-icon-text" id="tlBuildChecklistBtn" disabled>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 11l3 3L22 4"/>
-          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-        </svg>
-        <span>Сформировать чек-лист</span>
+    <div class="card tl2-top">
+      <h2 class="tl2-h">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        TOP Losses
+        <small>разбор потерь линии · проверка по желанию</small>
+      </h2>
+      <button type="button" class="editor-line-pill" id="tlLinePill" title="Сменить линию">
+        <span class="editor-line-pill-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        </span>
+        <span class="editor-line-pill-code" id="tlLinePillCode">Выбрать линию</span>
+        <span class="editor-line-pill-caret">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </span>
       </button>
     </div>
-
+    <div class="tl2-split">
+      <aside class="card tl2-side">
+        <label class="tl2-search">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="tlSearch" placeholder="Найти потерю…" autocomplete="off">
+        </label>
+        <div class="tl2-side-scroll" id="tlSideList"></div>
+      </aside>
+      <section class="card tl2-main" id="tlDiag"></section>
+    </div>
   </div>
 
-  <!-- ЭКРАН 2: ЧЕК-ЛИСТ (Этап 4) -->
+  <!-- ЭКРАН 2: ПРОВЕРКА -->
   <div id="tlChecklistView" style="display:none"></div>
 
-  <!-- ЭКРАН 3: РЕЗЮМЕ (Этап 4) -->
+  <!-- ЭКРАН 3: ИТОГ -->
   <div id="tlSummaryView" style="display:none"></div>
+
+</div>
 
 </div>
 <!-- ======================= ВКЛАДКА ЧЕК-ЛИСТ CL ======================= -->
@@ -1676,6 +1668,32 @@
     </div>
   </div>
 </div>
+<!-- ======================= УВЕДОМЛЕНИЕ: MACHINE JOURNAL ======================= -->
+<div class="modal-overlay" id="mjNoticeModal">
+  <div class="modal mj-modal">
+    <div class="mj-head">
+      <span class="mj-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="12" y1="7" x2="12" y2="11"/><line x1="12" y1="14" x2="12.01" y2="14"/></svg>
+      </span>
+      <div class="mj-head-text">
+        <h3>Сделайте запись в Machine Journal</h3>
+        <p id="mjNoticeSub"></p>
+      </div>
+      <button class="modal-close" id="mjNoticeClose" title="Закрыть">✕</button>
+    </div>
+    <div class="modal-body mj-body">
+      <p class="mj-lead">Проверка сохранена. Зафиксируйте каждое отклонение в журнале машины (Machine Journal).</p>
+      <div id="mjNoticeList"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-icon-text" id="mjNoticeCopyBtn" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <span>Скопировать список</span>
+      </button>
+      <button class="btn btn-primary" id="mjNoticeOkBtn" type="button">Понятно</button>
+    </div>
+  </div>
+</div>
 <!-- ======================= МОДАЛЬНОЕ ОКНО: БЫСТРАЯ ПРОВЕРКА (из матрицы) ======================= -->
 <div class="modal-overlay" id="quickCheckModal">
   <div class="modal modal-wide">
@@ -2203,6 +2221,7 @@
 <script src="js/components/standard-view.js"></script>
 <script src="js/components/quick-add-machine.js"></script>
 <script src="js/components/cil-table.js"></script>
+<script src="js/components/mj-notice.js"></script>
 <script src="js/io/excel-common.js"></script>
 <script src="js/io/standards-io.js"></script>
 <script src="js/views/brand-schedule.js"></script>
@@ -2211,7 +2230,8 @@
 <script src="js/views/cl-checklist/cl-checklist.js"></script>
 <script src="js/views/cl-checklist/quick-check.js"></script>
 <script src="js/views/cl-checklist/cl-save.js"></script>
-<script src="js/views/toploss.js"></script>
+<script src="js/views/toploss/toploss.js"></script>
+<script src="js/views/toploss/toploss-check.js"></script>
 <script src="js/views/history/history.js"></script>
 <script src="js/views/history/history-export.js"></script>
 <script src="js/views/dashboard.js"></script>
