@@ -573,6 +573,3 @@ $('#epPageSaveBtn')?.addEventListener('click', () => {
   showToast(wasNew ? 'Параметр добавлен' : 'Параметр обновлён');
 });
 
-/* Пагинация истории — отдельные переменные, чтобы не конфликтовать с редактором */
-let historyPage = 1;
-let historyPageSize = 10;
