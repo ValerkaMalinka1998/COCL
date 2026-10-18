@@ -757,7 +757,7 @@ function bindCoclAccordionEvents() {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const stdId = btn.dataset.stdId;
-      if (stdId && typeof openStandardView === 'function') openStandardView(stdId);
+      if (stdId && typeof openStandardView === 'function') openStandardView(stdId, { brand: $('#brandTo')?.value || '' });
     });
   });
 

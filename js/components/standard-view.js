@@ -40,147 +40,141 @@ function formatDateTime(iso) {
   }
 }
 
-window.openStandardView = function(stdId) {
+/* Открыть просмотр стандарта. opts.brand — бренд, строку которого выделить
+   в таблице норм (по умолчанию — бренд дня линии из расписания брендов). */
+window.openStandardView = function(stdId, opts) {
   const st = getStandards().find(s => s.id === stdId);
   if (!st) return showToast('Стандарт не найден', true);
 
   const modal = $('#standardViewModal');
   const body = $('#standardViewBody');
-  const title = $('#standardViewTitle');
-  const chipsEl = $('#standardViewChips');
   if (!modal || !body) return;
 
-  // Заголовок модалки
-  if (title) title.textContent = 'Просмотр стандарта · ' + (st.oplNumber || '—');
-
-  // Чипы в шапке
-  if (chipsEl) {
-    chipsEl.innerHTML = renderStandardViewHeaderChips(st);
+  let brand = (opts && opts.brand) || '';
+  if (!brand && typeof getElectronicBrandForDate === 'function') {
+    brand = getElectronicBrandForDate(st.line, getCurrentShiftPeriod().date) || '';
   }
 
-  // Тело модалки (без чипов)
-  body.innerHTML = renderStandardViewContent(st);
+  $('#standardViewTitle').textContent = st.title || '—';
+  $('#standardViewChips').innerHTML = renderStandardViewHeaderChips(st);
+  body.innerHTML = renderStandardViewContent(st, brand);
 
-  // Навешиваем обработчики на превью фото (открытие лайтбокса)
   body.querySelectorAll('[data-photo-idx]').forEach(el => {
-    el.addEventListener('click', () => {
-      const idx = parseInt(el.dataset.photoIdx, 10);
-      openLightbox(st, idx);
-    });
+    el.addEventListener('click', () => openLightbox(st, parseInt(el.dataset.photoIdx, 10)));
   });
 
   openModal(modal);
+  body.scrollTop = 0;
 };
 
-/* Отрисовать чипы для шапки модалки просмотра стандарта */
+/* Шапка: OPL · машина · узел · часть и тип контроля */
 function renderStandardViewHeaderChips(st) {
-  const ctx = getBlockForLine(st.line);
-
-  const chips = [];
-  if (ctx) {
-    chips.push(`<span class="sv-chip sv-chip-cyan">${escapeHtml(ctx.workshop.name)}</span>`);
-    const areaLabel = ctx.area.name + (ctx.block ? ` · ${ctx.block.name}` : '');
-    chips.push(`<span class="sv-chip sv-chip-cyan">${escapeHtml(areaLabel)}</span>`);
-  }
-  if (st.line) chips.push(`<span class="sv-chip sv-chip-cyan">${escapeHtml(st.line)}</span>`);
-  if (st.nodePart) chips.push(`<span class="et-part-chip et-part-${escapeAttr(st.nodePart.toLowerCase())}">${escapeHtml(st.nodePart)}</span>`);
-  if (st.machine) chips.push(`<span class="sv-chip sv-chip-amber">${escapeHtml(st.machine)}</span>`);
-
-  return chips.join('');
+  const bits = [
+    st.oplNumber ? `<b>${escapeHtml(st.oplNumber)}</b>` : '',
+    st.machine ? escapeHtml(st.machine) : '',
+    st.node ? escapeHtml(st.node) : '',
+    st.nodePart ? escapeHtml(st.nodePart) : ''
+  ].filter(Boolean);
+  return bits.join('<i>·</i>') +
+    `<span class="svm-type">${escapeHtml(controlTypeLabel(st.controlType))}</span>`;
 }
 
-/* Сформировать HTML содержимого модалки */
-function renderStandardViewContent(st) {
+/* Текст с переносами строк → абзацы */
+function svmText(text) {
+  const s = String(text || '').trim();
+  if (!s) return '';
+  return s.split(/\n+/).map(line => `<p>${escapeHtml(line)}</p>`).join('');
+}
+
+/* Содержимое окна просмотра */
+function renderStandardViewContent(st, brand) {
   const ctx = getBlockForLine(st.line);
+  const blocks = (Array.isArray(st.measurements) ? st.measurements : [])
+    .filter(b => b && Array.isArray(b.points) && b.points.length);
+  const maxPts = blocks.reduce((m, b) => Math.max(m, b.points.length), 0);
 
-  // ----- Левая колонка: те же блоки, что на полной странице стандарта -----
-  const mainHtml = `
-    <div class="sv-title">${escapeHtml(st.title || '—')}</div>
-    <div class="sv-full-content-blocks">${buildSvContentBlocksHtml(st, false)}</div>
-  `;
+  // Какой блок выделить: бренд из контекста, иначе «Все бренды»
+  const hl = blocks.find(b => b.brand === brand) ? brand
+    : (blocks.find(b => !b.brand) ? '' : null);
 
-  // ----- Правая колонка: фото + связанные объекты -----
+  // --- Норма ---
+  let normHtml;
+  if (!blocks.length) {
+    normHtml = `<div class="svm-visual">${CIL_ICONS.check}<span>Без замеров — проверка <b>ОК / Не ОК</b> по описанию контроля</span></div>`;
+  } else {
+    const head = Array.from({ length: maxPts }, (_, i) => `<th>Т${i + 1}</th>`).join('');
+    const rows = blocks.map(b => {
+      const isHl = hl !== null && (b.brand || '') === hl;
+      const cells = Array.from({ length: maxPts }, (_, i) => {
+        const p = b.points[i];
+        return `<td>${p ? escapeHtml(p.value || '—') : ''}</td>`;
+      }).join('');
+      return `<tr class="${isHl ? 'is-hl' : ''}"><th>${escapeHtml(b.brand || 'Все бренды')}${isHl && brand ? '<span class="svm-now">сейчас</span>' : ''}</th>${cells}</tr>`;
+    }).join('');
+    normHtml = `<div class="svm-norm-wrap"><table class="svm-norm"><thead><tr><th>Бренд</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+
+  const card = (title, inner, cls = '') => inner ? `
+    <section class="svm-card ${cls}"><h4>${title}</h4>${inner}</section>` : '';
+
+  // --- Фото ---
   const photos = Array.isArray(st.photos) ? st.photos : [];
+  const photo = (name, idx, cls) => `
+    <button type="button" class="svm-photo ${cls}" data-photo-idx="${idx}" title="${escapeAttr(name)}">
+      <img src="${escapeAttr(getPhotoPath(st, name))}" alt="${escapeAttr(name)}"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+      <span class="svm-photo-miss" style="display:none">нет файла<small>${escapeHtml(name)}</small></span>
+    </button>`;
+  const photosHtml = photos.length
+    ? `${photo(photos[0], 0, 'svm-photo-main')}${photos.length > 1
+        ? `<div class="svm-thumbs">${photos.slice(1).map((n, i) => photo(n, i + 1, '')).join('')}</div>` : ''}`
+    : '<div class="svm-empty">Фото не добавлены</div>';
 
-  const photosCardHtml = photos.length ? `
-    <div class="sv-side-card">
-      <div class="sv-side-card-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-          <circle cx="8.5" cy="8.5" r="1.5"/>
-          <polyline points="21 15 16 10 5 21"/>
-        </svg>
-        Фотографии
-      </div>
-      <div class="sv-photos-mini">
-        ${photos.map((name, idx) => {
-          const path = getPhotoPath(st, name);
-          return `
-            <div class="sv-photo-mini" data-photo-idx="${idx}" title="${escapeAttr(name)}">
-              <img src="${escapeAttr(path)}" alt="${escapeAttr(name)}"
-                   onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-              <div class="photo-missing" style="display:none">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="8" x2="12" y2="12"/>
-                  <line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
-              </div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    </div>
-  ` : '';
+  // --- Где и связи ---
+  const row = (label, value) => value ? `<div class="svm-row"><span>${label}</span><b>${escapeHtml(value)}</b></div>` : '';
+  const whereHtml = [
+    row('Цех', ctx && ctx.workshop.name),
+    row('Участок', ctx && (ctx.area.name + (ctx.block ? ' · ' + ctx.block.name : ''))),
+    row('Линия', st.line),
+    row('Часть', st.nodePart),
+    row('Машина', st.machine),
+    row('Узел', st.node),
+    row('OPL №', st.oplNumber)
+  ].join('');
 
-  const sideRow = (label, value) => {
-    const isEmpty = !value || !String(value).trim();
-    return `
-      <div class="sv-side-row">
-        <span class="sv-side-label">${escapeHtml(label)}</span>
-        <span class="sv-side-value ${isEmpty ? 'sv-empty' : ''}">${isEmpty ? '—' : escapeHtml(value)}</span>
-      </div>
-    `;
-  };
+  const APPLY = { ChangeOver: ['Change Over', 'co'], CL_TO: ['CL в ТО', 'to'], CL_Conversion: ['CL в Конвертацию', 'cv'] };
+  const applies = (st.appliesTo || []).filter(a => APPLY[a])
+    .map(a => `<span class="svm-tag svm-tag-${APPLY[a][1]}">${APPLY[a][0]}</span>`).join('');
+  const trig = (st.triggers || []).map(v => `<span class="svm-tag">${escapeHtml(getTriggerLabel(v))}</span>`).join('');
+  const losses = (st.topLosses || []).map(id => findLossById(id)).filter(Boolean)
+    .map(l => `<span class="svm-tag svm-tag-tl">${escapeHtml(l.name)}</span>`).join('');
+  const linksHtml = [
+    applies ? `<div class="svm-links"><span>Применять к</span><div>${applies}${st.forceInChangeOver ? '<span class="svm-tag">всегда в Change Over</span>' : ''}</div></div>` : '',
+    trig ? `<div class="svm-links"><span>Триггеры</span><div>${trig}</div></div>` : '',
+    losses ? `<div class="svm-links"><span>Top Losses</span><div>${losses}</div></div>` : ''
+  ].join('');
 
-  const sideHtml = `
-    ${photosCardHtml}
-    <div class="sv-side-card">
-      <div class="sv-side-card-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-        </svg>
-        Связанные объекты
-      </div>
-      ${sideRow('Цех', ctx ? ctx.workshop.name : '')}
-      ${sideRow('Участок', ctx ? ctx.area.name + (ctx.block ? ` (${ctx.block.name})` : '') : '')}
-      ${sideRow('Линия', st.line)}
-      ${sideRow('Рабочий центр', st.nodePart)}
-      ${sideRow('Машина', st.machine)}
-      ${sideRow('Узел', st.node)}
-      ${sideRow('OPL №', st.oplNumber)}
-    </div>
-    <div class="sv-side-card">
-      <div class="sv-side-card-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <polyline points="12 6 12 12 16 14"/>
-        </svg>
-        История
-      </div>
-      ${sideRow('Автор', st.author || '')}
-      ${sideRow('Дата создания', formatDateTime(st.createdAt))}
-      ${sideRow('Последнее обновление', formatDateTime(st.updatedAt))}
-    </div>
-  `;
+  const upd = st.updatedAt || st.createdAt;
+  const metaHtml = `<div class="svm-foot">${st.author ? `Автор: ${escapeHtml(st.author)} · ` : ''}${upd ? 'обновлён ' + formatDateTime(upd) : ''}</div>`;
 
   return `
-    <div class="sv-layout">
-      <div class="sv-main">${mainHtml}</div>
-      <div class="sv-side">${sideHtml}</div>
-    </div>
-  `;
+    <div class="svm-grid">
+      <div class="svm-main">
+        ${card('Норма' + (blocks.length > 1 ? ` <small>${blocks.length} ${blocks.length < 5 ? 'бренда' : 'брендов'}</small>` : ''), normHtml, 'svm-card-norm')}
+        ${card('Как проверять', svmText(st.controlDescription), 'svm-card-how')}
+        <div class="svm-why">
+          ${card('Описание проблемы', svmText(st.problemDescription))}
+          ${card('Цель', svmText(st.purpose))}
+          ${card('Знаю почему', svmText(st.whyCreated))}
+        </div>
+      </div>
+      <aside class="svm-side">
+        ${card(`Фото${photos.length ? ` <small>${photos.length}</small>` : ''}`, photosHtml, 'svm-card-photos')}
+        ${card('Где', whereHtml)}
+        ${card('Связи', linksHtml)}
+        ${metaHtml}
+      </aside>
+    </div>`;
 }
 
 /* Закрыть модалку просмотра */
