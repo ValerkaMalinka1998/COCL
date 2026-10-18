@@ -83,13 +83,35 @@
 /* === Покрытие смен === */
 .hist-cov-card { padding: 14px 16px; }
 .hist-cov-empty { font-size: 12px; color: var(--text-dim); }
-.hist-cov-h { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
-.hist-cov-title { font-size: 11px; font-weight: 800; color: var(--text-second); text-transform: uppercase; letter-spacing: .5px; }
-.hist-cov-sub { font-size: 12px; color: var(--text-dim); }
+.hist-cov-h { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 14px; }
+.hist-cov-week { flex: 1; min-width: 0; }
+.hist-cov-wk { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.hist-cov-no { font-size: 22px; font-weight: 800; color: var(--text-main); letter-spacing: -.2px; }
+.hist-cov-range { font-size: 16px; font-weight: 700; color: var(--text-second); font-variant-numeric: tabular-nums; }
+.hist-cov-tag { align-self: center; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 800; color: var(--text-second); background: var(--bg-hover); border: 1px solid var(--border); }
+.hist-cov-tag.is-cur { color: #fff; background: var(--accent-cyan); border-color: var(--accent-cyan); }
+.hist-cov-sub { margin-top: 4px; font-size: 12.5px; color: var(--text-dim); }
+.hist-cov-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; max-width: 280px; margin-top: 8px; }
+.hist-cov-days i { height: 5px; border-radius: 3px; background: var(--bg-input); border: 1px solid var(--border); }
+.hist-cov-days i.gone { background: var(--accent-cyan); border-color: var(--accent-cyan); }
+.hist-cov-days i.now { background: color-mix(in srgb, var(--accent-cyan) 45%, transparent); border-color: var(--accent-cyan); }
+.hist-cov-nav { display: flex; align-items: center; gap: 6px; }
+.hist-cks { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.hist-ck { --k: var(--text-main); padding: 10px 12px; border: 1px solid var(--border); border-left: 3px solid var(--k); border-radius: 10px; background: var(--bg-card); }
+.hist-ck b { display: block; font-size: 22px; font-weight: 800; line-height: 1.1; color: var(--k); font-variant-numeric: tabular-nums; }
+.hist-ck b em { font-style: normal; font-size: 14px; font-weight: 700; color: var(--text-dim); }
+.hist-ck span { display: block; margin-top: 2px; font-size: 12.5px; font-weight: 700; color: var(--text-second); }
+.hist-ck small { display: block; margin-top: 2px; font-size: 11px; color: var(--text-dim); }
+.hist-ck-in { --k: var(--accent-cyan); }
+.hist-ck-ok { --k: var(--accent-green); }
+.hist-ck-fail { --k: var(--accent-red); background: color-mix(in srgb, var(--accent-red) 5%, var(--bg-card)); }
+.hist-ck-warn { --k: var(--accent-amber); background: color-mix(in srgb, var(--accent-amber) 6%, var(--bg-card)); cursor: help; }
 .hist-cw { display: grid; grid-template-columns: 70px repeat(7, minmax(0, 1fr)); gap: 6px; }
 .hist-cw-dh { text-align: center; font-size: 11px; font-weight: 800; color: var(--text-second); padding: 4px 0; border-radius: 8px; }
 .hist-cw-dh small { display: block; font-weight: 600; color: var(--text-dim); }
-.hist-cw-dh.today { background: color-mix(in srgb, var(--accent-cyan) 12%, transparent); color: var(--accent-cyan); }
+.hist-cw-dh.today { background: var(--accent-cyan); color: #fff; }
+.hist-cw-dh.today small { color: #fff; opacity: .85; }
+.hist-cw-dh.gone { color: var(--text-main); }
 .hist-cw-rl { font-size: 11px; font-weight: 800; color: var(--text-second); display: flex; flex-direction: column; justify-content: center; }
 .hist-cw-rl small { color: var(--text-dim); font-weight: 600; }
 
@@ -114,8 +136,6 @@ button.hist-cc:hover { background: var(--bg-hover); }
 .hist-cc-now { --k: var(--accent-cyan); }
 .hist-cc-future, .hist-cc-none { border-style: dashed; border-left-width: 1px; opacity: .65; }
 .hist-cc-none { opacity: .45; }
-.hist-covsum { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--text-second); margin-top: 10px; }
-.hist-covsum b { color: var(--text-main); }
 
 /* === Лента проверок === */
 .hist-day { font-size: 11px; font-weight: 800; color: var(--text-second); text-transform: uppercase; letter-spacing: .5px; margin: 16px 4px 6px; display: flex; gap: 8px; }
@@ -292,6 +312,7 @@ button.hist-cc:hover { background: var(--bg-hover); }
 }
 @media (max-width: 760px) {
   .hist-cw { grid-template-columns: 44px repeat(7, minmax(64px, 1fr)); overflow-x: auto; }
+  .hist-cks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* === Печать страницы проверки === */

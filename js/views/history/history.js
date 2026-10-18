@@ -198,27 +198,57 @@ function renderHistCoverage() {
   box.innerHTML = histCoverageHtml(histState.line, histState.covWeek, 'data-hist-week');
 }
 
+/* Номер недели ISO 8601 для даты 'YYYY-MM-DD' */
+function histIsoWeek(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const jan4 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d - jan4) / 864e5 - 3 + ((jan4.getDay() + 6) % 7)) / 7);
+}
+
 /* Неделя смен Чек-листа CL (Пн–Вс × день/ночь); weekAttr — атрибут кнопок недели */
 function histCoverageHtml(line, weekOffset, weekAttr) {
   const week = histCoverage(line, weekOffset);
-  const sum = { past: 0, ok: 0, partial: 0, missed: 0, fail: 0 };
+  const today = getCurrentShiftPeriod().date;
+
+  // Итоги недели: смены и пункты
+  const sum = { planned: 0, past: 0, ok: 0, partial: 0, missed: 0, fail: 0, now: 0, pts: 0, ptsFail: 0 };
   const missedList = [];
   week.forEach(d => ['day', 'night'].forEach(s => {
     const c = d.shifts[s];
-    if (c.state === 'none' || c.state === 'future' || c.state === 'now') return;
+    if (c.state === 'none') return;
+    sum.planned++;
+    if (c.state === 'future') return;
+    sum.pts += c.done;
+    sum.ptsFail += c.fail;
+    if (c.state === 'now') { sum.now++; return; }
     sum.past++;
     sum[c.state]++;
-    if (c.state === 'missed') missedList.push(`${d.dayName} ${s === 'day' ? 'день' : 'ночь'}, бр. ${c.letter}`);
+    if (c.state === 'missed') missedList.push(`${d.dayName} ${s === 'day' ? 'день' : 'ночь'} · ${c.letter}`);
   }));
+  const checked = sum.ok + sum.partial + sum.fail;
+  const clean = sum.ok + sum.partial;
+
+  // Дни недели: сколько прошло
+  const daysGone = week.filter(d => d.date < today).length;
+  const isCur = weekOffset === 0;
+  const dayNo = week.findIndex(d => d.date === today) + 1;
+  const daysText = isCur
+    ? `идёт ${dayNo}-й день из 7 · прошло ${daysGone} ${pluralRu(daysGone, 'день', 'дня', 'дней')}`
+    : 'неделя завершена · 7 из 7 дней';
+  const weekTag = isCur ? 'Текущая неделя'
+    : weekOffset === -1 ? 'Прошлая неделя'
+    : `${-weekOffset} ${pluralRu(-weekOffset, 'неделя', 'недели', 'недель')} назад`;
 
   const cell = (d, s) => {
     const c = d.shifts[s];
     const night = s === 'night' ? ' hist-cc-night' : '';
+    const head = `<span>Смена ${escapeHtml(c.letter)}</span>`;
     if (c.state === 'none') {
-      return `<div class="hist-cc hist-cc-none${night}"><div class="hist-cc-t"><span>Бр. ${escapeHtml(c.letter)}</span></div><div class="hist-cc-d">нет в расписании</div></div>`;
+      return `<div class="hist-cc hist-cc-none${night}"><div class="hist-cc-t">${head}</div><div class="hist-cc-d">нет в расписании</div></div>`;
     }
     if (c.state === 'future') {
-      return `<div class="hist-cc hist-cc-future${night}"><div class="hist-cc-t"><span>Бр. ${escapeHtml(c.letter)}</span></div><div class="hist-cc-d">запланировано ${c.planned}</div></div>`;
+      return `<div class="hist-cc hist-cc-future${night}"><div class="hist-cc-t">${head}</div><div class="hist-cc-d">запланировано ${c.planned}</div></div>`;
     }
     const left = c.planned - c.done - c.unchecked;
     let text;
@@ -229,37 +259,51 @@ function histCoverageHtml(line, weekOffset, weekAttr) {
     else text = `${left + c.unchecked} не проверено`;
     const pct = Math.round(c.done / c.planned * 100);
     return `<button type="button" class="hist-cc hist-cc-${c.state}${night}" data-hist-shift="${d.date}|${s}" title="Открыть проверку смены">
-      <div class="hist-cc-t"><span>Бр. ${escapeHtml(c.letter)}</span><span>${c.done}/${c.planned}</span></div>
+      <div class="hist-cc-t">${head}<span>${c.done}/${c.planned}</span></div>
       <div class="hist-cc-n">${text}</div>
       <div class="hist-cc-pb"><i style="width:${pct}%"></i></div>
     </button>`;
   };
 
+  const kpi = (cls, val, label, sub, title) => `
+    <div class="hist-ck ${cls}"${title ? ` title="${escapeAttr(title)}"` : ''}>
+      <b>${val}</b><span>${label}</span>${sub ? `<small>${sub}</small>` : ''}
+    </div>`;
+
   const first = week[0].date, last = week[6].date;
-  const isCur = weekOffset === 0;
+  const arrow = (dir, dis) => `<button type="button" class="cil-week-btn" ${weekAttr}="${dir}" title="${dir < 0 ? 'Предыдущая' : 'Следующая'} неделя"${dis ? ' disabled' : ''}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="${dir < 0 ? '15 18 9 12 15 6' : '9 18 15 12 9 6'}"/></svg></button>`;
+
   return `
     <div class="hist-cov-h">
-      <span class="hist-cov-title">Покрытие смен Чек-листа CL</span>
-      <span class="hist-cov-sub">${escapeHtml(line)} · ${fmtShortDate(first)} – ${fmtShortDate(last)}${isCur ? ' · текущая неделя' : ''}</span>
-      <span class="hist-sp"></span>
-      <button type="button" class="cil-week-btn" ${weekAttr}="-1" title="Предыдущая неделя"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
-      ${!isCur ? `<button type="button" class="cil-week-today" ${weekAttr}="0">Сегодня</button>` : ''}
-      <button type="button" class="cil-week-btn" ${weekAttr}="1" title="Следующая неделя" ${isCur ? 'disabled' : ''}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+      <div class="hist-cov-week">
+        <div class="hist-cov-wk">
+          <span class="hist-cov-no">Неделя ${histIsoWeek(first)}</span>
+          <span class="hist-cov-range">${fmtShortDate(first)} – ${fmtShortDate(last)}</span>
+          <span class="hist-cov-tag ${isCur ? 'is-cur' : ''}">${weekTag}</span>
+        </div>
+        <div class="hist-cov-sub">Покрытие смен Чек-листа CL · ${escapeHtml(line)} · ${daysText}</div>
+        <div class="hist-cov-days">${week.map(d => `<i class="${d.date < today ? 'gone' : d.date === today ? 'now' : ''}"></i>`).join('')}</div>
+      </div>
+      <div class="hist-cov-nav">
+        ${arrow(-1, false)}
+        ${!isCur ? `<button type="button" class="cil-week-today" ${weekAttr}="0">К текущей</button>` : ''}
+        ${arrow(1, isCur)}
+      </div>
+    </div>
+    <div class="hist-cks">
+      ${kpi('', `${sum.past}<em>/${sum.planned}</em>`, 'смен прошло', sum.now ? 'и 1 идёт сейчас' : `в расписании ${sum.planned}`)}
+      ${kpi(checked ? 'hist-ck-in' : '', checked, `${pluralRu(checked, 'смена проверена', 'смены проверены', 'смен проверено')}`, `${sum.pts} ${pluralRu(sum.pts, 'пункт', 'пункта', 'пунктов')}`)}
+      ${kpi(clean ? 'hist-ck-ok' : '', clean, 'без отклонений', !clean ? (checked ? 'все проверенные — с отклонениями' : 'нет проверенных смен') : sum.partial ? `из них ${sum.partial} частично` : 'всё в норме')}
+      ${kpi(sum.fail ? 'hist-ck-fail' : '', sum.fail, 'с отклонениями', `${sum.ptsFail} ${pluralRu(sum.ptsFail, 'пункт', 'пункта', 'пунктов')} не в норме`)}
+      ${kpi(sum.missed ? 'hist-ck-warn' : '', sum.missed, 'пропущено', sum.missed ? 'наведите — какие' : 'пропусков нет', missedList.join('\n'))}
     </div>
     <div class="hist-cw">
       <span></span>
-      ${week.map(d => `<div class="hist-cw-dh ${d.isToday ? 'today' : ''}">${d.dayName}<small>${fmtShortDate(d.date)}${d.isToday ? ' · сегодня' : ''}</small></div>`).join('')}
+      ${week.map(d => `<div class="hist-cw-dh ${d.isToday ? 'today' : ''} ${d.date < today ? 'gone' : ''}">${d.dayName}<small>${fmtShortDate(d.date)}${d.isToday ? ' · сегодня' : ''}</small></div>`).join('')}
       <div class="hist-cw-rl">День<small>09–21</small></div>
       ${week.map(d => cell(d, 'day')).join('')}
       <div class="hist-cw-rl">Ночь<small>21–09</small></div>
       ${week.map(d => cell(d, 'night')).join('')}
-    </div>
-    <div class="hist-covsum">
-      <span>Смен прошло: <b>${sum.past}</b></span>
-      <span class="hist-c-ok">✓ полностью: <b>${sum.ok}</b></span>
-      <span class="hist-c-warn">◐ частично: <b>${sum.partial}</b></span>
-      <span class="hist-c-warn">? пропущено: <b>${sum.missed}</b>${missedList.length ? ' (' + escapeHtml(missedList.join('; ')) + ')' : ''}</span>
-      <span class="hist-c-fail">✕ с отклонениями: <b>${sum.fail}</b></span>
     </div>`;
 }
 
