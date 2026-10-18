@@ -1,0 +1,319 @@
+/* ============================================================ */
+/* === ОКНО ПРОСМОТРА СТАНДАРТА (#standardViewModal) ========== */
+/* ============================================================ */
+
+.sv-modal {
+  max-width: 1240px;
+}
+
+.svm-head {
+  align-items: flex-start;
+  padding: 16px 22px;
+}
+
+.svm-head-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.svm-head-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-second);
+}
+
+.svm-head-meta b {
+  color: var(--accent-cyan);
+}
+
+.svm-head-meta i {
+  font-style: normal;
+  color: var(--text-dim);
+}
+
+.svm-type {
+  margin-left: 6px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 40%, transparent);
+  background: color-mix(in srgb, var(--accent-cyan) 10%, transparent);
+  color: var(--accent-cyan);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.svm-head h3 {
+  margin: 4px 0 0;
+  font-size: 20px;
+  line-height: 1.25;
+  color: var(--text-main);
+}
+
+.sv-modal .modal-body.svm-body {
+  padding: 18px 22px;
+  background: var(--bg-main);
+}
+
+.svm-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: start;
+}
+
+.svm-main,
+.svm-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.svm-card {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-card);
+}
+
+.svm-card h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.svm-card h4 small {
+  padding: 1px 7px;
+  border-radius: 9px;
+  background: var(--bg-hover);
+  font-size: 10.5px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.svm-card p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-main);
+}
+
+.svm-card p + p {
+  margin-top: 6px;
+}
+
+/* Норма */
+.svm-card-norm {
+  border-left: 3px solid var(--accent-cyan);
+}
+
+.svm-norm-wrap {
+  overflow-x: auto;
+}
+
+.svm-norm {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.svm-norm th,
+.svm-norm td {
+  padding: 8px 10px;
+  background: none;
+  text-transform: none;
+  letter-spacing: 0;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.svm-norm thead th {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-dim);
+}
+
+.svm-norm tbody th {
+  text-align: left;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-second);
+}
+
+.svm-norm thead th:first-child {
+  width: 1%;
+  text-align: left;
+}
+
+.svm-norm td {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.svm-norm tr:last-child th,
+.svm-norm tr:last-child td {
+  border-bottom: 0;
+}
+
+.svm-norm tr.is-hl th,
+.svm-norm tr.is-hl td {
+  background: color-mix(in srgb, var(--accent-cyan) 10%, transparent);
+}
+
+.svm-norm tr.is-hl th {
+  color: var(--accent-cyan);
+  border-radius: 8px 0 0 8px;
+}
+
+.svm-norm tr.is-hl td:last-child {
+  border-radius: 0 8px 8px 0;
+}
+
+.svm-now {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--accent-cyan);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.svm-visual {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-main);
+}
+
+.svm-visual svg {
+  width: 18px;
+  height: 18px;
+  color: var(--accent-amber);
+}
+
+/* Как проверять — главный текст для оператора */
+.svm-card-how p {
+  font-size: 15px;
+}
+
+/* Описание, цель, почему — три колонки */
+.svm-why {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.svm-why:empty {
+  display: none;
+}
+
+.svm-why .svm-card p {
+  font-size: 13px;
+  color: var(--text-second);
+}
+
+.svm-empty {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+/* Где / связи */
+.svm-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 0;
+  font-size: 13px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.svm-row:last-child {
+  border-bottom: 0;
+}
+
+.svm-row span {
+  color: var(--text-dim);
+}
+
+.svm-row b {
+  font-weight: 700;
+  color: var(--text-main);
+  text-align: right;
+}
+
+.svm-links + .svm-links {
+  margin-top: 10px;
+}
+
+.svm-links > span {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.svm-links > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.svm-tag {
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-hover);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-second);
+}
+
+.svm-tag-co {
+  color: var(--accent-cyan);
+  border-color: color-mix(in srgb, var(--accent-cyan) 40%, transparent);
+  background: color-mix(in srgb, var(--accent-cyan) 10%, transparent);
+}
+
+.svm-tag-to {
+  color: var(--accent-purple);
+  border-color: color-mix(in srgb, var(--accent-purple) 40%, transparent);
+  background: color-mix(in srgb, var(--accent-purple) 10%, transparent);
+}
+
+.svm-tag-cv {
+  color: var(--accent-emerald);
+  border-color: color-mix(in srgb, var(--accent-emerald) 40%, transparent);
+  background: color-mix(in srgb, var(--accent-emerald) 10%, transparent);
+}
+
+.svm-tag-tl {
+  color: var(--accent-amber);
+  border-color: color-mix(in srgb, var(--accent-amber) 40%, transparent);
+  background: color-mix(in srgb, var(--accent-amber) 10%, transparent);
+}
+
+.svm-foot {
+  padding: 0 4px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+@media (max-width: 900px) {
+  .svm-grid {
+    grid-template-columns: 1fr;
+  }
+}

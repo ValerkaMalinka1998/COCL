@@ -173,7 +173,7 @@ function openClCheckModal(rowId, dateStr, shift) {
     openStdBtn.disabled = !isElec && !row.id;
     openStdBtn.onclick = () => {
       if (!isElec && typeof openStandardView === 'function') {
-        openStandardView(row.id);
+        openStandardView(row.id, { brand: quickCheckState.brand || '' });
       } else {
         showToast('Полный просмотр доступен только для механических стандартов', true);
       }
