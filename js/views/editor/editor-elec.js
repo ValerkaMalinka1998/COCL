@@ -101,7 +101,7 @@ function refreshEditorElecTable() {
     html += `
       <tr data-param-id="${id}" class="${isSelected ? 'is-selected' : ''} ${isActive ? '' : 'et-row-inactive'}">
         <td class="et-c-check cil-z${zones[m]}"><input type="checkbox" class="et-check-row" data-param-id="${id}" ${isSelected ? 'checked' : ''}></td>
-        <td><button type="button" class="et-name" data-edit-elec="${id}">${escapeHtml(p.paramName || '—')}</button></td>
+        <td><button type="button" class="et-name" data-edit-elec="${id}">${escapeHtml(p.paramName || '—')}</button>${valChipHtml(p)}</td>
         <td class="et-c-part">${p.nodePart ? `<span class="et-part-chip et-part-${p.nodePart.toLowerCase()}">${escapeHtml(p.nodePart)}</span>` : '<span class="et-dim">—</span>'}</td>
         <td class="et-c-type">${etTypeNormHtml(p, true)}</td>
         <td class="et-c-ap">${etAppliesHtml(p.appliesTo)}</td>

@@ -69,7 +69,10 @@ function normalizeElectronicParam(p) {
 
     author: typeof p.author === 'string' ? p.author : '',
     createdAt: p.createdAt || null,
-    updatedAt: p.updatedAt || null
+    updatedAt: p.updatedAt || null,
+
+    // --- Валидация нового параметра ---
+    validation: normalizeValidation(p.validation)
   };
 }
 

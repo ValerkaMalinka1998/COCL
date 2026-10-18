@@ -226,7 +226,9 @@ function normalizeStandard(st) {
     updatedAt: st.updatedAt || null,
     // --- НОВОЕ: миграция комментария к деактивации ---
     deactivationComment: typeof st.deactivationComment === 'string' ? st.deactivationComment : '',
-    deactivationHistory: Array.isArray(st.deactivationHistory) ? st.deactivationHistory : []
+    deactivationHistory: Array.isArray(st.deactivationHistory) ? st.deactivationHistory : [],
+    // --- Валидация нового стандарта ---
+    validation: normalizeValidation(st.validation)
   };
 }
 
@@ -238,3 +240,44 @@ function setStandards(v) { save(STORAGE_KEYS.standards, v); }
 
 function getHistory() { return load(STORAGE_KEYS.history, []); }
 function setHistory(v) { save(STORAGE_KEYS.history, v); }
+
+/* ============================================================
+   ВАЛИДАЦИЯ НОВОГО СТАНДАРТА / E-PARAM
+   validation = { from, until, decidedAt, result }:
+   from — дата смены начала, until — срок, decidedAt/result —
+   решение аналитика ('approved' | 'rejected'). Пока решения нет,
+   строка проверяется каждую смену (с from) и идёт в чек-листе последней.
+   ============================================================ */
+
+const VALIDATION_DAYS = 14;
+
+function normalizeValidation(v) {
+  if (!v || typeof v !== 'object' || !v.from) return null;
+  return {
+    from: String(v.from),
+    until: String(v.until || addDaysISO(v.from, VALIDATION_DAYS)),
+    decidedAt: v.decidedAt ? String(v.decidedAt) : '',
+    result: v.result === 'approved' || v.result === 'rejected' ? v.result : ''
+  };
+}
+
+/* Идёт ли валидация (решения ещё нет) */
+function isOnValidation(row) {
+  const v = row && row.validation;
+  return !!(v && v.from && !v.decidedAt);
+}
+
+/* Входит ли дата смены в период валидации: проверка каждую смену */
+function isValidationDay(row, dateStr) {
+  const v = row && row.validation;
+  if (!v || !v.from || dateStr < v.from) return false;
+  return !v.decidedAt || dateStr < v.decidedAt;
+}
+
+/* 'none' | 'active' | 'overdue' | 'approved' | 'rejected' */
+function validationStatus(row) {
+  const v = row && row.validation;
+  if (!v || !v.from) return 'none';
+  if (v.decidedAt) return v.result || 'approved';
+  return getCurrentShiftPeriod().date > v.until ? 'overdue' : 'active';
+}

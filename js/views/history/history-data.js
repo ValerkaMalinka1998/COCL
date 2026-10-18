@@ -206,6 +206,7 @@ function histFindRow(id) {
 
 /* Запланирован ли стандарт/параметр на смену (по «Расписанию CL») */
 function histIsPlanned(row, line, dateStr, shift) {
+  if (isValidationDay(row, dateStr)) return true;
   const weekStart = histWeekStartOf(dateStr);
   const w = getRowForWeek(row, weekStart, line);
   if (!w.member) return false;

@@ -669,6 +669,7 @@ function copyStandardNew(id) {
   copy.number = '';
   // Копия — новый стандарт: в расписание его добавляют отдельно
   copy.inSchedule = false;
+  copy.validation = null;   // копия — новый стандарт, валидацию ставим заново
   copy.frequency = { type: 'weekly', schedule: [], shifts: ['day', 'night'], daysOfWeek: [], dates: [], timeWindows: [] };
   copy.createdAt = new Date().toISOString();
   copy.updatedAt = new Date().toISOString();
