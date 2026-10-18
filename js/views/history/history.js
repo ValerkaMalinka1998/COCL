@@ -403,7 +403,7 @@ function renderHistDeviations() {
                 ${isElec ? '<span class="hist-tag hist-tag-elec">E-Param</span>' : ''}
                 ${n >= 2 ? `<span class="hist-tag hist-tag-fail">повтор ×${n}</span>` : ''}</td>
               <td class="hist-dev-val">${escapeHtml(histDeviationText(h, it))}</td>
-              <td class="hist-sub">${it.comment ? '💬 ' + escapeHtml(it.comment) : '—'}</td>
+              <td class="hist-sub">${it.comment ? cmtLine(it.comment) : '—'}</td>
               <td><span class="hist-tag hist-tag-kind" style="--k:${HIST_KINDS[histKind(h)].color}">${escapeHtml(HIST_KINDS[histKind(h)].short)}</span></td>
             </tr>`;
           }).join('')}

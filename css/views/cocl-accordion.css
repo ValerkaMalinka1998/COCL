@@ -288,3 +288,7 @@
   transform: scale(1.1);
   box-shadow: 0 0 14px rgba(255, 184, 0, 0.7);
 }
+
+/* Залитый пузырь на янтарном фоне кнопки: белый с янтарными точками */
+.cocl-acc-comment-btn.has-comment .cmt-svg.cmt-outline .cmt-bubble { fill: #fff; stroke: #fff; }
+.cocl-acc-comment-btn.has-comment .cmt-svg.cmt-outline .cmt-dot { fill: var(--accent-amber); }

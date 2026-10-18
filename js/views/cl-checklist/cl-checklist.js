@@ -724,7 +724,7 @@ function showClPeek(cell) {
         (pts.length === 1 && pts[0].label ? ` <span class="hist-sub">норма ${escapeHtml(pts[0].label)}</span>` : '')
       : `<span class="hist-pt ${it.status === 'FAIL' ? 'bad' : ''}"><b>${it.status === 'FAIL' ? 'Не ОК' : 'ОК'}</b></span>`) + '</div>';
   }
-  if (it && it.comment) body += `<div class="hist-com">💬 ${escapeHtml(it.comment)}</div>`;
+  if (it && it.comment) body += `<div class="hist-com">${cmtLine(it.comment)}</div>`;
 
   const title = row.oplNumber ? `<span class="hist-opl">${escapeHtml(row.oplNumber)}</span> · ${escapeHtml(row.title || row.paramName || '')}` : escapeHtml(row.title || row.paramName || '');
   const el = document.createElement('div');

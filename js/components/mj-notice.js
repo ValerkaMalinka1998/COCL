@@ -36,7 +36,7 @@ function showMachineJournalNotice(failItems, ctx = {}) {
       <div class="mj-item">
         <div class="mj-item-title">${it.kind === 'elec' ? '<span class="mj-kind">E-Param</span> ' : ''}${it.oplNumber ? `<span class="mj-opl">${escapeHtml(it.oplNumber)}</span> · ` : ''}${escapeHtml(it.title || '—')}</div>
         <div class="mj-item-val">${escapeHtml(valueText(it))}</div>
-        ${it.comment ? `<div class="mj-item-com">💬 ${escapeHtml(it.comment)}</div>` : ''}
+        ${it.comment ? `<div class="mj-item-com">${cmtLine(it.comment)}</div>` : ''}
       </div>`).join('')}`).join('');
 
   // Текст для копирования в Machine Journal
