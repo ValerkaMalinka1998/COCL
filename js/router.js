@@ -24,6 +24,13 @@ function switchTab(tabName, pushHistory = true) {
     if (!hasData) tabName = 'editor';
   }
 
+  // Окно выбора линии принадлежит вкладке, из которой открыто: при уходе
+  // закрываем его и сбрасываем колбэк, иначе оно «прилипает» к другой вкладке.
+  if (typeof closeLinePickerModal === 'function' && document.getElementById('linePickerModal')?.classList.contains('active')) {
+    closeLinePickerModal();
+  }
+  if (typeof linePickerOnSelect !== 'undefined') linePickerOnSelect = null;
+
   // Переключаем активные классы
   document.querySelectorAll('nav a[data-tab]').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
