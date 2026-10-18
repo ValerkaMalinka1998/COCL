@@ -33,7 +33,7 @@ function createEmptyStandard() {
       daysOfWeek: [],
       dates: []
     },
-    // --- НОВОЕ: в расписании технолога ---
+    // --- НОВОЕ: в расписании аналитика ---
     inSchedule: false,
     problemDescription: '',
     controlDescription: '',
@@ -218,7 +218,7 @@ function normalizeStandard(st) {
     photos: Array.isArray(st.photos)
       ? st.photos.filter(p => typeof p === 'string' && p.trim() !== '')
       : [],
-    // --- НОВОЕ: в расписании технолога (миграция) ---
+    // --- НОВОЕ: в расписании аналитика (миграция) ---
     inSchedule: st.inSchedule === true,
     // --- НОВОЕ: миграция истории ---
     author: typeof st.author === 'string' ? st.author : '',
