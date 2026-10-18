@@ -46,8 +46,8 @@
 }
 .settings-nav-item.active {
   color: var(--accent-cyan);
-  background: rgba(0, 212, 255, 0.08);
-  border-color: rgba(0, 212, 255, 0.35);
+  background: rgba(58, 166, 240, 0.08);
+  border-color: rgba(58, 166, 240, 0.35);
 }
 .settings-nav-item.active svg { opacity: 1; }
 .settings-nav-label { flex: 1; min-width: 0; }
@@ -64,7 +64,7 @@
 .settings-nav-count:empty { display: none; }
 .settings-nav-item.active .settings-nav-count {
   color: var(--accent-cyan);
-  background: rgba(0, 212, 255, 0.12);
+  background: rgba(58, 166, 240, 0.12);
 }
 
 /* --- Разделы: видно только выбранный --- */
@@ -129,7 +129,7 @@
 .settings-chip:hover { border-color: var(--border-hi); color: var(--text-main); }
 .settings-chip.active {
   color: var(--accent-cyan);
-  background: rgba(0, 212, 255, 0.1);
+  background: rgba(58, 166, 240, 0.1);
   border-color: var(--accent-cyan);
 }
 .settings-chip-count {
@@ -238,7 +238,7 @@
 }
 .settings-mark {
   color: inherit;
-  background: rgba(0, 212, 255, 0.25);
+  background: rgba(58, 166, 240, 0.25);
   border-radius: 3px;
 }
 .settings-inline-input {
@@ -248,7 +248,7 @@
   font-size: 14px;
   border: 1px solid var(--accent-cyan);
   border-radius: 6px;
-  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(58, 166, 240, 0.15);
 }
 
 /* --- Иконки-кнопки строк --- */
@@ -421,9 +421,9 @@
 .st-line:hover { border-color: var(--accent-cyan); }
 .st-line.active {
   color: var(--accent-cyan);
-  background: rgba(0, 212, 255, 0.1);
+  background: rgba(58, 166, 240, 0.1);
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12);
+  box-shadow: 0 0 0 3px rgba(58, 166, 240, 0.12);
 }
 .st-line-meta {
   min-width: 18px;
@@ -564,7 +564,7 @@
 button.st-chip:hover { border-color: var(--border-hi); color: var(--text-main); }
 .st-chip.on {
   color: var(--accent-cyan);
-  background: rgba(0, 212, 255, 0.1);
+  background: rgba(58, 166, 240, 0.1);
   border-color: var(--accent-cyan);
 }
 .st-chip[disabled] { cursor: default; }

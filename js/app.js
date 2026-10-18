@@ -6,9 +6,56 @@
    ============================================================ */
 
 /* ============================================================
-   ЧАСЫ
+   ШАПКА: ЧАСЫ, СМЕНА И «КРУГ СМЕНЫ»
+   Сверху — смена, бригада, дата и время; снизу — полоса прогресса
+   смены (09:00 → 21:00 / 21:00 → 09:00) и сколько CL проверено
+   в текущую смену на линии Чек-листа CL.
    ============================================================ */
-function tickClock() { $('#headerDatetime').textContent = nowStr(); }
+const SHIFT_HOURS = 12;
+
+function tickClock() {
+  const d = new Date();
+  const el = $('#headerDatetime');
+  if (el) {
+    el.textContent = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()} ` +
+      `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
+  // Полосу смены и счётчик CL достаточно обновлять раз в минуту
+  if (d.getSeconds() === 0 || !tickClock.done) {
+    tickClock.done = true;
+    updateHeaderShift();
+  }
+}
+
+function updateHeaderShift() {
+  const p = getCurrentShiftPeriod();
+  const isDay = p.shiftType === 'day';
+  const letter = getShiftsForDate(p.date)[p.shiftType];
+  const start = new Date(p.date + (isDay ? 'T09:00:00' : 'T21:00:00'));
+  const pct = Math.max(0, Math.min(100, (Date.now() - start) / (SHIFT_HOURS * 3600000) * 100));
+
+  const name = $('#headerShift');
+  if (name) name.textContent = `${isDay ? 'День' : 'Ночь'} · бригада ${letter}`;
+  const fill = $('#headerLapFill');
+  if (fill) fill.style.width = pct.toFixed(1) + '%';
+  if ($('#headerLapFrom')) $('#headerLapFrom').textContent = isDay ? '09:00' : '21:00';
+  if ($('#headerLapTo')) $('#headerLapTo').textContent = isDay ? '21:00' : '09:00';
+
+  // CL текущей смены — по линии Чек-листа CL
+  let clText = '';
+  let line = '';
+  try { line = localStorage.getItem('cl_cl_line') || ''; } catch (e) { /* нет доступа */ }
+  if (line && typeof histCoverage === 'function') {
+    const day = histCoverage(line, 0).find(x => x.date === p.date);
+    const c = day && day.shifts[p.shiftType];
+    if (c && c.planned) clText = `${line} · CL ${c.done + c.unchecked}/${c.planned}`;
+  }
+  const cl = $('#headerLapCl');
+  if (cl) cl.textContent = clText;
+  const lap = $('#headerLap');
+  if (lap) lap.title = `Прошло ${Math.round(pct)}% смены${clText ? ' · проверено ' + clText.split('CL ')[1] : ''}`;
+}
+
 setInterval(tickClock, 1000);
 tickClock();
 /* ============================================================
@@ -104,31 +151,43 @@ function init() {
   }, 300);
 }
 /* ============================================================
-   Переключатель темы (light / dark)
+   ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ (light / dark)
+   Тема ставится ещё в <head> (без мигания). Здесь — кнопка-шлем,
+   плавный переход только в момент переключения и синхронизация
+   между открытыми вкладками браузера.
    ============================================================ */
-(function initTheme() {
-  const STORAGE_KEY = 'cl_theme';
+const THEME_KEY = 'cl_theme';
+let themeSwitchTimer = null;
+
+function applyTheme(theme, animate) {
   const html = document.documentElement;
-  const saved = localStorage.getItem(STORAGE_KEY);
-
-  // Восстанавливаем сохранённую тему
-  if (saved === 'dark' || saved === 'light') {
-    html.setAttribute('data-theme', saved);
-  } else {
-    // По умолчанию — светлая
-    html.setAttribute('data-theme', 'light');
+  const next = theme === 'dark' ? 'dark' : 'light';
+  if (animate) {
+    html.classList.add('theme-switching');
+    clearTimeout(themeSwitchTimer);
+    themeSwitchTimer = setTimeout(() => html.classList.remove('theme-switching'), 400);
   }
-
-  // Обработчик кнопки
-  const btn = document.getElementById('themeToggle');
+  html.setAttribute('data-theme', next);
+  const btn = $('#themeToggle');
   if (btn) {
-    btn.addEventListener('click', () => {
-      const current = html.getAttribute('data-theme') || 'light';
-      const next = current === 'dark' ? 'light' : 'dark';
-      html.setAttribute('data-theme', next);
-      localStorage.setItem(STORAGE_KEY, next);
-    });
+    const label = next === 'dark' ? 'Дневная тема' : 'Ночная тема';
+    btn.title = label;
+    btn.setAttribute('aria-label', label);
+    btn.setAttribute('aria-pressed', next === 'dark' ? 'true' : 'false');
   }
+}
+
+(function initTheme() {
+  applyTheme(document.documentElement.getAttribute('data-theme'), false);
+  $('#themeToggle')?.addEventListener('click', () => {
+    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    applyTheme(next, true);
+    try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* тема просто не запомнится */ }
+  });
+  // Сменили тему в другой вкладке — повторяем здесь
+  window.addEventListener('storage', (e) => {
+    if (e.key === THEME_KEY && e.newValue) applyTheme(e.newValue, true);
+  });
 })();
 
 init();

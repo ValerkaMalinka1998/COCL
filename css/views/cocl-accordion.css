@@ -24,7 +24,7 @@
   flex-shrink: 0;
   padding: 12px 24px;
   font-size: 14px;
-  box-shadow: 0 0 16px rgba(0, 212, 255, 0.35);
+  box-shadow: 0 0 16px rgba(58, 166, 240, 0.35);
 }
 #buildChecklistBtn:disabled {
   box-shadow: none;

@@ -56,7 +56,7 @@
 .ep-table input:focus {
   outline: none;
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.15);
+  box-shadow: 0 0 0 2px rgba(58, 166, 240, 0.15);
 }
 .ep-range {
   font-family: 'Courier New', Consolas, monospace;

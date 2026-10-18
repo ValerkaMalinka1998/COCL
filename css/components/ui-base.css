@@ -118,12 +118,12 @@ button.btn {
   font-size: 13px;
 }
 .btn-primary {
-  background: linear-gradient(135deg, #2e5288 0%, #3d6db3 100%);
+  background: linear-gradient(100deg, var(--blue-deep) 0%, var(--blue-mid) 100%);
   color: #ffffff;
   border-color: #3d6db3;
 }
 .btn-primary:hover {
-  background: linear-gradient(135deg, #3d6db3 0%, #4d80cc 100%);
+  background: linear-gradient(100deg, var(--blue-mid) 0%, var(--blue-light) 100%);
   box-shadow: 0 4px 14px rgba(61, 109, 179, 0.5);
   transform: translateY(-1px);
 }
@@ -408,7 +408,7 @@ button.btn {
 }
 .progress-bar-inner.low  { background: var(--accent-red);   box-shadow: 0 0 12px rgba(255, 45, 111, 0.5); }
 .progress-bar-inner.mid  { background: var(--accent-amber); box-shadow: 0 0 12px rgba(255, 184, 0, 0.5); }
-.progress-bar-inner.high { background: var(--accent-cyan);  box-shadow: 0 0 12px rgba(0, 212, 255, 0.5); }
+.progress-bar-inner.high { background: var(--accent-cyan);  box-shadow: 0 0 12px rgba(58, 166, 240, 0.5); }
 .progress-bar-inner.done { background: var(--accent-green); box-shadow: 0 0 16px rgba(0, 255, 157, 0.7); }
 .progress-percent {
   min-width: 52px;
@@ -469,10 +469,10 @@ tr:hover td { background: var(--bg-hover); }
   text-transform: uppercase;
 }
 .badge-changeover {
-  background: rgba(0, 212, 255, 0.10);
-  color: #00d4ff;
-  border: 1px solid rgba(0, 212, 255, 0.5);
-  box-shadow: 0 0 8px rgba(0, 212, 255, 0.25);
+  background: rgba(58, 166, 240, 0.10);
+  color: var(--bft-sky);
+  border: 1px solid rgba(58, 166, 240, 0.5);
+  box-shadow: 0 0 8px rgba(58, 166, 240, 0.25);
 }
 .badge-clto {
   background: rgba(123, 92, 255, 0.10);
@@ -731,10 +731,10 @@ tr:hover td { background: var(--bg-hover); }
 
 /* ============ Типы переходов — цветовые чипы ============ */
 .type-chip-changeover {
-  background: rgba(0, 212, 255, 0.10);
-  color: #00d4ff;
-  border: 1px solid rgba(0, 212, 255, 0.5);
-  box-shadow: 0 0 10px rgba(0, 212, 255, 0.25), inset 0 0 6px rgba(0, 212, 255, 0.08);
+  background: rgba(58, 166, 240, 0.10);
+  color: var(--bft-sky);
+  border: 1px solid rgba(58, 166, 240, 0.5);
+  box-shadow: 0 0 10px rgba(58, 166, 240, 0.25), inset 0 0 6px rgba(58, 166, 240, 0.08);
 }
 .type-chip-clto {
   background: rgba(123, 92, 255, 0.10);

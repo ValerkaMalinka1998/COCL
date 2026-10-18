@@ -111,7 +111,7 @@
 }
 .photo-card:hover {
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 12px rgba(0, 212, 255, 0.3);
+  box-shadow: 0 0 12px rgba(58, 166, 240, 0.3);
 }
 .photo-card img {
   width: 100%;
@@ -279,7 +279,7 @@
   border: 1px solid var(--border-hi);
   color: var(--text-second);
 }
-.sv-chip-cyan { background: rgba(0, 212, 255, 0.1); color: var(--accent-cyan); border-color: rgba(0, 212, 255, 0.4); }
+.sv-chip-cyan { background: rgba(58, 166, 240, 0.1); color: var(--accent-cyan); border-color: rgba(58, 166, 240, 0.4); }
 .sv-chip-purple { background: rgba(123, 92, 255, 0.1); color: var(--accent-purple); border-color: rgba(123, 92, 255, 0.4); }
 .sv-chip-amber { background: rgba(232, 154, 0, 0.1); color: var(--accent-amber); border-color: rgba(232, 154, 0, 0.4); }
 .sv-chip-green { background: rgba(0, 196, 122, 0.1); color: var(--accent-green); border-color: rgba(0, 196, 122, 0.4); }
@@ -356,7 +356,7 @@
 .sv-photo-mini:hover {
   border-color: var(--accent-cyan);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(58, 166, 240, 0.3);
 }
 .sv-photo-mini img {
   width: 100%;
@@ -501,7 +501,7 @@
   font-family: inherit;
 }
 .lb-nav:hover {
-  background: rgba(0, 212, 255, 0.4);
+  background: rgba(58, 166, 240, 0.4);
   transform: translateY(-50%) scale(1.08);
 }
 .lb-prev {

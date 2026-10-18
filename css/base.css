@@ -3,128 +3,132 @@
    ============================================================ */
 
 /* ============ ТЕМА: Дневная (light) — по умолчанию ============ */
+/* Палитра BFT: королевский и ночной синий, голубой, медь (ребрендинг 2026) */
 :root,
 [data-theme="light"] {
-  /* Навигация (тёмная всегда) */
-  --nav-bg:       #0d1b3a;
-  --nav-bg-2:     #0a1228;
-  --nav-text:     #e0e7ff;
-  --nav-text-dim: #8892b0;
-  --nav-border:   #1f2a44;
-  --nav-hover:    rgba(0, 212, 255, 0.08);
-  --nav-active:   rgba(0, 212, 255, 0.14);
+  /* Навигация (тёмно-синяя всегда) */
+  --nav-bg:       #071648;
+  --nav-bg-2:     #050f36;
+  --nav-text:     #e6edff;
+  --nav-text-dim: #8fa3d6;
+  --nav-border:   #13286e;
+  --nav-hover:    rgba(58, 166, 240, 0.10);
+  --nav-active:   rgba(58, 166, 240, 0.18);
 
   /* Рабочая область — светлая */
-  --bg-main:      #eef3fb;
+  --bg-main:      #eef3fc;
   --bg-card:      #ffffff;
   --bg-input:     #ffffff;
-  --bg-hover:     #f5f8fe;
+  --bg-hover:     #f3f7ff;
 
-  /* Синие акценты */
-  --blue-deep:    #1a2c52;
-  --blue-mid:     #2e5288;
-  --blue-light:   #3d6db3;
+  /* Фирменные синие BFT */
+  --blue-deep:    #0a1f6e;
+  --blue-mid:     #1238b8;
+  --blue-light:   #2f5fd6;
+  --bft-ink:      #061340;
+  --bft-sky:      #3aa6f0;
+  --bft-copper:   #c98a4b;
 
-  /* Неон */
-  --accent-cyan:   #00d4ff;
-  --accent-purple: #7b5cff;
-  --accent-green:  #00c47a;
-  --accent-red:    #e6244f;
+  /* Акценты */
+  --accent-cyan:   #2a95e8;
+  --accent-purple: #6a5cff;
+  --accent-green:  #10a86a;
+  --accent-red:    #e3264f;
   --accent-amber:  #e89a00;
+  --accent-emerald:#10b39a;
 
-  /* Части линии — сплошные нейтральные заливки, чтобы не путать
-     с цветными пилюлями применяемости (ChangeOver / CL в ТО / Конвертация) */
-  --part-maker-bg:   #1f3f73;
+  /* Части линии */
+  --part-maker-bg:   #1a3a8f;
   --part-maker-fg:   #ffffff;
   --part-packer-bg:  #4b5568;
   --part-packer-fg:  #ffffff;
-  /* Текст на заливке акцентным цветом (номер шага, активная кнопка) */
   --on-accent:       #ffffff;
 
   /* Текст */
-  --text-main:    #1a2643;
-  --text-second:  #5a6b8a;
-  --text-dim:     #8896b0;
+  --text-main:    #0b1a45;
+  --text-second:  #4b5e8a;
+  --text-dim:     #8796b8;
 
   /* Границы */
-  --border:       #dde5f2;
-  --border-hi:    #c4d2e8;
+  --border:       #d9e3f5;
+  --border-hi:    #bfd0ee;
 
   /* Тени карточек */
-  --card-shadow:       0 2px 8px rgba(30, 58, 95, 0.08), 0 1px 3px rgba(30, 58, 95, 0.06);
-  --card-shadow-hover: 0 4px 16px rgba(30, 58, 95, 0.12);
+  --card-shadow:       0 2px 8px rgba(10, 31, 110, 0.07), 0 1px 3px rgba(10, 31, 110, 0.05);
+  --card-shadow-hover: 0 4px 16px rgba(10, 31, 110, 0.12);
 
   /* Свечения */
-  --glow-cyan:    0 0 14px rgba(0, 212, 255, 0.55);
-  --glow-cyan-sm: 0 0 8px  rgba(0, 212, 255, 0.45);
-  --glow-green:   0 0 12px rgba(0, 196, 122, 0.5);
+  --glow-cyan:    0 0 14px rgba(58, 166, 240, 0.55);
+  --glow-cyan-sm: 0 0 8px  rgba(58, 166, 240, 0.45);
+  --glow-green:   0 0 12px rgba(16, 168, 106, 0.5);
+
+  /* Шапка */
+  --header-bg:    linear-gradient(100deg, #061340 0%, #0a1f6e 45%, #1238b8 100%);
+  --header-strip: linear-gradient(90deg, #3aa6f0, #1238b8 40%, #c98a4b);
 
   /* Скроллбар */
-  --scroll-track: #eef3fb;
-  --scroll-thumb: #c4d2e8;
-  --scroll-thumb-hover: #2e5288;
+  --scroll-track: #eef3fc;
+  --scroll-thumb: #bfd0ee;
+  --scroll-thumb-hover: #1238b8;
 
   --modal-z-base: 2000;
 }
 
-/* ============ ТЕМА: Ночная (dark) ============ */
+/* ============ ТЕМА: Ночная (dark) — «Pit Wall» ============ */
 [data-theme="dark"] {
-  /* Навигация — ещё темнее */
-  --nav-bg:       #050810;
-  --nav-bg-2:     #03060c;
-  --nav-text:     #e0e7ff;
-  --nav-text-dim: #6a7898;
-  --nav-border:   #16213e;
-  --nav-hover:    rgba(0, 212, 255, 0.1);
-  --nav-active:   rgba(0, 212, 255, 0.18);
+  --nav-bg:       #050b24;
+  --nav-bg-2:     #030819;
+  --nav-text:     #e6edff;
+  --nav-text-dim: #7f93c8;
+  --nav-border:   #1a2a5c;
+  --nav-hover:    rgba(58, 166, 240, 0.10);
+  --nav-active:   rgba(58, 166, 240, 0.20);
 
-  /* Рабочая область — тёмная */
-  --bg-main:      #0a0e1a;
-  --bg-card:      #131a2e;
-  --bg-input:     #0d1424;
-  --bg-hover:     #1a2340;
+  --bg-main:      #060d2b;
+  --bg-card:      #0b1638;
+  --bg-input:     #08112e;
+  --bg-hover:     #11204d;
 
-  /* Синие акценты — светлее для контраста на тёмном */
-  --blue-deep:    #1a2c52;
-  --blue-mid:     #3d6db3;
-  --blue-light:   #4d80cc;
+  --blue-deep:    #0a1f6e;
+  --blue-mid:     #3a6cf0;
+  --blue-light:   #5b8af5;
+  --bft-ink:      #061340;
+  --bft-sky:      #3aa6f0;
+  --bft-copper:   #d79a5c;
 
-  /* Неон — тот же, но ярче */
-  --accent-cyan:   #00d4ff;
-  --accent-purple: #7b5cff;
-  --accent-green:  #00ff9d;
+  --accent-cyan:   #3aa6f0;
+  --accent-purple: #8b7dff;
+  --accent-green:  #22c983;
   --accent-red:    #ff4d6d;
   --accent-amber:  #ffb800;
+  --accent-emerald:#1fc9ad;
 
-  --part-maker-bg:   #3a64a8;
+  --part-maker-bg:   #2f5fd6;
   --part-maker-fg:   #ffffff;
   --part-packer-bg:  #5d6880;
   --part-packer-fg:  #ffffff;
-  /* Текст на заливке акцентным цветом (номер шага, активная кнопка) */
   --on-accent:       #ffffff;
 
-  /* Текст — светлый */
-  --text-main:    #e0e7ff;
-  --text-second:  #9aa5c4;
-  --text-dim:     #6b78a0;
+  --text-main:    #e6edff;
+  --text-second:  #9fb0dc;
+  --text-dim:     #6779a8;
 
-  /* Границы */
-  --border:       #1f2a44;
-  --border-hi:    #2d3d5c;
+  --border:       #1a2a5c;
+  --border-hi:    #26397a;
 
-  /* Тени карточек — глубже */
-  --card-shadow:       0 2px 12px rgba(0, 0, 0, 0.5);
-  --card-shadow-hover: 0 4px 20px rgba(0, 212, 255, 0.15);
+  --card-shadow:       0 2px 12px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(58, 166, 240, 0.10);
+  --card-shadow-hover: 0 4px 20px rgba(58, 166, 240, 0.15);
 
-  /* Свечения — ярче */
-  --glow-cyan:    0 0 16px rgba(0, 212, 255, 0.6);
-  --glow-cyan-sm: 0 0 10px rgba(0, 212, 255, 0.5);
-  --glow-green:   0 0 12px rgba(0, 255, 157, 0.5);
+  --glow-cyan:    0 0 16px rgba(58, 166, 240, 0.6);
+  --glow-cyan-sm: 0 0 10px rgba(58, 166, 240, 0.5);
+  --glow-green:   0 0 12px rgba(34, 201, 131, 0.5);
 
-  /* Скроллбар */
-  --scroll-track: #0a0e1a;
-  --scroll-thumb: #2d3d5c;
-  --scroll-thumb-hover: #00d4ff;
+  --header-bg:    #050b24;
+  --header-strip: linear-gradient(90deg, transparent, #3aa6f0, transparent);
+
+  --scroll-track: #060d2b;
+  --scroll-thumb: #26397a;
+  --scroll-thumb-hover: #3aa6f0;
 
   --modal-z-base: 2000;
 }
