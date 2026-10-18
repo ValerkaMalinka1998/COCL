@@ -9,8 +9,9 @@
    во всех файлах. Порядок подключения — index.html.
    ============================================================ */
 
-const DASH_PERIODS = { shift: 1, day: 2, '7': 14, '30': 60 };
-const DASH_PERIOD_LABELS = { shift: 'текущая смена', day: 'последние сутки', '7': '7 дней', '30': '30 дней' };
+const DASH_PERIODS = { shift: 1, day: 2, '7': 14, '30': 60, all: 0, custom: 0 };
+const DASH_PERIOD_LABELS = { shift: 'текущая смена', day: 'последние сутки', '7': '7 дней', '30': '30 дней', all: 'всё время', custom: 'выбранный период' };
+const DASH_PERIOD_BTNS = [['shift', 'Смена'], ['day', 'Сутки'], ['7', '7 дней'], ['30', '30 дней'], ['all', 'Всё'], ['custom', 'Период…']];
 const DASH_NEAR_LIMIT = 0.15;   // запас до границы нормы < 15%
 const DASH_STALE_DAYS = 30;
 
@@ -18,9 +19,11 @@ const dashState = {
   period: (() => { try { return localStorage.getItem('cl_dashboard_period') || '7'; } catch (e) { return '7'; } })(),
   line: null,          // открыт паспорт линии
   week: 0,             // неделя покрытия в паспорте
-  keepLine: false      // вернуться в паспорт после Истории
+  keepLine: false,     // вернуться в паспорт после Истории
+  from: (() => { try { return localStorage.getItem('cl_dashboard_from') || ''; } catch (e) { return ''; } })(),
+  to: (() => { try { return localStorage.getItem('cl_dashboard_to') || ''; } catch (e) { return ''; } })()
 };
-if (!DASH_PERIODS[dashState.period]) dashState.period = '7';
+if (!(dashState.period in DASH_PERIODS)) dashState.period = '7';
 
 /* ============================================================
    ДАННЫЕ
@@ -28,9 +31,21 @@ if (!DASH_PERIODS[dashState.period]) dashState.period = '7';
 
 /* Смены периода: последние N смен до текущей (back — сдвиг на N назад) */
 function dashSlots(period, back = 0) {
-  const n = DASH_PERIODS[period] || 14;
   const cur = getCurrentShiftPeriod();
+  let n = DASH_PERIODS[period] || 14;
   let date = cur.date, shift = cur.shiftType;
+  // «Всё» и «Период…» — от даты «с» до даты «по» (обе смены каждого дня)
+  if (period === 'all' || period === 'custom') {
+    let from = period === 'all' ? dashFirstDate() : (dashState.from || addDaysISO(cur.date, -6));
+    let to = period === 'all' ? cur.date : (dashState.to || cur.date);
+    if (to > cur.date) to = cur.date;
+    if (from > to) from = to;
+    const days = Math.round((new Date(to + 'T12:00:00') - new Date(from + 'T12:00:00')) / 86400000) + 1;
+    n = days * 2;
+    date = to; shift = 'night';
+    // Не заглядываем в будущие смены
+    if (to === cur.date && cur.shiftType === 'day') { shift = 'day'; n--; }
+  }
   const step = () => {
     if (shift === 'night') shift = 'day';
     else { shift = 'night'; date = addDaysISO(date, -1); }
@@ -42,6 +57,13 @@ function dashSlots(period, back = 0) {
 }
 
 function dashSlotKey(s) { return s.date + '|' + s.shift; }
+
+/* Дата самой ранней записи истории (для «Всё») */
+function dashFirstDate() {
+  let first = getCurrentShiftPeriod().date;
+  getHistory().forEach(h => { const d = histShift(h).date; if (d < first) first = d; });
+  return first;
+}
 
 /* Линии выбранного цеха (или всех) с контекстом */
 function dashLines() {
@@ -306,12 +328,16 @@ function renderDashboardHead() {
   const scope = dashState.line ? dashState.line
     : (dashboardWorkshop ? (getWorkshop(dashboardWorkshop)?.name || '') : 'весь завод');
   bar.innerHTML = `
-    <div class="dash-title">Дашборд <small>${escapeHtml(scope)} · ${DASH_PERIOD_LABELS[dashState.period]}</small></div>
+    <div class="dash-title">Дашборд <small>${escapeHtml(scope)} · ${dashState.period === 'custom' && (dashState.from || dashState.to) ? (dashState.from ? fmtShortDate(dashState.from) : '…') + ' – ' + (dashState.to ? fmtShortDate(dashState.to) : 'сегодня') : DASH_PERIOD_LABELS[dashState.period]}</small></div>
     <span class="hist-sp"></span>
     ${dashState.line ? '' : `<div class="hist-seg">${tabs.map(t =>
       `<button type="button" class="${t.id === dashboardWorkshop ? 'on' : ''}" data-dash-ws="${escapeAttr(t.id)}">${escapeHtml(t.name)}</button>`).join('')}</div>`}
-    <div class="hist-seg">${['shift', 'day', '7', '30'].map(p =>
-      `<button type="button" class="${p === dashState.period ? 'on' : ''}" data-dash-period="${p}">${p === 'shift' ? 'Смена' : p === 'day' ? 'Сутки' : p + ' дней'}</button>`).join('')}</div>`;
+    <div class="hist-seg">${DASH_PERIOD_BTNS.map(([p, t]) =>
+      `<button type="button" class="${p === dashState.period ? 'on' : ''}" data-dash-period="${p}">${t}</button>`).join('')}</div>
+    ${dashState.period === 'custom' ? `<div class="hist-custom dash-custom">
+      <label>С <input type="date" data-dash-date="from" value="${escapeAttr(dashState.from)}" max="${getCurrentShiftPeriod().date}"></label>
+      <label>По <input type="date" data-dash-date="to" value="${escapeAttr(dashState.to)}" max="${getCurrentShiftPeriod().date}"></label>
+    </div>` : ''}`;
 }
 
 function dashDelta(cur, prev, goodUp, unit = '') {
@@ -556,6 +582,7 @@ $('#tab-dashboard')?.addEventListener('click', (e) => {
     return dashState.line ? renderDashboardLine() : renderDashboard();
   }
   if (t.closest('[data-dash-back]')) { dashState.line = null; return renderDashboard(); }
+  if (t.closest('[data-dash-date]')) return;
   const wk = t.closest('[data-dash-week]');
   if (wk) {
     const d = parseInt(wk.dataset.dashWeek, 10);
@@ -589,4 +616,14 @@ $('#tab-dashboard')?.addEventListener('click', (e) => {
   }
   const go = t.closest('[data-dash-go]');
   if (go) return switchTab(go.dataset.dashGo);
+});
+
+/* Даты «с / по» для «Период…» */
+$('#tab-dashboard')?.addEventListener('change', (e) => {
+  const inp = e.target.closest('[data-dash-date]');
+  if (!inp) return;
+  const key = inp.dataset.dashDate;
+  dashState[key] = inp.value;
+  try { localStorage.setItem(key === 'from' ? 'cl_dashboard_from' : 'cl_dashboard_to', inp.value); } catch (err) { /* нет доступа */ }
+  return dashState.line ? renderDashboardLine() : renderDashboard();
 });
