@@ -226,66 +226,6 @@
   color: var(--text-second);
 }
 
-/* Фото */
-.svm-photo {
-  position: relative;
-  display: block;
-  width: 100%;
-  padding: 0;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg-input);
-  cursor: zoom-in;
-}
-
-.svm-photo img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.svm-photo-main {
-  aspect-ratio: 4 / 3;
-}
-
-.svm-thumbs {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  margin-top: 6px;
-}
-
-.svm-thumbs .svm-photo {
-  aspect-ratio: 1;
-}
-
-.svm-photo:hover {
-  border-color: var(--accent-purple);
-}
-
-.svm-photo-miss {
-  position: absolute;
-  inset: 0;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-dim);
-  background: repeating-linear-gradient(45deg, var(--bg-input), var(--bg-input) 8px, var(--bg-hover) 8px, var(--bg-hover) 16px);
-}
-
-.svm-photo-miss small {
-  max-width: 90%;
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .svm-empty {
   font-size: 13px;
   color: var(--text-dim);

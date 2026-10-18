@@ -59,9 +59,7 @@ window.openStandardView = function(stdId, opts) {
   $('#standardViewChips').innerHTML = renderStandardViewHeaderChips(st);
   body.innerHTML = renderStandardViewContent(st, brand);
 
-  body.querySelectorAll('[data-photo-idx]').forEach(el => {
-    el.addEventListener('click', () => openLightbox(st, parseInt(el.dataset.photoIdx, 10)));
-  });
+  bindPhotoSlider(body, st);
 
   openModal(modal);
   body.scrollTop = 0;
@@ -117,18 +115,9 @@ function renderStandardViewContent(st, brand) {
   const card = (title, inner, cls = '') => inner ? `
     <section class="svm-card ${cls}"><h4>${title}</h4>${inner}</section>` : '';
 
-  // --- Фото ---
+  // --- Фото: слайдер ---
   const photos = Array.isArray(st.photos) ? st.photos : [];
-  const photo = (name, idx, cls) => `
-    <button type="button" class="svm-photo ${cls}" data-photo-idx="${idx}" title="${escapeAttr(name)}">
-      <img src="${escapeAttr(getPhotoPath(st, name))}" alt="${escapeAttr(name)}"
-           onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-      <span class="svm-photo-miss" style="display:none">нет файла<small>${escapeHtml(name)}</small></span>
-    </button>`;
-  const photosHtml = photos.length
-    ? `${photo(photos[0], 0, 'svm-photo-main')}${photos.length > 1
-        ? `<div class="svm-thumbs">${photos.slice(1).map((n, i) => photo(n, i + 1, '')).join('')}</div>` : ''}`
-    : '<div class="svm-empty">Фото не добавлены</div>';
+  const photosHtml = photos.length ? photoSliderHtml(st) : '<div class="svm-empty">Фото не добавлены</div>';
 
   // --- Где и связи ---
   const row = (label, value) => value ? `<div class="svm-row"><span>${label}</span><b>${escapeHtml(value)}</b></div>` : '';
