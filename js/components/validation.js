@@ -141,6 +141,14 @@ document.addEventListener('click', (e) => {
   row.updatedAt = new Date().toISOString();
   if (isElec) setElectronicParams(all); else setStandards(all);
 
+  // Лист истории изменений: решение по валидации
+  let logId = null;
+  if (act === 'approve') {
+    logId = addChangeLogEntry(isElec ? 'elec' : 'mech', row, 'approved', 'Утверждён по итогам валидации');
+  } else if (act === 'reject') {
+    logId = addChangeLogEntry(isElec ? 'elec' : 'mech', row, 'deactivated', 'Отклонён по итогам валидации');
+  }
+
   if (act === 'approve') {
     showToast(row.inSchedule ? 'Утверждён' : 'Утверждён — добавьте его в «Расписание CL», чтобы проверка продолжалась');
   } else showToast(act === 'reject' ? 'Отклонён и деактивирован' : 'Срок продлён на 7 дней');
@@ -153,4 +161,5 @@ document.addEventListener('click', (e) => {
   }
   if (typeof refreshEditorMechTable === 'function') refreshEditorMechTable();
   if (typeof refreshEditorElecTable === 'function') refreshEditorElecTable();
+  if (logId) askChangeReason(logId);
 });

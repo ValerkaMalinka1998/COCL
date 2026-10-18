@@ -14,13 +14,14 @@
    entry = {
      id, date (ISO), line, part ('Maker'|'Packer'|''),
      kind ('mech'|'elec'), refId, number, machine, node, title,
-     action ('added'|'changed'|'deactivated'|'activated'|'removed'|'manual'),
+     action ('added'|'approved'|'changed'|'deactivated'|'activated'|'removed'|'manual'),
      comment, author, auto (true — создана программой)
    }
 */
 
 const CHANGE_ACTIONS = {
   added:       { label: 'Добавлен',      cls: 'add' },
+  approved:    { label: 'Утверждён',     cls: 'add' },
   changed:     { label: 'Пересмотрен',   cls: 'chg' },
   deactivated: { label: 'Деактивирован', cls: 'off' },
   activated:   { label: 'Восстановлен',  cls: 'on' },
