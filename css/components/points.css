@@ -136,9 +136,9 @@ input.input-error {
   font-weight: 700;
   letter-spacing: 0.3px;
   text-transform: uppercase;
-  background: rgba(0, 212, 255, 0.12);
+  background: rgba(58, 166, 240, 0.12);
   color: var(--accent-cyan);
-  border: 1px solid rgba(0, 212, 255, 0.45);
+  border: 1px solid rgba(58, 166, 240, 0.45);
   flex-shrink: 0;
 }
 
@@ -187,12 +187,12 @@ input.input-error {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: rgba(0, 212, 255, 0.12);
+  background: rgba(58, 166, 240, 0.12);
   color: var(--accent-cyan);
   font-weight: 700;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
-  border: 1px solid rgba(0, 212, 255, 0.4);
+  border: 1px solid rgba(58, 166, 240, 0.4);
   flex-shrink: 0;
 }
 
@@ -227,7 +227,7 @@ input.input-error {
 .checklist-point-input:focus {
   outline: none;
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.15);
+  box-shadow: 0 0 0 2px rgba(58, 166, 240, 0.15);
 }
 .checklist-point-input::placeholder {
   color: var(--text-dim);

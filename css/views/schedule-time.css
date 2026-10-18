@@ -31,18 +31,18 @@
   font-size: 12px;
   font-weight: 700;
   color: var(--accent-cyan);
-  background: rgba(0, 212, 255, 0.08);
-  border: 1px solid rgba(0, 212, 255, 0.4);
+  background: rgba(58, 166, 240, 0.08);
+  border: 1px solid rgba(58, 166, 240, 0.4);
   cursor: pointer;
   transition: all 0.15s;
   font-variant-numeric: tabular-nums;
 }
 
 .tw-preset-btn:hover {
-  background: rgba(0, 212, 255, 0.18);
+  background: rgba(58, 166, 240, 0.18);
   border-color: var(--accent-cyan);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 212, 255, 0.25);
+  box-shadow: 0 2px 8px rgba(58, 166, 240, 0.25);
 }
 
 .tw-preset-btn:active {

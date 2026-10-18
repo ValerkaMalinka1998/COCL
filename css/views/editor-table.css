@@ -199,5 +199,5 @@
   transform: scale(1.1);
 }
 .sidebar button.active .nav-icon svg {
-  filter: drop-shadow(0 0 4px rgba(0, 212, 255, 0.6));
+  filter: drop-shadow(0 0 4px rgba(58, 166, 240, 0.6));
 }

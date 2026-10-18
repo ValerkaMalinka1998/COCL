@@ -97,8 +97,8 @@
   height: 22px;
   padding: 0 10px;
   border-radius: 11px;
-  background: rgba(0, 212, 255, 0.1);
-  border: 1px solid rgba(0, 212, 255, 0.4);
+  background: rgba(58, 166, 240, 0.1);
+  border: 1px solid rgba(58, 166, 240, 0.4);
   color: var(--accent-cyan);
   font-family: 'Courier New', Consolas, monospace;
   font-size: 12px;
@@ -153,7 +153,7 @@
   color: #ffffff;
 }
 .sv-full-action-edit:hover {
-  box-shadow: 0 4px 14px rgba(0, 212, 255, 0.4);
+  box-shadow: 0 4px 14px rgba(58, 166, 240, 0.4);
   transform: translateY(-1px);
 }
 
@@ -232,7 +232,7 @@
   background: linear-gradient(135deg, var(--blue-mid), var(--blue-light));
   border-color: var(--accent-cyan);
   color: #ffffff;
-  box-shadow: 0 0 14px rgba(0, 212, 255, 0.3);
+  box-shadow: 0 0 14px rgba(58, 166, 240, 0.3);
 }
 .sv-full-tab-btn.active svg {
   stroke: #ffffff;
@@ -248,9 +248,9 @@
   border-radius: 10px;
   font-size: 11px;
   font-weight: 800;
-  background: rgba(0, 212, 255, 0.15);
+  background: rgba(58, 166, 240, 0.15);
   color: var(--accent-cyan);
-  border: 1px solid rgba(0, 212, 255, 0.4);
+  border: 1px solid rgba(58, 166, 240, 0.4);
   font-variant-numeric: tabular-nums;
 }
 .sv-full-tab-btn.active .sv-full-tab-badge {
@@ -438,7 +438,7 @@
 .sv-full-field-edit textarea:focus {
   outline: none;
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12);
+  box-shadow: 0 0 0 3px rgba(58, 166, 240, 0.12);
 }
 .sv-full-field-edit textarea {
   resize: vertical;
@@ -495,7 +495,7 @@
 .sv-full-photo:hover {
   border-color: var(--accent-cyan);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(58, 166, 240, 0.3);
 }
 .sv-full-photo img {
   width: 100%;
@@ -653,7 +653,7 @@
   border-bottom: none;
 }
 .sv-full-table tbody tr:hover {
-  background: rgba(0, 212, 255, 0.03);
+  background: rgba(58, 166, 240, 0.03);
 }
 
 .sv-full-version-badge {
@@ -667,9 +667,9 @@
   font-size: 11px;
   font-weight: 800;
   font-family: 'Courier New', Consolas, monospace;
-  background: rgba(0, 212, 255, 0.12);
+  background: rgba(58, 166, 240, 0.12);
   color: var(--accent-cyan);
-  border: 1px solid rgba(0, 212, 255, 0.4);
+  border: 1px solid rgba(58, 166, 240, 0.4);
 }
 
 .sv-full-empty-table {
@@ -759,9 +759,9 @@
   font-weight: 700;
   letter-spacing: 0.3px;
   text-transform: uppercase;
-  background: rgba(0, 212, 255, 0.12);
+  background: rgba(58, 166, 240, 0.12);
   color: var(--accent-cyan);
-  border: 1px solid rgba(0, 212, 255, 0.45);
+  border: 1px solid rgba(58, 166, 240, 0.45);
 }
 .sv-points-grid {
   display: flex;
@@ -787,12 +787,12 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: rgba(0, 212, 255, 0.12);
+  background: rgba(58, 166, 240, 0.12);
   color: var(--accent-cyan);
   font-weight: 700;
   font-size: 10px;
   font-variant-numeric: tabular-nums;
-  border: 1px solid rgba(0, 212, 255, 0.4);
+  border: 1px solid rgba(58, 166, 240, 0.4);
   flex-shrink: 0;
 }
 .sv-point-value {
@@ -824,7 +824,7 @@
 .sv-content-textarea:focus {
   outline: none;
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12);
+  box-shadow: 0 0 0 3px rgba(58, 166, 240, 0.12);
 }
 
 /* ============================================================ */
@@ -895,9 +895,9 @@
   border-radius: 14px;
   font-size: 12px;
   font-weight: 600;
-  background: rgba(0, 212, 255, 0.1);
+  background: rgba(58, 166, 240, 0.1);
   color: var(--accent-cyan);
-  border: 1px solid rgba(0, 212, 255, 0.45);
+  border: 1px solid rgba(58, 166, 240, 0.45);
   white-space: nowrap;
 }
 
@@ -965,7 +965,7 @@
 .sv-photo-add-textarea:focus {
   outline: none;
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12);
+  box-shadow: 0 0 0 3px rgba(58, 166, 240, 0.12);
 }
 
 .sv-photo-add-form .btn {
