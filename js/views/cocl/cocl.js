@@ -273,7 +273,7 @@ function renderCoclLineContext(line) {
   const user = getCurrentUser();
   const autoText = [
     user ? 'Оператор: ' + user : null,
-    (period.shiftType === 'day' ? 'День' : 'Ночь') + ' · смена ' + shiftLetter
+    (period.shiftType === 'day' ? 'День' : 'Ночь') + ' · ' + shiftLetter
   ].filter(Boolean).join(' · ');
 
   el.innerHTML = chips

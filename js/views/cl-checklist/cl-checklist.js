@@ -273,7 +273,7 @@ function updateClContext() {
     <div class="cl-context-item">
       <span class="cl-context-label">Смена:</span>
       <span class="cl-context-value">
-        ${shiftLabel} · смена
+        ${shiftLabel} ·
         <span class="cl-shift-badge cl-shift-${clState.shiftLetter}">${escapeHtml(clState.shiftLetter)}</span>
       </span>
     </div>

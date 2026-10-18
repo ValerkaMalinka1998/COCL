@@ -62,7 +62,7 @@ function openClCheckModal(rowId, dateStr, shift) {
   workEl.className = 'qc-work-badge ' + (workVal === 'Run' ? 'qc-work-run' : 'qc-work-stop');
 
   const shiftLabel = shift === 'day' ? 'День' : 'Ночь';
-  $('#qcDateShift').textContent = `${fmtISODate(dateStr)} · ${shiftLabel} · смена ${shiftLetter}`;
+  $('#qcDateShift').textContent = `${fmtISODate(dateStr)} · ${shiftLabel} · ${shiftLetter}`;
 
   $('#qcBrand').textContent = brand || '— не задан —';
 
