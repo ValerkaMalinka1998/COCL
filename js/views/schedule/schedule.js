@@ -428,6 +428,38 @@ function getTimeWindowShift(from) {
   if (hh >= '21' || hh < '09') return 'night';
   return 'day';
 }
+/* Предустановки: окна по 30 минут, каждые 2 часа своей смены */
+const TW_PRESETS = {
+  day: ['09:00', '11:00', '13:00', '15:00', '17:00', '19:00'],
+  night: ['21:00', '23:00', '01:00', '03:00', '05:00', '07:00']
+};
+let twDuration = 30;
+
+/* Минуты от начала дневной смены (09:00) — для сортировки и шкалы */
+function twMinutesFromShiftStart(hhmm) {
+  const [h, m] = String(hhmm).split(':').map(Number);
+  return ((h * 60 + m) - 9 * 60 + 1440) % 1440;
+}
+
+/* Время + N минут (через полночь) */
+function twAddMinutes(hhmm, mins) {
+  const [h, m] = String(hhmm).split(':').map(Number);
+  const total = ((h * 60 + m + mins) % 1440 + 1440) % 1440;
+  return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
+}
+
+/* «930», «9:30», «09.30» → «09:30»; иначе '' */
+function twNormalizeTime(raw) {
+  const s = String(raw || '').trim().replace(/[.,\s]/g, ':');
+  let h, m;
+  if (/^\d{1,2}:\d{2}$/.test(s)) [h, m] = s.split(':').map(Number);
+  else if (/^\d{3,4}$/.test(s)) { h = Number(s.slice(0, -2)); m = Number(s.slice(-2)); }
+  else if (/^\d{1,2}$/.test(s)) { h = Number(s); m = 0; }
+  else return '';
+  if (h > 23 || m > 59) return '';
+  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+}
+
 /* Открыть модалку */
 function openTimeWindowsModal(rowId) {
   const modal = $('#timeWindowsModal');
@@ -436,19 +468,19 @@ function openTimeWindowsModal(rowId) {
   const row = schState.rows.find(r => r.id === rowId);
   if (!row) return;
 
-  // Читаем текущие окна (из draft или из row.frequency)
-  const freq = schState.draft[row.id] || row.frequency || {};
+  // Текущие окна — с учётом черновика и правок недели
+  const freq = getSchRowFreq(row);
   const current = Array.isArray(freq.timeWindows) ? freq.timeWindows : [];
 
   twState.rowId = rowId;
   twState.draft = current.map(w => ({ from: w.from, to: w.to }));
 
-  // Заголовок
-  const title = row.title || row.paramName || '—';
-  $('#timeWindowsPoint').textContent = 'Стандарт: ' + title;
+  // Подзаголовок: OPL · машина · название
+  const parts = [row.oplNumber, row.machine, row.title || row.paramName].filter(Boolean);
+  $('#timeWindowsPoint').textContent = parts.join(' · ') || '—';
 
   renderTimeWindowsList();
-
+  updateTwCustomPreview();
   openModal(modal);
 }
 
@@ -459,47 +491,73 @@ function closeTimeWindowsModal() {
   twState.draft = [];
 }
 
-/* Отрисовать список окон */
+/* Отрисовать всё содержимое: шкалу, предустановки, выбранные окна */
 function renderTimeWindowsList() {
-  const list = $('#twList');
-  if (!list) return;
+  twState.draft.sort((a, b) => twMinutesFromShiftStart(a.from) - twMinutesFromShiftStart(b.from));
+  const has = (from, to) => twState.draft.some(w => w.from === from && w.to === to);
 
-  if (!twState.draft.length) {
-    list.innerHTML = '<div class="tw-empty">Пока нет окон. Выберите предустановку или добавьте вручную.</div>';
-    return;
+  // Предустановки — переключатели
+  ['day', 'night'].forEach(shift => {
+    const box = $(shift === 'day' ? '#twPresetsDay' : '#twPresetsNight');
+    if (!box) return;
+    box.innerHTML = TW_PRESETS[shift].map(from => {
+      const to = twAddMinutes(from, 30);
+      const on = has(from, to);
+      return `<button type="button" class="tw-preset${on ? ' active' : ''}" data-from="${from}" data-to="${to}">
+        ${on ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}${from}–${to}</button>`;
+    }).join('');
+  });
+
+  // Шкала суток 09:00 → 09:00
+  const tl = $('#twTimeline');
+  if (tl) {
+    const ticks = [];
+    for (let i = 0; i <= 24; i += 3) {
+      ticks.push(`<span class="tw-tl-tick" style="left:${i / 24 * 100}%">${String((9 + i) % 24).padStart(2, '0')}</span>`);
+    }
+    const marks = twState.draft.map(w => {
+      const start = twMinutesFromShiftStart(w.from);
+      let len = (twMinutesFromShiftStart(w.to) - start + 1440) % 1440 || 1440;
+      return `<span class="tw-tl-mark tw-tl-mark-${getTimeWindowShift(w.from)}" style="left:${start / 1440 * 100}%;width:max(4px, ${len / 1440 * 100}%)" title="${w.from}–${w.to}"></span>`;
+    }).join('');
+    tl.innerHTML = `<div class="tw-tl-bar"><span class="tw-tl-day"></span><span class="tw-tl-night"></span>${marks}</div><div class="tw-tl-ticks">${ticks.join('')}</div>`;
   }
 
-  list.innerHTML = twState.draft.map((w, idx) => {
-    const shift = getTimeWindowShift(w.from);
-    return `
-      <div class="tw-item">
-        <span class="tw-item-text tw-item-text-${shift}">${escapeHtml(w.from)}–${escapeHtml(w.to)}</span>
-        <button type="button" class="tw-item-remove" data-tw-remove="${idx}" title="Удалить">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
-    `;
-  }).join('');
+  // Выбранные окна
+  const count = $('#twCount');
+  if (count) count.textContent = twState.draft.length;
+  const clear = $('#twClearAllBtn');
+  if (clear) clear.hidden = !twState.draft.length;
 
-  // Обработчики удаления
-  list.querySelectorAll('[data-tw-remove]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const idx = parseInt(btn.dataset.twRemove, 10);
-      twState.draft.splice(idx, 1);
-      renderTimeWindowsList();
-    });
-  });
+  const list = $('#twList');
+  if (!list) return;
+  if (!twState.draft.length) {
+    list.innerHTML = '<div class="tw-empty">Нет окон — проверка без привязки ко времени. Отметьте время выше.</div>';
+    return;
+  }
+  list.innerHTML = twState.draft.map((w, idx) => `
+    <span class="tw-item tw-item-${getTimeWindowShift(w.from)}">
+      ${escapeHtml(w.from)}–${escapeHtml(w.to)}
+      <button type="button" class="tw-item-remove" data-tw-remove="${idx}" title="Удалить">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </span>
+  `).join('');
+}
+
+/* Подсказка «10:00–10:30» у своего времени */
+function updateTwCustomPreview() {
+  const el = $('#twCustomPreview');
+  if (!el) return;
+  const from = twNormalizeTime($('#twCustomFrom')?.value);
+  el.textContent = from ? `${from}–${twAddMinutes(from, twDuration)}` : '';
+  el.className = 'tw-custom-preview' + (from ? ' tw-custom-preview-' + getTimeWindowShift(from) : '');
 }
 
 /* Добавить окно в draft (с проверкой на дубли) */
 function addTimeWindow(from, to) {
   if (!from || !to) return;
-  // Проверка дубля
-  const exists = twState.draft.some(w => w.from === from && w.to === to);
-  if (exists) {
+  if (twState.draft.some(w => w.from === from && w.to === to)) {
     showToast('Такое окно уже добавлено', true);
     return;
   }
@@ -527,40 +585,58 @@ function saveTimeWindows() {
 
 /* --- Обработчики модалки --- */
 
-$('#timeWindowsClose')?.addEventListener('click', closeTimeWindowsModal);
-$('#twCancelBtn')?.addEventListener('click', closeTimeWindowsModal);
+$('#timeWindowsClose')?.addEventListener('click', () => closeTimeWindowsModal());
+$('#twCancelBtn')?.addEventListener('click', () => closeTimeWindowsModal());
 $('#timeWindowsModal')?.addEventListener('click', (e) => {
-  if (e.target.id === 'timeWindowsModal') closeTimeWindowsModal();
+  if (e.target.id === 'timeWindowsModal') { closeTimeWindowsModal(); return; }
+
+  // Предустановка — включить / выключить
+  const preset = e.target.closest('.tw-preset');
+  if (preset) {
+    const { from, to } = preset.dataset;
+    const idx = twState.draft.findIndex(w => w.from === from && w.to === to);
+    if (idx >= 0) twState.draft.splice(idx, 1);
+    else twState.draft.push({ from, to });
+    renderTimeWindowsList();
+    return;
+  }
+
+  // Удалить выбранное окно
+  const rm = e.target.closest('[data-tw-remove]');
+  if (rm) {
+    twState.draft.splice(parseInt(rm.dataset.twRemove, 10), 1);
+    renderTimeWindowsList();
+    return;
+  }
+
+  // Длительность своего окна
+  const dur = e.target.closest('#twDur [data-dur]');
+  if (dur) {
+    twDuration = parseInt(dur.dataset.dur, 10);
+    $$('#twDur [data-dur]').forEach(b => b.classList.toggle('active', b === dur));
+    updateTwCustomPreview();
+  }
 });
 
-/* Быстрые предустановки */
-$('#twPresetsList')?.addEventListener('click', (e) => {
-  const btn = e.target.closest('.tw-preset-btn');
-  if (!btn) return;
-  const from = btn.dataset.from;
-  const to = btn.dataset.to;
-  addTimeWindow(from, to);
+$('#twCustomFrom')?.addEventListener('input', () => updateTwCustomPreview());
+$('#twCustomFrom')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') $('#twAddCustomBtn')?.click();
 });
 
-/* Добавить своё окно */
+/* Добавить своё окно (может переходить через полночь) */
 $('#twAddCustomBtn')?.addEventListener('click', () => {
-  const from = $('#twCustomFrom')?.value || '';
-  const to = $('#twCustomTo')?.value || '';
-  if (!from || !to) {
-    showToast('Укажите время «С» и «По»', true);
+  const from = twNormalizeTime($('#twCustomFrom')?.value);
+  if (!from) {
+    showToast('Укажите время в формате чч:мм, например 10:00', true);
     return;
   }
-  if (from >= to) {
-    showToast('«С» должно быть раньше «По»', true);
-    return;
-  }
-  addTimeWindow(from, to);
+  $('#twCustomFrom').value = from;
+  addTimeWindow(from, twAddMinutes(from, twDuration));
 });
 
 /* Очистить всё */
 $('#twClearAllBtn')?.addEventListener('click', () => {
   if (!twState.draft.length) return;
-  if (!confirm('Очистить все окна проверки для этой строки?')) return;
   twState.draft = [];
   renderTimeWindowsList();
 });
