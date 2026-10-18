@@ -64,7 +64,7 @@ function normalizeElectronicParam(p) {
 
     frequency: normalizeElectronicFrequency(p.frequency),
 
-    // --- НОВОЕ: в расписании технолога ---
+    // --- НОВОЕ: в расписании аналитика ---
     inSchedule: p.inSchedule === true,
 
     author: typeof p.author === 'string' ? p.author : '',
