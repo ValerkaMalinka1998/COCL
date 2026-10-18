@@ -39,6 +39,56 @@ function getQcFields() {
   return points.map((p, i) => ({ label: 'Т' + (i + 1), text: p.value || '—', norm: parseNorm(p.value) }));
 }
 
+/* Строки смены по порядку матрицы: запланированы на эту дату/смену;
+   done — уже отмечены (черновик или история) */
+function getQcQueue() {
+  const { date, shift, shiftLetter } = quickCheckState;
+  const day = new Date(date + 'T00:00:00').getDay();
+  const rec = getHistory().find(h => h.mode === clRecordMode() && h.line === clState.line &&
+    h.date === date && h.shift === shiftLetter);
+  const ids = [...new Set([...$$('#clMatrixWrap tr.cil-row[data-row-id]')].map(r => r.dataset.rowId))];
+  return ids.map(id => clState.rows.find(r => r.id === id)).filter(Boolean)
+    .filter(r => (getClRowFreq(r).schedule || []).some(x => x.day === day && x.shift === shift))
+    .map(r => ({
+      row: r,
+      done: !!clState.quickDraft[`${r.id}|${date}|${shift}`] ||
+        !!(rec && (rec.items || []).some(it => it.standardId === r.id))
+    }));
+}
+
+/* Следующая неотмеченная строка смены после текущей (по кругу) */
+function getQcNext() {
+  const q = getQcQueue();
+  const i = q.findIndex(x => x.row.id === quickCheckState.row?.id);
+  for (let k = 1; k < q.length; k++) {
+    const x = q[(i + k + q.length) % q.length];
+    if (!x.done) return x.row;
+  }
+  return null;
+}
+
+/* Прошлая проверка этой строки (до текущей смены) */
+function getQcPrevious(row) {
+  const { date, shiftLetter } = quickCheckState;
+  const order = (d, letter) => `${d}|${getShiftsForDate(d).day === letter ? 0 : 1}`;
+  const cur = order(date, shiftLetter);
+  let best = null;
+  getHistory().forEach(h => {
+    if (h.mode !== clRecordMode() || h.line !== clState.line) return;
+    const o = order(h.date, h.shift);
+    if (o >= cur || (best && o <= best.o)) return;
+    const it = (h.items || []).find(x => x.standardId === row.id);
+    if (it && (it.status === 'OK' || it.status === 'FAIL')) best = { o, h, it };
+  });
+  if (!best) return null;
+  const isDay = getShiftsForDate(best.h.date).day === best.h.shift;
+  return {
+    values: String(best.it.answer || '').split(',').map(s => s.trim()),
+    status: best.it.status,
+    label: `${fmtShortDate(best.h.date)} · ${isDay ? 'день' : 'ночь'} ${best.h.shift}`
+  };
+}
+
 function openClCheckModal(rowId, dateStr, shift) {
   const modal = $('#quickCheckModal');
   if (!modal) return;
@@ -65,6 +115,13 @@ function openClCheckModal(rowId, dateStr, shift) {
     `<span class="qcx-tag qcx-tag-${work === 'Run' ? 'run' : 'stop'}">${work}</span>`
   ].filter(Boolean).join('<i>·</i>');
   $('#quickCheckModalTitle').textContent = isElec ? (row.paramName || '—') : (row.title || '—');
+
+  // Место в очереди смены: «3 из 12 · осталось 5»
+  const queue = getQcQueue();
+  const pos = queue.findIndex(x => x.row.id === row.id);
+  const left = queue.filter(x => !x.done && x.row.id !== row.id).length;
+  $('#qcQueue').innerHTML = queue.length && pos >= 0
+    ? `<b>${pos + 1}</b> из ${queue.length}<span>${left ? `осталось ${left}` : 'остальные отмечены'}</span>` : '';
 
   const freq = getClRowFreq(row);
   const tw = (freq.timeWindows || []).map(w => `${w.from}–${w.to}`).join(', ');
@@ -97,6 +154,9 @@ function openClCheckModal(rowId, dateStr, shift) {
     $('#qcNormText').innerHTML = normText
       ? `Норма: <b>${escapeHtml(normText)}</b>`
       : 'Проверка визуально — по описанию «Как проверять»';
+    const prevOk = getQcPrevious(row);
+    $('#qcPrevOk').innerHTML = prevOk
+      ? `Прошлый раз (${escapeHtml(prevOk.label)}): <b class="${prevOk.status === 'OK' ? 'ok' : 'fail'}">${prevOk.status === 'OK' ? 'ОК' : 'Не ОК'}</b>` : '';
     const val = draft?.status || existing?.status || '';
     $('#qcAnswerOk').checked = val === 'OK';
     $('#qcAnswerFail').checked = val === 'FAIL';
@@ -106,15 +166,22 @@ function openClCheckModal(rowId, dateStr, shift) {
     const saved = [];
     const src = draft?.answer || existing?.answer || '';
     String(src).split(',').forEach(v => saved.push(v.trim()));
+    const prev = getQcPrevious(row);
     $('#qcPointsTitle').textContent = isElec ? 'Значение' : (fields.length > 1 ? `Точки замера · ${fields.length}` : 'Точка замера');
     $('#qcPointsList').innerHTML = fields.length ? fields.map((f, i) => `
       <label class="qcx-pt" data-index="${i}">
         <span class="qcx-pt-norm">${fields.length > 1 || !isElec ? `<b>${f.label}</b>` : ''}${escapeHtml(f.text)}<span class="qcx-pt-st" data-qc-status="${i}"></span></span>
         <input type="text" inputmode="decimal" autocomplete="off" class="qc-point-input" data-qc-point="${i}" value="${escapeAttr(saved[i] || '')}">
         ${f.norm ? `<span class="qcx-pt-range">${f.norm.min}…${f.norm.max}</span>` : ''}
+        ${prev && prev.values[i] ? (() => {
+          const pv = qcNum(prev.values[i]);
+          const bad = f.norm && !isNaN(pv) && (pv < f.norm.min || pv > f.norm.max);
+          return `<span class="qcx-pt-prev${bad ? ' is-bad' : ''}" title="Прошлая проверка: ${escapeAttr(prev.label)}">было ${escapeHtml(prev.values[i])}</span>`;
+        })() : ''}
       </label>`).join('')
       : '<div class="qcx-empty">Точки не заданы в стандарте</div>';
     $('#qcPointsList').classList.toggle('qcx-pts-one', fields.length === 1);
+    $('#qcPrevLabel').textContent = prev ? `«было» — ${prev.label}` : '';
   }
 
   $('#qcComment').value = draft?.comment || existing?.comment || '';
@@ -129,6 +196,9 @@ function openClCheckModal(rowId, dateStr, shift) {
 
   updateQcResult();
   openModal(modal);
+
+  const nextBtn = $('#quickCheckNextBtn');
+  if (nextBtn) nextBtn.style.display = getQcNext() ? '' : 'none';
 
   const btn = $('#qcOpenStandardBtn');
   btn.style.display = isElec ? 'none' : '';
@@ -196,7 +266,7 @@ function closeQuickCheckModal() {
    БЫСТРАЯ ПРОВЕРКА — сохранение
    ============================================================ */
 
-function saveQuickCheck() {
+function saveQuickCheck(goNext) {
   const row = quickCheckState.row;
   if (!row) {
     showToast('Ошибка: стандарт не найден', true);
@@ -289,8 +359,14 @@ function saveQuickCheck() {
   clState.quickDraft[key] = { status, answer, value, comment };
 
   renderClMatrix();
+  const next = goNext ? getQcNext() : null;
+  const { date: d, shift: s } = quickCheckState;
   closeQuickCheckModal();
-  showToast('Отметка сохранена');
+  if (next) {
+    openClCheckModal(next.id, d, s);
+  } else {
+    showToast(goNext ? 'Отметка сохранена — все проверки смены отмечены' : 'Отметка сохранена');
+  }
 }
 
 /* ============================================================
@@ -321,7 +397,7 @@ document.addEventListener('keydown', (e) => {
   const all = [...$$('#qcPointsList .qc-point-input')];
   const next = all[all.indexOf(inp) + 1];
   if (next) next.focus();
-  else saveQuickCheck();
+  else saveQuickCheck(!!getQcNext());
 });
 
 /* --- Быстрая проверка: обработчики через делегирование --- */
@@ -337,6 +413,10 @@ document.addEventListener('click', (e) => {
   }
   if (e.target.closest('#quickCheckSaveBtn')) {
     saveQuickCheck();
+    return;
+  }
+  if (e.target.closest('#quickCheckNextBtn')) {
+    saveQuickCheck(true);
     return;
   }
   // Клик по фону модалки

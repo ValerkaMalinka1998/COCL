@@ -1731,7 +1731,7 @@
   <div class="modal qcx-modal">
     <div class="modal-header qcx-head">
       <div class="qcx-head-main">
-        <div class="qcx-meta" id="qcMeta"></div>
+        <div class="qcx-top"><div class="qcx-meta" id="qcMeta"></div><div class="qcx-queue" id="qcQueue"></div></div>
         <h3 id="quickCheckModalTitle">Проверка CL</h3>
         <div class="qcx-ctx" id="qcCtx"></div>
       </div>
@@ -1747,6 +1747,7 @@
       <!-- ОК / Не ОК -->
       <div class="qcx-sec" id="qcAnswerOkNotOk" style="display:none">
         <div class="qcx-norm-text" id="qcNormText"></div>
+        <div class="qcx-prev-ok" id="qcPrevOk"></div>
         <div class="qcx-okfail">
           <label><input type="radio" name="qc_answer" value="OK" id="qcAnswerOk"><span>ОК</span></label>
           <label><input type="radio" name="qc_answer" value="FAIL" id="qcAnswerFail"><span>Не ОК</span></label>
@@ -1760,6 +1761,7 @@
           <span class="qcx-result" id="qcResult"></span>
         </div>
         <div id="qcPointsList" class="qcx-pts"></div>
+        <div class="qcx-prev-label" id="qcPrevLabel"></div>
       </div>
 
       <!-- Как проверять -->
@@ -1781,7 +1783,11 @@
         <span>Стандарт</span>
       </button>
       <button class="btn btn-secondary" id="quickCheckCancelBtn">Отмена</button>
-      <button class="btn btn-primary" id="quickCheckSaveBtn">Сохранить</button>
+      <button class="btn btn-secondary" id="quickCheckSaveBtn">Сохранить</button>
+      <button class="btn btn-primary btn-icon-text" id="quickCheckNextBtn">
+        <span>Сохранить и далее</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
     </div>
   </div>
 </div>
