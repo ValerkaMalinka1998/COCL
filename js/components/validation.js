@@ -1,6 +1,6 @@
 /* ============================================================
    КОМПОНЕНТЫ: валидация нового стандарта / E-Param
-   Блок в форме (флажок + срок), плашка с решением технолога,
+   Блок в форме (флажок + срок), плашка с решением аналитика,
    метка для таблиц и чек-листа. Данные — js/data/standards.js.
    Модуль общего пространства имён. Порядок подключения — index.html.
    ============================================================ */
@@ -13,8 +13,8 @@ function valChipHtml(row) {
   if (s !== 'active' && s !== 'overdue') return '';
   const until = fmtShortDate(row.validation.until);
   return s === 'overdue'
-    ? `<span class="val-chip val-chip-over" title="Срок валидации истёк ${escapeAttr(until)} — нужно решение технолога">Валидация · срок истёк</span>`
-    : `<span class="val-chip" title="Временный: проверяется каждую смену до решения технолога">Валидация · до ${escapeHtml(until)}</span>`;
+    ? `<span class="val-chip val-chip-over" title="Срок валидации истёк ${escapeAttr(until)} — нужно решение аналитика">Валидация · срок истёк</span>`
+    : `<span class="val-chip" title="Временный: проверяется каждую смену до решения аналитика">Валидация · до ${escapeHtml(until)}</span>`;
 }
 
 /* Блок в форме: флажок «На валидации» и срок */
@@ -40,7 +40,7 @@ function valEditBlockHtml(row, isNew) {
       </label>
       <div class="val-days" ${on ? '' : 'hidden'}>
         Срок <select id="valDays">${opts}</select>
-        <span>с ${escapeHtml(fmtShortDate(from))} до <b id="valUntil">${escapeHtml(fmtShortDate(addDaysISO(from, days)))}</b>, потом — решение технолога</span>
+        <span>с ${escapeHtml(fmtShortDate(from))} до <b id="valUntil">${escapeHtml(fmtShortDate(addDaysISO(from, days)))}</b>, потом — решение аналитика</span>
       </div>
       ${was}
     </div>`;
@@ -84,7 +84,7 @@ function valCheckStats(row) {
   return { n, fail };
 }
 
-/* Плашка на странице стандарта / параметра: статус и решение технолога */
+/* Плашка на странице стандарта / параметра: статус и решение аналитика */
 function valBannerHtml(row, kind) {
   const s = validationStatus(row);
   if (s === 'none') return '';
@@ -114,7 +114,7 @@ function valBannerHtml(row, kind) {
     </div>`;
 }
 
-/* Решение технолога: approve | reject | extend */
+/* Решение аналитика: approve | reject | extend */
 document.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-val-act]');
   if (!btn) return;

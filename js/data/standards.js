@@ -245,7 +245,7 @@ function setHistory(v) { save(STORAGE_KEYS.history, v); }
    ВАЛИДАЦИЯ НОВОГО СТАНДАРТА / E-PARAM
    validation = { from, until, decidedAt, result }:
    from — дата смены начала, until — срок, decidedAt/result —
-   решение технолога ('approved' | 'rejected'). Пока решения нет,
+   решение аналитика ('approved' | 'rejected'). Пока решения нет,
    строка проверяется каждую смену (с from) и идёт в чек-листе последней.
    ============================================================ */
 
