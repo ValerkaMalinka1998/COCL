@@ -132,9 +132,9 @@ function cilNorm(row, brand, isElec) {
 }
 
 /* ============================================================
-   ШАПКА: дни и смены с бригадами
+   ШАПКА: дни и смены с буквами смен
    opts.infoHeads — html <th> левых колонок (rowspan=2)
-   opts.shiftSub(dateStr, shift, i) — подпись и прогресс под бригадой
+   opts.shiftSub(dateStr, shift, i) — подпись и прогресс под буквой смены
    opts.activeDate / opts.activeShift — текущая смена
    opts.colAttrs(dateStr, dayIdx, shift) — доп. атрибуты <th> смены
    ============================================================ */

@@ -45,7 +45,7 @@ function fillHistoryFilters() {
   }
   const brSel = $('#histBrigade');
   if (brSel) {
-    brSel.innerHTML = '<option value="">Все бригады</option>' +
+    brSel.innerHTML = '<option value="">Все смены</option>' +
       ['A', 'B', 'C', 'D'].map(b => `<option value="${b}">Бригада ${b}</option>`).join('');
     brSel.value = histState.brigade || '';
   }
@@ -387,7 +387,7 @@ function renderHistDeviations() {
     <div class="card hist-top5">
       ${topBlock('Чаще всего отклоняются', byStd)}
       ${topBlock('По машинам', byMachine)}
-      ${topBlock('По бригадам', byBrigade)}
+      ${topBlock('По сменам', byBrigade)}
     </div>
     <div class="card hist-dev-card">
       <table class="hist-dev">

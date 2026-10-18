@@ -755,7 +755,7 @@ button.st-chip:hover { border-color: var(--border-hi); color: var(--text-main); 
 .brand-tile .st-icon-btn { width: 26px; height: 26px; }
 
 /* ============================================================ */
-/* === СМЕНЫ: цикл бригад и календарь ========================= */
+/* === СМЕНЫ: цикл смен и календарь ========================= */
 /* ============================================================ */
 .shf-intro { margin-bottom: 14px; font-size: 13px; color: var(--text-second); }
 .shf-b-A { --shf-c: var(--accent-cyan); }

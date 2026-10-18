@@ -67,7 +67,7 @@ function setElectronicShiftConfig(cfg) {
 }
 
 /* ============================================================
-   НАСТРОЙКИ: раздел «Смены» — редактор цикла бригад
+   НАСТРОЙКИ: раздел «Смены» — редактор цикла смен
    Черновик (shfDraft) правится кликами, в хранилище попадает
    только по «Сохранить».
    ============================================================ */
@@ -112,7 +112,7 @@ function renderElectronicShiftPreview() {
         <span class="shf-badge shf-b-${brigade}">${brigade}</span>
         <div>
           <div class="shf-now-label">Сейчас на смене</div>
-          <div class="shf-now-text">Бригада ${brigade} · ${now.shiftType === 'day' ? 'день 09:00–21:00' : 'ночь 21:00–09:00'} · ${fmtISODate(now.date)}</div>
+          <div class="shf-now-text">Смена ${brigade} · ${now.shiftType === 'day' ? 'день 09:00–21:00' : 'ночь 21:00–09:00'} · ${fmtISODate(now.date)}</div>
         </div>
       </div>
       <div class="shf-now-pos">День цикла ${cur.pos + 1} из ${len}</div>`;
@@ -123,7 +123,7 @@ function renderElectronicShiftPreview() {
   if (cycle) {
     const cell = (kind, i) => {
       const b = shfDraft[kind + 'Cycle'][i];
-      return `<button type="button" class="shf-cell shf-b-${b}" data-shf-kind="${kind}" data-shf-i="${i}" title="${kind === 'day' ? 'День' : 'Ночь'}, день цикла ${i + 1}: бригада ${b}">${b}</button>`;
+      return `<button type="button" class="shf-cell shf-b-${b}" data-shf-kind="${kind}" data-shf-i="${i}" title="${kind === 'day' ? 'День' : 'Ночь'}, день цикла ${i + 1}: смена ${b}">${b}</button>`;
     };
     let html = '<div class="shf-row-label"></div>';
     for (let i = 0; i < len; i++) html += `<div class="shf-col-head ${i === cur.pos ? 'shf-today' : ''}">${i + 1}</div>`;
@@ -199,7 +199,7 @@ $('#elecShiftStart')?.addEventListener('change', (e) => {
 
 $('#elecShiftSaveBtn')?.addEventListener('click', () => {
   if (!shfIsDirty()) return showToast('Изменений нет');
-  if (!confirm('Сохранить график? Буквы бригад в Чек-листе, Расписании и COCL пересчитаются по новому циклу.')) return;
+  if (!confirm('Сохранить график? Буквы смен в Чек-листе, Расписании и COCL пересчитаются по новому циклу.')) return;
   setElectronicShiftConfig(shfDraft);
   shfDraft = getElectronicShiftConfig();
   renderElectronicShiftPreview();

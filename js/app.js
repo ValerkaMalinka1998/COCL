@@ -7,7 +7,7 @@
 
 /* ============================================================
    ШАПКА: ЧАСЫ, СМЕНА И «КРУГ СМЕНЫ»
-   Сверху — смена, бригада, дата и время; снизу — полоса прогресса
+   Сверху — смена (с буквой), дата и время; снизу — полоса прогресса
    смены (09:00 → 21:00 / 21:00 → 09:00) и сколько CL проверено
    в текущую смену на линии Чек-листа CL.
    ============================================================ */
@@ -35,7 +35,7 @@ function updateHeaderShift() {
   const pct = Math.max(0, Math.min(100, (Date.now() - start) / (SHIFT_HOURS * 3600000) * 100));
 
   const name = $('#headerShift');
-  if (name) name.textContent = `${isDay ? 'День' : 'Ночь'} · бригада ${letter}`;
+  if (name) name.textContent = `${isDay ? 'День' : 'Ночь'} · смена ${letter}`;
   const fill = $('#headerLapFill');
   if (fill) fill.style.width = pct.toFixed(1) + '%';
   if ($('#headerLapFrom')) $('#headerLapFrom').textContent = isDay ? '09:00' : '21:00';
