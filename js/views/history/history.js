@@ -240,28 +240,28 @@ function histCoverageHtml(line, weekOffset, weekAttr) {
     : weekOffset === -1 ? 'Прошлая неделя'
     : `${-weekOffset} ${pluralRu(-weekOffset, 'неделя', 'недели', 'недель')} назад`;
 
+  // Ячейка смены: цвет — состояние, крупно — итог, мелко — смена и N/M
   const cell = (d, s) => {
     const c = d.shifts[s];
-    const night = s === 'night' ? ' hist-cc-night' : '';
-    const head = `<span>Смена ${escapeHtml(c.letter)}</span>`;
+    const meta = `Смена ${escapeHtml(c.letter)}`;
     if (c.state === 'none') {
-      return `<div class="hist-cc hist-cc-none${night}"><div class="hist-cc-t">${head}</div><div class="hist-cc-d">нет в расписании</div></div>`;
+      return `<div class="hist-cc hist-cc-none" title="Нет в расписании"><span class="hist-cc-m">${meta}</span><span class="hist-cc-n">—</span></div>`;
     }
     if (c.state === 'future') {
-      return `<div class="hist-cc hist-cc-future${night}"><div class="hist-cc-t">${head}</div><div class="hist-cc-d">запланировано ${c.planned}</div></div>`;
+      return `<div class="hist-cc hist-cc-future"><span class="hist-cc-m">${meta}</span><span class="hist-cc-n">план ${c.planned}</span></div>`;
     }
-    const left = c.planned - c.done - c.unchecked;
+    const left = c.planned - c.done;
     let text;
     if (c.state === 'fail') text = `${CIL_ICONS.x}${c.fail} откл.`;
-    else if (c.state === 'ok') text = `${CIL_ICONS.check}всё проверено`;
+    else if (c.state === 'ok') text = `${CIL_ICONS.check}в норме`;
     else if (c.state === 'missed') text = '? пропущена';
     else if (c.state === 'now') text = 'идёт смена';
-    else text = `${left + c.unchecked} не проверено`;
+    else text = `◐ ${left} не пров.`;
     const pct = Math.round(c.done / c.planned * 100);
-    return `<button type="button" class="hist-cc hist-cc-${c.state}${night}" data-hist-shift="${d.date}|${s}" title="Открыть проверку смены">
-      <div class="hist-cc-t">${head}<span>${c.done}/${c.planned}</span></div>
-      <div class="hist-cc-n">${text}</div>
-      <div class="hist-cc-pb"><i style="width:${pct}%"></i></div>
+    return `<button type="button" class="hist-cc hist-cc-${c.state}" data-hist-shift="${d.date}|${s}" title="Открыть проверку смены">
+      <span class="hist-cc-m">${meta}<b>${c.done}/${c.planned}</b></span>
+      <span class="hist-cc-n">${text}</span>
+      <span class="hist-cc-pb"><i style="width:${pct}%"></i></span>
     </button>`;
   };
 
@@ -299,10 +299,10 @@ function histCoverageHtml(line, weekOffset, weekAttr) {
     </div>
     <div class="hist-cw">
       <span></span>
-      ${week.map(d => `<div class="hist-cw-dh ${d.isToday ? 'today' : ''} ${d.date < today ? 'gone' : ''}">${d.dayName}<small>${fmtShortDate(d.date)}${d.isToday ? ' · сегодня' : ''}</small></div>`).join('')}
-      <div class="hist-cw-rl">День<small>09–21</small></div>
+      ${week.map(d => `<div class="hist-cw-dh ${d.isToday ? 'today' : ''} ${d.date < today ? 'gone' : ''}"><b>${d.dayName}</b><span>${fmtShortDate(d.date)}</span></div>`).join('')}
+      <div class="hist-cw-rl hist-cw-rl-day"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.9" y1="4.9" x2="6.3" y2="6.3"/><line x1="17.7" y1="17.7" x2="19.1" y2="19.1"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.9" y1="19.1" x2="6.3" y2="17.7"/><line x1="17.7" y1="6.3" x2="19.1" y2="4.9"/></svg><span>День<small>09–21</small></span></div>
       ${week.map(d => cell(d, 'day')).join('')}
-      <div class="hist-cw-rl">Ночь<small>21–09</small></div>
+      <div class="hist-cw-rl hist-cw-rl-night"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span>Ночь<small>21–09</small></span></div>
       ${week.map(d => cell(d, 'night')).join('')}
     </div>`;
 }
