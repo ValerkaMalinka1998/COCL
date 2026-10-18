@@ -51,13 +51,24 @@ function renderBrandsSettings() {
   const wsSeg = (active, attrName, brand) => getWorkshops().map(w => `
     <button type="button" class="settings-seg-btn ${active === w.id ? 'active' : ''}" ${attrName}="${escapeAttr(w.id)}"${brand != null ? ` data-brand="${escapeAttr(brand)}"` : ''}>${escapeHtml(w.name)}</button>`).join('');
 
+  // Компактная плитка бренда: название, линии, цех (короткий список), удалить.
+  // Плитки идут сеткой в прокручиваемой области — длинный справочник не растягивает страницу.
+  const wsSelect = (brand) => {
+    const cur = getBrandWorkshop(brand) || '';
+    return `<select class="brand-tile-ws" data-brand-ws-select="${escapeAttr(brand)}" title="Цех бренда">
+      ${cur ? '' : '<option value="" selected>без цеха</option>'}
+      ${getWorkshops().map(w => `<option value="${escapeAttr(w.id)}" ${cur === w.id ? 'selected' : ''}>${escapeHtml(w.name)}</option>`).join('')}
+    </select>`;
+  };
   const rows = shown.map(b => {
     const lines = getLinesForBrand(b);
     return `
-      <div class="settings-row" data-brand-row="${escapeAttr(b)}">
-        <span class="settings-row-name" data-brand-rename="${escapeAttr(b)}" title="Нажмите, чтобы переименовать">${settingsHighlight(b, q)}</span>
-        <span class="settings-row-meta" title="${escapeAttr(lines.join(', ') || 'Ни на одной линии')}">${lines.length ? lines.length + ' ' + pluralizeLines(lines.length) : 'нет линий'}</span>
-        <span class="settings-seg settings-seg-sm">${wsSeg(getBrandWorkshop(b), 'data-brand-ws', b)}</span>
+      <div class="brand-tile ${lines.length ? '' : 'brand-tile-unused'}" data-brand-row="${escapeAttr(b)}">
+        <div class="brand-tile-main">
+          <span class="brand-tile-name" data-brand-rename="${escapeAttr(b)}" title="Нажмите, чтобы переименовать">${settingsHighlight(b, q)}</span>
+          <span class="brand-tile-meta" title="${escapeAttr(lines.join(', ') || 'Ни на одной линии')}">${lines.length ? escapeHtml(lines.slice(0, 3).join(', ')) + (lines.length > 3 ? ` +${lines.length - 3}` : '') : 'нет линий'}</span>
+        </div>
+        ${wsSelect(b)}
         <button type="button" class="st-icon-btn st-icon-danger" data-brand-delete="${escapeAttr(b)}" title="Удалить бренд">${SETTINGS_ICON_DELETE}</button>
       </div>`;
   }).join('');
@@ -72,9 +83,9 @@ function renderBrandsSettings() {
       <span class="settings-seg">${wsSeg(brandsAddWs, 'data-brand-add-ws')}</span>
       <button type="button" class="btn btn-primary btn-sm" id="newBrandInlineBtn">Добавить</button>
     </div>
-    <div class="settings-list">
-      ${rows || `<div class="st-empty">${q ? `Ничего не найдено по «${escapeHtml(brandsQuery)}»` : 'Брендов в этом цехе пока нет'}</div>`}
-    </div>`;
+    ${rows ? `<div class="brand-grid-meta">Показано ${shown.length} из ${all.length}</div>
+    <div class="brand-grid">${rows}</div>`
+    : `<div class="settings-list"><div class="st-empty">${q ? `Ничего не найдено по «${escapeHtml(brandsQuery)}»` : 'Брендов в этом цехе пока нет'}</div></div>`}`;
 }
 
 function addBrandInline() {
@@ -192,13 +203,6 @@ $('#brandsList')?.addEventListener('click', (e) => {
     return;
   }
   if (e.target.closest('#newBrandInlineBtn')) return addBrandInline();
-  const setWs = e.target.closest('[data-brand-ws]');
-  if (setWs) {
-    setBrandWorkshop(setWs.dataset.brand, setWs.dataset.brandWs);
-    renderBrandsSettings();
-    if (typeof renderStructureSettings === 'function') renderStructureSettings();
-    return;
-  }
   const del = e.target.closest('[data-brand-delete]');
   if (del) return window.deleteBrand(del.dataset.brandDelete);
   const ren = e.target.closest('[data-brand-rename]');
@@ -206,6 +210,15 @@ $('#brandsList')?.addEventListener('click', (e) => {
     const old = ren.dataset.brandRename;
     startInlineEdit(ren, old, (v) => renameBrand(old, v));
   }
+});
+
+/* Цех бренда — выпадающий список на плитке */
+$('#brandsList')?.addEventListener('change', (e) => {
+  const sel = e.target.closest('[data-brand-ws-select]');
+  if (!sel || !sel.value) return;
+  setBrandWorkshop(sel.dataset.brandWsSelect, sel.value);
+  renderBrandsSettings();
+  if (typeof renderStructureSettings === 'function') renderStructureSettings();
 });
 
 /* ============================================================

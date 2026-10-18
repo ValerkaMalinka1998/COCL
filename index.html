@@ -313,53 +313,44 @@
 <!-- ======================= ВКЛАДКА TOP LOSSES ======================= -->
 <div class="tab" id="tab-toploss">
 
-  <!-- ЭКРАН 1: ВЫБОР ПОТЕРЬ -->
+  <!-- ЭКРАН 1: РАЗБОР ПОТЕРЬ ЛИНИИ -->
   <div id="tlSelectView">
-
-    <div class="card">
-      <h2>1. Линия</h2>
-      <div class="row">
-        <div class="field">
-          <label class="required">Линия</label>
-          <select id="tlLine"><option value="">— выберите —</option></select>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="tl-header-row">
-        <h2>2. Выберите потери для проверки</h2>
-        <div class="tl-selected-counter" id="tlSelectedCounter" style="display:none">
-          Выбрано: <strong id="tlSelectedCount">0</strong>
-        </div>
-      </div>
-      <p class="tl-hint">
-        Отметьте одну или несколько потерь. Будут собраны все стандарты,
-        которые их контролируют (дубликаты исключаются).
-      </p>
-      <div id="tlCategoriesContainer" class="tl-select-categories"></div>
-    </div>
-
-    <div class="tl-select-footer">
-      <button class="btn btn-secondary" id="tlResetSelectionBtn">Сбросить выбор</button>
-      <button class="btn btn-primary btn-icon-text" id="tlBuildChecklistBtn" disabled>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 11l3 3L22 4"/>
-          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-        </svg>
-        <span>Сформировать чек-лист</span>
+    <div class="card tl2-top">
+      <h2 class="tl2-h">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        TOP Losses
+        <small>разбор потерь линии · проверка по желанию</small>
+      </h2>
+      <button type="button" class="editor-line-pill" id="tlLinePill" title="Сменить линию">
+        <span class="editor-line-pill-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        </span>
+        <span class="editor-line-pill-code" id="tlLinePillCode">Выбрать линию</span>
+        <span class="editor-line-pill-caret">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </span>
       </button>
     </div>
-
+    <div class="tl2-split">
+      <aside class="card tl2-side">
+        <label class="tl2-search">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="tlSearch" placeholder="Найти потерю…" autocomplete="off">
+        </label>
+        <div class="tl2-side-scroll" id="tlSideList"></div>
+      </aside>
+      <section class="card tl2-main" id="tlDiag"></section>
+    </div>
   </div>
 
-  <!-- ЭКРАН 2: ЧЕК-ЛИСТ (Этап 4) -->
+  <!-- ЭКРАН 2: ПРОВЕРКА -->
   <div id="tlChecklistView" style="display:none"></div>
 
-  <!-- ЭКРАН 3: РЕЗЮМЕ (Этап 4) -->
+  <!-- ЭКРАН 3: ИТОГ -->
   <div id="tlSummaryView" style="display:none"></div>
 
 </div>
+
 <!-- ======================= ВКЛАДКА ЧЕК-ЛИСТ CL ======================= -->
 <div class="tab active" id="tab-electronic">
 
@@ -492,7 +483,14 @@
             </svg>
             <span>Создать стандарт</span>
           </button>
-          <button class="btn btn-secondary btn-icon-text btn-sm" id="editorMechUploadBtn" type="button">
+          <div class="et-excel" id="editorMechExcelMenu">
+            <button class="btn btn-secondary btn-icon-text et-excel-toggle" type="button" title="Импорт, шаблон и экспорт Excel">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13l3 4M12 13l-3 4"/></svg>
+              <span>Excel</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="et-excel-menu">
+          <button class="et-excel-item" id="editorMechUploadBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="17 8 12 3 7 8"/>
@@ -501,7 +499,7 @@
             <span>Импорт</span>
           </button>
           <input type="file" id="editorMechUploadInput" accept=".xlsx,.xls" style="display:none">
-          <button class="btn btn-secondary btn-icon-text btn-sm" id="editorMechTemplateBtn" type="button">
+          <button class="et-excel-item" id="editorMechTemplateBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="7 10 12 15 17 10"/>
@@ -509,7 +507,7 @@
             </svg>
             <span>Шаблон</span>
           </button>
-          <button class="btn btn-secondary btn-icon-text btn-sm" id="editorMechExportBtn" type="button">
+          <button class="et-excel-item" id="editorMechExportBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="17 8 12 3 7 8"/>
@@ -517,6 +515,8 @@
             </svg>
             <span>Экспорт</span>
           </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -578,66 +578,31 @@
 
       <div class="editor-panel-divider"></div>
 
-      <!-- Фильтры -->
-      <div class="editor-filters">
-        <div class="editor-filter-field">
-          <label>Цех</label>
-          <select id="emFilterWorkshop"><option value="">Все</option></select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Участок</label>
-          <select id="emFilterArea"><option value="">Все</option></select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Линия</label>
-          <select id="emFilterLine"><option value="">Все</option></select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Машина</label>
-          <select id="emFilterMachine"><option value="">Все</option></select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Узел</label>
-          <select id="emFilterNode"><option value="">Все</option></select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Тип</label>
-          <select id="emFilterType">
-            <option value="">Все</option>
-            <option value="ChangeOver">Change Over</option>
-            <option value="CL_TO">CL в ТО</option>
-            <option value="CL_Conversion">CL в Конвертацию</option>
-            <option value="__none">Без привязки</option>
-          </select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Часть линии</label>
-          <select id="emFilterPart">
-            <option value="">Все</option>
-            <option value="Maker">Maker</option>
-            <option value="Packer">Packer</option>
-          </select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Статус</label>
-          <select id="emFilterActive">
-            <option value="">Все</option>
-            <option value="active">Только активные</option>
-            <option value="inactive">Только неактивные</option>
-          </select>
-        </div>
-        <div class="editor-filter-field editor-filter-field-wide">
-          <label>Поиск</label>
-          <div class="editor-filter-search-row">
-            <input type="text" id="emFilterSearch" placeholder="Название, OPL №, узел...">
-            <button class="editor-filter-reset-btn" id="emFilterResetBtn" type="button" title="Сбросить фильтры">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="23 4 23 10 17 10"/>
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-              </svg>
-            </button>
-          </div>
-        </div>
+      <!-- Фильтры одной строкой -->
+      <div class="et-filterbar">
+        <label class="et-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="emFilterSearch" placeholder="Поиск: OPL, название, узел…" autocomplete="off"></label>
+        <div class="et-fchips" id="emMachineChips"></div>
+        <input type="hidden" id="emFilterMachine">
+        <input type="hidden" id="emFilterPart">
+        <select class="et-fsel" id="emFilterNode" title="Узел"><option value="">Узел: все</option></select>
+        <select class="et-fsel" id="emFilterType" title="Применять к">
+          <option value="">Применять к: все</option>
+          <option value="ChangeOver">Change Over</option>
+          <option value="CL_TO">CL в ТО</option>
+          <option value="CL_Conversion">CL в Конвертацию</option>
+          <option value="__none">Без привязки</option>
+        </select>
+        <select class="et-fsel" id="emFilterSchedule" title="Расписание">
+          <option value="">Расписание: все</option>
+          <option value="in">В расписании</option>
+          <option value="out">Не в расписании</option>
+        </select>
+        <select class="et-fsel" id="emFilterActive" title="Статус">
+          <option value="">Статус: все</option>
+          <option value="active">Активные</option>
+          <option value="inactive">Неактивные</option>
+        </select>
+        <button class="et-reset" id="emFilterResetBtn" type="button" title="Сбросить фильтры">Сбросить</button>
       </div>
     </div>
 
@@ -672,7 +637,14 @@
             </svg>
             <span>Создать параметр</span>
           </button>
-          <button class="btn btn-secondary btn-icon-text btn-sm" id="editorElecUploadBtn" type="button">
+          <div class="et-excel" id="editorElecExcelMenu">
+            <button class="btn btn-secondary btn-icon-text et-excel-toggle" type="button" title="Импорт, шаблон и экспорт Excel">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13l3 4M12 13l-3 4"/></svg>
+              <span>Excel</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="et-excel-menu">
+          <button class="et-excel-item" id="editorElecUploadBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="17 8 12 3 7 8"/>
@@ -681,7 +653,7 @@
             <span>Импорт</span>
           </button>
           <input type="file" id="editorElecUploadInput" accept=".xlsx,.xls" style="display:none">
-          <button class="btn btn-secondary btn-icon-text btn-sm" id="editorElecTemplateBtn" type="button">
+          <button class="et-excel-item" id="editorElecTemplateBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="7 10 12 15 17 10"/>
@@ -689,7 +661,7 @@
             </svg>
             <span>Шаблон</span>
           </button>
-          <button class="btn btn-secondary btn-icon-text btn-sm" id="editorElecExportBtn" type="button">
+          <button class="et-excel-item" id="editorElecExportBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="17 8 12 3 7 8"/>
@@ -697,6 +669,8 @@
             </svg>
             <span>Экспорт</span>
           </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -755,62 +729,36 @@
 
       <div class="editor-panel-divider"></div>
 
-      <!-- Фильтры -->
-      <div class="editor-filters">
-        <div class="editor-filter-field">
-          <label>Цех</label>
-          <select id="eeFilterWorkshop"><option value="">Все</option></select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Участок</label>
-          <select id="eeFilterArea"><option value="">Все</option></select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Линия</label>
-          <select id="eeFilterLine"><option value="">Все</option></select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Машина</label>
-          <select id="eeFilterMachine"><option value="">Все</option></select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Тип контроля</label>
-          <select id="eeFilterControlType">
-            <option value="">Все</option>
-            <option value="fixed">Фиксированный</option>
-            <option value="variable">Вариабельный</option>
-            <option value="interval">Контролируемый интервал</option>
-          </select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Периодичность</label>
-          <select id="eeFilterFreq">
-            <option value="">Все</option>
-            <option value="daily">Каждый день</option>
-            <option value="weekly">По дням недели</option>
-            <option value="once">Разовые даты</option>
-          </select>
-        </div>
-        <div class="editor-filter-field">
-          <label>Статус</label>
-          <select id="eeFilterActive">
-            <option value="">Все</option>
-            <option value="active">Только активные</option>
-            <option value="inactive">Только неактивные</option>
-          </select>
-        </div>
-        <div class="editor-filter-field editor-filter-field-wide">
-          <label>Поиск</label>
-          <div class="editor-filter-search-row">
-            <input type="text" id="eeFilterSearch" placeholder="Название параметра...">
-            <button class="editor-filter-reset-btn" id="eeFilterResetBtn" type="button" title="Сбросить фильтры">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="23 4 23 10 17 10"/>
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-              </svg>
-            </button>
-          </div>
-        </div>
+      <!-- Фильтры одной строкой -->
+      <div class="et-filterbar">
+        <label class="et-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="eeFilterSearch" placeholder="Поиск: параметр, машина…" autocomplete="off"></label>
+        <div class="et-fchips" id="eeMachineChips"></div>
+        <input type="hidden" id="eeFilterMachine">
+        <input type="hidden" id="eeFilterPart">
+        <select class="et-fsel" id="eeFilterControlType" title="Тип контроля">
+          <option value="">Тип: все</option>
+          <option value="fixed">Фиксированный</option>
+          <option value="variable">Вариабельный</option>
+          <option value="interval">Контролируемый интервал</option>
+        </select>
+        <select class="et-fsel" id="eeFilterType" title="Применять к">
+          <option value="">Применять к: все</option>
+          <option value="ChangeOver">Change Over</option>
+          <option value="CL_TO">CL в ТО</option>
+          <option value="CL_Conversion">CL в Конвертацию</option>
+          <option value="__none">Без привязки</option>
+        </select>
+        <select class="et-fsel" id="eeFilterSchedule" title="Расписание">
+          <option value="">Расписание: все</option>
+          <option value="in">В расписании</option>
+          <option value="out">Не в расписании</option>
+        </select>
+        <select class="et-fsel" id="eeFilterActive" title="Статус">
+          <option value="">Статус: все</option>
+          <option value="active">Активные</option>
+          <option value="inactive">Неактивные</option>
+        </select>
+        <button class="et-reset" id="eeFilterResetBtn" type="button" title="Сбросить фильтры">Сбросить</button>
       </div>
     </div>
 
@@ -1198,6 +1146,7 @@
         <div class="sch-matrix-legend" id="schMatrixLegend">
           <span><span class="sch-matrix-legend-swatch sch-matrix-legend-day"></span> День</span>
           <span><span class="sch-matrix-legend-swatch sch-matrix-legend-night"></span> Ночь</span>
+          <span><span class="sch-matrix-legend-swatch sch-matrix-legend-past"></span> Прошло</span>
         </div>
       </div>
 
@@ -1213,76 +1162,84 @@
 <!-- ======================= ВКЛАДКА ИСТОРИЯ ======================= -->
 <div class="tab" id="tab-history">
 
-  <div class="card">
-    <h2>Фильтры</h2>
-    <div class="filters">
-      <div class="field">
-        <label>Период</label>
-        <select id="periodSelect">
-          <option value="all">Все время</option>
-          <option value="week">Последняя неделя</option>
-          <option value="month">Последний месяц</option>
-          <option value="custom">Произвольный</option>
-        </select>
+  <!-- ===== Лента проверок / журнал отклонений ===== -->
+  <div id="histMainView">
+    <div class="card hist-head-card">
+      <div class="hist-head">
+        <div class="hist-title">История <small id="histSubtitle"></small></div>
+        <span class="hist-sp"></span>
+        <div class="hist-seg" id="histViewSeg">
+          <button type="button" data-hist-view="feed">По проверкам</button>
+          <button type="button" data-hist-view="dev">По отклонениям</button>
+        </div>
+        <div class="hist-seg" id="histPeriodSeg">
+          <button type="button" data-hist-period="shift">Смена</button>
+          <button type="button" data-hist-period="today">Сегодня</button>
+          <button type="button" data-hist-period="7">7 дней</button>
+          <button type="button" data-hist-period="30">30 дней</button>
+          <button type="button" data-hist-period="all">Всё</button>
+          <button type="button" data-hist-period="custom">Период…</button>
+        </div>
+        <div class="et-excel" id="historyExcelMenu">
+          <button class="btn btn-secondary btn-icon-text et-excel-toggle" type="button" title="Экспорт и очистка истории">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13l3 4M12 13l-3 4"/></svg>
+            <span>Excel</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="et-excel-menu">
+            <button class="et-excel-item" id="exportXlsxBtn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Экспорт XLSX</span>
+            </button>
+            <button class="et-excel-item" id="exportCsvBtn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Экспорт CSV</span>
+            </button>
+            <button class="et-excel-item hist-danger-item" id="clearHistoryBtn" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+              <span>Очистить историю</span>
+            </button>
+          </div>
+        </div>
       </div>
-      <div class="field" id="dateFromField" style="display:none">
-        <label>С даты</label>
-        <input type="date" id="dateFrom">
+      <div class="hist-custom hist-hidden" id="histCustomRange">
+        <label>С <input type="date" id="dateFrom"></label>
+        <label>По <input type="date" id="dateTo"></label>
       </div>
-      <div class="field" id="dateToField" style="display:none">
-        <label>По дату</label>
-        <input type="date" id="dateTo">
-      </div>
-      <div class="field">
-        <label>Линия</label>
-        <select id="filterLine"><option value="">Все</option></select>
-      </div>
-      <div class="field">
-        <label>Тип перехода</label>
-          <select id="filterType">
-            <option value="">Все</option>
-            <option>ChangeOver</option>
-            <option>CL_TO</option>
-            <option>CL_Conversion</option>
-          </select>
-      </div>
-      <div class="field">
-        <label>Тип проверки</label>
-        <select id="filterMode">
-          <option value="">Все</option>
-          <option value="changeover">COCL (смена сорта)</option>
-          <option value="toploss">Top Losses</option>
-          <option value="electronic">CL Electronic</option>
-        </select>
-      </div>
-      <div class="field" style="flex:0 0 auto; min-width:auto">
-        <button class="btn btn-primary" id="applyFilterBtn">Применить</button>
+      <div class="hist-kpis" id="histKpis"></div>
+      <div class="hist-fbar">
+        <label class="hist-search">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="histSearch" placeholder="Поиск: OPL, стандарт, машина, комментарий…">
+        </label>
+        <select id="filterLine" class="hist-select" title="Линия"></select>
+        <div class="hist-kind-chips" id="histKindChips"></div>
+        <select id="histBrigade" class="hist-select" title="Бригада"></select>
+        <select id="histMachine" class="hist-select" title="Машина"></select>
+        <label class="hist-toggle" title="Показать только проверки с отклонениями">
+          <input type="checkbox" id="histOnlyDev"><span class="hist-toggle-sw"></span>только с отклонениями
+        </label>
       </div>
     </div>
-    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px">
-      <button class="btn btn-secondary" id="exportCsvBtn">Экспорт CSV</button>
-      <button class="btn btn-secondary" id="exportXlsxBtn">Экспорт XLSX</button>
-      <button class="btn btn-danger" id="clearHistoryBtn">Очистить историю</button>
-    </div>
+
+    <div class="card hist-cov-card" id="histCoverage"></div>
+    <div id="historyList"></div>
   </div>
 
-  <div class="card">
-    <h2>Записи (<span id="historyCount">0</span>)</h2>
-    <div id="historyList"></div>
-    <div class="pagination-bar" id="historyPagination"></div>
-  </div>
+  <!-- ===== Страница проверки ===== -->
+  <div id="histRecordView" class="hist-hidden"></div>
+
+  <!-- ===== История стандарта ===== -->
+  <div id="histStdView" class="hist-hidden"></div>
 
 </div>
 
 <!-- ======================= ВКЛАДКА ДАШБОРД ======================= -->
 <div class="tab" id="tab-dashboard">
 
-  <div class="card">
-    <h2>Дашборд</h2>
-    <div id="dashboardWorkshopBar" class="dash-workshop-bar"></div>
-    <div id="dashboardContent">
-      <div class="empty-state">Загрузка данных...</div>
-    </div>
+  <div class="card dash-head" id="dashboardWorkshopBar"></div>
+  <div id="dashboardContent">
+    <div class="empty-state">Загрузка данных...</div>
   </div>
 
 </div>
@@ -1507,44 +1464,48 @@
     </section>
     <section class="settings-panel" data-panel="shifts">
       <div class="card">
-        <h2>График смен CL Electronic</h2>
-        <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
-          Определяет автоматический расчёт смены по дате для вкладки «CL Electronic».
-          Порядок смен и количество дней на смену фиксированы, дата старта задаётся один раз.
+        <h2>График смен и бригад</h2>
+        <p class="shf-intro">
+          Две смены: <b>день 09:00–21:00</b> и <b>ночь 21:00–09:00</b>. A, B, C, D — бригады.
+          По этому графику Чек-лист CL, Расписание CL и COCL показывают, какая бригада на смене.
         </p>
 
-        <div class="row">
-          <div class="field">
-            <label>Порядок смен в цикле</label>
-            <input type="text" id="elecShiftCycle" placeholder="D, A, C, B" readonly
-                   style="background:var(--bg-hover);font-family:'Courier New',Consolas,monospace;letter-spacing:1px">
-          </div>
-          <div class="field" style="max-width:180px">
-            <label class="required">Дней на одну смену</label>
-            <input type="number" id="elecShiftDays" min="1" max="14" value="2" placeholder="2">
-          </div>
-          <div class="field" style="max-width:220px">
-            <label class="required">Дата старта цикла</label>
-            <input type="date" id="elecShiftStart" value="2026-01-01">
+        <div id="shfNow" class="shf-now"></div>
+
+        <div class="shf-section-head">
+          <div class="shf-section-title">Цикл бригад</div>
+          <div class="shf-legend">Нажмите на букву, чтобы сменить бригаду</div>
+        </div>
+        <div id="shfCycle" class="shf-cycle"></div>
+
+        <div class="shf-controls">
+          <label class="shf-start">
+            <span>Первый день цикла</span>
+            <input type="date" id="elecShiftStart">
+          </label>
+          <div class="shf-len">
+            <span>Длина цикла</span>
+            <button type="button" class="btn btn-secondary btn-sm" id="shfLenMinus" title="Убрать последний день цикла">−</button>
+            <span id="shfLenVal" class="shf-len-val"></span>
+            <button type="button" class="btn btn-secondary btn-sm" id="shfLenPlus" title="Добавить день в конец цикла">+</button>
           </div>
         </div>
 
-        <div class="photo-path-block" style="margin-top:14px">
-          <div class="photo-path-label">Предпросмотр — ближайшие 8 дней от выбранной даты старта:</div>
-          <div id="elecShiftPreview" class="elec-shift-preview"></div>
+        <div class="shf-section-head">
+          <div class="shf-section-title">Ближайшие 14 дней</div>
         </div>
+        <div id="elecShiftPreview" class="shf-calendar"></div>
 
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px">
-          <button class="btn btn-primary btn-icon-text" id="elecShiftSaveBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <div class="shf-actions">
+          <span id="shfDirty" class="shf-dirty" hidden>Есть несохранённые изменения</span>
+          <button class="btn btn-secondary" id="elecShiftResetBtn" type="button">Сбросить к стандартному</button>
+          <button class="btn btn-primary btn-icon-text" id="elecShiftSaveBtn" type="button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
               <polyline points="17 21 17 13 7 13 7 21"/>
               <polyline points="7 3 7 8 15 8"/>
             </svg>
             <span>Сохранить</span>
-          </button>
-          <button class="btn btn-secondary" id="elecShiftResetBtn" type="button">
-            Сбросить к стандартному
           </button>
         </div>
       </div>
@@ -1714,6 +1675,32 @@
     </div>
   </div>
 </div>
+<!-- ======================= УВЕДОМЛЕНИЕ: MACHINE JOURNAL ======================= -->
+<div class="modal-overlay" id="mjNoticeModal">
+  <div class="modal mj-modal">
+    <div class="mj-head">
+      <span class="mj-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="12" y1="7" x2="12" y2="11"/><line x1="12" y1="14" x2="12.01" y2="14"/></svg>
+      </span>
+      <div class="mj-head-text">
+        <h3>Сделайте запись в Machine Journal</h3>
+        <p id="mjNoticeSub"></p>
+      </div>
+      <button class="modal-close" id="mjNoticeClose" title="Закрыть">✕</button>
+    </div>
+    <div class="modal-body mj-body">
+      <p class="mj-lead">Проверка сохранена. Зафиксируйте каждое отклонение в журнале машины (Machine Journal).</p>
+      <div id="mjNoticeList"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-icon-text" id="mjNoticeCopyBtn" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <span>Скопировать список</span>
+      </button>
+      <button class="btn btn-primary" id="mjNoticeOkBtn" type="button">Понятно</button>
+    </div>
+  </div>
+</div>
 <!-- ======================= МОДАЛЬНОЕ ОКНО: БЫСТРАЯ ПРОВЕРКА (из матрицы) ======================= -->
 <div class="modal-overlay" id="quickCheckModal">
   <div class="modal modal-wide">
@@ -1815,29 +1802,6 @@
     </div>
   </div>
 </div>
-<!-- ======================= МОДАЛЬНОЕ ОКНО: ПРОСМОТР ЗАПИСИ ======================= -->
-<div class="modal-overlay" id="recordModal">
-  <div class="modal modal-wide">
-    <div class="modal-header">
-      <h3>Просмотр проверки</h3>
-      <button class="modal-close" id="recordModalClose">✕</button>
-    </div>
-    <div class="modal-body" id="recordModalBody"></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary btn-icon-text" id="recordPrintBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="6 9 6 2 18 2 18 9"/>
-          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-          <rect x="6" y="14" width="12" height="8"/>
-        </svg>
-        <span>Печать</span>
-      </button>
-      <button class="btn btn-primary" id="recordCloseBtn">Закрыть</button>
-    </div>
-  </div>
-</div>
-
-
 <!-- ======================= МОДАЛЬНОЕ ОКНО: ДОБАВИТЬ ОПЕРАТОРА ======================= -->
 <div class="modal-overlay" id="addOperatorModal">
   <div class="modal">
@@ -2240,6 +2204,8 @@
 <script src="js/components/line-picker.js"></script>
 <script src="js/components/standard-view.js"></script>
 <script src="js/components/quick-add-machine.js"></script>
+<script src="js/components/cil-table.js"></script>
+<script src="js/components/mj-notice.js"></script>
 <script src="js/io/excel-common.js"></script>
 <script src="js/io/standards-io.js"></script>
 <script src="js/views/brand-schedule.js"></script>
@@ -2247,9 +2213,12 @@
 <script src="js/views/cocl/cocl-save.js"></script>
 <script src="js/views/cl-checklist/cl-checklist.js"></script>
 <script src="js/views/cl-checklist/quick-check.js"></script>
-<script src="js/views/cl-checklist/cl-save.js"></script>
-<script src="js/views/toploss.js"></script>
+<script src="js/views/toploss/toploss.js"></script>
+<script src="js/views/toploss/toploss-check.js"></script>
+<script src="js/views/history/history-data.js"></script>
 <script src="js/views/history/history.js"></script>
+<script src="js/views/history/history-record.js"></script>
+<script src="js/views/history/history-standard.js"></script>
 <script src="js/views/history/history-export.js"></script>
 <script src="js/views/dashboard.js"></script>
 <script src="js/views/editor/editor-core.js"></script>

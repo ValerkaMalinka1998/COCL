@@ -1,0 +1,303 @@
+/* ============================================================
+   ВКЛАДКА «ИСТОРИЯ»: лента, покрытие смен, журнал отклонений,
+   страница проверки, история стандарта
+   ============================================================ */
+
+.hist-hidden { display: none !important; }
+.hist-sp { flex: 1; }
+.hist-sub { font-size: 11px; color: var(--text-dim); }
+.hist-c-ok { color: var(--accent-green); }
+.hist-c-fail { color: var(--accent-red); }
+.hist-c-warn { color: var(--accent-amber); }
+.hist-opl { font-family: Consolas, 'Courier New', monospace; color: var(--accent-cyan); font-weight: 700; }
+
+/* === Шапка: заголовок, режим, период, Excel === */
+.hist-head-card { padding: 0; }
+.hist-head {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 14px 16px;
+}
+.hist-title { font-size: 18px; font-weight: 800; color: var(--text-main); display: flex; gap: 8px; align-items: baseline; }
+.hist-title small { font-size: 12px; font-weight: 600; color: var(--text-dim); }
+
+.hist-seg {
+  display: inline-flex; gap: 2px; padding: 3px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--bg-card);
+}
+.hist-seg button {
+  border: 0; background: transparent; padding: 6px 11px; border-radius: 8px;
+  font-size: 12px; font-weight: 700; color: var(--text-second); cursor: pointer;
+  font-family: inherit; white-space: nowrap;
+}
+.hist-seg button:hover { color: var(--text-main); background: var(--bg-hover); }
+.hist-seg button.on { background: var(--blue-mid); color: var(--on-accent); }
+
+.hist-danger-item { color: var(--accent-red) !important; }
+
+.hist-custom { display: flex; gap: 12px; padding: 0 16px 12px; justify-content: flex-end; }
+.hist-custom label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--text-second); }
+.hist-custom input { padding: 6px 8px; border: 1px solid var(--border-hi); border-radius: 8px; background: var(--bg-input); color: var(--text-main); font-family: inherit; }
+
+/* === KPI === */
+.hist-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; padding: 0 16px 14px; }
+.hist-kpi { padding: 10px 12px; border-radius: 10px; background: var(--bg-input); border: 1px solid var(--border); }
+.hist-kpi b { display: block; font-size: 20px; color: var(--text-main); }
+.hist-kpi span { font-size: 11px; color: var(--text-dim); }
+.hist-kpi-ok b { color: var(--accent-green); }
+.hist-kpi-fail b { color: var(--accent-red); }
+.hist-kpi-warn b { color: var(--accent-amber); }
+
+/* === Фильтры === */
+.hist-fbar {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  padding: 10px 16px 14px; border-top: 1px solid var(--border);
+}
+.hist-search {
+  flex: 1 1 220px; display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border: 1px solid var(--border-hi); border-radius: 10px;
+  background: var(--bg-input); color: var(--text-dim);
+}
+.hist-search input { border: 0; outline: 0; background: transparent; width: 100%; color: var(--text-main); font: inherit; font-size: 13px; }
+.hist-select {
+  padding: 6px 10px; border: 1px solid var(--border-hi); border-radius: 999px;
+  background: var(--bg-card); color: var(--text-second); font: inherit; font-size: 12px; font-weight: 700;
+  width: auto; min-width: 0;
+}
+.hist-kind-chips { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.hist-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px;
+  border: 1px solid var(--border-hi); background: var(--bg-card); font: inherit; font-size: 12px; font-weight: 700;
+  color: var(--text-dim); cursor: pointer;
+}
+.hist-chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--border-hi); }
+.hist-chip.on { border-color: var(--k); color: var(--k); background: color-mix(in srgb, var(--k) 10%, var(--bg-card)); }
+.hist-chip.on i { background: var(--k); }
+.hist-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--text-second); cursor: pointer; user-select: none; }
+.hist-toggle input { display: none; }
+.hist-toggle-sw { width: 30px; height: 16px; border-radius: 8px; background: var(--border-hi); position: relative; transition: background .15s; }
+.hist-toggle-sw::after { content: ""; position: absolute; left: 2px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--bg-card); transition: left .15s; }
+.hist-toggle input:checked + .hist-toggle-sw { background: var(--accent-red); }
+.hist-toggle input:checked + .hist-toggle-sw::after { left: 16px; }
+.hist-toggle:has(input:checked) { color: var(--accent-red); }
+
+/* === Покрытие смен === */
+.hist-cov-card { padding: 14px 16px; }
+.hist-cov-empty { font-size: 12px; color: var(--text-dim); }
+.hist-cov-h { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.hist-cov-title { font-size: 11px; font-weight: 800; color: var(--text-second); text-transform: uppercase; letter-spacing: .5px; }
+.hist-cov-sub { font-size: 12px; color: var(--text-dim); }
+.hist-cw { display: grid; grid-template-columns: 70px repeat(7, minmax(0, 1fr)); gap: 6px; }
+.hist-cw-dh { text-align: center; font-size: 11px; font-weight: 800; color: var(--text-second); padding: 4px 0; border-radius: 8px; }
+.hist-cw-dh small { display: block; font-weight: 600; color: var(--text-dim); }
+.hist-cw-dh.today { background: color-mix(in srgb, var(--accent-cyan) 12%, transparent); color: var(--accent-cyan); }
+.hist-cw-rl { font-size: 11px; font-weight: 800; color: var(--text-second); display: flex; flex-direction: column; justify-content: center; }
+.hist-cw-rl small { color: var(--text-dim); font-weight: 600; }
+
+.hist-cc {
+  --k: var(--text-dim);
+  display: block; width: 100%; text-align: left; font: inherit; color: inherit;
+  border: 1px solid var(--border); border-left: 4px solid var(--k); border-radius: 8px;
+  padding: 6px 8px; background: var(--bg-card); min-height: 54px; min-width: 0;
+}
+button.hist-cc { cursor: pointer; }
+button.hist-cc:hover { background: var(--bg-hover); }
+.hist-cc-night { background: color-mix(in srgb, var(--accent-purple) 4%, var(--bg-card)); }
+.hist-cc-t { display: flex; justify-content: space-between; gap: 4px; font-size: 10px; color: var(--text-dim); font-weight: 700; }
+.hist-cc-n { display: flex; align-items: center; gap: 3px; font-size: 12.5px; font-weight: 800; margin-top: 2px; color: var(--k); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-cc-n svg { width: 13px; height: 13px; flex: none; }
+.hist-cc-d { font-size: 10.5px; color: var(--text-dim); margin-top: 3px; }
+.hist-cc-pb { height: 4px; border-radius: 2px; background: var(--bg-input); margin-top: 5px; overflow: hidden; }
+.hist-cc-pb i { display: block; height: 100%; background: var(--k); }
+.hist-cc-ok { --k: var(--accent-green); }
+.hist-cc-fail { --k: var(--accent-red); }
+.hist-cc-missed, .hist-cc-partial { --k: var(--accent-amber); }
+.hist-cc-now { --k: var(--accent-cyan); }
+.hist-cc-future, .hist-cc-none { border-style: dashed; border-left-width: 1px; opacity: .65; }
+.hist-cc-none { opacity: .45; }
+.hist-covsum { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--text-second); margin-top: 10px; }
+.hist-covsum b { color: var(--text-main); }
+
+/* === Лента проверок === */
+.hist-day { font-size: 11px; font-weight: 800; color: var(--text-second); text-transform: uppercase; letter-spacing: .5px; margin: 16px 4px 6px; display: flex; gap: 8px; }
+.hist-day span { color: var(--text-dim); font-weight: 600; text-transform: none; letter-spacing: 0; }
+.hist-feed { padding: 0; overflow: hidden; margin-bottom: 0; }
+.hist-rec {
+  display: grid; grid-template-columns: 56px 40px minmax(0, 1.2fr) minmax(0, 1fr) 170px 140px;
+  gap: 12px; align-items: center; width: 100%; padding: 10px 14px;
+  border: 0; border-bottom: 1px solid var(--border); background: transparent;
+  text-align: left; font: inherit; color: inherit; cursor: pointer;
+}
+.hist-rec:last-child { border-bottom: 0; }
+.hist-rec:hover { background: var(--bg-hover); }
+.hist-rec-tm { font-weight: 800; font-size: 13px; color: var(--text-main); }
+.hist-rec-tm small { display: block; font-size: 10px; color: var(--text-dim); font-weight: 600; }
+.hist-ico {
+  width: 36px; height: 36px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; flex: none;
+  color: var(--k); background: color-mix(in srgb, var(--k) 14%, transparent);
+}
+.hist-rec-t b { font-size: 13px; color: var(--text-main); }
+.hist-rec-t div { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.hist-rec-ctx { font-size: 12px; color: var(--text-second); min-width: 0; }
+.hist-rec-dev { font-size: 11px; color: var(--accent-red); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-res { display: flex; flex-direction: column; gap: 4px; }
+.hist-rbar { display: flex; height: 7px; border-radius: 4px; overflow: hidden; background: var(--bg-input); }
+.hist-rbar .ok { background: var(--accent-green); }
+.hist-rbar .fail { background: var(--accent-red); }
+.hist-rbar .un { background: color-mix(in srgb, var(--accent-amber) 45%, transparent); }
+.hist-rtxt { font-size: 11px; color: var(--text-second); }
+.hist-rec-tag { text-align: right; }
+
+.hist-tag {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 800; white-space: nowrap; vertical-align: middle;
+}
+.hist-tag svg { width: 11px; height: 11px; }
+.hist-tag-fail { color: var(--accent-red); background: color-mix(in srgb, var(--accent-red) 11%, transparent); }
+.hist-tag-warn { color: var(--accent-amber); background: color-mix(in srgb, var(--accent-amber) 13%, transparent); }
+.hist-tag-ok { color: var(--accent-green); background: color-mix(in srgb, var(--accent-green) 11%, transparent); }
+.hist-tag-elec { color: var(--accent-purple); border: 1px solid color-mix(in srgb, var(--accent-purple) 35%, transparent); }
+.hist-tag-kind { color: var(--k); background: color-mix(in srgb, var(--k) 11%, transparent); }
+
+.hist-empty { padding: 28px 16px; text-align: center; color: var(--text-dim); font-size: 13px; }
+.hist-more { display: block; margin: 12px auto 0; }
+
+/* === Журнал отклонений === */
+.hist-top5 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 14px 16px; }
+.hist-t5 { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-input); min-width: 0; }
+.hist-t5 h4 { margin: 0 0 6px; font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .5px; }
+.hist-t5 div { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; padding: 3px 0; color: var(--text-main); }
+.hist-t5 div span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hist-t5 div b { color: var(--accent-red); }
+.hist-dev-card { padding: 0; overflow-x: auto; }
+.hist-dev { width: 100%; border-collapse: separate; border-spacing: 0; }
+.hist-dev th {
+  background: var(--nav-bg); color: var(--nav-text); font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px;
+  padding: 9px 10px; text-align: left; white-space: nowrap;
+}
+.hist-dev td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; font-size: 12.5px; color: var(--text-main); }
+.hist-dev tbody tr { cursor: pointer; }
+.hist-dev tbody tr:hover td { background: var(--bg-hover); }
+.hist-dev-val { font-family: Consolas, 'Courier New', monospace; font-size: 12px; color: var(--accent-red); }
+
+/* === Страница проверки === */
+.hist-rp-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 16px; }
+.hist-rp-head .hist-ico { width: 48px; height: 48px; border-radius: 13px; }
+.hist-rp-tt { min-width: 0; }
+.hist-rp-tt h2 { margin: 0; font-size: 19px; color: var(--text-main); }
+.hist-rp-meta { display: flex; gap: 6px 14px; flex-wrap: wrap; font-size: 12px; color: var(--text-second); margin-top: 4px; }
+.hist-rp-meta b { color: var(--text-main); }
+.hist-rp-extra { margin-top: 6px; font-size: 12px; color: var(--text-second); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.hist-rp-nav { display: flex; gap: 6px; }
+.hist-rp { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 12px; align-items: start; }
+.hist-rp-items { padding: 0; overflow: hidden; }
+.hist-mg {
+  font-size: 11px; font-weight: 800; color: var(--text-second); text-transform: uppercase; letter-spacing: .5px;
+  padding: 10px 16px 6px; border-top: 1px solid var(--border); border-left: 4px solid var(--cil-z);
+  background: color-mix(in srgb, var(--cil-z) 9%, var(--bg-card));
+}
+.hist-mg:first-child { border-top: 0; }
+.hist-it {
+  display: grid; grid-template-columns: 28px minmax(0, 1fr) 200px auto; gap: 12px; align-items: start;
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+}
+.hist-it:last-child { border-bottom: 0; }
+.hist-it-fail { background: color-mix(in srgb, var(--accent-red) 5%, var(--bg-card)); }
+.hist-it-missed { background: color-mix(in srgb, var(--accent-amber) 5%, var(--bg-card)); }
+.hist-st {
+  width: 26px; height: 26px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center;
+  color: var(--on-accent); font-weight: 900; font-size: 13px;
+}
+.hist-st svg { width: 15px; height: 15px; }
+.hist-st-o { background: var(--accent-green); }
+.hist-st-x { background: var(--accent-red); }
+.hist-st-u { background: var(--bg-input); color: var(--accent-amber); border: 1.5px dashed var(--accent-amber); }
+.hist-it-title { font-weight: 700; color: var(--text-main); }
+.hist-pts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.hist-pt {
+  font-family: Consolas, 'Courier New', monospace; font-size: 11.5px; padding: 3px 8px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--bg-input); color: var(--text-second);
+}
+.hist-pt i { font-style: normal; color: var(--text-dim); }
+.hist-pt b { color: var(--text-main); }
+.hist-pt.bad { border-color: var(--accent-red); color: var(--accent-red); background: color-mix(in srgb, var(--accent-red) 8%, var(--bg-card)); }
+.hist-pt.bad b { color: var(--accent-red); }
+.hist-com { margin-top: 6px; font-size: 12px; color: var(--text-second); }
+.hist-prev { font-size: 12px; display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+.hist-prev b { color: var(--text-main); }
+.hist-it-act { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+.hist-it-act svg { width: 14px; height: 14px; }
+
+.hist-rp-side { padding: 16px; position: sticky; top: 12px; }
+.hist-ring {
+  width: 124px; height: 124px; border-radius: 50%; margin: 4px auto 12px;
+  background: conic-gradient(var(--accent-green) 0 var(--a1), var(--accent-red) var(--a1) var(--a2),
+    color-mix(in srgb, var(--accent-amber) 45%, transparent) var(--a2) 100%);
+  display: flex; align-items: center; justify-content: center;
+}
+.hist-ring div {
+  width: 92px; height: 92px; border-radius: 50%; background: var(--bg-card);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 22px; color: var(--text-main);
+}
+.hist-ring small { font-size: 10px; color: var(--text-dim); font-weight: 600; }
+.hist-leg { display: grid; grid-template-columns: 1fr auto; gap: 6px; font-size: 12px; color: var(--text-second); margin: 8px 0 14px; }
+.hist-leg span { display: inline-flex; align-items: center; gap: 5px; }
+.hist-leg svg { width: 13px; height: 13px; }
+.hist-side-btns { display: flex; flex-direction: column; gap: 8px; }
+.hist-side-btns .btn { justify-content: center; width: 100%; }
+.hist-mjbox {
+  margin-top: 12px; padding: 10px 12px; border-radius: 10px; font-size: 12px; color: var(--text-second);
+  background: color-mix(in srgb, var(--accent-red) 7%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, var(--accent-red) 30%, var(--border));
+}
+.hist-mjbox b { color: var(--accent-red); }
+
+/* === История стандарта === */
+.hist-std-head { padding: 0; }
+.hist-std-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 16px; }
+.hist-std-top .btn svg { width: 14px; height: 14px; }
+.hist-chart-card { padding: 14px 16px; }
+.hist-chart-h { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.hist-chart-h h3 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-second); }
+.hist-chart { display: block; max-height: 260px; }
+.hist-chart text { font-size: 10px; fill: var(--text-dim); }
+.hist-ch-band { fill: var(--accent-green); opacity: .1; }
+.hist-ch-norm { stroke: var(--accent-green); stroke-dasharray: 4 4; }
+.hist-ch-line { fill: none; stroke: var(--accent-cyan); stroke-width: 2.5; }
+.hist-ch-pt { fill: var(--bg-card); stroke: var(--accent-cyan); stroke-width: 2; }
+.hist-ch-bad { fill: var(--accent-red); stroke: var(--accent-red); stroke-width: 2; }
+
+/* === Карточка ячейки Чек-листа CL (клик по прошлой смене) === */
+.cl-peek {
+  position: fixed; z-index: 900; width: 340px; max-width: calc(100vw - 24px);
+  background: var(--bg-card); border: 1px solid var(--border-hi); border-radius: 12px;
+  box-shadow: var(--card-shadow-hover); padding: 12px 14px;
+}
+.cl-peek-h { display: flex; align-items: center; gap: 8px; }
+.cl-peek-h b { font-size: 13px; color: var(--text-main); }
+.cl-peek-x { margin-left: auto; border: 0; background: transparent; color: var(--text-dim); cursor: pointer; font-size: 16px; line-height: 1; }
+.cl-peek-body { margin: 8px 0; font-size: 12px; color: var(--text-second); }
+.cl-peek-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* === Адаптив === */
+@media (max-width: 1100px) {
+  .hist-rec { grid-template-columns: 52px 40px minmax(0, 1fr) 150px; }
+  .hist-rec-ctx, .hist-rec-tag { display: none; }
+  .hist-rp { grid-template-columns: 1fr; }
+  .hist-rp-side { position: static; }
+  .hist-it { grid-template-columns: 28px minmax(0, 1fr); }
+  .hist-prev, .hist-it-act { grid-column: 2; }
+  .hist-it-act { justify-content: flex-start; }
+  .hist-top5 { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .hist-cw { grid-template-columns: 44px repeat(7, minmax(64px, 1fr)); overflow-x: auto; }
+}
+
+/* === Печать страницы проверки === */
+@media print {
+  .hist-noprint { display: none !important; }
+  .hist-rp { grid-template-columns: 1fr; }
+  .hist-rp-side { position: static; }
+  .hist-it { break-inside: avoid; }
+}

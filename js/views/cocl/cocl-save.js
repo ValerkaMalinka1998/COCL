@@ -130,6 +130,7 @@ if (type === 'ChangeOver') {
 
   showToast('Проверка сохранена');
   renderCoclSummary(record);
+  showMachineJournalNotice(items.filter(it => it.status === 'FAIL'), { line, source: 'Проверка COCL' });
 });
 
 $('#resetCheckBtn').addEventListener('click', resetCheckForm);

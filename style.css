@@ -29,6 +29,8 @@
 @import url('css/views/standard-page.css');
 @import url('css/views/eparam-page.css');
 @import url('css/views/settings.css');
+@import url('css/views/history.css');
+@import url('css/components/cil-table.css');
 
 /* ============================================================
    ГЛОБАЛЬНЫЕ ПРАВИЛА (после модулей)

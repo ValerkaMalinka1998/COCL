@@ -127,8 +127,18 @@ $('#deactivationClearBtn')?.addEventListener('click', () => {
 
 // Выбранные потери стандарта, который редактируется на полной странице
 let sfTopLossesSelected = [];
-// Откуда открыто окно выбора потерь ('sv-full' — полная страница стандарта)
+// Откуда открыто окно выбора потерь ('sv-full' — полная страница стандарта,
+// 'callback' — openTopLossPickerFor, например страница E-Param)
 let topLossPickerContext = 'sv-full';
+let topLossPickerCallback = null;   // { workshopId, onApply }
+
+/* Окно выбора потерь для любого объекта: выбор возвращается в onApply(ids) */
+function openTopLossPickerFor({ workshopId, selected, onApply }) {
+  topLossPickerContext = 'callback';
+  topLossPickerCallback = { workshopId: workshopId || null, onApply };
+  sfTopLossesSelected = Array.isArray(selected) ? [...selected] : [];
+  window.openTopLossPickerModal();
+}
 
 /* ============================================================
    Модалка выбора потерь
@@ -160,11 +170,17 @@ window.openTopLossPickerModal = function() {
 function closeTopLossPickerModal() {
   closeModal('#topLossPickerModal');
   topLossPickerTemp = new Set();
+  // Окно, открытое через openTopLossPickerFor, — разовое
+  if (topLossPickerContext === 'callback') {
+    topLossPickerContext = 'sv-full';
+    topLossPickerCallback = null;
+  }
 }
 
 /** Отрисовать список категорий и потерь в модалке */
 /* Цех линии, для которой выбираем потери (форма или полная страница) */
 function getTopLossPickerWorkshop() {
+  if (topLossPickerContext === 'callback') return topLossPickerCallback?.workshopId || null;
   const line = (svFullState.editingData || {}).line || '';
   return line ? getWorkshopIdForLine(line) : null;
 }
@@ -245,6 +261,14 @@ function updateTopLossPickerCounter() {
 /** Применить выбор из модалки */
 function applyTopLossPicker() {
   sfTopLossesSelected = [...topLossPickerTemp];
+
+  // Контекст: вызов с колбэком (страница E-Param и др.)
+  if (topLossPickerContext === 'callback') {
+    const cb = topLossPickerCallback?.onApply;
+    closeTopLossPickerModal();
+    if (typeof cb === 'function') cb([...sfTopLossesSelected]);
+    return;
+  }
 
   // Контекст: новый полный просмотр
   if (topLossPickerContext === 'sv-full') {

@@ -5,106 +5,112 @@
    ============================================================ */
 
 /* ============================================================
-   РЕДАКТОР: парсинг нормы (для колонок)
-   ============================================================ */
-
-function formatEditorDate(iso) {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return '—';
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const yyyy = d.getFullYear();
-  return `${dd}.${mm}.${yyyy}`;
-}
-
-/* ============================================================
    МЕХАНИЧЕСКИЕ СТАНДАРТЫ: фильтрация
    ============================================================ */
 
 function getFilteredMechStandards() {
-  const all = getStandards();
-
-  // Учитываем активную линию, если она выбрана
-  const editorLine = localStorage.getItem('cl_editor_line') || '';
-
-  const workshopId = $('#emFilterWorkshop')?.value || '';
-  const areaId = $('#emFilterArea')?.value || '';
-  const line = $('#emFilterLine')?.value || '';
+  const line = localStorage.getItem('cl_editor_line') || '';
   const machine = $('#emFilterMachine')?.value || '';
   const node = $('#emFilterNode')?.value || '';
   const type = $('#emFilterType')?.value || '';
+  const sched = $('#emFilterSchedule')?.value || '';
   const part = $('#emFilterPart')?.value || '';
   const activeFilter = $('#emFilterActive')?.value || '';
   const search = ($('#emFilterSearch')?.value || '').trim().toLowerCase();
 
-  // Заранее готовим кэш: для каждой линии — контекст (workshopId/areaId/blockId)
-  const lineContextCache = {};
-  const allLinesCtx = getAllLinesWithContext();
-  allLinesCtx.forEach(x => { lineContextCache[x.line] = x; });
-
-  let filtered = all.filter(st => {
-    // Цех
-    if (workshopId) {
-      const ctx = lineContextCache[st.line];
-      if (!ctx || ctx.workshopId !== workshopId) return false;
-    }
-
-    // Участок
-    if (areaId) {
-      const ctx = lineContextCache[st.line];
-      if (!ctx || ctx.areaId !== areaId) return false;
-    }
-
-    // Линия (приоритет — фильтр, если задан, иначе — выбранная)
-    if (line) {
-      if (st.line !== line) return false;
-    } else if (editorLine) {
-      if (st.line !== editorLine) return false;
-    }
-
-    // Машина
+  const filtered = getStandards().filter(st => {
+    if (line && st.line !== line) return false;
     if (machine && st.machine !== machine) return false;
-
-    // Узел
     if (node && st.node !== node) return false;
-
-    // Тип (appliesTo)
-    if (type === '__none') {
-      if (st.appliesTo && st.appliesTo.length) return false;
-    } else if (type) {
-      if (!st.appliesTo || !st.appliesTo.includes(type)) return false;
-    }
-
-    // Часть линии
+    if (!editorAppliesMatch(st.appliesTo, type)) return false;
     if (part && st.nodePart !== part) return false;
-
-    // Активность
     if (activeFilter === 'active' && st.active === false) return false;
     if (activeFilter === 'inactive' && st.active !== false) return false;
-
-    // Поиск
+    if (sched && (editorRowSchedule(st, line).member ? 'in' : 'out') !== sched) return false;
     if (search) {
-      const hay = [
-        st.title, st.oplNumber, st.node, st.machine, st.nodePart, st.number
-      ].map(v => String(v || '').toLowerCase()).join(' ');
+      const hay = [st.title, st.oplNumber, st.node, st.machine, st.nodePart, st.number]
+        .map(v => String(v || '').toLowerCase()).join(' ');
       if (!hay.includes(search)) return false;
     }
-
     return true;
   });
 
-  // Сортировка: по OPL № (натурально), потом по машине
-  filtered.sort((a, b) => {
-    const oa = String(a.oplNumber || '').toLowerCase();
-    const ob = String(b.oplNumber || '').toLowerCase();
-    if (oa !== ob) return oa.localeCompare(ob, 'ru', { numeric: true });
-    const ma = String(a.machine || '');
-    const mb = String(b.machine || '');
-    return ma.localeCompare(mb, 'ru');
-  });
+  // Группы по машинам, внутри — по OPL №
+  return cilSortRows(filtered);
+}
 
-  return filtered;
+/* Фильтр «Применять к» */
+function editorAppliesMatch(appliesTo, type) {
+  if (!type) return true;
+  const list = Array.isArray(appliesTo) ? appliesTo : [];
+  return type === '__none' ? !list.length : list.includes(type);
+}
+
+/* Расписание строки на текущей неделе: { member, count } */
+function editorRowSchedule(row, line) {
+  try {
+    const w = getRowForWeek(row, getSchWeekStart(0), line || row.line);
+    return { member: !!w.member, count: w.member ? (w.schedule || []).length : 0 };
+  } catch (e) {
+    return { member: false, count: 0 };
+  }
+}
+
+/* ============================================================
+   СТАНДАРТЫ CL: общие куски строки таблицы
+   ============================================================ */
+
+const ET_ICONS = {
+  edit: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+  copy: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  del: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',
+  cam: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>'
+};
+
+/* Применяемость — три метки CO / ТО / КВ */
+function etAppliesHtml(appliesTo) {
+  const list = Array.isArray(appliesTo) ? appliesTo : [];
+  const items = [['ChangeOver', 'co', 'CO', 'Change Over'], ['CL_TO', 'to', 'ТО', 'CL в ТО'], ['CL_Conversion', 'cv', 'КВ', 'CL в Конвертацию']];
+  return '<span class="et-applies">' + items.map(([k, cls, label, title]) =>
+    `<span class="et-ap et-ap-${cls} ${list.includes(k) ? 'on' : ''}" title="${title}${list.includes(k) ? '' : ' — нет'}">${label}</span>`).join('') + '</span>';
+}
+
+/* Тип контроля + норма; предупреждение, если точек нет там, где они нужны */
+function etTypeNormHtml(row, isElec) {
+  const type = isElec ? (row.controlType || 'variable') : migrateControlType(row.controlType, row.measurements);
+  const norm = cilNorm(row, '', isElec);
+  const needsPoints = type === 'variable' || type === 'interval';
+  const noValues = norm.visual || /cil-dim/.test(norm.html);
+  const normHtml = needsPoints && noValues
+    ? '<span class="et-warn" title="Для этого типа нужны точки замера">⚠ нет точек</span>'
+    : norm.html;
+  const short = { fixed: 'Фиксированный', variable: 'Вариабельный', interval: 'Интервал' };
+  return `<div class="et-type" title="${escapeAttr(controlTypeLabel(type))}">${escapeHtml(short[type] || controlTypeLabel(type))}</div><div class="et-norm">${normHtml}</div>`;
+}
+
+/* Расписание: «N / 14 смен» или «не в расписании» */
+function etScheduleHtml(row, line) {
+  const s = editorRowSchedule(row, line);
+  if (!s.member) return '<span class="et-sch et-sch-out">не в расписании</span>';
+  return `<span class="et-sch ${s.count ? 'et-sch-in' : 'et-sch-empty'}" title="${s.count ? '' : 'В расписании, но смены не отмечены'}">${s.count} / 14 смен</span><span class="et-sch-bar"><i style="width:${Math.round(s.count / 14 * 100)}%"></i></span>`;
+}
+
+function etStatusHtml(isActive) {
+  return isActive
+    ? '<span class="et-st et-st-on" title="Активен">Активен</span>'
+    : '<span class="et-st et-st-off" title="Неактивен — меняется на странице стандарта">Неактивен</span>';
+}
+
+/* Строка-заголовок группы машины */
+function etGroupRow(machine, zone, count, colspan, word) {
+  return `<tr class="et-grp cil-z${zone}"><td colspan="${colspan}">Машина ${escapeHtml(machine || '—')}<span>${count} ${word}</span></td></tr>`;
+}
+
+function etPluralStd(n) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'стандарт';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'стандарта';
+  return 'стандартов';
 }
 
 /* ============================================================
@@ -114,23 +120,12 @@ function getFilteredMechStandards() {
 function refreshEditorMechTable() {
   const wrap = $('#editorMechTableWrap');
   const paginationEl = $('#editorMechPagination');
-  const countEl = $('#editorMechCount');
   if (!wrap) return;
 
   const line = localStorage.getItem('cl_editor_line') || '';
   const standards = getFilteredMechStandards();
+  updateMechSelectionUI(standards);
 
-  // Счётчик в шапке панели
-  if (countEl) {
-    if (line) {
-      const totalLine = getStandards().filter(s => s.line === line).length;
-      countEl.textContent = `${standards.length} из ${totalLine}`;
-    } else {
-      countEl.textContent = `${standards.length}`;
-    }
-  }
-
-  // Пустое состояние
   if (!standards.length) {
     wrap.innerHTML = '<div class="editor-empty">Стандарты не найдены</div>';
     if (paginationEl) paginationEl.innerHTML = '';
@@ -141,120 +136,70 @@ function refreshEditorMechTable() {
   const totalPages = Math.ceil(standards.length / editorTableState.mechPageSize);
   if (editorTableState.mechPage > totalPages) editorTableState.mechPage = totalPages;
   if (editorTableState.mechPage < 1) editorTableState.mechPage = 1;
-
   const startIdx = (editorTableState.mechPage - 1) * editorTableState.mechPageSize;
   const endIdx = Math.min(startIdx + editorTableState.mechPageSize, standards.length);
   const pageItems = standards.slice(startIdx, endIdx);
 
-  // --- Таблица ---
+  const zones = cilZoneMap(standards);
+  const perMachine = {};
+  standards.forEach(s => { perMachine[s.machine || '—'] = (perMachine[s.machine || '—'] || 0) + 1; });
+
   let html = `
-    <table class="editor-table">
-      <thead>
-        <tr>
-          <th class="et-col-num">№</th>
-          <th class="et-col-check">
-            <input type="checkbox" class="et-check-all" id="emCheckAll">
-          </th>
-          <th class="et-col-title">Название</th>
-          <th class="et-col-machine">Машина</th>
-          <th class="et-col-opl">№ OPL</th>
-          <th class="et-col-struct">Структура</th>
-          <th class="et-col-part">Часть</th>
-          <th class="et-col-types">Тип</th>
-          <th class="et-col-status">Статус</th>
-          <th class="et-col-date">Дата</th>
-          <th class="et-col-actions">Действия</th>
-        </tr>
-      </thead>
-      <tbody>
-  `;
-  pageItems.forEach((st, idx) => {
+    <table class="et-table">
+      <thead><tr>
+        <th class="et-c-check"><input type="checkbox" id="emCheckAll" title="Выделить все на странице"></th>
+        <th class="et-c-opl">OPL №</th>
+        <th>Стандарт</th>
+        <th class="et-c-part">Часть</th>
+        <th class="et-c-type">Тип / норма</th>
+        <th class="et-c-ap">Применять к</th>
+        <th class="et-c-sch">Расписание</th>
+        <th class="et-c-ph">Фото</th>
+        <th class="et-c-st">Статус</th>
+        <th class="et-c-act"></th>
+      </tr></thead><tbody>`;
+
+  let curMachine = null;
+  pageItems.forEach(st => {
+    const m = st.machine || '—';
+    if (m !== curMachine) {
+      curMachine = m;
+      html += etGroupRow(m, zones[m], perMachine[m], 10, etPluralStd(perMachine[m]));
+    }
     const isActive = st.active !== false;
     const isSelected = editorTableState.mechSelected.has(st.id);
-
-    const ctx = lineContextCacheForLine(st.line);
-    const contextHtml = ctx
-      ? `<div class="et-struct">${escapeHtml(ctx.workshopName)}<br>${escapeHtml([ctx.areaName, ctx.blockName].filter(Boolean).join(' / '))}<br><strong>${escapeHtml(st.line)}</strong></div>`
-      : `<div class="et-struct">${escapeHtml(st.line || '—')}</div>`;
-
-    const typesHtml = renderMechTypeChips(st.appliesTo);
-    const partHtml = st.nodePart ? `<span class="et-part-chip et-part-${st.nodePart.toLowerCase()}">${escapeHtml(st.nodePart)}</span>` : '—';
-
-    // Порядковый номер: (page - 1) * size + idx + 1
-    const rowNumber = (editorTableState.mechPage - 1) * editorTableState.mechPageSize + idx + 1;
-
+    const id = escapeAttr(st.id);
+    const photos = Array.isArray(st.photos) ? st.photos.length : 0;
     html += `
-      <tr data-std-id="${escapeAttr(st.id)}" class="${isSelected ? 'is-selected' : ''} ${isActive ? '' : 'et-row-inactive'}">
-        <td class="et-col-num">${rowNumber}</td>
-        <td class="et-col-check">
-          <input type="checkbox" class="et-check-row" data-std-id="${escapeAttr(st.id)}" ${isSelected ? 'checked' : ''}>
+      <tr data-std-id="${id}" class="${isSelected ? 'is-selected' : ''} ${isActive ? '' : 'et-row-inactive'}">
+        <td class="et-c-check cil-z${zones[m]}"><input type="checkbox" class="et-check-row" data-std-id="${id}" ${isSelected ? 'checked' : ''}></td>
+        <td class="et-c-opl"><button type="button" class="et-opl" data-open-view="${id}">${escapeHtml(st.oplNumber || '—')}</button></td>
+        <td>
+          <button type="button" class="et-name" data-open-view="${id}">${escapeHtml(st.title || '—')}</button>
+          ${st.node ? `<div class="et-sub">${CIL_ICONS.gear}${escapeHtml(st.node)}</div>` : ''}
         </td>
-        <td class="et-col-title">
-          <div class="et-title">
-            <span class="et-title-text" data-open-view="${escapeAttr(st.id)}" style="cursor:pointer">${escapeHtml(st.title || '—')}</span>
-          </div>
-        </td>
-        <td class="et-col-machine"><span class="et-machine">${escapeHtml(st.machine || '—')}</span></td>
-        <td class="et-col-opl">
-          <span class="et-opl" data-open-view="${escapeAttr(st.id)}">${escapeHtml(st.oplNumber || '—')}</span>
-        </td>
-        <td class="et-col-struct">${contextHtml}</td>
-        <td class="et-col-part">${partHtml}</td>
-        <td class="et-col-types"><div class="et-types">${typesHtml}</div></td>
-        <td class="et-col-status">
-          <span class="et-status ${isActive ? 'et-status-active' : 'et-status-inactive'}"
-                title="${isActive ? 'Активен' : 'Неактивен — измените в редактировании стандарта'}">
-            ${isActive ? 'Активен' : 'Неактивен'}
-          </span>
-        </td>
-        <td class="et-col-date">
-          <span class="et-date">${escapeHtml(formatEditorDate(st.updatedAt || st.createdAt))}</span>
-        </td>
-        <td class="et-col-actions">
-          <div class="et-actions">
-            <button type="button" class="et-action-btn et-action-edit" data-edit="${escapeAttr(st.id)}" title="Редактировать">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-            </button>
-            <button type="button" class="et-action-btn et-action-copy" data-copy="${escapeAttr(st.id)}" title="Копировать">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-              </svg>
-            </button>
-            <button type="button" class="et-action-btn et-action-delete" data-delete="${escapeAttr(st.id)}" title="Удалить">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="3 6 5 6 21 6"/>
-                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                <path d="M10 11v6"/><path d="M14 11v6"/>
-                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-              </svg>
-            </button>
-          </div>
-        </td>
-      </tr>
-    `;
+        <td class="et-c-part">${st.nodePart ? `<span class="et-part-chip et-part-${st.nodePart.toLowerCase()}">${escapeHtml(st.nodePart)}</span>` : '<span class="et-dim">—</span>'}</td>
+        <td class="et-c-type">${etTypeNormHtml(st, false)}</td>
+        <td class="et-c-ap">${etAppliesHtml(st.appliesTo)}</td>
+        <td class="et-c-sch">${etScheduleHtml(st, line)}</td>
+        <td class="et-c-ph">${photos ? `<span class="et-ph">${ET_ICONS.cam}${photos}</span>` : '<span class="et-dim">—</span>'}</td>
+        <td class="et-c-st">${etStatusHtml(isActive)}</td>
+        <td class="et-c-act"><div class="et-acts">
+          <button type="button" class="et-ib" data-edit="${id}" title="Редактировать">${ET_ICONS.edit}</button>
+          <button type="button" class="et-ib" data-copy="${id}" title="Копировать">${ET_ICONS.copy}</button>
+          <button type="button" class="et-ib et-ib-del" data-delete="${id}" title="Удалить">${ET_ICONS.del}</button>
+        </div></td>
+      </tr>`;
   });
-
   html += '</tbody></table>';
   wrap.innerHTML = html;
 
-  // --- Пагинация ---
   renderEditorMechPagination(standards.length, totalPages, startIdx, endIdx);
 
   // --- Обработчики ---
-
-  // Клик по OPL / по названию → полный просмотр
   wrap.querySelectorAll('[data-open-view]').forEach(el => {
-    el.addEventListener('click', () => {
-      const id = el.dataset.openView;
-      if (id) openStandardFullView(id, 'view');
-    });
+    el.addEventListener('click', () => openStandardFullView(el.dataset.openView, 'view'));
   });
-
-  // Кнопки действий
   wrap.querySelectorAll('[data-edit]').forEach(btn => {
     btn.addEventListener('click', () => openStandardFullView(btn.dataset.edit, 'edit'));
   });
@@ -264,93 +209,38 @@ function refreshEditorMechTable() {
   wrap.querySelectorAll('[data-delete]').forEach(btn => {
     btn.addEventListener('click', () => deleteStandardNew(btn.dataset.delete));
   });
-
-  // Чекбоксы выделения
   wrap.querySelectorAll('.et-check-row').forEach(cb => {
     cb.addEventListener('change', () => {
-      const id = cb.dataset.stdId;
-      if (!id) return;
-      if (cb.checked) editorTableState.mechSelected.add(id);
-      else editorTableState.mechSelected.delete(id);
+      if (cb.checked) editorTableState.mechSelected.add(cb.dataset.stdId);
+      else editorTableState.mechSelected.delete(cb.dataset.stdId);
       updateMechSelectionUI();
     });
   });
-
-  // «Выделить все» — чекбокс в шапке
   const checkAll = wrap.querySelector('#emCheckAll');
   if (checkAll) {
-    const allOnPageSelected = pageItems.every(st => editorTableState.mechSelected.has(st.id));
-    checkAll.checked = allOnPageSelected;
-
+    checkAll.checked = pageItems.every(st => editorTableState.mechSelected.has(st.id));
     checkAll.addEventListener('change', () => {
-      if (checkAll.checked) {
-        pageItems.forEach(st => editorTableState.mechSelected.add(st.id));
-      } else {
-        pageItems.forEach(st => editorTableState.mechSelected.delete(st.id));
-      }
+      pageItems.forEach(st => checkAll.checked
+        ? editorTableState.mechSelected.add(st.id)
+        : editorTableState.mechSelected.delete(st.id));
       refreshEditorMechTable();
     });
   }
-
-  // Подсветка выделенных строк
-  updateMechSelectionUI();
 }
 
-/* --- Хелпер: контекст линии --- */
-const _lineContextCache = {};
-function lineContextCacheForLine(line) {
-  if (_lineContextCache[line]) return _lineContextCache[line];
-  const ctx = typeof getBlockForLine === 'function' ? getBlockForLine(line) : null;
-  const result = ctx ? {
-    workshopId: ctx.workshop.id, workshopName: ctx.workshop.name,
-    areaId: ctx.area.id, areaName: ctx.area.name,
-    blockId: ctx.block ? ctx.block.id : null,
-    blockName: ctx.block ? ctx.block.name : null
-  } : null;
-  _lineContextCache[line] = result;
-  return result;
-}
-
-/* --- Хелпер: чипы типов --- */
-function renderMechTypeChips(appliesTo) {
-  if (!Array.isArray(appliesTo) || !appliesTo.length) {
-    return '<span class="et-type-chip et-type-none">Без привязки</span>';
-  }
-  const map = {
-    ChangeOver: { cls: 'et-type-changeover', label: 'Change Over' },
-    CL_TO: { cls: 'et-type-clto', label: 'CL в ТО' },
-    CL_Conversion: { cls: 'et-type-clconv', label: 'CL в Конв.' }
-  };
-  return appliesTo.map(t => {
-    const info = map[t];
-    if (!info) return '';
-    return `<span class="et-type-chip ${info.cls}">${info.label}</span>`;
-  }).join('');
-}
-
-/* --- UI: счётчик выделенных + подсветка --- */
-function updateMechSelectionUI() {
+/* --- Счётчик в шапке («N из M · выбрано K») и подсветка выбранных строк --- */
+function updateMechSelectionUI(filtered) {
+  const line = localStorage.getItem('cl_editor_line') || '';
+  const list = filtered || getFilteredMechStandards();
+  const lineAll = line ? getStandards().filter(s => s.line === line) : getStandards();
+  const inSchedule = line ? lineAll.filter(s => editorRowSchedule(s, line).member).length : 0;
   const selected = editorTableState.mechSelected.size;
-
-  // Счётчик в шапке
   const countEl = $('#editorMechCount');
   if (countEl) {
-    // если выделено — показываем «Выбрано: N» вместо «из X»
-    if (selected > 0) {
-      const line = localStorage.getItem('cl_editor_line') || '';
-      const standards = getFilteredMechStandards();
-      countEl.textContent = `Выбрано: ${selected} · ${standards.length} из ${line ? getStandards().filter(s => s.line === line).length : getStandards().length}`;
-    } else {
-      // Пересчитываем в обычный вид
-      const standards = getFilteredMechStandards();
-      const line = localStorage.getItem('cl_editor_line') || '';
-      countEl.textContent = line
-        ? `${standards.length} из ${getStandards().filter(s => s.line === line).length}`
-        : `${standards.length}`;
-    }
+    countEl.textContent = (list.length === lineAll.length ? `${lineAll.length} стандартов` : `${list.length} из ${lineAll.length}`)
+      + (line ? ` · ${inSchedule} в расписании` : '')
+      + (selected ? ` · выбрано ${selected}` : '');
   }
-
-  // Подсветка строк
   document.querySelectorAll('#editorMechTableWrap tr[data-std-id]').forEach(tr => {
     tr.classList.toggle('is-selected', editorTableState.mechSelected.has(tr.dataset.stdId));
   });

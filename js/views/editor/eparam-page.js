@@ -325,6 +325,19 @@ function renderEparamExtra(p) {
       <p class="ep-hint">Если ничего не выбрано — параметр хранится, но в проверках COCL не показывается.</p>
     </div>
     <div class="sv-full-extra-block">
+      <div class="sv-full-extra-label">Top Losses</div>
+      <div class="sv-full-extra-chips">
+        ${(p.topLosses || []).map(id => {
+          const l = findLossById(id);
+          return l ? `<span class="ep-tl-chip">${escapeHtml(l.name)}
+            <button type="button" class="ep-tl-remove" data-remove-toploss="${escapeAttr(id)}" title="Убрать">✕</button></span>` : '';
+        }).join('') || '<span class="sv-full-extra-empty">Потери не выбраны</span>'}
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" id="epf_addTopLossBtn" style="margin-top:8px">
+        + Выбрать потери
+      </button>
+    </div>
+    <div class="sv-full-extra-block">
       <div class="sv-full-extra-label">Триггеры Change Over</div>
       <div class="sv-full-extra-chips">
         ${triggersHtml || '<span class="sv-full-extra-empty">Триггеры не заданы</span>'}
@@ -434,6 +447,26 @@ $('#tab-eparam-edit')?.addEventListener('click', (e) => {
     renderEparamExtra(p);
     return;
   }
+  const removeLoss = e.target.closest('[data-remove-toploss]');
+  if (removeLoss) {
+    e.preventDefault();
+    p.topLosses = (p.topLosses || []).filter(v => v !== removeLoss.dataset.removeToploss);
+    epPageState.dirty = true;
+    renderEparamExtra(p);
+    return;
+  }
+  if (e.target.closest('#epf_addTopLossBtn')) {
+    openTopLossPickerFor({
+      workshopId: getWorkshopIdForLine(p.line),
+      selected: p.topLosses || [],
+      onApply: (ids) => {
+        p.topLosses = ids;
+        epPageState.dirty = true;
+        renderEparamExtra(p);
+      }
+    });
+    return;
+  }
   if (e.target.closest('#epf_addTriggerBtn')) {
     openTriggerPickerModal({
       workshopId: getWorkshopIdForLine(p.line),
@@ -523,6 +556,7 @@ $('#epPageSaveBtn')?.addEventListener('click', () => {
     valuesByBrand,
     appliesTo: p.appliesTo || [],
     triggers: p.triggers || [],
+    topLosses: p.topLosses || [],
     active: p.active !== false,
     createdAt: existing?.createdAt || now,
     updatedAt: now
@@ -539,6 +573,3 @@ $('#epPageSaveBtn')?.addEventListener('click', () => {
   showToast(wasNew ? 'Параметр добавлен' : 'Параметр обновлён');
 });
 
-/* Пагинация истории — отдельные переменные, чтобы не конфликтовать с редактором */
-let historyPage = 1;
-let historyPageSize = 10;

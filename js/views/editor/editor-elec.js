@@ -9,58 +9,40 @@
    ============================================================ */
 
 function getFilteredElecParams() {
-  const all = getElectronicParams().map(normalizeElectronicParam);
-
-  const workshopId = $('#eeFilterWorkshop')?.value || '';
-  const areaId = $('#eeFilterArea')?.value || '';
-  const line = $('#eeFilterLine')?.value || '';
+  const line = localStorage.getItem('cl_editor_line') || '';
   const machine = $('#eeFilterMachine')?.value || '';
   const controlType = $('#eeFilterControlType')?.value || '';
-  const freqType = $('#eeFilterFreq')?.value || '';
+  const type = $('#eeFilterType')?.value || '';
+  const sched = $('#eeFilterSchedule')?.value || '';
+  const part = $('#eeFilterPart')?.value || '';
   const activeFilter = $('#eeFilterActive')?.value || '';
   const search = ($('#eeFilterSearch')?.value || '').trim().toLowerCase();
 
-  const lineContextCache = {};
-  const allLinesCtx = getAllLinesWithContext();
-  allLinesCtx.forEach(x => { lineContextCache[x.line] = x; });
-
-  let filtered = all.filter(p => {
-    if (workshopId) {
-      const ctx = lineContextCache[p.line];
-      if (!ctx || ctx.workshopId !== workshopId) return false;
-    }
-    if (areaId) {
-      const ctx = lineContextCache[p.line];
-      if (!ctx || ctx.areaId !== areaId) return false;
-    }
+  const filtered = getElectronicParams().map(normalizeElectronicParam).filter(p => {
     if (line && p.line !== line) return false;
     if (machine && p.machine !== machine) return false;
-
     if (controlType && p.controlType !== controlType) return false;
-    if (freqType && p.frequency?.type !== freqType) return false;
-
+    if (!editorAppliesMatch(p.appliesTo, type)) return false;
+    if (part && p.nodePart !== part) return false;
     if (activeFilter === 'active' && p.active === false) return false;
     if (activeFilter === 'inactive' && p.active !== false) return false;
-
+    if (sched && (editorRowSchedule(p, line).member ? 'in' : 'out') !== sched) return false;
     if (search) {
-      const hay = [p.paramName, p.machine, p.line].map(v => String(v || '').toLowerCase()).join(' ');
+      const hay = [p.paramName, p.machine, p.nodePart].map(v => String(v || '').toLowerCase()).join(' ');
       if (!hay.includes(search)) return false;
     }
-
     return true;
   });
 
-  filtered.sort((a, b) => {
-    const la = String(a.line || '').toLowerCase();
-    const lb = String(b.line || '').toLowerCase();
-    if (la !== lb) return la.localeCompare(lb, 'ru');
-    const ma = String(a.machine || '').toLowerCase();
-    const mb = String(b.machine || '').toLowerCase();
-    if (ma !== mb) return ma.localeCompare(mb, 'ru');
-    return String(a.paramName || '').localeCompare(String(b.paramName || ''), 'ru');
-  });
+  // Группы по машинам, внутри — по названию
+  return cilSortRows(filtered);
+}
 
-  return filtered;
+function etPluralParam(n) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'параметр';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'параметра';
+  return 'параметров';
 }
 
 /* ============================================================
@@ -70,20 +52,11 @@ function getFilteredElecParams() {
 function refreshEditorElecTable() {
   const wrap = $('#editorElecTableWrap');
   const paginationEl = $('#editorElecPagination');
-  const countEl = $('#editorElecCount');
   if (!wrap) return;
 
   const line = localStorage.getItem('cl_editor_line') || '';
   const params = getFilteredElecParams();
-
-  if (countEl) {
-    if (line) {
-      const totalLine = getElectronicParamsForLine(line).length;
-      countEl.textContent = `${params.length} из ${totalLine}`;
-    } else {
-      countEl.textContent = `${params.length}`;
-    }
-  }
+  updateElecSelectionUI(params);
 
   if (!params.length) {
     wrap.innerHTML = '<div class="editor-empty">Электронные параметры не найдены</div>';
@@ -94,116 +67,61 @@ function refreshEditorElecTable() {
   const totalPages = Math.ceil(params.length / editorTableState.elecPageSize);
   if (editorTableState.elecPage > totalPages) editorTableState.elecPage = totalPages;
   if (editorTableState.elecPage < 1) editorTableState.elecPage = 1;
-
   const startIdx = (editorTableState.elecPage - 1) * editorTableState.elecPageSize;
   const endIdx = Math.min(startIdx + editorTableState.elecPageSize, params.length);
   const pageItems = params.slice(startIdx, endIdx);
 
-  let html = `
-    <table class="editor-table">
-      <thead>
-        <tr>
-          <th class="et-col-num">№</th>
-          <th class="et-col-check"><input type="checkbox" class="et-check-all" id="eeCheckAll"></th>
-          <th class="et-col-title">Параметр</th>
-          <th class="et-col-machine">Машина</th>
-          <th class="et-col-struct">Структура</th>
-          <th class="et-col-part">Часть</th>
-          <th class="et-col-types">Тип</th>
-          <th class="et-col-types">Применяемость</th>
-          <th class="et-col-status">Статус</th>
-          <th class="et-col-date">Дата</th>
-          <th class="et-col-actions">Действия</th>
-        </tr>
-      </thead>
-      <tbody>
-  `;
+  const zones = cilZoneMap(params);
+  const perMachine = {};
+  params.forEach(p => { perMachine[p.machine || '—'] = (perMachine[p.machine || '—'] || 0) + 1; });
 
-  pageItems.forEach((p, idx) => {
+  let html = `
+    <table class="et-table">
+      <thead><tr>
+        <th class="et-c-check"><input type="checkbox" id="eeCheckAll" title="Выделить все на странице"></th>
+        <th>Параметр</th>
+        <th class="et-c-part">Часть</th>
+        <th class="et-c-type">Тип / норма</th>
+        <th class="et-c-ap">Применять к</th>
+        <th class="et-c-sch">Расписание</th>
+        <th class="et-c-st">Статус</th>
+        <th class="et-c-act"></th>
+      </tr></thead><tbody>`;
+
+  let curMachine = null;
+  pageItems.forEach(p => {
+    const m = p.machine || '—';
+    if (m !== curMachine) {
+      curMachine = m;
+      html += etGroupRow(m, zones[m], perMachine[m], 8, etPluralParam(perMachine[m]));
+    }
     const isActive = p.active !== false;
     const isSelected = editorTableState.elecSelected.has(p.id);
-
-    const ctx = lineContextCacheForLine(p.line);
-    const contextHtml = ctx
-      ? `<div class="et-struct">${escapeHtml(ctx.workshopName)}<br>${escapeHtml([ctx.areaName, ctx.blockName].filter(Boolean).join(' / '))}<br><strong>${escapeHtml(p.line)}</strong></div>`
-      : `<div class="et-struct">${escapeHtml(p.line || '—')}</div>`;
-
-    // Часть линии
-    const partHtml = p.nodePart
-      ? `<span class="et-part-chip et-part-${p.nodePart.toLowerCase()}">${escapeHtml(p.nodePart)}</span>`
-      : '—';
-
-    // Тип контроля
-    const typeLabel = controlTypeLabel(p.controlType);
-    const typeCls = (p.controlType === 'fixed' || p.controlType === 'ok_not_ok')
-      ? 'et-type-none' : 'et-type-clto';
-    const typeHtml = `<span class="et-type-chip ${typeCls}">${escapeHtml(typeLabel)}</span>`;
-
-    // Применяемость
-    const appliesToHtml = renderMechTypeChips(p.appliesTo);
-
-    // Порядковый номер
-    const rowNumber = (editorTableState.elecPage - 1) * editorTableState.elecPageSize + idx + 1;
-
+    const id = escapeAttr(p.id);
     html += `
-      <tr data-param-id="${escapeAttr(p.id)}" class="${isSelected ? 'is-selected' : ''} ${isActive ? '' : 'et-row-inactive'}">
-        <td class="et-col-num">${rowNumber}</td>
-        <td class="et-col-check">
-          <input type="checkbox" class="et-check-row" data-param-id="${escapeAttr(p.id)}" ${isSelected ? 'checked' : ''}>
-        </td>
-        <td class="et-col-title">
-          <div class="et-title">
-            <span class="et-title-text" data-open-view-elec="${escapeAttr(p.id)}" style="cursor:pointer">${escapeHtml(p.paramName || '—')}</span>
-          </div>
-        </td>
-        <td class="et-col-machine"><span class="et-machine">${escapeHtml(p.machine || '—')}</span></td>
-        <td class="et-col-struct">${contextHtml}</td>
-        <td class="et-col-part">${partHtml}</td>
-        <td class="et-col-types">${typeHtml}</td>
-        <td class="et-col-types"><div class="et-types">${appliesToHtml}</div></td>
-        <td class="et-col-status">
-          <span class="et-status ${isActive ? 'et-status-active' : 'et-status-inactive'}"
-                title="${isActive ? 'Активен' : 'Неактивен — измените в редактировании параметра'}">
-            ${isActive ? 'Активен' : 'Неактивен'}
-          </span>
-        </td>
-        <td class="et-col-date">
-          <span class="et-date">${escapeHtml(formatEditorDate(p.updatedAt || p.createdAt))}</span>
-        </td>
-        <td class="et-col-actions">
-          <div class="et-actions">
-            <button type="button" class="et-action-btn et-action-edit" data-edit-elec="${escapeAttr(p.id)}" title="Редактировать">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-            </button>
-            <button type="button" class="et-action-btn et-action-delete" data-delete-elec="${escapeAttr(p.id)}" title="Удалить">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="3 6 5 6 21 6"/>
-                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                <path d="M10 11v6"/><path d="M14 11v6"/>
-                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-              </svg>
-            </button>
-          </div>
-        </td>
-      </tr>
-    `;
+      <tr data-param-id="${id}" class="${isSelected ? 'is-selected' : ''} ${isActive ? '' : 'et-row-inactive'}">
+        <td class="et-c-check cil-z${zones[m]}"><input type="checkbox" class="et-check-row" data-param-id="${id}" ${isSelected ? 'checked' : ''}></td>
+        <td><button type="button" class="et-name" data-edit-elec="${id}">${escapeHtml(p.paramName || '—')}</button></td>
+        <td class="et-c-part">${p.nodePart ? `<span class="et-part-chip et-part-${p.nodePart.toLowerCase()}">${escapeHtml(p.nodePart)}</span>` : '<span class="et-dim">—</span>'}</td>
+        <td class="et-c-type">${etTypeNormHtml(p, true)}</td>
+        <td class="et-c-ap">${etAppliesHtml(p.appliesTo)}</td>
+        <td class="et-c-sch">${etScheduleHtml(p, line)}</td>
+        <td class="et-c-st">${etStatusHtml(isActive)}</td>
+        <td class="et-c-act"><div class="et-acts">
+          <button type="button" class="et-ib" data-edit-elec="${id}" title="Редактировать">${ET_ICONS.edit}</button>
+          <button type="button" class="et-ib et-ib-del" data-delete-elec="${id}" title="Удалить">${ET_ICONS.del}</button>
+        </div></td>
+      </tr>`;
   });
-
   html += '</tbody></table>';
   wrap.innerHTML = html;
 
   renderEditorElecPagination(params.length, totalPages, startIdx, endIdx);
 
-  // Обработчики
+  // Обработчики: название и карандаш открывают страницу параметра
   wrap.querySelectorAll('[data-edit-elec]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      openEparamPage(btn.dataset.editElec);
-    });
+    btn.addEventListener('click', () => openEparamPage(btn.dataset.editElec));
   });
-
   wrap.querySelectorAll('[data-delete-elec]').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.deleteElec;
@@ -211,56 +129,43 @@ function refreshEditorElecTable() {
       if (!p) return;
       if (!confirm(`Удалить параметр "${p.paramName}"?`)) return;
       setElectronicParams(getElectronicParams().filter(x => x.id !== id));
+      editorTableState.elecSelected.delete(id);
+      fillEditorFilters();
+      updatePartCounters();
       refreshEditorElecTable();
       showToast('Параметр удалён');
     });
   });
-
-  // Чекбоксы выделения
   wrap.querySelectorAll('.et-check-row').forEach(cb => {
     cb.addEventListener('change', () => {
-      const id = cb.dataset.paramId;
-      if (!id) return;
-      if (cb.checked) editorTableState.elecSelected.add(id);
-      else editorTableState.elecSelected.delete(id);
+      if (cb.checked) editorTableState.elecSelected.add(cb.dataset.paramId);
+      else editorTableState.elecSelected.delete(cb.dataset.paramId);
       updateElecSelectionUI();
     });
   });
-    // Клик по названию E-Param → полный просмотр
-  wrap.querySelectorAll('[data-open-view-elec]').forEach(el => {
-    el.addEventListener('click', () => {
-      const id = el.dataset.openViewElec;
-      if (id) openStandardFullView(id, 'view');
-    });
-  });
-
   const checkAll = wrap.querySelector('#eeCheckAll');
   if (checkAll) {
-    const allOnPageSelected = pageItems.every(p => editorTableState.elecSelected.has(p.id));
-    checkAll.checked = allOnPageSelected;
+    checkAll.checked = pageItems.every(p => editorTableState.elecSelected.has(p.id));
     checkAll.addEventListener('change', () => {
-      if (checkAll.checked) pageItems.forEach(p => editorTableState.elecSelected.add(p.id));
-      else pageItems.forEach(p => editorTableState.elecSelected.delete(p.id));
+      pageItems.forEach(p => checkAll.checked
+        ? editorTableState.elecSelected.add(p.id)
+        : editorTableState.elecSelected.delete(p.id));
       refreshEditorElecTable();
     });
   }
-
-  updateElecSelectionUI();
 }
 
-function updateElecSelectionUI() {
+function updateElecSelectionUI(filtered) {
+  const line = localStorage.getItem('cl_editor_line') || '';
+  const list = filtered || getFilteredElecParams();
+  const lineAll = line ? getElectronicParamsForLine(line) : getElectronicParams();
+  const inSchedule = line ? lineAll.filter(p => editorRowSchedule(p, line).member).length : 0;
   const selected = editorTableState.elecSelected.size;
   const countEl = $('#editorElecCount');
   if (countEl) {
-    const params = getFilteredElecParams();
-    const line = localStorage.getItem('cl_editor_line') || '';
-    if (selected > 0) {
-      countEl.textContent = `Выбрано: ${selected} · ${params.length} из ${line ? getElectronicParamsForLine(line).length : getElectronicParams().length}`;
-    } else {
-      countEl.textContent = line
-        ? `${params.length} из ${getElectronicParamsForLine(line).length}`
-        : `${params.length}`;
-    }
+    countEl.textContent = (list.length === lineAll.length ? `${lineAll.length} ${etPluralParam(lineAll.length)}` : `${list.length} из ${lineAll.length}`)
+      + (line ? ` · ${inSchedule} в расписании` : '')
+      + (selected ? ` · выбрано ${selected}` : '');
   }
   document.querySelectorAll('#editorElecTableWrap tr[data-param-id]').forEach(tr => {
     tr.classList.toggle('is-selected', editorTableState.elecSelected.has(tr.dataset.paramId));
@@ -373,7 +278,7 @@ async function editorElecDownloadTemplate() {
   const ws = wb.addWorksheet('Параметры');
 
   const headers = ['Параметр', 'Линия', 'Узел/часть', 'Машина', 'Тип контроля', 'Норма',
-    'Работа', 'Время с', 'Время по', 'Применять к', 'Значения по брендам', 'Активен'];
+    'Работа', 'Время с', 'Время по', 'Применять к', 'Значения по брендам', 'Активен', 'Top Losses'];
   ws.addRow(headers);
 
   // Пример
@@ -383,10 +288,11 @@ async function editorElecDownloadTemplate() {
     'Run', '09:10', '10:00',
     'ChangeOver, CL_TO',
     'Kent|92|5; |90|3',
-    'Да'
+    'Да',
+    ''
   ]);
 
-  const widths = [30, 10, 18, 10, 14, 16, 8, 10, 10, 22, 40, 8];
+  const widths = [30, 10, 18, 10, 14, 16, 8, 10, 10, 22, 40, 8, 36];
   ws.columns.forEach((col, i) => { col.width = widths[i] || 14; });
 
   const headerRow = ws.getRow(1);
@@ -409,6 +315,7 @@ async function editorElecDownloadTemplate() {
     ['   Пустой бренд (||допуск) — применяется ко всем брендам.'],
     ['3. Тип контроля: fixed (Фиксированный), variable (Вариабельный), interval (Интервал).'],
     ['4. «Применять к» — через запятую: ChangeOver, CL_TO, CL_Conversion.'],
+    ['5. «Top Losses» — названия потерь цеха линии через запятую (как в Настройках).'],
     [''],
     ['ОБЯЗАТЕЛЬНЫЕ ПОЛЯ: Параметр, Линия, Машина, Тип контроля.']
   ];
@@ -433,7 +340,7 @@ async function editorElecExport() {
   const ws = wb.addWorksheet('Параметры');
 
   const headers = ['Параметр', 'Линия', 'Узел/часть', 'Машина', 'Тип контроля', 'Норма',
-    'Работа', 'Время с', 'Время по', 'Применять к', 'Значения по брендам', 'Активен'];
+    'Работа', 'Время с', 'Время по', 'Применять к', 'Значения по брендам', 'Активен', 'Top Losses'];
   ws.addRow(headers);
 
   const headerRow = ws.getRow(1);
@@ -453,11 +360,13 @@ async function editorElecExport() {
       p.work || 'Run', p.timeFrom || '', p.timeTo || '',
       (Array.isArray(p.appliesTo) ? p.appliesTo.join(', ') : ''),
       serializeValuesByBrand(p.valuesByBrand),
-      p.active !== false ? 'Да' : 'Нет'
+      p.active !== false ? 'Да' : 'Нет',
+      (Array.isArray(p.topLosses) ? p.topLosses : [])
+        .map(id => findLossById(id)?.name).filter(Boolean).join(', ')
     ]);
   });
 
-  const widths = [30, 10, 18, 10, 14, 16, 8, 10, 10, 22, 40, 8];
+  const widths = [30, 10, 18, 10, 14, 16, 8, 10, 10, 22, 40, 8, 36];
   ws.columns.forEach((col, i) => { col.width = widths[i] || 14; });
 
   // Инструкция
@@ -485,7 +394,7 @@ async function parseElectronicParamsExcel(file, targetLine) {
   ws.eachRow((row, rowNum) => {
     if (rowNum < 2) return; // skip header
     const vals = [];
-    for (let c = 1; c <= 12; c++) vals.push(row.getCell(c).text || '');
+    for (let c = 1; c <= 13; c++) vals.push(row.getCell(c).text || '');
     const name = vals[0].trim();
     if (!name) return;
     rows.push(vals);
@@ -521,6 +430,12 @@ async function parseElectronicParamsExcel(file, targetLine) {
 
     const valuesByBrand = parseValuesByBrand(brandValuesStr);
 
+    // Top Losses — по названию среди потерь цеха линии
+    const wsLosses = getTopLossesForWorkshop(getWorkshopIdForLine(line)).flatMap(c => c.items || []);
+    const topLosses = String(vals[12] || '').split(/[,;]/).map(x => x.trim()).filter(Boolean)
+      .map(name => wsLosses.find(l => l.name.toLowerCase() === name.toLowerCase())?.id)
+      .filter(Boolean);
+
     const id = makeElectronicParamId();
     const p = {
       id, active,
@@ -530,6 +445,7 @@ async function parseElectronicParamsExcel(file, targetLine) {
       controlType, normText,
       valuesByBrand,
       appliesTo,
+      topLosses,
       frequency: { type: 'weekly', schedule: [], shifts: ['day', 'night'], daysOfWeek: [], dates: [] },
       inSchedule: false,
       author: '',

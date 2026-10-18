@@ -10,52 +10,6 @@
   margin-top: 6px;
 }
 
-.line-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 10px 16px;
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-}
-.line-row:hover {
-  border-color: var(--accent-cyan);
-  background: rgba(0, 212, 255, 0.04);
-}
-
-.line-name {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text-main);
-  font-family: 'Courier New', Consolas, monospace;
-  letter-spacing: 0.4px;
-  min-width: 80px;
-  flex-shrink: 0;
-}
-
-.line-brands-preview {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.line-counter {
-  font-size: 13px;
-  color: var(--text-second);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.line-row .btn {
-  margin-left: auto;
-  flex-shrink: 0;
-}
-
 /* ============================================================ */
 /* === CL Electronic: аккордеон в «Параметры на сегодня» ====== */
 /* ============================================================ */
@@ -72,10 +26,6 @@
 
 .elec-acc-item .cocl-acc-body {
   padding: 10px 14px 14px;
-}
-
-.elec-acc-item .elec-check-answer {
-  margin-top: 8px;
 }
 
 .elec-acc-item[data-status="ok"] {
@@ -115,16 +65,9 @@
   color: #10b981;
   border: 1px solid rgba(16, 185, 129, 0.5);
 }
-.et-type-chip.et-type-none {
-  background: var(--bg-hover);
-  color: var(--text-dim);
-  border: 1px solid var(--border);
-  font-style: italic;
-}
 /* ============================================================ */
 /* === РЕДАКТОР: единая панель + фильтры + таблица ============ */
 /* ============================================================ */
-
 
 /* --- Единая панель (заголовок + действия + фильтры) --- */
 .editor-panel-card {
@@ -200,73 +143,6 @@
   margin: 0 20px;
 }
 
-/* Фильтры внутри панели */
-.editor-panel-card .editor-filters {
-  padding: 16px 20px;
-}
-
-/* ============================================================ */
-/* === РЕДАКТОР: сетка фильтров =============================== */
-/* ============================================================ */
-
-.editor-filters {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 10px 14px;
-  align-items: end;
-}
-
-/* Кнопка сброса — 1 колонка */
-.editor-filter-reset-wrap {
-  grid-column: span 1;
-}
-
-.editor-filter-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.editor-filter-field label {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.editor-filter-field select,
-.editor-filter-field input[type="text"] {
-  width: 100%;
-  padding: 8px 10px;
-  font-size: 13px;
-  border: 1px solid var(--border-hi);
-  border-radius: 6px;
-  background: var(--bg-input);
-  color: var(--text-main);
-  font-family: inherit;
-  transition: border-color 0.15s, box-shadow 0.15s;
-  min-width: 0;
-}
-
-.editor-filter-field select:focus,
-.editor-filter-field input[type="text"]:focus {
-  outline: none;
-  border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12);
-}
-
-/* Поиск занимает 2 колонки */
-.editor-filter-field-wide {
-  grid-column: span 4;
-}
-
-
 /* ============================================================ */
 /* === РЕДАКТОР: карточка таблицы ============================= */
 /* ============================================================ */
@@ -325,69 +201,12 @@
   background: rgba(0, 212, 255, 0.03);
 }
 
-/* --- Колонка «№» — служебная, визуально отделена --- */
-
-/* Заголовок */
-.editor-table thead th.et-col-num {
-  background: var(--bg-hover);
-  color: var(--text-dim);
-  border-right: 1px solid var(--border);
-  font-family: 'Courier New', Consolas, monospace;
-  letter-spacing: 0;
-}
-
-/* Ячейки */
-.editor-table td.et-col-num {
-  width: 48px;
-  min-width: 48px;
-  text-align: center;
-  color: var(--text-dim);
-  font-family: 'Courier New', Consolas, monospace;
-  font-weight: 700;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-  background: var(--bg-hover);
-  border-right: 1px solid var(--border);
-  user-select: none;
-  padding: 12px 6px;
-}
-
-/* При наведении на строку — слегка подсветить */
-.editor-table tbody tr:hover td.et-col-num {
-  color: var(--text-second);
-  background: rgba(0, 212, 255, 0.04);
-}
-.editor-table .et-col-check { width: 44px; text-align: center; }
-.editor-table .et-col-title { min-width: 240px; }
-.editor-table .et-col-opl   { width: 100px; }
-.editor-table .et-col-struct { width: 260px; }
-.editor-table .et-col-types { width: 140px; }
-.editor-table .et-col-machine { width: 100px; }
-.editor-table .et-col-status { width: 110px; }
-.editor-table .et-col-author { width: 140px; }
-.editor-table .et-col-date  { width: 110px; }
-.editor-table .et-col-actions { width: 100px; text-align: right; white-space: nowrap; }
-.editor-table .et-col-work { width: 80px; text-align: center; }
-
 /* Название */
 .et-title {
   display: flex;
   align-items: flex-start;
   gap: 8px;
   min-width: 0;
-}
-.et-title-icon {
-  width: 16px;
-  height: 16px;
-  color: var(--accent-cyan);
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-.et-title-text {
-  font-weight: 600;
-  color: var(--text-main);
-  word-break: break-word;
-  line-height: 1.35;
 }
 
 /* OPL */
@@ -403,59 +222,6 @@
   text-decoration: underline;
 }
 
-/* Структура */
-.et-struct {
-  font-size: 12px;
-  color: var(--text-second);
-  line-height: 1.4;
-  font-family: 'Courier New', Consolas, monospace;
-  word-break: break-word;
-}
-
-/* Типы */
-.et-types {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-/* Машина */
-.et-machine {
-  font-family: 'Courier New', Consolas, monospace;
-  font-weight: 700;
-  color: var(--blue-mid);
-  font-size: 12px;
-  letter-spacing: 0.3px;
-}
-
-/* Статус */
-.et-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-.et-status:hover {
-  transform: scale(1.05);
-}
-.et-status-active {
-  background: rgba(0, 196, 122, 0.15);
-  color: var(--accent-green);
-  border: 1px solid rgba(0, 196, 122, 0.5);
-}
-.et-status-inactive {
-  background: var(--bg-hover);
-  color: var(--text-dim);
-  border: 1px solid var(--border-hi);
-}
 /* Неактивные строки — приглушаем, чтобы отличались от активных */
 .editor-table tbody tr.et-row-inactive td {
   opacity: 0.55;
@@ -465,80 +231,7 @@
   opacity: 0.8;
   filter: grayscale(0.15);
 }
-.et-status::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-  flex-shrink: 0;
-}
 
-/* Автор */
-.et-author {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text-main);
-}
-.et-author svg {
-  width: 14px;
-  height: 14px;
-  color: var(--text-dim);
-  flex-shrink: 0;
-}
-
-/* Дата */
-.et-date {
-  font-size: 12px;
-  color: var(--text-second);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-/* Действия */
-.et-actions {
-  display: inline-flex;
-  gap: 4px;
-  justify-content: flex-end;
-}
-.et-action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  background: transparent;
-  border: 1px solid var(--border-hi);
-  border-radius: 6px;
-  color: var(--text-second);
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.et-action-btn svg {
-  width: 14px;
-  height: 14px;
-  display: block;
-  pointer-events: none;
-}
-.et-action-edit:hover {
-  background: rgba(0, 212, 255, 0.1);
-  border-color: var(--accent-cyan);
-  color: var(--accent-cyan);
-}
-.et-action-copy:hover {
-  background: rgba(123, 92, 255, 0.1);
-  border-color: var(--accent-purple);
-  color: var(--accent-purple);
-}
-.et-action-delete:hover {
-  background: rgba(230, 36, 79, 0.1);
-  border-color: var(--accent-red);
-  color: var(--accent-red);
-}
-/* RUN/STOP в таблице редактора — компактные чипы */
 /* Пустое состояние */
 .editor-empty {
   text-align: center;
@@ -578,12 +271,6 @@
   color: #10b981;
   border: 1px solid rgba(16, 185, 129, 0.5);
 }
-.et-type-chip.et-type-none {
-  background: var(--bg-hover);
-  color: var(--text-dim);
-  border: 1px solid var(--border);
-  font-style: italic;
-}
 
 .et-part-chip {
   display: inline-flex;
@@ -611,34 +298,6 @@
 /* === РЕДАКТОР: адаптив ====================================== */
 /* ============================================================ */
 
-@media (max-width: 1400px) {
-  .editor-filters {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-  .editor-filter-field-wide { grid-column: span 2; }
-}
-
-@media (max-width: 900px) {
-  .editor-filters {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-  .editor-filter-field-wide { grid-column: span 2; }
-}
-
-@media (max-width: 600px) {
-  .editor-filters {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .editor-filter-field-wide { grid-column: span 2; }
-}
-
-@media (max-width: 400px) {
-  .editor-filters {
-    grid-template-columns: 1fr;
-  }
-  .editor-filter-field-wide { grid-column: span 1; }
-}
-
 @media (max-width: 700px) {
   .editor-panel-head {
     flex-direction: column;
@@ -649,62 +308,6 @@
   }
 }
 
-/* ============================================================ */
-/* === РЕДАКТОР: строка поиска + кнопка сброса ================ */
-/* ============================================================ */
-
-.editor-filter-search-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-}
-
-.editor-filter-search-row input[type="text"] {
-  flex: 1;
-  min-width: 0;
-  width: auto;
-}
-
-.editor-filter-reset-btn {
-  flex-shrink: 0;
-  width: 40px;
-  height: 36px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 212, 255, 0.06);
-  border: 1px solid rgba(0, 212, 255, 0.4);
-  border-radius: 6px;
-  color: var(--accent-cyan);
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.editor-filter-reset-btn svg {
-  width: 18px;
-  height: 18px;
-  display: block;
-  pointer-events: none;
-  transition: transform 0.35s ease;
-  stroke: currentColor;
-}
-
-.editor-filter-reset-btn:hover {
-  border-color: var(--accent-cyan);
-  color: #ffffff;
-  background: linear-gradient(135deg, var(--blue-mid), var(--blue-light));
-  box-shadow: 0 0 12px rgba(0, 212, 255, 0.35);
-}
-
-.editor-filter-reset-btn:hover svg {
-  transform: rotate(-180deg);
-}
-
-.editor-filter-reset-btn:active {
-  transform: scale(0.95);
-}
 /* ============================================================ */
 /* === РЕДАКТОР: крошки ======================================= */
 /* ============================================================ */
@@ -898,4 +501,277 @@
 }
 .editor-mode-inline-btn.active svg {
   stroke: #ffffff;
+}
+
+/* ============================================================ */
+/* === СТАНДАРТЫ CL: фильтры одной строкой и меню Excel ======= */
+/* ============================================================ */
+.et-filterbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px 14px;
+}
+.et-search {
+  display: flex;
+  flex: 1 1 240px;
+  align-items: center;
+  gap: 8px;
+  min-width: 200px;
+  padding: 0 12px;
+  color: var(--text-dim);
+  background: var(--bg-input);
+  border: 1px solid var(--border-hi);
+  border-radius: 10px;
+}
+.et-search:focus-within { border-color: var(--accent-cyan); }
+.et-search input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 0;
+  font-size: 13px;
+  background: transparent;
+  border: 0;
+  outline: none;
+}
+.et-fchips { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.et-fchips:empty { display: none; }
+.et-flabel {
+  margin-right: 2px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.et-fchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-second);
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.et-fchip:hover { border-color: var(--accent-cyan); color: var(--text-main); }
+.et-fchip.on {
+  color: var(--accent-cyan);
+  background: color-mix(in srgb, var(--accent-cyan) 10%, var(--bg-card));
+  border-color: var(--accent-cyan);
+}
+.et-fchip-n { font-size: 11px; color: var(--text-dim); }
+.et-fsel {
+  width: auto;
+  max-width: 200px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-second);
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.et-reset {
+  padding: 7px 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.et-reset:hover { color: var(--accent-cyan); background: var(--bg-hover); }
+
+.et-excel { position: relative; }
+.et-excel-toggle svg { width: 16px; height: 16px; }
+.et-excel-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 50;
+  display: none;
+  min-width: 190px;
+  padding: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
+  border-radius: 10px;
+  box-shadow: var(--card-shadow-hover);
+}
+.et-excel.open .et-excel-menu { display: block; }
+.et-excel-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--text-main);
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.et-excel-item:hover { color: var(--accent-cyan); background: var(--bg-hover); }
+.et-excel-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+/* ============================================================ */
+/* === СТАНДАРТЫ CL: таблица по машинам ======================= */
+/* ============================================================ */
+.et-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.et-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 10px 10px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--nav-text);
+  background: var(--blue-deep);
+}
+.et-table thead th:first-child { border-top-left-radius: 12px; }
+.et-table thead th:last-child { border-top-right-radius: 12px; }
+:root[data-theme="dark"] .et-table thead th { background: var(--nav-bg); }
+.et-table tbody td {
+  padding: 8px 10px;
+  vertical-align: middle;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+}
+.et-table tbody tr:hover td { background: var(--bg-hover); }
+.et-table tbody tr.is-selected td { background: color-mix(in srgb, var(--accent-cyan) 7%, var(--bg-card)); }
+.et-table tbody tr.et-row-inactive td:not(.et-c-act):not(.et-c-check) { opacity: 0.5; }
+
+/* Заголовок группы машины */
+.et-table tbody tr.et-grp td {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--cil-z) 11%, var(--bg-card));
+  border-left: 4px solid var(--cil-z);
+}
+.et-grp td span { margin-left: 8px; font-weight: 600; color: var(--text-dim); }
+.et-table tbody td.et-c-check { width: 40px; text-align: center; border-left: 4px solid var(--cil-z); }
+.et-table thead th.et-c-check { width: 40px; text-align: center; }
+
+.et-c-opl { width: 120px; }
+.et-c-part { width: 80px; }
+.et-c-type { width: 170px; }
+.et-c-ap { width: 120px; }
+.et-c-sch { width: 130px; }
+.et-c-ph { width: 60px; }
+.et-c-st { width: 96px; }
+.et-c-act { width: 110px; }
+
+.et-opl {
+  padding: 0;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  white-space: nowrap;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.et-name {
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+  color: var(--text-main);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.et-opl:hover, .et-name:hover { color: var(--accent-cyan); text-decoration: underline; }
+.et-sub {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.et-dim { color: var(--text-dim); }
+.et-type { font-size: 12px; font-weight: 700; color: var(--text-main); }
+.et-norm .cil-norm-val { font-size: 11px; font-weight: 600; color: var(--text-second); }
+.et-norm .cil-norm-val small { display: inline; margin-left: 6px; }
+.et-norm .cil-norm-visual { flex-direction: row; gap: 4px; font-size: 11px; }
+.et-norm .cil-norm-visual svg { width: 12px; height: 12px; }
+.et-norm .cil-norm-pts { padding: 1px 8px; font-size: 10px; }
+.et-warn { font-size: 11px; font-weight: 800; color: var(--accent-amber); }
+
+.et-applies { display: inline-flex; gap: 4px; }
+.et-ap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 22px;
+  font-size: 10px;
+  font-weight: 900;
+  color: var(--border-hi);
+  border: 1px dashed var(--border-hi);
+  border-radius: 6px;
+}
+.et-ap.on { border-style: solid; }
+.et-ap-co.on { color: var(--accent-cyan); background: color-mix(in srgb, var(--accent-cyan) 13%, transparent); border-color: var(--accent-cyan); }
+.et-ap-to.on { color: var(--accent-purple); background: color-mix(in srgb, var(--accent-purple) 13%, transparent); border-color: var(--accent-purple); }
+.et-ap-cv.on { color: var(--accent-emerald, #10b39a); background: color-mix(in srgb, var(--accent-emerald, #10b39a) 13%, transparent); border-color: var(--accent-emerald, #10b39a); }
+
+.et-sch { display: block; font-size: 11px; white-space: nowrap; }
+.et-sch-in { font-weight: 800; color: var(--accent-green); }
+.et-sch-out { font-weight: 600; color: var(--text-dim); }
+.et-sch-empty { font-weight: 800; color: var(--accent-amber); }
+.et-sch-bar { display: block; width: 64px; height: 4px; margin-top: 4px; overflow: hidden; background: var(--border); border-radius: 2px; }
+.et-sch-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple)); }
+.et-ph { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-second); }
+
+.et-st { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.et-st::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.et-st-on { color: var(--accent-green); }
+.et-st-off { color: var(--text-dim); }
+
+.et-acts { display: flex; justify-content: flex-end; gap: 2px; opacity: 0.35; transition: opacity 0.12s; }
+.et-table tbody tr:hover .et-acts, .et-acts:focus-within { opacity: 1; }
+.et-ib {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: var(--text-second);
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.et-ib:hover { color: var(--accent-cyan); background: var(--bg-hover); }
+.et-ib-del:hover { color: var(--accent-red); }
+
+@media (max-width: 1200px) {
+  .et-c-ph, .et-table td.et-c-ph { display: none; }
 }
