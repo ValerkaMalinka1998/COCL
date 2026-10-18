@@ -273,6 +273,7 @@ function renderSvFullExtra(st, isEdit) {
     .join('');
 
   wrap.innerHTML = `
+    ${valEditBlockHtml(st, svFullState.isNew)}
     <div class="sv-full-extra-block">
       <div class="sv-full-extra-label">Применять к</div>
       <div class="sv-full-extra-chips">
@@ -623,6 +624,7 @@ $('#svFullSaveBtn')?.addEventListener('click', () => {
     tool: toolEl ? toolEl.value.trim() : st.tool,
     controlType: migrateControlType(controlType, measurements),
     active: activeEl ? activeEl.checked : st.active,
+    validation: valReadEdit(st.validation),
     updatedAt: new Date().toISOString()
   };
   if (isNew) {

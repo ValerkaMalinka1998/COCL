@@ -136,6 +136,10 @@ function renderStandardFullView() {
   // --- Крошки ---
   renderSvFullCrumbs(st);
 
+  // --- Валидация: плашка с решением (в просмотре) ---
+  const valBox = $('#svFullValidation');
+  if (valBox) valBox.innerHTML = (isEdit || svFullState.isNew) ? '' : valBannerHtml(st, 'mech');
+
   // --- Кнопки ---
   const viewBtn = $('#svFullViewToggleBtn');
   const editBtn = $('#svFullEditBtn');

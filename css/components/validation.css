@@ -1,0 +1,166 @@
+/* ============================================================ */
+/* === ВАЛИДАЦИЯ НОВОГО СТАНДАРТА / E-PARAM =================== */
+/* ============================================================ */
+
+.val-chip {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px dashed color-mix(in srgb, var(--accent-amber) 70%, transparent);
+  background: color-mix(in srgb, var(--accent-amber) 12%, transparent);
+  color: var(--accent-amber);
+  font-size: 10.5px;
+  font-weight: 800;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.val-chip-over {
+  border-style: solid;
+  border-color: var(--accent-red);
+  background: color-mix(in srgb, var(--accent-red) 10%, transparent);
+  color: var(--accent-red);
+}
+
+/* Строка чек-листа на валидации: лёгкая амберная заливка */
+tr.cil-row-val > td {
+  background-image: linear-gradient(color-mix(in srgb, var(--accent-amber) 7%, transparent), color-mix(in srgb, var(--accent-amber) 7%, transparent));
+}
+
+tr.cil-row-val > td.cil-c-std {
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--accent-amber) 70%, transparent);
+}
+
+/* Блок в форме */
+.val-edit {
+  padding: 12px;
+  border: 1px dashed color-mix(in srgb, var(--accent-amber) 60%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent-amber) 6%, transparent);
+}
+
+.val-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-second);
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.val-toggle input {
+  margin-top: 3px;
+  accent-color: var(--accent-amber);
+}
+
+.val-toggle b {
+  color: var(--accent-amber);
+}
+
+.val-days {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 0 24px;
+  font-size: 12.5px;
+  color: var(--text-second);
+}
+
+.val-days[hidden] {
+  display: none;
+}
+
+.val-days select {
+  width: auto;
+  height: 30px;
+  padding: 0 8px;
+  font-size: 12.5px;
+}
+
+.val-was {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* Плашка на странице */
+.val-slot:empty {
+  display: none;
+}
+
+.val-slot {
+  margin-bottom: 12px;
+}
+
+.val-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  border: 1px solid color-mix(in srgb, var(--accent-amber) 55%, var(--border));
+  border-left: 4px solid var(--accent-amber);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent-amber) 8%, var(--bg-card));
+}
+
+.val-banner-over {
+  border-color: color-mix(in srgb, var(--accent-red) 55%, var(--border));
+  border-left-color: var(--accent-red);
+  background: color-mix(in srgb, var(--accent-red) 6%, var(--bg-card));
+}
+
+.val-banner-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.val-banner-main b {
+  display: block;
+  font-size: 14px;
+  color: var(--accent-amber);
+}
+
+.val-banner-over .val-banner-main b {
+  color: var(--accent-red);
+}
+
+.val-banner-main span {
+  font-size: 12.5px;
+  color: var(--text-second);
+}
+
+.val-banner-main em {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--accent-red);
+}
+
+.val-banner-acts {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.val-btn-reject {
+  color: var(--accent-red);
+}
+
+.val-banner-done {
+  gap: 10px;
+  border-left-color: var(--accent-green);
+  border-color: var(--border);
+  background: var(--bg-card);
+  font-size: 12.5px;
+  color: var(--text-second);
+}
+
+.val-banner-done b {
+  color: var(--accent-green);
+}
