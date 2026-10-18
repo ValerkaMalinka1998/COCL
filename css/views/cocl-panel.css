@@ -339,16 +339,6 @@
   color: var(--text-dim);
 }
 
-.cocl-bday {
-  padding: 1px 6px;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--accent-amber) 16%, transparent);
-  color: var(--accent-amber);
-  font-size: 10.5px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
 .cocl-bsel-pop {
   position: absolute;
   z-index: 20;

@@ -237,14 +237,13 @@ function renderCoclBrandTiles() {
   const line = $('#lineSelect')?.value || '';
   const brands = line ? getBrandsForLine(line) : [];
   const from = $('#brandFrom')?.value || '';
-  const ofDay = getCoclBrandOfDay(line);
 
   $$('.cocl-bsel').forEach(box => {
     const target = box.dataset.brandTarget;
     const value = $('#' + target)?.value || '';
     const val = box.querySelector('.cocl-bsel-val');
     val.innerHTML = value
-      ? `${escapeHtml(value)}${value === ofDay ? '<span class="cocl-bday">бренд дня</span>' : ''}`
+      ? escapeHtml(value)
       : '<span class="cocl-bsel-ph">Выберите бренд</span>';
     box.classList.toggle('is-set', !!value);
 
@@ -256,7 +255,7 @@ function renderCoclBrandTiles() {
       ? list.map(b => {
           const off = target === 'brandTo' && b === from;
           return `<button type="button" class="cocl-bsel-opt${b === value ? ' active' : ''}" data-brand="${escapeAttr(b)}"${off ? ' disabled title="Это бренд «С»"' : ''}>
-            <span>${escapeHtml(b)}</span>${b === ofDay ? '<span class="cocl-bday">бренд дня</span>' : ''}</button>`;
+            <span>${escapeHtml(b)}</span></button>`;
         }).join('')
       : `<div class="cocl-bsel-empty">${brands.length ? 'Ничего не найдено' : 'У линии нет брендов — добавьте их в Настройках'}</div>`;
   });
@@ -623,11 +622,9 @@ function updateChecklist() {
   renderChecklist(relevant);
 }
 
-/* Сколько точек помещается прямо в строку стандарта */
-const COCL_INLINE_POINTS = 3;
-
 /* Чек-лист: строки стандартов, сгруппированные по машинам.
-   До «Начать проверку» — норма текстом, во время проверки — поля ввода. */
+   До «Начать проверку» — норма текстом, во время проверки — поля ввода
+   (точки и ОК / Не ОК — под названием, слева направо). */
 function renderChecklist(items) {
   const c = $('#checklistContainer');
   const type = $('#transitionType').value;
@@ -657,7 +654,6 @@ function renderChecklist(items) {
     const block = (type === 'ChangeOver' && brandTo) ? getEffectiveBrandBlock(blocks, brandTo) : (blocks[0] || null);
     const points = block && Array.isArray(block.points) ? block.points : [];
     const isOkNotOk = st.controlType === 'fixed' && !points.length;
-    const inline = points.length > 0 && points.length <= COCL_INLINE_POINTS;
 
     // Норма текстом (для списка до начала проверки)
     let normText = '';
@@ -672,13 +668,9 @@ function renderChecklist(items) {
           <label><input type="radio" name="ans_${st.id}" value="OK" data-ans><span>ОК</span></label>
           <label><input type="radio" name="ans_${st.id}" value="FAIL" data-ans><span>Не ОК</span></label>
         </div>`;
-    } else if (inline) {
-      ans = `<div class="cocl-pts cocl-pts-inline">${points.map((m, i) => pointCell(m, i, points.length > 1)).join('')}</div>`;
+    } else if (points.length) {
+      ans = `<div class="cocl-pts">${points.map((m, i) => pointCell(m, i, points.length > 1)).join('')}</div>`;
     }
-
-    const grid = (!isOkNotOk && !inline && points.length)
-      ? `<div class="cocl-pts cocl-pts-grid">${points.map((m, i) => pointCell(m, i, true)).join('')}</div>`
-      : '';
 
     const meta = [st.oplNumber, st.node, block && block.brand ? 'бренд ' + block.brand : ''].filter(Boolean)
       .map(escapeHtml).join(' · ');
@@ -692,7 +684,6 @@ function renderChecklist(items) {
             <div class="cocl-acc-meta">${meta}</div>
           </div>
           <span class="cocl-row-norm">${escapeHtml(normText)}</span>
-          ${ans}
           <div class="cocl-row-tools">
             <button type="button" class="cocl-acc-comment-btn" data-comment-btn title="Комментарий">${cmtIcon(16, true)}</button>
             <button type="button" class="cocl-acc-view-btn" data-view-btn data-std-id="${escapeAttr(st.id)}" title="Посмотреть стандарт">
@@ -700,7 +691,7 @@ function renderChecklist(items) {
             </button>
           </div>
         </div>
-        ${grid}
+        ${ans ? `<div class="cocl-row-input">${ans}</div>` : ''}
         <div class="comment-preview" style="display:none" data-comment-preview></div>
       </div>`;
   };
