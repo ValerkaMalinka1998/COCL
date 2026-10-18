@@ -222,6 +222,8 @@ function fillBrandsForLine(line) {
     el.innerHTML = '<option value="">— выберите —</option>' +
       brands.map(b => `<option>${escapeHtml(b)}</option>`).join('');
   });
+  const search = $('#coclBrandSearch');
+  if (search) search.value = '';
   $('#brandFrom').value = getCoclBrandOfDay(line);
   renderCoclBrandTiles();
 }
@@ -239,8 +241,15 @@ function renderCoclBrandTiles() {
   const to = $('#brandTo')?.value || '';
   const ofDay = getCoclBrandOfDay(line);
 
+  // Много брендов — поиск, ряды с прокруткой; выбранный бренд виден всегда
+  const many = brands.length > 12;
+  const search = $('#coclBrandSearch');
+  if (search) search.hidden = !many;
+  const q = many ? String(search?.value || '').trim().toLowerCase() : '';
+  $$('.cocl-brand-tiles').forEach(el => el.classList.toggle('is-many', many));
+
   const tiles = (selected, disabledBrand) => brands.length
-    ? brands.map(b => `<button type="button" class="cocl-brand-tile${b === selected ? ' active' : ''}"
+    ? brands.filter(b => !q || b === selected || b.toLowerCase().includes(q)).map(b => `<button type="button" class="cocl-brand-tile${b === selected ? ' active' : ''}"
         data-brand="${escapeAttr(b)}"${b === disabledBrand ? ' disabled' : ''}>${escapeHtml(b)}${b === ofDay ? '<span class="cocl-brand-day" title="Бренд дня по расписанию"></span>' : ''}</button>`).join('')
     : '<span class="cocl-sec-hint">У линии нет брендов — добавьте их в Настройках.</span>';
 
@@ -254,6 +263,8 @@ function renderCoclBrandTiles() {
     hint.textContent = ofDay ? `Точка — бренд дня по расписанию (${ofDay}).` : '';
   }
 }
+
+$('#coclBrandSearch')?.addEventListener('input', () => renderCoclBrandTiles());
 
 /* Клик по плитке бренда и «поменять местами» */
 $('#brandsCard')?.addEventListener('click', (e) => {
@@ -575,185 +586,105 @@ function updateChecklist() {
   renderChecklist(relevant);
 }
 
+/* Сколько точек помещается прямо в строку стандарта */
+const COCL_INLINE_POINTS = 3;
+
+/* Чек-лист: строки стандартов, сгруппированные по машинам.
+   До «Начать проверку» — норма текстом, во время проверки — поля ввода. */
 function renderChecklist(items) {
   const c = $('#checklistContainer');
-  if (!items.length) {
-    c.innerHTML = '<div class="empty-state">Нет стандартов для выбранных условий.<br>Добавьте их во вкладке «Редактор стандартов».</div>';
-    updateProgress();
-    return;
-  }
-
   const type = $('#transitionType').value;
   const brandTo = (type === 'ChangeOver') ? $('#brandTo').value : '';
 
-  // Найдём первый непроверенный — его раскроем автоматически
-  let firstUncheckedId = null;
+  // Группы по машинам — в порядке появления
+  const groups = [];
+  items.forEach(st => {
+    const key = st.machine || '—';
+    let g = groups.find(x => x.key === key);
+    if (!g) { g = { key, items: [] }; groups.push(g); }
+    g.items.push(st);
+  });
 
-  // Собираем HTML
-  const html = items.map(st => {
-    const isFirstUnchecked = (firstUncheckedId === null);
-    if (isFirstUnchecked) firstUncheckedId = st.id;
+  const pointCell = (m, i, showNum) => {
+    const norm = parseNorm(m.value);
+    const normData = norm ? JSON.stringify(norm).replace(/"/g, '&quot;') : '';
+    return `
+      <label class="checklist-point-cell" data-point-index="${i}" data-norm='${normData}'>
+        <span class="cocl-pt-norm">${showNum ? `<b>${i + 1}</b>` : ''}${escapeHtml(m.value || '—')}<span class="checklist-point-status" data-point-status="${i}"></span></span>
+        <input type="text" inputmode="decimal" class="checklist-point-input" data-point-input="${i}" autocomplete="off">
+      </label>`;
+  };
 
-    // --- Выбираем блок точек для отображения ---
+  const rowHtml = (st) => {
     const blocks = Array.isArray(st.measurements) ? st.measurements : [];
-    let selectedBlock = null;
+    const block = (type === 'ChangeOver' && brandTo) ? getEffectiveBrandBlock(blocks, brandTo) : (blocks[0] || null);
+    const points = block && Array.isArray(block.points) ? block.points : [];
+    const isOkNotOk = st.controlType === 'fixed' && !points.length;
+    const inline = points.length > 0 && points.length <= COCL_INLINE_POINTS;
 
-    if (type === 'ChangeOver' && brandTo) {
-      selectedBlock = getEffectiveBrandBlock(blocks, brandTo);
-    } else {
-      selectedBlock = blocks[0] || null;
-    }
+    // Норма текстом (для списка до начала проверки)
+    let normText = '';
+    if (isOkNotOk) normText = 'ОК / Не ОК';
+    else if (points.length === 1) normText = points[0].value || '—';
+    else normText = `${points.length} ${points.length < 5 ? 'точки' : 'точек'}`;
 
-    const visiblePoints = selectedBlock ? selectedBlock.points : [];
-
-    // Сетка точек (для типов с точками: variable / interval / fixed с точками)
-    let pointsHtml = '';
-    if (selectedBlock && visiblePoints.length) {
-      const cells = visiblePoints.map((m, i) => {
-        const norm = parseNorm(m.value);
-        const normData = norm ? JSON.stringify(norm).replace(/"/g, '&quot;') : '';
-        return `
-          <div class="checklist-point-cell"
-               data-point-index="${i}"
-               data-norm='${normData}'>
-            <div class="checklist-point-cell-head">
-              <span class="checklist-point-status" data-point-status="${i}"></span>
-              <span class="checklist-point-num">${i + 1}</span>
-              <span class="checklist-point-norm" title="${escapeAttr(m.value || '')}">${escapeHtml(m.value || '—')}</span>
-            </div>
-            <div class="checklist-point-cell-body">
-              <input type="number" step="any" class="checklist-point-input"
-                     data-point-input="${i}" placeholder="0">
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      pointsHtml = `
-        <div class="checklist-points">
-          <div class="checklist-points-header">
-            <span class="checklist-point-brand-badge">
-              ${escapeHtml(selectedBlock.brand || 'Все бренды')}
-            </span>
-            <span class="checklist-points-hint">Все точки должны быть в норме</span>
-          </div>
-          <div class="checklist-points-grid">${cells}</div>
-        </div>
-      `;
-    }
-
-    // Ответ (ОК/Не ОК) — только для Фиксированного без точек
-    let answerHtml = '';
-    if (st.controlType === 'fixed' && !visiblePoints.length) {
-      answerHtml = `
-        <div class="radio-group">
-          <label><input type="radio" name="ans_${st.id}" value="OK" data-ans> ОК</label>
-          <label><input type="radio" name="ans_${st.id}" value="FAIL" data-ans> Не ОК</label>
+    let ans = '';
+    if (isOkNotOk) {
+      ans = `
+        <div class="cocl-okfail">
+          <label><input type="radio" name="ans_${st.id}" value="OK" data-ans><span>ОК</span></label>
+          <label><input type="radio" name="ans_${st.id}" value="FAIL" data-ans><span>Не ОК</span></label>
         </div>`;
+    } else if (inline) {
+      ans = `<div class="cocl-pts cocl-pts-inline">${points.map((m, i) => pointCell(m, i, points.length > 1)).join('')}</div>`;
     }
 
-    // Компактная строка в свёрнутом виде
-    const compactMeta = [
-      st.oplNumber ? `OPL: ${escapeHtml(st.oplNumber)}` : '',
-      st.machine ? `Машина: ${escapeHtml(st.machine)}` : '',
-      st.nodePart ? escapeHtml(st.nodePart) : ''
-    ].filter(Boolean).join(' · ');
+    const grid = (!isOkNotOk && !inline && points.length)
+      ? `<div class="cocl-pts cocl-pts-grid">${points.map((m, i) => pointCell(m, i, true)).join('')}</div>`
+      : '';
 
-    // Если пользователь оставил комментарий — нарисуем иконку 💬
-    // (проверим по data-comment, при перерисовке может быть уже установлен)
-    const hasComment = false; // пока нет — установится после ручного комментария
+    const meta = [st.oplNumber, st.node, block && block.brand ? 'бренд ' + block.brand : ''].filter(Boolean)
+      .map(escapeHtml).join(' · ');
 
     return `
-      <div class="cocl-acc-item" data-std-id="${st.id}" data-expanded="false">
-        <div class="cocl-acc-header" data-acc-toggle>
+      <div class="cocl-acc-item cocl-row" data-std-id="${st.id}" data-status="unchecked">
+        <div class="cocl-row-main">
           <span class="cocl-status-dot" data-acc-status="unchecked"></span>
-          <div class="cocl-acc-title-wrap">
+          <div class="cocl-row-title">
             <div class="cocl-acc-title">${escapeHtml(st.title || '—')}</div>
-            <div class="cocl-acc-meta">${compactMeta}</div>
+            <div class="cocl-acc-meta">${meta}</div>
           </div>
-
-          <button type="button" class="cocl-acc-comment-btn" data-comment-btn title="Добавить комментарий">
-            ${cmtIcon(16, true)}
-          </button>
-
-          <button type="button" class="cocl-acc-view-btn" data-view-btn data-std-id="${escapeAttr(st.id)}" title="Посмотреть стандарт">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-              <circle cx="12" cy="12" r="3"/>
-            </svg>
-          </button>
-
-          <span class="cocl-acc-caret">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px">
-              <polyline points="9 18 15 12 9 6"/>
-            </svg>
-          </span>
+          <span class="cocl-row-norm">${escapeHtml(normText)}</span>
+          ${ans}
+          <div class="cocl-row-tools">
+            <button type="button" class="cocl-acc-comment-btn" data-comment-btn title="Комментарий">${cmtIcon(16, true)}</button>
+            <button type="button" class="cocl-acc-view-btn" data-view-btn data-std-id="${escapeAttr(st.id)}" title="Посмотреть стандарт">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
         </div>
+        ${grid}
+        <div class="comment-preview" style="display:none" data-comment-preview></div>
+      </div>`;
+  };
 
-        <div class="cocl-acc-body">
-          ${pointsHtml}
-          ${answerHtml ? `<div class="cocl-acc-answer">${answerHtml}</div>` : ''}
+  c.innerHTML = groups.map(g => `
+    <div class="cocl-group">
+      <div class="cocl-group-head">${escapeHtml(g.key)}<span>${g.items.length}</span></div>
+      ${g.items.map(rowHtml).join('')}
+    </div>`).join('');
 
-          <div class="comment-preview" style="display:none" data-comment-preview></div>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  c.innerHTML = html;
-
-  // Раскрываем первый непроверенный
-  if (firstUncheckedId && coclState.checking) {
-    const firstItem = c.querySelector(`.cocl-acc-item[data-std-id="${firstUncheckedId}"]`);
-    if (firstItem) expandCoclItem(firstItem, true);
-  }
-
-  // Привязываем обработчики
   bindCoclAccordionEvents();
   updateProgress();
 }
 
 /* ============================================================
-   COCL: аккордеон — обработчики
+   COCL: строки чек-листа — обработчики
    ============================================================ */
-
-function expandCoclItem(item, silent) {
-  if (!coclState.checking) return;
-  item.dataset.expanded = 'true';
-  item.classList.add('expanded');
-  const caret = item.querySelector('.cocl-acc-caret');
-  if (caret) caret.style.transform = 'rotate(90deg)';
-}
-
-function collapseCoclItem(item) {
-  item.dataset.expanded = 'false';
-  item.classList.remove('expanded');
-  const caret = item.querySelector('.cocl-acc-caret');
-  if (caret) caret.style.transform = 'rotate(0deg)';
-}
 
 function bindCoclAccordionEvents() {
   const c = $('#checklistContainer');
   if (!c) return;
-
-  // --- Клик по шапке — раскрыть/свернуть ---
-  c.querySelectorAll('[data-acc-toggle]').forEach(head => {
-    head.addEventListener('click', (e) => {
-      // Игнорируем клики по кнопкам внутри шапки
-      if (e.target.closest('[data-view-btn]')) return;
-      if (e.target.closest('.cocl-acc-comment-icon')) return;
-
-      const item = head.closest('.cocl-acc-item');
-      if (!item) return;
-
-      const isExpanded = item.dataset.expanded === 'true';
-      if (isExpanded) {
-        collapseCoclItem(item);
-      } else {
-        expandCoclItem(item);
-      }
-    });
-  });
 
   // --- Глазик — просмотр стандарта ---
   c.querySelectorAll('[data-view-btn]').forEach(btn => {
@@ -795,7 +726,7 @@ function bindCoclAccordionEvents() {
         return;
       }
 
-      const val = parseFloat(e.target.value);
+      const val = parseFloat(String(e.target.value).replace(',', '.'));
       if (isNaN(val)) {
         updateCoclItemStatusFromPoints(item);
         updateProgress();
@@ -819,6 +750,17 @@ function bindCoclAccordionEvents() {
 
       updateCoclItemStatusFromPoints(item);
       updateProgress();
+    });
+  });
+
+  // --- Enter — к следующему полю ---
+  c.querySelectorAll('.checklist-point-input').forEach(inp => {
+    inp.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const all = [...c.querySelectorAll('.checklist-point-input')];
+      const next = all[all.indexOf(inp) + 1];
+      if (next) next.focus();
     });
   });
 
@@ -965,6 +907,7 @@ function buildChecklistView() {
   coclState.checking = true;
   setCoclCheckingUi(true);
   updateChecklistForCheck();
+  $('#checklistContainer .checklist-point-input')?.focus();
 }
 
 /* Перерисовать текущий список уже в режиме проверки */

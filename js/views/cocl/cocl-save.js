@@ -64,7 +64,7 @@ if (type === 'ChangeOver') {
         const val = inp?.value.trim() || '';
         if (val === '') { allFilled = false; return; }
 
-        const num = parseFloat(val);
+        const num = parseFloat(val.replace(',', '.'));
         const normStr = cell.dataset.norm;
         let inRange = null;
         let norm = null;

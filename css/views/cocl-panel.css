@@ -91,6 +91,7 @@
 .cocl-setup.is-locked .cocl-part-btn:not(.active),
 .cocl-setup.is-locked .cocl-change:not(.checked),
 .cocl-setup.is-locked .cocl-swap,
+.cocl-setup.is-locked .cocl-brand-search,
 .cocl-setup.is-locked .cocl-brand-hint {
   display: none;
 }
@@ -414,6 +415,24 @@
   display: none;
 }
 
+.cocl-brand-search {
+  width: 100%;
+  height: 32px;
+  margin-bottom: 8px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.cocl-brand-search[hidden] {
+  display: none;
+}
+
+.cocl-brand-tiles.is-many {
+  max-height: 112px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
 .cocl-main-info {
   margin-top: 3px;
   font-size: 13px;
@@ -446,18 +465,6 @@
   font-size: 14px;
   color: var(--text-dim);
   text-align: center;
-}
-
-/* До «Начать проверку» — только список: без раскрытия и ввода */
-.cocl-preview .cocl-acc-header {
-  cursor: default;
-}
-
-.cocl-preview .cocl-acc-body,
-.cocl-preview .cocl-acc-caret,
-.cocl-preview .cocl-acc-comment-btn,
-.cocl-preview .cocl-status-dot {
-  display: none;
 }
 
 @media (max-width: 1000px) {
