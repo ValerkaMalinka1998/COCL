@@ -75,7 +75,7 @@
 }
 
 .cocl-row-title {
-  flex: 1;
+  flex: 0 0 300px;
   min-width: 0;
 }
 
@@ -112,32 +112,8 @@
 
 .cocl-row-tools {
   display: flex;
-  gap: 4px;
-}
-
-.cocl-acc-comment-btn,
-.cocl-acc-view-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border: 0;
-  border-radius: 8px;
-  background: none;
-  color: var(--text-dim);
-  cursor: pointer;
-}
-
-.cocl-acc-comment-btn:hover,
-.cocl-acc-view-btn:hover {
-  background: var(--bg-hover);
-  color: var(--accent-purple);
-}
-
-.cocl-acc-comment-btn.urgent {
-  color: var(--accent-red);
-  background: color-mix(in srgb, var(--accent-red) 10%, transparent);
+  gap: 6px;
+  margin-left: auto;
 }
 
 /* ОК / Не ОК */
@@ -188,9 +164,9 @@
 
 .cocl-pts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  grid-template-columns: repeat(auto-fill, 118px);
   gap: 6px;
-  padding: 0 10px 10px 34px;
+  padding: 0 10px 12px 334px;
 }
 
 .checklist-point-cell {
@@ -285,7 +261,11 @@
   }
 
   .cocl-row-title {
-    flex-basis: calc(100% - 100px);
+    flex: 1 1 calc(100% - 110px);
+  }
+
+  .cocl-pts-grid {
+    padding-left: 34px;
   }
 
   .cocl-pts-inline {

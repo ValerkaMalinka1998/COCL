@@ -222,8 +222,6 @@ function fillBrandsForLine(line) {
     el.innerHTML = '<option value="">— выберите —</option>' +
       brands.map(b => `<option>${escapeHtml(b)}</option>`).join('');
   });
-  const search = $('#coclBrandSearch');
-  if (search) search.value = '';
   $('#brandFrom').value = getCoclBrandOfDay(line);
   renderCoclBrandTiles();
 }
@@ -233,56 +231,95 @@ function updateBrandToOptions() {
   renderCoclBrandTiles();
 }
 
-/* Плитки брендов «С» / «На» */
+/* Выбор брендов «С» / «На»: кнопка + выпадающий список с поиском
+   (названия брендов бывают длинными — плитки для них не годятся) */
 function renderCoclBrandTiles() {
   const line = $('#lineSelect')?.value || '';
   const brands = line ? getBrandsForLine(line) : [];
   const from = $('#brandFrom')?.value || '';
-  const to = $('#brandTo')?.value || '';
   const ofDay = getCoclBrandOfDay(line);
 
-  // Много брендов — поиск, ряды с прокруткой; выбранный бренд виден всегда
-  const many = brands.length > 12;
-  const search = $('#coclBrandSearch');
-  if (search) search.hidden = !many;
-  const q = many ? String(search?.value || '').trim().toLowerCase() : '';
-  $$('.cocl-brand-tiles').forEach(el => el.classList.toggle('is-many', many));
+  $$('.cocl-bsel').forEach(box => {
+    const target = box.dataset.brandTarget;
+    const value = $('#' + target)?.value || '';
+    const val = box.querySelector('.cocl-bsel-val');
+    val.innerHTML = value
+      ? `${escapeHtml(value)}${value === ofDay ? '<span class="cocl-bday">бренд дня</span>' : ''}`
+      : '<span class="cocl-bsel-ph">Выберите бренд</span>';
+    box.classList.toggle('is-set', !!value);
 
-  const tiles = (selected, disabledBrand) => brands.length
-    ? brands.filter(b => !q || b === selected || b.toLowerCase().includes(q)).map(b => `<button type="button" class="cocl-brand-tile${b === selected ? ' active' : ''}"
-        data-brand="${escapeAttr(b)}"${b === disabledBrand ? ' disabled' : ''}>${escapeHtml(b)}${b === ofDay ? '<span class="cocl-brand-day" title="Бренд дня по расписанию"></span>' : ''}</button>`).join('')
-    : '<span class="cocl-sec-hint">У линии нет брендов — добавьте их в Настройках.</span>';
-
-  const fromBox = $('#coclBrandFromTiles');
-  const toBox = $('#coclBrandToTiles');
-  if (fromBox) fromBox.innerHTML = tiles(from, '');
-  if (toBox) toBox.innerHTML = tiles(to, from);
-
-  const hint = $('#coclBrandHint');
-  if (hint) {
-    hint.textContent = ofDay ? `Точка — бренд дня по расписанию (${ofDay}).` : '';
-  }
+    const pop = box.querySelector('.cocl-bsel-pop');
+    if (pop.hidden) return;
+    const q = String(box.querySelector('.cocl-bsel-search').value || '').trim().toLowerCase();
+    const list = brands.filter(b => !q || b.toLowerCase().includes(q));
+    box.querySelector('.cocl-bsel-list').innerHTML = list.length
+      ? list.map(b => {
+          const off = target === 'brandTo' && b === from;
+          return `<button type="button" class="cocl-bsel-opt${b === value ? ' active' : ''}" data-brand="${escapeAttr(b)}"${off ? ' disabled title="Это бренд «С»"' : ''}>
+            <span>${escapeHtml(b)}</span>${b === ofDay ? '<span class="cocl-bday">бренд дня</span>' : ''}</button>`;
+        }).join('')
+      : `<div class="cocl-bsel-empty">${brands.length ? 'Ничего не найдено' : 'У линии нет брендов — добавьте их в Настройках'}</div>`;
+  });
 }
 
-$('#coclBrandSearch')?.addEventListener('input', () => renderCoclBrandTiles());
+function closeCoclBrandPops(except) {
+  $$('.cocl-bsel-pop').forEach(p => { if (p !== except) p.hidden = true; });
+  $$('.cocl-bsel').forEach(b => b.classList.toggle('is-open', !b.querySelector('.cocl-bsel-pop').hidden));
+}
 
-/* Клик по плитке бренда и «поменять местами» */
+/* Выпадающие списки брендов и «поменять местами» */
 $('#brandsCard')?.addEventListener('click', (e) => {
   if ($('#coclSetupCard')?.classList.contains('is-locked')) return;
-  const tile = e.target.closest('.cocl-brand-tile');
-  if (tile && !tile.disabled) {
-    const target = tile.closest('[data-brand-target]').dataset.brandTarget;
-    const sel = $('#' + target);
-    sel.value = sel.value === tile.dataset.brand ? '' : tile.dataset.brand;
-    if (target === 'brandFrom' && $('#brandTo').value === sel.value) $('#brandTo').value = '';
-    sel.dispatchEvent(new Event('change'));
+  const box = e.target.closest('.cocl-bsel');
+
+  if (e.target.closest('.cocl-bsel-btn')) {
+    const pop = box.querySelector('.cocl-bsel-pop');
+    const open = pop.hidden;
+    closeCoclBrandPops();
+    pop.hidden = !open;
+    box.classList.toggle('is-open', open);
+    if (open) {
+      box.querySelector('.cocl-bsel-search').value = '';
+      renderCoclBrandTiles();
+      box.querySelector('.cocl-bsel-search').focus();
+      box.querySelector('.cocl-bsel-opt.active')?.scrollIntoView({ block: 'nearest' });
+    }
     return;
   }
+
+  const opt = e.target.closest('.cocl-bsel-opt');
+  if (opt && !opt.disabled) {
+    const target = box.dataset.brandTarget;
+    $('#' + target).value = opt.dataset.brand;
+    if (target === 'brandFrom' && $('#brandTo').value === opt.dataset.brand) $('#brandTo').value = '';
+    closeCoclBrandPops();
+    $('#' + target).dispatchEvent(new Event('change'));
+    return;
+  }
+
   if (e.target.closest('#coclBrandSwap')) {
     const f = $('#brandFrom'), t = $('#brandTo');
     [f.value, t.value] = [t.value, f.value];
     f.dispatchEvent(new Event('change'));
   }
+});
+
+$('#brandsCard')?.addEventListener('input', (e) => {
+  if (e.target.classList.contains('cocl-bsel-search')) renderCoclBrandTiles();
+});
+
+$('#brandsCard')?.addEventListener('keydown', (e) => {
+  if (!e.target.classList.contains('cocl-bsel-search')) return;
+  if (e.key === 'Escape') { closeCoclBrandPops(); return; }
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    e.target.closest('.cocl-bsel').querySelector('.cocl-bsel-opt:not(:disabled)')?.click();
+  }
+});
+
+/* Клик вне списка — закрыть */
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.cocl-bsel')) closeCoclBrandPops();
 });
 
 $('#lineSelect').addEventListener('change', () => {

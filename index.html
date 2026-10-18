@@ -248,16 +248,22 @@
       </div>
       <select id="brandFrom" style="display:none"><option value="">— выберите —</option></select>
       <select id="brandTo" style="display:none"><option value="">— выберите —</option></select>
-      <input type="search" class="cocl-brand-search" id="coclBrandSearch" placeholder="Найти бренд" autocomplete="off" hidden>
-      <div class="cocl-brand-row">
-        <span class="cocl-brand-cap">С</span>
-        <div class="cocl-brand-tiles" id="coclBrandFromTiles" data-brand-target="brandFrom"></div>
+      <div class="cocl-bsel" data-brand-target="brandFrom">
+        <span class="cocl-bsel-cap">С бренда</span>
+        <button type="button" class="cocl-bsel-btn"><span class="cocl-bsel-val"></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <div class="cocl-bsel-pop" hidden>
+          <input type="search" class="cocl-bsel-search" placeholder="Найти бренд" autocomplete="off">
+          <div class="cocl-bsel-list"></div>
+        </div>
       </div>
-      <div class="cocl-brand-row">
-        <span class="cocl-brand-cap">На</span>
-        <div class="cocl-brand-tiles" id="coclBrandToTiles" data-brand-target="brandTo"></div>
+      <div class="cocl-bsel" data-brand-target="brandTo">
+        <span class="cocl-bsel-cap">На бренд</span>
+        <button type="button" class="cocl-bsel-btn"><span class="cocl-bsel-val"></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <div class="cocl-bsel-pop" hidden>
+          <input type="search" class="cocl-bsel-search" placeholder="Найти бренд" autocomplete="off">
+          <div class="cocl-bsel-list"></div>
+        </div>
       </div>
-      <div class="cocl-brand-hint" id="coclBrandHint"></div>
     </div>
 
     <!-- Что меняется — только Change Over -->

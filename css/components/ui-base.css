@@ -769,3 +769,62 @@ tr:hover td { background: var(--bg-hover); }
 .cmt-svg.cmt-outline .cmt-dot { fill: currentColor; }
 .has-comment .cmt-svg.cmt-outline .cmt-bubble { fill: var(--accent-amber); stroke: var(--accent-amber); }
 .has-comment .cmt-svg.cmt-outline .cmt-dot { fill: #fff; }
+
+/* ============================================================ */
+/* === Кнопки-иконки: комментарий и просмотр стандарта ======== */
+/* ============================================================ */
+/* Цветные, чтобы их было видно как инструменты:
+   комментарий — циан (амбер, если уже есть), просмотр — фиолетовый */
+
+button[data-comment-btn],
+button[data-view-btn],
+button[data-tl-view],
+button[data-tl-open-ep] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+button[data-comment-btn] {
+  color: var(--accent-cyan);
+  background: color-mix(in srgb, var(--accent-cyan) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 35%, transparent);
+}
+
+button[data-comment-btn]:hover {
+  background: color-mix(in srgb, var(--accent-cyan) 20%, transparent);
+  border-color: var(--accent-cyan);
+}
+
+button[data-comment-btn].has-comment {
+  color: var(--accent-amber);
+  background: color-mix(in srgb, var(--accent-amber) 14%, transparent);
+  border-color: var(--accent-amber);
+}
+
+button[data-comment-btn].urgent {
+  color: var(--accent-red);
+  background: color-mix(in srgb, var(--accent-red) 12%, transparent);
+  border-color: var(--accent-red);
+}
+
+button[data-view-btn],
+button[data-tl-view],
+button[data-tl-open-ep] {
+  color: var(--accent-purple);
+  background: color-mix(in srgb, var(--accent-purple) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-purple) 35%, transparent);
+}
+
+button[data-view-btn]:hover,
+button[data-tl-view]:hover,
+button[data-tl-open-ep]:hover {
+  background: color-mix(in srgb, var(--accent-purple) 20%, transparent);
+  border-color: var(--accent-purple);
+}
