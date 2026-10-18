@@ -268,7 +268,7 @@ function histItemHtml(x, entries, line) {
       <div class="hist-it-title">${it.oplNumber ? `<span class="hist-opl">${escapeHtml(it.oplNumber)}</span> · ` : ''}${escapeHtml(histItemTitle(it))}${isElec ? ' <span class="hist-tag hist-tag-elec">E-Param</span>' : ''}</div>
       ${sub ? `<div class="hist-sub">${escapeHtml(sub)}</div>` : ''}
       <div class="hist-pts">${valuesHtml}</div>
-      ${it.comment ? `<div class="hist-com">💬 ${escapeHtml(it.comment)}</div>` : ''}
+      ${it.comment ? `<div class="hist-com">${cmtLine(it.comment)}</div>` : ''}
     </div>
     <div class="hist-prev">${prevHtml}${repHtml}</div>
     <div class="hist-it-act hist-noprint">

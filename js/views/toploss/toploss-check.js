@@ -106,11 +106,11 @@ function renderTopLossChecklist() {
           <div class="tl3-nm">${isElec ? '<span class="tl2-kind tl2-kind-el">E-Param</span> ' : ''}${row.oplNumber ? `<span class="tl2-opl">${escapeHtml(row.oplNumber)}</span> · ` : ''}${escapeHtml(title || '—')}</div>
           <div class="tl2-sub">${escapeHtml([row.machine, row.nodePart, row.node].filter(Boolean).join(' · '))}${lossNames ? ` · <span class="tl3-loss">${escapeHtml(lossNames)}</span>` : ''}</div>
           ${body}
-          <div class="comment-preview" data-comment-preview style="${a.comment ? '' : 'display:none'}">${a.comment ? '💬 ' + escapeHtml(a.comment) : ''}</div>
+          <div class="comment-preview" data-comment-preview style="${a.comment ? '' : 'display:none'}">${a.comment ? cmtLine(a.comment) : ''}</div>
         </div>
         <div class="tl3-acts">
           <button type="button" class="tl2-ib ${a.comment ? 'has-comment' : ''}" data-comment-btn data-tl-comment="${escapeAttr(row.id)}" title="Комментарий">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            ${cmtIcon(16, true)}
           </button>
           ${isElec ? '' : `<button type="button" class="tl2-ib" data-tl-view="${escapeAttr(row.id)}" title="Открыть стандарт">${CIL_ICONS.eye}</button>`}
         </div>

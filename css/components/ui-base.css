@@ -758,3 +758,14 @@ tr:hover td { background: var(--bg-hover); }
   text-transform: uppercase;
   font-variant-numeric: tabular-nums;
 }
+
+/* ============ Иконка комментария (cmtIcon) ============ */
+.cmt-svg { display: inline-block; vertical-align: -3px; flex-shrink: 0; }
+.cmt-svg .cmt-bubble { fill: var(--accent-amber); stroke: var(--accent-amber); stroke-width: 1.5; stroke-linejoin: round; }
+.cmt-svg .cmt-dot { fill: #fff; }
+.cmt-mark { display: inline-flex; margin-right: 2px; }
+/* Контурная версия для кнопок; при has-comment — заливается */
+.cmt-svg.cmt-outline .cmt-bubble { fill: none; stroke: currentColor; stroke-width: 1.8; }
+.cmt-svg.cmt-outline .cmt-dot { fill: currentColor; }
+.has-comment .cmt-svg.cmt-outline .cmt-bubble { fill: var(--accent-amber); stroke: var(--accent-amber); }
+.has-comment .cmt-svg.cmt-outline .cmt-dot { fill: #fff; }

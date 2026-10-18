@@ -301,7 +301,7 @@ $('#commentSaveBtn').addEventListener('click', () => {
   const btn = currentCommentItem.querySelector('[data-comment-btn]');
 
   if (text) {
-    preview.textContent = '💬 ' + text;
+    preview.innerHTML = cmtLine(text);
     preview.style.display = 'block';
     btn.classList.add('has-comment');
   } else {

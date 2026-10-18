@@ -8,6 +8,18 @@
 /* ============================================================
    УТИЛИТЫ
    ============================================================ */
+/* Иконка комментария: пузырь с тремя точками.
+   outline=true — контурная (для кнопок), иначе залитая янтарная (метка в тексте). */
+function cmtIcon(size = 14, outline = false) {
+  return `<svg class="cmt-svg${outline ? ' cmt-outline' : ''}" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true">` +
+    '<path class="cmt-bubble" d="M5 3h14a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-7l-5 4v-4H5a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3z"/>' +
+    '<circle class="cmt-dot" cx="8" cy="10.5" r="1.4"/><circle class="cmt-dot" cx="12" cy="10.5" r="1.4"/><circle class="cmt-dot" cx="16" cy="10.5" r="1.4"/></svg>';
+}
+/* Строка комментария: иконка + текст (текст экранируется) */
+function cmtLine(text) {
+  return `<span class="cmt-mark">${cmtIcon(14)}</span> ${escapeHtml(text)}`;
+}
+
 function $(sel) { return document.querySelector(sel); }
 function $$(sel) { return document.querySelectorAll(sel); }
 

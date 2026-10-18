@@ -671,11 +671,7 @@ function renderChecklist(items) {
           </div>
 
           <button type="button" class="cocl-acc-comment-btn" data-comment-btn title="Добавить комментарий">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-              <line x1="9" y1="10" x2="15" y2="10"/>
-              <line x1="9" y1="14" x2="13" y2="14"/>
-            </svg>
+            ${cmtIcon(16, true)}
           </button>
 
           <button type="button" class="cocl-acc-view-btn" data-view-btn data-std-id="${escapeAttr(st.id)}" title="Посмотреть стандарт">
