@@ -32,7 +32,7 @@
 }
 .sch-week-chip.active {
   color: var(--accent-cyan);
-  background: rgba(0, 212, 255, 0.12);
+  background: rgba(58, 166, 240, 0.12);
   border-color: var(--accent-cyan);
 }
 .sch-scope {
@@ -126,7 +126,7 @@
 .sch-matrix-filter-field input:focus {
   outline: none;
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12);
+  box-shadow: 0 0 0 3px rgba(58, 166, 240, 0.12);
 }
 
 .sch-matrix-filter-search {
@@ -178,8 +178,8 @@
   color: var(--accent-green);
 }
 .sch-counter-chip-cells {
-  background: rgba(0, 212, 255, 0.08);
-  border-color: rgba(0, 212, 255, 0.35);
+  background: rgba(58, 166, 240, 0.08);
+  border-color: rgba(58, 166, 240, 0.35);
   color: var(--accent-cyan);
 }
 .sch-counter-chip-cells strong {
@@ -206,7 +206,7 @@
   border-radius: 3px;
   border: 1px solid var(--border);
 }
-.sch-matrix-legend-day   { background: linear-gradient(135deg, rgba(0, 212, 255, 0.25), rgba(0, 212, 255, 0.12)); border-color: var(--accent-cyan); }
+.sch-matrix-legend-day   { background: linear-gradient(135deg, rgba(58, 166, 240, 0.25), rgba(58, 166, 240, 0.12)); border-color: var(--accent-cyan); }
 .sch-matrix-legend-night { background: linear-gradient(135deg, rgba(123, 92, 255, 0.25), rgba(123, 92, 255, 0.12)); border-color: var(--accent-purple); }
 
 /* Инфо-ячейка в теле */
@@ -249,7 +249,7 @@
   justify-content: space-between;
   gap: 14px;
   padding: 12px 20px;
-  background: rgba(0, 212, 255, 0.04);
+  background: rgba(58, 166, 240, 0.04);
   border-top: 1px solid var(--border);
   flex-wrap: wrap;
 }
@@ -337,7 +337,7 @@
 }
 
 .sch-add-group-head:hover {
-  background: rgba(0, 212, 255, 0.06);
+  background: rgba(58, 166, 240, 0.06);
 }
 
 .sch-add-group-name {
@@ -353,8 +353,8 @@
   font-size: 11px;
   font-weight: 700;
   color: var(--accent-cyan);
-  background: rgba(0, 212, 255, 0.1);
-  border: 1px solid rgba(0, 212, 255, 0.3);
+  background: rgba(58, 166, 240, 0.1);
+  border: 1px solid rgba(58, 166, 240, 0.3);
   padding: 2px 8px;
   border-radius: 10px;
   font-variant-numeric: tabular-nums;
@@ -372,7 +372,7 @@
 }
 
 .sch-add-item:hover {
-  background: rgba(0, 212, 255, 0.04);
+  background: rgba(58, 166, 240, 0.04);
 }
 
 .sch-add-item input {

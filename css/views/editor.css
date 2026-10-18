@@ -51,9 +51,9 @@
   white-space: nowrap;
 }
 .et-type-chip.et-type-changeover {
-  background: rgba(0, 212, 255, 0.12);
-  color: #00d4ff;
-  border: 1px solid rgba(0, 212, 255, 0.5);
+  background: rgba(58, 166, 240, 0.12);
+  color: var(--bft-sky);
+  border: 1px solid rgba(58, 166, 240, 0.5);
 }
 .et-type-chip.et-type-clto {
   background: rgba(123, 92, 255, 0.12);
@@ -198,7 +198,7 @@
 }
 
 .editor-table tbody tr:hover {
-  background: rgba(0, 212, 255, 0.03);
+  background: rgba(58, 166, 240, 0.03);
 }
 
 /* Название */
@@ -257,9 +257,9 @@
   white-space: nowrap;
 }
 .et-type-chip.et-type-changeover {
-  background: rgba(0, 212, 255, 0.12);
-  color: #00d4ff;
-  border: 1px solid rgba(0, 212, 255, 0.5);
+  background: rgba(58, 166, 240, 0.12);
+  color: var(--bft-sky);
+  border: 1px solid rgba(58, 166, 240, 0.5);
 }
 .et-type-chip.et-type-clto {
   background: rgba(123, 92, 255, 0.12);
@@ -343,7 +343,7 @@
   transition: background 0.15s;
 }
 .editor-crumb:hover {
-  background: rgba(0, 212, 255, 0.08);
+  background: rgba(58, 166, 240, 0.08);
 }
 .editor-crumb svg {
   width: 14px;
@@ -405,8 +405,8 @@
 }
 .editor-line-pill:hover {
   border-color: var(--accent-cyan);
-  background: rgba(0, 212, 255, 0.04);
-  box-shadow: 0 0 12px rgba(0, 212, 255, 0.15);
+  background: rgba(58, 166, 240, 0.04);
+  box-shadow: 0 0 12px rgba(58, 166, 240, 0.15);
 }
 
 .editor-line-pill-icon {

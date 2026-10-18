@@ -7,7 +7,7 @@
   flex-wrap: wrap;
   gap: 10px 20px;
   padding: 12px 20px;
-  background: rgba(0, 212, 255, 0.04);
+  background: rgba(58, 166, 240, 0.04);
   border-top: 1px solid var(--border);
   align-items: center;
 }
@@ -51,7 +51,7 @@
   font-size: 13px;
   letter-spacing: 0.4px;
 }
-.cl-shift-A { color: var(--accent-cyan);   background: rgba(0, 212, 255, 0.12);   border: 1px solid rgba(0, 212, 255, 0.4); }
+.cl-shift-A { color: var(--accent-cyan);   background: rgba(58, 166, 240, 0.12);   border: 1px solid rgba(58, 166, 240, 0.4); }
 .cl-shift-B { color: var(--accent-purple); background: rgba(123, 92, 255, 0.12);  border: 1px solid rgba(123, 92, 255, 0.4); }
 .cl-shift-C { color: var(--accent-amber);  background: rgba(232, 154, 0, 0.12);   border: 1px solid rgba(232, 154, 0, 0.4); }
 .cl-shift-D { color: var(--accent-green);  background: rgba(0, 196, 122, 0.12);   border: 1px solid rgba(0, 196, 122, 0.4); }
@@ -79,7 +79,7 @@
   transition: color 0.15s, border-color 0.15s;
 }
 .cl-brand-edit-btn svg { width: 12px; height: 12px; display: block; pointer-events: none; }
-.cl-brand-edit-btn:hover { color: var(--accent-cyan); border-color: rgba(0, 212, 255, 0.4); }
+.cl-brand-edit-btn:hover { color: var(--accent-cyan); border-color: rgba(58, 166, 240, 0.4); }
 
 /* ============================================================ */
 /* === БЫСТРАЯ ПРОВЕРКА: точки замера ========================= */
@@ -127,11 +127,11 @@
   height: 22px;
   padding: 0 8px;
   border-radius: 11px;
-  background: rgba(0, 212, 255, 0.1);
+  background: rgba(58, 166, 240, 0.1);
   color: var(--accent-cyan);
   font-size: 11px;
   font-weight: 800;
-  border: 1px solid rgba(0, 212, 255, 0.4);
+  border: 1px solid rgba(58, 166, 240, 0.4);
   flex-shrink: 0;
 }
 
@@ -178,7 +178,7 @@
 .qc-point-input:focus {
   outline: none;
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(58, 166, 240, 0.15);
 }
 .qc-point-input::placeholder {
   color: var(--text-dim);
@@ -212,7 +212,7 @@
   flex-wrap: wrap;
 }
 .qc-collapsible-header:hover {
-  background: rgba(0, 212, 255, 0.06);
+  background: rgba(58, 166, 240, 0.06);
 }
 
 .qc-collapsible-toggle {

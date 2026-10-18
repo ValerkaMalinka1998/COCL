@@ -1,0 +1,218 @@
+/* ============================================================
+   БРЕНД BFT — Building the Future of Tobacco
+   Светлая тема «Race Blue», тёмная — «Pit Wall».
+   Палитра — в base.css; здесь шапка, логотип, «круг смены»,
+   кнопка темы, акценты меню и карточек. Подключается последним.
+   ============================================================ */
+
+/* ============ Шапка ============ */
+header.bft-header {
+  background: var(--header-bg);
+  border-bottom: 0;
+  box-shadow: 0 4px 18px rgba(6, 19, 64, 0.35);
+  padding: 0 24px;
+  overflow: hidden;
+}
+header.bft-header::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 3px;
+  background: var(--header-strip);
+}
+[data-theme="dark"] header.bft-header::after { height: 2px; }
+
+/* Шахматка финиша справа — едва заметная */
+.bft-header-check {
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: 260px;
+  pointer-events: none;
+  opacity: 0.12;
+  background-image: conic-gradient(var(--nav-text) 25%, transparent 0 50%, var(--nav-text) 0 75%, transparent 0);
+  background-size: 14px 14px;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000);
+          mask-image: linear-gradient(90deg, transparent, #000);
+}
+
+/* ============ Логотип ============ */
+.bft-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--nav-text);
+  text-shadow: none;
+  font-size: inherit;
+  letter-spacing: 0;
+  position: relative;
+  z-index: 1;
+}
+.bft-mark {
+  font-size: 38px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -1.5px;
+  line-height: 1;
+}
+.bft-tag {
+  font-size: 9.5px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+.bft-sep { width: 1px; height: 34px; background: currentColor; opacity: 0.3; }
+.bft-app { font-size: 15px; font-weight: 700; opacity: 0.9; }
+
+/* ============ Смена, время и «круг смены» ============ */
+.header-right-wrap { position: relative; z-index: 1; gap: 18px; }
+.bft-shift { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; }
+.bft-shift-top { display: flex; align-items: center; gap: 12px; }
+.bft-shift-name {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--nav-text);
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  white-space: nowrap;
+}
+header.bft-header .header-right {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--nav-text);
+}
+.bft-lap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--nav-text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.bft-lap-track {
+  position: relative;
+  width: 240px;
+  height: 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+.bft-lap-track i {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 0;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--bft-sky), var(--nav-text));
+  transition: width 0.6s ease;
+}
+.bft-lap-track b {
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: 14px;
+  background-image: conic-gradient(var(--nav-text) 25%, var(--bft-ink) 0 50%, var(--nav-text) 0 75%, var(--bft-ink) 0);
+  background-size: 7px 7px;
+}
+.bft-lap-cl { color: var(--nav-text); white-space: nowrap; }
+.bft-lap-cl:empty { display: none; }
+
+/* ============ Кнопка темы — шлем ============ */
+.theme-toggle {
+  color: var(--nav-text);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+.theme-toggle:hover {
+  background: rgba(58, 166, 240, 0.18);
+  border-color: var(--bft-sky);
+  box-shadow: 0 0 14px rgba(58, 166, 240, 0.5);
+}
+.theme-helmet { display: block; width: 28px; height: 28px; transition: transform 0.4s ease; }
+.theme-helmet .helmet-shell { fill: currentColor; }
+.theme-helmet .helmet-stripe { fill: none; stroke: var(--bft-sky); stroke-width: 1.6; stroke-linecap: round; }
+.theme-helmet .helmet-visor { transition: fill 0.4s ease; }
+.theme-helmet .helmet-glare { fill: none; stroke-width: 1.4; stroke-linecap: round; transition: stroke 0.4s ease, opacity 0.4s ease; }
+/* Светлая тема: на кнопке шлем с тёмным визором — «включить ночную гонку» */
+[data-theme="light"] .theme-helmet .helmet-visor { fill: var(--bft-ink); }
+[data-theme="light"] .theme-helmet .helmet-glare { stroke: var(--bft-sky); opacity: 0.9; }
+/* Тёмная тема: визор поднят и светится — «вернуть день» */
+[data-theme="dark"] .theme-helmet { transform: scaleX(-1); }
+[data-theme="dark"] .theme-helmet .helmet-visor { fill: var(--bft-sky); }
+[data-theme="dark"] .theme-helmet .helmet-glare { stroke: #ffffff; opacity: 0.85; }
+
+/* ============ Боковое меню ============ */
+.sidebar a.active {
+  color: #ffffff;
+  text-shadow: none;
+  border-left-color: var(--bft-sky);
+  position: relative;
+}
+.sidebar a.active .nav-icon svg { filter: none; }
+/* Светлая тема: флажок-шахматка у активного пункта */
+[data-theme="light"] .sidebar a.active::after {
+  content: '';
+  position: absolute;
+  right: 0; top: 8px; bottom: 8px;
+  width: 6px;
+  background-image: conic-gradient(#ffffff 25%, var(--blue-mid) 0 50%, #ffffff 0 75%, var(--blue-mid) 0);
+  background-size: 6px 6px;
+  border-radius: 1px;
+}
+[data-theme="light"] .sidebar a.active { background: linear-gradient(90deg, var(--blue-mid), rgba(18, 56, 184, 0.35)); }
+/* Тёмная тема: подсветка, как на мониторе боксов */
+[data-theme="dark"] .sidebar a.active {
+  background: linear-gradient(135deg, rgba(18, 56, 184, 0.9), rgba(10, 31, 110, 0.6));
+  box-shadow: inset 0 0 0 1px rgba(58, 166, 240, 0.6), 0 0 14px rgba(58, 166, 240, 0.3);
+}
+
+/* ============ Карточки и заголовки ============ */
+.card::before {
+  background: linear-gradient(90deg, var(--blue-mid), var(--bft-sky));
+  border-radius: 10px 10px 0 0;
+}
+[data-theme="dark"] .card {
+  background: linear-gradient(180deg, #0c1a44, var(--bg-card));
+}
+.card > h2,
+.dash-title,
+.hist-title,
+.hist-rp-tt h2 {
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+.dash-title small,
+.hist-title small { font-style: normal; }
+
+/* Крупные цифры — жирный курсив, как номера болидов */
+.dash-kpi b,
+.hist-kpi b,
+.dash-ln-p {
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+}
+[data-theme="dark"] .dash-kpi,
+[data-theme="dark"] .hist-kpi { box-shadow: inset 0 -2px 0 rgba(58, 166, 240, 0.35); }
+
+/* ============ Футер ============ */
+.site-footer {
+  background: var(--nav-bg);
+  border-top-color: var(--bft-sky);
+  border-left-color: var(--bft-sky);
+}
+.site-footer span { color: var(--bft-sky); }
+
+/* ============ Адаптив ============ */
+@media (max-width: 900px) {
+  .bft-tag, .bft-sep, .bft-header-check { display: none; }
+  .bft-lap-track { width: 140px; }
+}
+@media (max-width: 640px) {
+  .bft-mark { font-size: 26px; }
+  .bft-app { font-size: 13px; }
+  .bft-lap { display: none; }
+  .bft-shift-name { display: none; }
+}

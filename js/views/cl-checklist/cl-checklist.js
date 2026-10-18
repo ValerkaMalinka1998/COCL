@@ -803,6 +803,7 @@ function stopClCheck() {
   updateClCheckButtons();
   renderClMatrix();
   showToast('Проверка сохранена');
+  if (typeof updateHeaderShift === 'function') updateHeaderShift();
   showMachineJournalNotice(fails, {
     line: clState.line,
     source: clState.mode === 'mech' ? 'Чек-лист CL · механические' : 'Чек-лист CL · электронные'

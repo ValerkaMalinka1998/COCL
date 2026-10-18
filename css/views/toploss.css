@@ -102,9 +102,9 @@
 /* ============================================================ */
 
 .badge-mode-cocl {
-  background: rgba(0, 212, 255, 0.1);
+  background: rgba(58, 166, 240, 0.1);
   color: var(--accent-cyan);
-  border: 1px solid rgba(0, 212, 255, 0.45);
+  border: 1px solid rgba(58, 166, 240, 0.45);
 }
 .badge-mode-toploss {
   background: rgba(232, 154, 0, 0.1);
@@ -112,9 +112,9 @@
   border: 1px solid rgba(232, 154, 0, 0.45);
 }
 .badge-mode-cl {
-  background: rgba(0, 212, 255, 0.12);
+  background: rgba(58, 166, 240, 0.12);
   color: var(--accent-cyan);
-  border: 1px solid rgba(0, 212, 255, 0.55);
+  border: 1px solid rgba(58, 166, 240, 0.55);
 }
 .tl-history-losses {
   font-size: 12px;

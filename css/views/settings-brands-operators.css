@@ -36,7 +36,7 @@
 }
 
 .operators-row:hover {
-  background: rgba(0, 212, 255, 0.04);
+  background: rgba(58, 166, 240, 0.04);
 }
 .operators-row:hover::before {
   content: '';
@@ -95,7 +95,7 @@
 /* ============================================================ */
 
 .hl-match {
-  background: rgba(0, 212, 255, 0.15);
+  background: rgba(58, 166, 240, 0.15);
   color: var(--accent-cyan);
   font-weight: 700;
   padding: 0 1px;
