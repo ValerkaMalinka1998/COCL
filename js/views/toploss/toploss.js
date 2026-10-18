@@ -161,12 +161,17 @@ function renderTopLossCategories() {
   const main = $('#tlDiag');
   if (!side || !main) return;
 
+  const split = $('#tlSplit');
+  const pick = $('#tlPick');
   if (!tlState.line) {
     side.innerHTML = '';
-    main.innerHTML = `<div class="tl2-empty">Выберите линию — список потерь зависит от цеха.
-      <button type="button" class="btn btn-primary" data-tl-pick-line>Выбрать линию</button></div>`;
+    main.innerHTML = '';
+    if (split) split.style.display = 'none';
+    if (pick) { pick.style.display = ''; renderTopLossLinePick(); }
     return;
   }
+  if (split) split.style.display = '';
+  if (pick) pick.style.display = 'none';
 
   const cats = getTopLossesForWorkshop(getWorkshopIdForLine(tlState.line));
   if (!cats.length) {
@@ -192,6 +197,127 @@ function renderTopLossCategories() {
   renderTopLossSide(cats, stats);
   renderTopLossDiag(cats, stats, hidx);
 }
+
+/* ============================================================
+   ВЫБОР ЛИНИИ НА ЭКРАНЕ (линия ещё не выбрана)
+   Один цех за раз (вкладки), участки во всю ширину плитками,
+   участки сворачиваются, сверху поиск и недавние линии.
+   ============================================================ */
+const tlPick = { ws: null, q: '', closed: new Set() };
+
+/* Сводка TOP Losses по линии за 7 дней: отклонения и последняя проверка */
+function tlLinePickStats() {
+  const border = Date.now() - 7 * 86400000;
+  const out = {};
+  getHistory().forEach(h => {
+    if (h.mode !== 'toploss') return;
+    const o = out[h.line] || (out[h.line] = { fails: 0, last: null });
+    if (!o.last || h.timestamp > o.last) o.last = h.timestamp;
+    if (new Date(h.timestamp).getTime() >= border) {
+      o.fails += (h.items || []).filter(it => it.status === 'FAIL').length;
+    }
+  });
+  return out;
+}
+
+function tlPickTile(line, st) {
+  const days = st && st.last ? Math.floor((Date.now() - new Date(st.last).getTime()) / 86400000) : null;
+  let cls = 'none', sub = 'проверок не было', sub2 = '';
+  if (st && st.last) {
+    sub2 = 'посл. проверка ' + fmtShortDate(todayISO(new Date(st.last)));
+    if (st.fails) { cls = 'red'; sub = `${st.fails} откл. за 7 дн.`; }
+    else if (days > 30) { cls = 'amber'; sub = `нет проверок ${days} дн.`; sub2 = ''; }
+    else { cls = 'green'; sub = 'без откл.'; }
+  }
+  return `<button type="button" class="tl-pick-ln tl-pick-ln-${cls}" data-tl-pick-set="${escapeAttr(line)}">
+    <b>${escapeHtml(line)}</b><span class="${cls === 'red' ? 'tl-pick-bad' : ''}">${escapeHtml(sub)}</span>${sub2 ? `<span>${escapeHtml(sub2)}</span>` : ''}
+  </button>`;
+}
+
+function renderTopLossLinePick() {
+  const box = $('#tlPick');
+  if (!box) return;
+  const workshops = getWorkshops();
+  const stats = tlLinePickStats();
+  const linesOf = (a) => Array.isArray(a.blocks) ? a.blocks.flatMap(b => b.lines || []) : (a.lines || []);
+
+  // Цех по умолчанию — цех последней линии, иначе первый с линиями
+  if (!tlPick.ws || !workshops.some(w => w.id === tlPick.ws)) {
+    let last = '';
+    try { last = (getRecentLines()[0]) || localStorage.getItem('cl_cl_line') || ''; } catch (e) { /* нет доступа */ }
+    const wsLast = last ? getWorkshopIdForLine(last) : null;
+    const withLines = workshops.find(w => (w.areas || []).some(a => linesOf(a).length));
+    tlPick.ws = wsLast || (withLines && withLines.id) || (workshops[0] && workshops[0].id);
+  }
+
+  const recent = (typeof getRecentLines === 'function' ? getRecentLines() : []).filter(l => getLines().includes(l));
+  const q = tlPick.q.trim().toLowerCase();
+
+  let body;
+  if (q) {
+    const found = getAllLinesWithContext().filter(x => x.line.toLowerCase().includes(q));
+    body = found.length
+      ? `<div class="tl-pick-area-h">Найдено: ${found.length}</div><div class="tl-pick-lines">${found.map(x => tlPickTile(x.line, stats[x.line])).join('')}</div>`
+      : '<div class="tl-pick-none">Линия не найдена</div>';
+  } else {
+    const ws = workshops.find(w => w.id === tlPick.ws);
+    const lossCount = (id) => getTopLossesForWorkshop(id).reduce((n, c) => n + (c.items || []).length, 0);
+    body = `<div class="hist-seg tl-pick-tabs">${workshops.map(w =>
+      `<button type="button" class="${w.id === tlPick.ws ? 'on' : ''}" data-tl-pick-ws="${escapeAttr(w.id)}">${escapeHtml(w.name)}<small>${lossCount(w.id)} потерь</small></button>`).join('')}</div>`;
+    body += (ws ? ws.areas || [] : []).map(a => {
+      const lines = linesOf(a);
+      const closed = tlPick.closed.has(a.id);
+      return `<div class="tl-pick-area">
+        <button type="button" class="tl-pick-area-h" data-tl-pick-area="${escapeAttr(a.id)}">
+          <span class="tl-pick-caret ${closed ? '' : 'open'}">▸</span>${escapeHtml(a.name)}<small>${lines.length} ${pluralRu(lines.length, 'линия', 'линии', 'линий')}</small>
+        </button>
+        ${closed ? '' : lines.length
+          ? `<div class="tl-pick-lines">${lines.map(l => tlPickTile(l, stats[l])).join('')}</div>`
+          : '<div class="tl-pick-none">линий нет</div>'}
+      </div>`;
+    }).join('');
+  }
+
+  box.innerHTML = `
+    <div class="tl-pick-hero">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      <h3>На какой линии разбираем потери?</h3>
+      <p>Список потерь зависит от цеха линии. Выберите линию — откроются потери и стандарты, которые на них влияют.</p>
+      <label class="tl-pick-search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="tlPickSearch" placeholder="Найти линию: SD12, Lamina…" autocomplete="off" value="${escapeAttr(tlPick.q)}">
+      </label>
+      ${recent.length ? `<div class="tl-pick-recent"><span>Недавние:</span>${recent.map(l =>
+        `<button type="button" class="tl-pick-chip" data-tl-pick-set="${escapeAttr(l)}">${escapeHtml(l)}</button>`).join('')}</div>` : ''}
+    </div>
+    ${body}`;
+}
+
+$('#tlPick')?.addEventListener('click', (e) => {
+  const set = e.target.closest('[data-tl-pick-set]');
+  if (set) {
+    const line = set.dataset.tlPickSet;
+    if (typeof addRecentLine === 'function') addRecentLine(line);
+    tlPick.q = '';
+    return setTopLossLine(line);
+  }
+  const ws = e.target.closest('[data-tl-pick-ws]');
+  if (ws) { tlPick.ws = ws.dataset.tlPickWs; return renderTopLossLinePick(); }
+  const area = e.target.closest('[data-tl-pick-area]');
+  if (area) {
+    const id = area.dataset.tlPickArea;
+    if (tlPick.closed.has(id)) tlPick.closed.delete(id); else tlPick.closed.add(id);
+    return renderTopLossLinePick();
+  }
+});
+$('#tlPick')?.addEventListener('input', (e) => {
+  if (e.target.id !== 'tlPickSearch') return;
+  tlPick.q = e.target.value;
+  const pos = e.target.selectionStart;
+  renderTopLossLinePick();
+  const inp = $('#tlPickSearch');
+  if (inp) { inp.focus(); inp.setSelectionRange(pos, pos); }
+});
 
 function renderTopLossSide(cats, stats) {
   const side = $('#tlSideList');
