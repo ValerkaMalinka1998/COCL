@@ -124,7 +124,7 @@ function renderTopLossChecklist() {
     <div class="card tl3-head">
       <button type="button" class="btn btn-secondary" id="tlBackToSelectBtn">← Потери</button>
       <div class="tl3-title">Проверка TOP Losses
-        <small>${escapeHtml(tlState.line)} · ${escapeHtml(fmtShortDate(period.date))} · ${period.shiftType === 'day' ? 'день' : 'ночь'} · бригада ${escapeHtml(letter || '—')}${tlCheck.brand ? ' · бренд ' + escapeHtml(tlCheck.brand) : ''}</small></div>
+        <small>${escapeHtml(tlState.line)} · ${escapeHtml(fmtShortDate(period.date))} · ${period.shiftType === 'day' ? 'день' : 'ночь'} · ${escapeHtml(letter || '—')}${tlCheck.brand ? ' · бренд ' + escapeHtml(tlCheck.brand) : ''}</small></div>
       <span class="tl2-sp"></span>
       <div class="tl3-chips">${chips}</div>
     </div>

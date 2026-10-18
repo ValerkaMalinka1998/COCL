@@ -78,7 +78,7 @@ function tlWeekStartOf(dateStr) {
   return addDaysISO(dateStr, -((d.getDay() + 6) % 7));
 }
 
-/* Индекс истории Чек-листа CL линии: «дата|бригада|id» → статус */
+/* Индекс истории Чек-листа CL линии: «дата|смена|id» → статус */
 function tlHistoryIndex(line) {
   const idx = new Map();
   getHistory().forEach(h => {

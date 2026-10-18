@@ -805,7 +805,7 @@ function bindScheduleCells() {
     });
   });
 
-  // Клик по бригаде в шапке — отметить смену у всех строк (или снять, если отмечена везде)
+  // Клик по букве смены в шапке — отметить смену у всех строк (или снять, если отмечена везде)
   wrap.querySelectorAll('[data-sch-col-day]').forEach(th => {
     th.addEventListener('click', () => {
       const day = parseInt(th.dataset.schColDay, 10);

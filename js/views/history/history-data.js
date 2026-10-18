@@ -55,7 +55,7 @@ function histIcon(kind, size = 18) {
 }
 
 /* Смена записи: { date, shift: 'day'|'night', letter }.
-   CL-записи хранят дату смены и букву бригады; COCL — дату и тип смены;
+   CL-записи хранят дату смены и букву смены; COCL — дату и тип смены;
    у остальных смену восстанавливаем по времени сохранения. */
 function histShift(h) {
   if ((h.mode === 'cl' || h.mode === 'electronic') && h.date) {
@@ -227,7 +227,7 @@ function histClRows(line) {
   ];
 }
 
-/* Индекс результатов CL линии: «дата|бригада|id» → { h, it } */
+/* Индекс результатов CL линии: «дата|смена|id» → { h, it } */
 function histClIndex(line) {
   const idx = new Map();
   getHistory().forEach(h => {

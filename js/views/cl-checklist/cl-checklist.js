@@ -273,7 +273,7 @@ function updateClContext() {
     <div class="cl-context-item">
       <span class="cl-context-label">Смена:</span>
       <span class="cl-context-value">
-        ${shiftLabel} · бригада
+        ${shiftLabel} ·
         <span class="cl-shift-badge cl-shift-${clState.shiftLetter}">${escapeHtml(clState.shiftLetter)}</span>
       </span>
     </div>
@@ -495,7 +495,7 @@ function cilIsoWeek(dateStr) {
   return 1 + Math.round(((d - firstThu) / 86400000 - 3 + ((firstThu.getDay() + 6) % 7)) / 7);
 }
 
-/* История CL линии: результат по ключу «дата|бригада|id» и последний статус стандарта */
+/* История CL линии: результат по ключу «дата|смена|id» и последний статус стандарта */
 function clHistoryIndex() {
   const cell = new Map();
   const last = {};
