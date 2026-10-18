@@ -566,10 +566,12 @@ $('#epPageSaveBtn')?.addEventListener('click', () => {
   if (idx !== -1) all[idx] = obj;
   else all.push(obj);
   setElectronicParams(all);
+  const logId = logRowChange('elec', existing || null, obj);
 
   const wasNew = epPageState.isNew;
   closeEparamPage(true);
   if (typeof refreshEditorElecTable === 'function') refreshEditorElecTable();
   showToast(wasNew ? 'Параметр добавлен' : 'Параметр обновлён');
+  askChangeReason(logId);
 });
 
