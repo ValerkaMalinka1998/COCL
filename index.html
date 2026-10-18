@@ -583,6 +583,12 @@
             </svg>
             <span>Электронные</span>
           </button>
+          <button type="button" class="editor-mode-inline-btn" data-mode="log">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 8v4l3 3"/><path d="M3.05 11a9 9 0 1 1 .5 4"/><polyline points="3 4 3 11 10 11"/>
+            </svg>
+            <span>Лист изменений</span>
+          </button>
         </div>
 
         <!-- Переключатель по части линии (Все / Maker / Packer) -->
@@ -735,6 +741,12 @@
             </svg>
             <span>Электронные</span>
           </button>
+          <button type="button" class="editor-mode-inline-btn" data-mode="log">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 8v4l3 3"/><path d="M3.05 11a9 9 0 1 1 .5 4"/><polyline points="3 4 3 11 10 11"/>
+            </svg>
+            <span>Лист изменений</span>
+          </button>
         </div>
 
         <div class="editor-part-switch" id="eePartCounters" style="display:none">
@@ -793,6 +805,115 @@
     </div>
 
   </div>     
+
+  <!-- ======================= РЕЖИМ: ЛИСТ ИСТОРИИ ИЗМЕНЕНИЙ ======================= -->
+  <div id="editorLogView" style="display:none">
+    <div class="card editor-panel-card">
+      <div class="editor-panel-head">
+        <div class="editor-panel-title-wrap">
+          <h2 class="editor-panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 8v4l3 3"/><path d="M3.05 11a9 9 0 1 1 .5 4"/><polyline points="3 4 3 11 10 11"/>
+            </svg>
+            Лист истории изменений
+          </h2>
+          <span class="editor-panel-count" id="editorLogCount"></span>
+        </div>
+        <div class="editor-panel-actions">
+          <button class="btn btn-success btn-icon-text" id="elAddBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>Добавить запись</span>
+          </button>
+          <button class="btn btn-secondary btn-icon-text" id="elExportBtn" type="button" title="Выгрузить лист в Excel">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13l3 4M12 13l-3 4"/></svg>
+            <span>Excel</span>
+          </button>
+          <button class="btn btn-secondary btn-icon-text" id="elPrintBtn" type="button" title="Распечатать лист">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            <span>Печать</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="editor-crumbs" id="elEditorCrumbs" style="display:none"></div>
+      <div class="editor-panel-divider"></div>
+
+      <div class="editor-context-bar">
+        <button type="button" class="editor-line-pill" id="elLinePill" title="Сменить линию">
+          <span class="editor-line-pill-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          </span>
+          <span class="editor-line-pill-code" id="elLinePillCode">Выбрать линию</span>
+          <span class="editor-line-pill-caret">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </span>
+        </button>
+
+        <div class="editor-mode-inline" id="elModeSwitch">
+          <button type="button" class="editor-mode-inline-btn" data-mode="mech">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          <span>Механические</span>
+        </button>
+          <button type="button" class="editor-mode-inline-btn" data-mode="elec">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+          <span>Электронные</span>
+        </button>
+          <button type="button" class="editor-mode-inline-btn active" data-mode="log">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 8v4l3 3"/><path d="M3.05 11a9 9 0 1 1 .5 4"/><polyline points="3 4 3 11 10 11"/>
+            </svg>
+            <span>Лист изменений</span>
+          </button>
+        </div>
+
+        <div class="editor-part-switch" id="elPartCounters" style="display:none">
+          <button type="button" class="editor-part-switch-btn active" data-part="" title="Все записи линии">
+            <span>Все</span>
+          </button>
+          <button type="button" class="editor-part-switch-btn" data-part="Maker" title="Лист Maker">
+            <span>Maker</span>
+            <span class="editor-part-switch-count" id="elCounterMaker">0</span>
+          </button>
+          <button type="button" class="editor-part-switch-btn" data-part="Packer" title="Лист Packer">
+            <span>Packer</span>
+            <span class="editor-part-switch-count" id="elCounterPacker">0</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="editor-panel-divider"></div>
+
+      <div class="et-filterbar">
+        <label class="et-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="elFilterSearch" placeholder="Поиск: OPL, машина, название, комментарий…" autocomplete="off"></label>
+        <input type="hidden" id="elFilterPart">
+        <select class="et-fsel" id="elFilterKind" title="Вид">
+          <option value="">Вид: все</option>
+          <option value="mech">Механические</option>
+          <option value="elec">Электронные</option>
+        </select>
+        <select class="et-fsel" id="elFilterAction" title="Изменение">
+          <option value="">Изменение: все</option>
+          <option value="added">Добавлен</option>
+          <option value="changed">Пересмотрен</option>
+          <option value="deactivated">Деактивирован</option>
+          <option value="activated">Восстановлен</option>
+          <option value="removed">Удалён</option>
+          <option value="manual">Запись</option>
+        </select>
+        <button class="et-reset clog-sort" id="elSortBtn" type="button" title="Порядок строк"><span>Сначала новые</span></button>
+        <button class="et-reset" id="elFilterResetBtn" type="button" title="Сбросить фильтры">Сбросить</button>
+      </div>
+    </div>
+
+    <div class="card editor-table-card">
+      <div class="editor-table-wrap" id="editorLogTableWrap"></div>
+    </div>
+  </div>
 
 </div>        
 
@@ -2083,6 +2204,21 @@
     </div>
   </div>
 </div>
+<!-- ======================= МОДАЛЬНОЕ ОКНО: ЗАПИСЬ ЛИСТА ИЗМЕНЕНИЙ ======================= -->
+<div class="modal-overlay" id="changeLogModal">
+  <div class="modal clog-modal">
+    <div class="modal-header">
+      <h3 id="changeLogModalTitle">Лист изменений</h3>
+      <button class="modal-close" id="changeLogModalClose">✕</button>
+    </div>
+    <div class="modal-body" id="changeLogModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="changeLogDeleteBtn" type="button" style="margin-right:auto">Удалить</button>
+      <button class="btn btn-secondary" id="changeLogCancelBtn" type="button">Отмена</button>
+      <button class="btn btn-primary" id="changeLogSaveBtn" type="button">Записать</button>
+    </div>
+  </div>
+</div>
 <!-- ======================= МОДАЛЬНОЕ ОКНО: ДОБАВИТЬ СТАНДАРТЫ В РАСПИСАНИЕ ======================= -->
 <div class="modal-overlay" id="schAddStandardsModal">
   <div class="modal modal-wide">
@@ -2225,6 +2361,7 @@
 <script src="js/data/workshops.js"></script>
 <script src="js/data/catalog.js"></script>
 <script src="js/data/schedule.js"></script>
+<script src="js/data/changelog.js"></script>
 <script src="js/components/pickers.js"></script>
 <script src="js/components/line-picker.js"></script>
 <script src="js/components/standard-view.js"></script>
@@ -2250,6 +2387,7 @@
 <script src="js/views/editor/editor-mech.js"></script>
 <script src="js/views/editor/editor-elec.js"></script>
 <script src="js/views/editor/eparam-page.js"></script>
+<script src="js/views/editor/changelog-view.js"></script>
 <script src="js/views/standard-page/standard-page.js"></script>
 <script src="js/views/standard-page/standard-page-extra.js"></script>
 <script src="js/views/schedule/schedule.js"></script>

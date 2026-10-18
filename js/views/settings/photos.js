@@ -283,7 +283,8 @@ const backup = {
   topLosses: getTopLosses(),
   electronicParams: getElectronicParams(),
   electronicShiftCfg: getElectronicShiftConfig(),
-  electronicBrandSchedule: getElectronicBrandSchedule()
+  electronicBrandSchedule: getElectronicBrandSchedule(),
+  changeLog: getChangeLog()
 };
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8' });
   const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
@@ -318,6 +319,7 @@ $('#backupFileInput').addEventListener('change', (e) => {
       if (Array.isArray(data.electronicParams)) setElectronicParams(data.electronicParams);
       if (data.electronicShiftCfg && typeof data.electronicShiftCfg === 'object') setElectronicShiftConfig(data.electronicShiftCfg);
       if (data.electronicBrandSchedule && typeof data.electronicBrandSchedule === 'object') setElectronicBrandSchedule(data.electronicBrandSchedule);
+      if (Array.isArray(data.changeLog)) setChangeLog(data.changeLog);
       init();
       showToast('Бэкап загружен');
     } catch (err) {

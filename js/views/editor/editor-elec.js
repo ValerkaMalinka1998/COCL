@@ -129,11 +129,13 @@ function refreshEditorElecTable() {
       if (!p) return;
       if (!confirm(`Удалить параметр "${p.paramName}"?`)) return;
       setElectronicParams(getElectronicParams().filter(x => x.id !== id));
+      const logId = addChangeLogEntry('elec', p, 'removed', 'Параметр удалён');
       editorTableState.elecSelected.delete(id);
       fillEditorFilters();
       updatePartCounters();
       refreshEditorElecTable();
       showToast('Параметр удалён');
+      askChangeReason(logId);
     });
   });
   wrap.querySelectorAll('.et-check-row').forEach(cb => {
@@ -453,6 +455,7 @@ async function parseElectronicParamsExcel(file, targetLine) {
       updatedAt: new Date().toISOString()
     };
     all.push(p);
+    addChangeLogEntry('elec', p, 'added', 'Новый параметр (импорт из Excel)');
     imported++;
   });
 
