@@ -939,10 +939,3 @@ $('#clPartSwitch')?.addEventListener('click', (e) => {
 
 $('#clStartCheckBtn')?.addEventListener('click', startClCheck);
 $('#clStopCheckBtn')?.addEventListener('click', stopClCheck);
-/* Сворачивание блока «Как проверять» в модалке быстрой проверки */
-document.addEventListener('click', (e) => {
-  const head = e.target.closest('#qcControlDescToggle');
-  if (!head) return;
-  const block = document.getElementById('qcControlDescBlock');
-  if (block) block.classList.toggle('expanded');
-});

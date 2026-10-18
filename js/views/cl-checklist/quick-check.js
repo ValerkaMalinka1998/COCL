@@ -19,6 +19,76 @@ const quickCheckState = {
   draft: null
 };
 
+/* Число из ввода: допускает запятую */
+function qcNum(v) {
+  return parseFloat(String(v || '').trim().replace(',', '.'));
+}
+
+/* Нормы полей ввода текущей проверки: [{ label, text, norm:{min,max}|null }] */
+function getQcFields() {
+  const row = quickCheckState.row;
+  if (!row) return [];
+  if (quickCheckState.isElec) {
+    const values = Array.isArray(row.valuesByBrand) ? row.valuesByBrand : [];
+    const brand = quickCheckState.brand;
+    const entry = (brand && values.find(v => v.brand === brand)) || values[0] || null;
+    const ct = migrateControlType(row.controlType, row.measurements);
+    return [{ label: 'Значение', text: entry ? getEparamNormLabel(entry, ct) : '—', norm: getEparamNormRange(entry) }];
+  }
+  const points = getRowMeasurementBlock(row, quickCheckState.brand)?.points || [];
+  return points.map((p, i) => ({ label: 'Т' + (i + 1), text: p.value || '—', norm: parseNorm(p.value) }));
+}
+
+/* Строки смены по порядку матрицы: запланированы на эту дату/смену;
+   done — уже отмечены (черновик или история) */
+function getQcQueue() {
+  const { date, shift, shiftLetter } = quickCheckState;
+  const day = new Date(date + 'T00:00:00').getDay();
+  const rec = getHistory().find(h => h.mode === clRecordMode() && h.line === clState.line &&
+    h.date === date && h.shift === shiftLetter);
+  const ids = [...new Set([...$$('#clMatrixWrap tr.cil-row[data-row-id]')].map(r => r.dataset.rowId))];
+  return ids.map(id => clState.rows.find(r => r.id === id)).filter(Boolean)
+    .filter(r => (getClRowFreq(r).schedule || []).some(x => x.day === day && x.shift === shift))
+    .map(r => ({
+      row: r,
+      done: !!clState.quickDraft[`${r.id}|${date}|${shift}`] ||
+        !!(rec && (rec.items || []).some(it => it.standardId === r.id))
+    }));
+}
+
+/* Следующая неотмеченная строка смены после текущей (по кругу) */
+function getQcNext() {
+  const q = getQcQueue();
+  const i = q.findIndex(x => x.row.id === quickCheckState.row?.id);
+  for (let k = 1; k < q.length; k++) {
+    const x = q[(i + k + q.length) % q.length];
+    if (!x.done) return x.row;
+  }
+  return null;
+}
+
+/* Прошлая проверка этой строки (до текущей смены) */
+function getQcPrevious(row) {
+  const { date, shiftLetter } = quickCheckState;
+  const order = (d, letter) => `${d}|${getShiftsForDate(d).day === letter ? 0 : 1}`;
+  const cur = order(date, shiftLetter);
+  let best = null;
+  getHistory().forEach(h => {
+    if (h.mode !== clRecordMode() || h.line !== clState.line) return;
+    const o = order(h.date, h.shift);
+    if (o >= cur || (best && o <= best.o)) return;
+    const it = (h.items || []).find(x => x.standardId === row.id);
+    if (it && (it.status === 'OK' || it.status === 'FAIL')) best = { o, h, it };
+  });
+  if (!best) return null;
+  const isDay = getShiftsForDate(best.h.date).day === best.h.shift;
+  return {
+    values: String(best.it.answer || '').split(',').map(s => s.trim()),
+    status: best.it.status,
+    label: `${fmtShortDate(best.h.date)} · ${isDay ? 'день' : 'ночь'} ${best.h.shift}`
+  };
+}
+
 function openClCheckModal(rowId, dateStr, shift) {
   const modal = $('#quickCheckModal');
   if (!modal) return;
@@ -27,158 +97,158 @@ function openClCheckModal(rowId, dateStr, shift) {
   if (!row) return;
 
   const isElec = clState.mode === 'elec';
-
   const shiftLetter = getShiftsForDate(dateStr)[shift] || '—';
   const brand = clState.brand || '';
-
   const existing = findExistingCheck(rowId, dateStr, shiftLetter);
-  const draftKey = `${rowId}|${dateStr}|${shift}`;
-  const draft = clState.quickDraft[draftKey] || null;
+  const draft = clState.quickDraft[`${rowId}|${dateStr}|${shift}`] || null;
 
-  quickCheckState.row = row;
-  quickCheckState.date = dateStr;
-  quickCheckState.shift = shift;
-  quickCheckState.shiftLetter = shiftLetter;
-  quickCheckState.brand = brand;
-  quickCheckState.existing = existing;
-  quickCheckState.draft = draft;
-  quickCheckState.isElec = isElec;
+  Object.assign(quickCheckState, { row, date: dateStr, shift, shiftLetter, brand, existing, draft, isElec });
 
-  $('#quickCheckModalTitle').textContent = isElec ? 'Проверка CL (E-Param)' : 'Проверка CL';
+  // --- Шапка: машина · узел · часть, название, контекст смены ---
+  const work = getClRowFreq(row).work === 'Stop' ? 'Stop' : 'Run';
+  $('#qcMeta').innerHTML = [
+    isElec ? '<span class="qcx-tag qcx-tag-el">E-Param</span>' : (row.oplNumber ? `<b>${escapeHtml(row.oplNumber)}</b>` : ''),
+    escapeHtml(clState.line || ''),
+    escapeHtml(row.machine || ''),
+    isElec ? '' : escapeHtml(row.node || ''),
+    escapeHtml(row.nodePart || ''),
+    `<span class="qcx-tag qcx-tag-${work === 'Run' ? 'run' : 'stop'}">${work}</span>`
+  ].filter(Boolean).join('<i>·</i>');
+  $('#quickCheckModalTitle').textContent = isElec ? (row.paramName || '—') : (row.title || '—');
 
-  const line = clState.line || '';
-  const machine = row.machine || '';
-  $('#qcMachine').textContent = line + (machine ? ' · ' + machine : '');
-  $('#qcParamName').textContent = isElec ? (row.paramName || '—') : (row.title || '—');
-  $('#qcNode').textContent = isElec ? '—' : (row.node || '—');
+  // Место в очереди смены: «3 из 12 · осталось 5»
+  const queue = getQcQueue();
+  const pos = queue.findIndex(x => x.row.id === row.id);
+  const left = queue.filter(x => !x.done && x.row.id !== row.id).length;
+  $('#qcQueue').innerHTML = queue.length && pos >= 0
+    ? `<b>${pos + 1}</b> из ${queue.length}<span>${left ? `осталось ${left}` : 'остальные отмечены'}</span>` : '';
 
-  const timeFrom = row.timeFrom || '';
-  const timeTo = row.timeTo || '';
-  $('#qcTime').textContent = (timeFrom && timeTo) ? `${timeFrom}–${timeTo}` : '—';
+  const freq = getClRowFreq(row);
+  const tw = (freq.timeWindows || []).map(w => `${w.from}–${w.to}`).join(', ');
+  $('#qcCtx').innerHTML = [
+    `<span>${fmtISODate(dateStr)} · ${shift === 'day' ? 'День' : 'Ночь'} · смена ${escapeHtml(shiftLetter)}</span>`,
+    tw ? `<span>время ${escapeHtml(tw)}</span>` : '',
+    `<span class="${brand ? 'qcx-brand' : 'qcx-nobrand'}">${brand ? 'бренд ' + escapeHtml(brand) : 'бренд не задан'}</span>`
+  ].filter(Boolean).join('');
 
-  const workEl = $('#qcWork');
-  const workVal = getClRowFreq(row).work === 'Stop' ? 'Stop' : 'Run';
-  workEl.textContent = workVal;
-  workEl.className = 'qc-work-badge ' + (workVal === 'Run' ? 'qc-work-run' : 'qc-work-stop');
+  // --- Как проверять ---
+  const how = isElec ? '' : (row.controlDescription || '').trim();
+  const howBlock = $('#qcControlDescBlock');
+  howBlock.style.display = how ? '' : 'none';
+  howBlock.open = false;
+  $('#qcControlDescBody').innerHTML = how
+    ? how.split(/\n+/).map(l => `<p>${escapeHtml(l)}</p>`).join('') : '';
 
-  const shiftLabel = shift === 'day' ? 'День' : 'Ночь';
-  $('#qcDateShift').textContent = `${fmtISODate(dateStr)} · ${shiftLabel} · ${shiftLetter}`;
-
-  $('#qcBrand').textContent = brand || '— не задан —';
-
+  // --- Ввод ---
   const controlType = migrateControlType(row.controlType, row.measurements);
-  const hasPointsMech = !isElec &&
-    Array.isArray(row.measurements) &&
+  const hasPointsMech = !isElec && Array.isArray(row.measurements) &&
     row.measurements.some(b => b && Array.isArray(b.points) && b.points.length > 0);
+  const isOkFail = controlType === 'fixed' && (isElec || !hasPointsMech);
+  quickCheckState.isOkFail = isOkFail;
 
-  // --- Описание контроля (только для механики) ---
-  const ctrlDescBlock = $('#qcControlDescBlock');
-  const ctrlDescBody = $('#qcControlDescBody');
-  const ctrlDescHint = $('#qcControlDescHint');
-  const ctrlDescText = isElec ? '' : (row.controlDescription || '').trim();
+  $('#qcAnswerOkNotOk').style.display = isOkFail ? '' : 'none';
+  $('#qcAnswerPoints').style.display = isOkFail ? 'none' : '';
 
-  if (ctrlDescBlock && ctrlDescBody) {
-    if (ctrlDescText) {
-      ctrlDescBlock.style.display = 'block';
-      ctrlDescBody.innerHTML = `<div class="qc-control-text">${escapeHtml(ctrlDescText).replace(/\n/g, '<br>')}</div>`;
-      if (ctrlDescHint) {
-        ctrlDescHint.textContent = ctrlDescText.length > 60
-          ? ctrlDescText.substring(0, 60) + '…'
-          : ctrlDescText;
-      }
-      ctrlDescBlock.classList.remove('expanded');
-    } else {
-      ctrlDescBlock.style.display = 'none';
-    }
-  }
-
-  const normBlock = $('#qcNormBlock');
-  const okBlock = $('#qcAnswerOkNotOk');
-  const pointsBlock = $('#qcAnswerPoints');
-
-  if (controlType === 'fixed' && (isElec || !hasPointsMech)) {
-    // --- Фиксированный без точек → ОК / Не ОК ---
-    normBlock.style.display = 'block';
-    const normText = isElec
-      ? ((row.normText || '').trim() || '— проверить визуально —')
-      : ((row.normText || '').trim() || (row.controlDescription || '').trim() || '— проверить визуально —');
-    $('#qcNormValue').textContent = normText;
-
-    okBlock.style.display = 'block';
-    pointsBlock.style.display = 'none';
-
-    const existingVal = draft?.status || existing?.status || '';
-    $('#qcAnswerOk').checked = existingVal === 'OK';
-    $('#qcAnswerFail').checked = existingVal === 'FAIL';
-  } else if (isElec && (controlType === 'variable' || controlType === 'interval')) {
-    // --- Электронный числовой параметр ---
-    const values = Array.isArray(row.valuesByBrand) ? row.valuesByBrand : [];
-    // Ищем значение для выбранного бренда, иначе первое
-    let entry = brand ? values.find(v => v.brand === brand) : null;
-    if (!entry && values.length) entry = values[0];
-
-    normBlock.style.display = 'block';
-    okBlock.style.display = 'none';
-    pointsBlock.style.display = 'block';
-
-    $('#qcNormValue').textContent = getEparamNormLabel(entry, controlType);
-
-    // Показываем одно поле ввода значения
-    const pointsList = $('#qcPointsList');
-    if (pointsList) {
-      const savedValue = draft?.answer || existing?.answer || '';
-      pointsList.innerHTML = `
-        <div class="qc-point-row" data-index="0">
-          <div class="qc-point-head">
-            <span class="qc-point-num">Значение</span>
-            <span class="qc-point-norm">${entry ? `${entry.target} ± ${entry.tolerance}` : '—'}</span>
-          </div>
-          <div class="qc-point-input-wrap">
-            <input type="number" step="any" class="qc-point-input" data-qc-point="0"
-                   value="${escapeAttr(savedValue)}" placeholder="0">
-          </div>
-        </div>
-      `;
-    }
+  if (isOkFail) {
+    const normText = (row.normText || '').trim();
+    $('#qcNormText').innerHTML = normText
+      ? `Норма: <b>${escapeHtml(normText)}</b>`
+      : 'Проверка визуально — по описанию «Как проверять»';
+    const prevOk = getQcPrevious(row);
+    $('#qcPrevOk').innerHTML = prevOk
+      ? `Прошлый раз (${escapeHtml(prevOk.label)}): <b class="${prevOk.status === 'OK' ? 'ok' : 'fail'}">${prevOk.status === 'OK' ? 'ОК' : 'Не ОК'}</b>` : '';
+    const val = draft?.status || existing?.status || '';
+    $('#qcAnswerOk').checked = val === 'OK';
+    $('#qcAnswerFail').checked = val === 'FAIL';
+    if (how) howBlock.open = true;
   } else {
-    // --- Мех. точки замера (value_input / range_input) ---
-    const block = getRowMeasurementBlock(row, brand);
-    normBlock.style.display = 'block';
-    okBlock.style.display = 'none';
-    pointsBlock.style.display = 'block';
-
-    const points = block?.points || [];
-    const normText = points.map((p, i) => `Т${i + 1}: ${p.value || '—'}`).join(' · ');
-    $('#qcNormValue').textContent = normText || '— точки не заданы —';
-
-    renderQcPointsList(points, existing, draft);
+    const fields = getQcFields();
+    const saved = [];
+    const src = draft?.answer || existing?.answer || '';
+    String(src).split(',').forEach(v => saved.push(v.trim()));
+    const prev = getQcPrevious(row);
+    $('#qcPointsTitle').textContent = isElec ? 'Значение' : (fields.length > 1 ? `Точки замера · ${fields.length}` : 'Точка замера');
+    $('#qcPointsList').innerHTML = fields.length ? fields.map((f, i) => `
+      <label class="qcx-pt" data-index="${i}">
+        <span class="qcx-pt-norm">${fields.length > 1 || !isElec ? `<b>${f.label}</b>` : ''}${escapeHtml(f.text)}<span class="qcx-pt-st" data-qc-status="${i}"></span></span>
+        <input type="text" inputmode="decimal" autocomplete="off" class="qc-point-input" data-qc-point="${i}" value="${escapeAttr(saved[i] || '')}">
+        ${f.norm ? `<span class="qcx-pt-range">${f.norm.min}…${f.norm.max}</span>` : ''}
+        ${prev && prev.values[i] ? (() => {
+          const pv = qcNum(prev.values[i]);
+          const bad = f.norm && !isNaN(pv) && (pv < f.norm.min || pv > f.norm.max);
+          return `<span class="qcx-pt-prev${bad ? ' is-bad' : ''}" title="Прошлая проверка: ${escapeAttr(prev.label)}">было ${escapeHtml(prev.values[i])}</span>`;
+        })() : ''}
+      </label>`).join('')
+      : '<div class="qcx-empty">Точки не заданы в стандарте</div>';
+    $('#qcPointsList').classList.toggle('qcx-pts-one', fields.length === 1);
+    $('#qcPrevLabel').textContent = prev ? `«было» — ${prev.label}` : '';
   }
 
   $('#qcComment').value = draft?.comment || existing?.comment || '';
 
+  // --- Уже проверено ---
   const infoEl = $('#qcExistingInfo');
+  infoEl.style.display = existing ? '' : 'none';
   if (existing) {
-    infoEl.style.display = 'flex';
     $('#qcExistingStatus').textContent =
-      existing.status === 'OK' ? 'ОК' :
-      existing.status === 'FAIL' ? 'Не ОК' : 'Не проверено';
-  } else {
-    infoEl.style.display = 'none';
+      existing.status === 'OK' ? 'ОК' : existing.status === 'FAIL' ? 'Не ОК' : 'не проверено';
   }
 
+  updateQcResult();
   openModal(modal);
 
-  const openStdBtn = $('#qcOpenStandardBtn');
-  if (openStdBtn) {
-    openStdBtn.disabled = !isElec && !row.id;
-    openStdBtn.onclick = () => {
-      if (!isElec && typeof openStandardView === 'function') {
-        openStandardView(row.id, { brand: quickCheckState.brand || '' });
-      } else {
-        showToast('Полный просмотр доступен только для механических стандартов', true);
-      }
-    };
+  const nextBtn = $('#quickCheckNextBtn');
+  if (nextBtn) nextBtn.style.display = getQcNext() ? '' : 'none';
+
+  const btn = $('#qcOpenStandardBtn');
+  btn.style.display = isElec ? 'none' : '';
+  btn.onclick = () => openStandardView(row.id, { brand: quickCheckState.brand || '' });
+
+  setTimeout(() => {
+    const first = [...$$('#qcPointsList .qc-point-input')].find(i => !i.value) || $('#qcPointsList .qc-point-input');
+    first?.focus();
+  }, 60);
+}
+
+/* Подсветка полей и итог над ними: «Все в норме» / «N не в норме» / «Заполнено N из M» */
+function updateQcResult() {
+  const fields = getQcFields();
+  let filled = 0, fails = 0;
+  $$('#qcPointsList .qcx-pt').forEach(cell => {
+    const i = +cell.dataset.index;
+    const inp = cell.querySelector('input');
+    const st = cell.querySelector('[data-qc-status]');
+    cell.classList.remove('is-ok', 'is-fail');
+    st.textContent = '';
+    if (inp.value.trim() === '') return;
+    filled++;
+    const v = qcNum(inp.value);
+    const norm = fields[i] && fields[i].norm;
+    if (isNaN(v) || !norm) return;
+    const ok = v >= norm.min && v <= norm.max;
+    if (!ok) fails++;
+    cell.classList.add(ok ? 'is-ok' : 'is-fail');
+    st.textContent = ok ? '✓' : '✕';
+  });
+
+  let isFail = false;
+  const res = $('#qcResult');
+  if (quickCheckState.isOkFail) {
+    isFail = $('#qcAnswerFail')?.checked;
+  } else if (res) {
+    const total = fields.length;
+    isFail = fails > 0;
+    res.className = 'qcx-result';
+    if (!total) res.textContent = '';
+    else if (fails) { res.textContent = `✕ ${fails} не в норме`; res.classList.add('is-fail'); }
+    else if (filled === total) { res.textContent = '✓ всё в норме'; res.classList.add('is-ok'); }
+    else res.textContent = `заполнено ${filled} из ${total}`;
   }
+
+  // При отклонении комментарий важен
+  $('#qcCommentWrap')?.classList.toggle('is-needed', !!isFail);
+  const hint = $('#qcCommentHint');
+  if (hint) hint.textContent = isFail ? '— опишите отклонение' : '— по желанию';
 }
 
 /* ============================================================
@@ -196,7 +266,7 @@ function closeQuickCheckModal() {
    БЫСТРАЯ ПРОВЕРКА — сохранение
    ============================================================ */
 
-function saveQuickCheck() {
+function saveQuickCheck(goNext) {
   const row = quickCheckState.row;
   if (!row) {
     showToast('Ошибка: стандарт не найден', true);
@@ -232,7 +302,7 @@ function saveQuickCheck() {
       showToast('Введите значение', true);
       return;
     }
-    const num = parseFloat(inp.value);
+    const num = qcNum(inp.value);
     if (isNaN(num)) {
       showToast('Введите число', true);
       return;
@@ -269,7 +339,7 @@ function saveQuickCheck() {
       const idx = parseInt(inp.dataset.qcPoint, 10);
       const v = (inp.value || '').trim();
       if (v === '') { allFilled = false; values.push(''); return; }
-      const num = parseFloat(v);
+      const num = qcNum(v);
       values.push(isNaN(num) ? v : String(num));
       const norm = parseNorm(points[idx]?.value);
       if (norm && !isNaN(num) && (num < norm.min || num > norm.max)) anyFail = true;
@@ -289,8 +359,14 @@ function saveQuickCheck() {
   clState.quickDraft[key] = { status, answer, value, comment };
 
   renderClMatrix();
+  const next = goNext ? getQcNext() : null;
+  const { date: d, shift: s } = quickCheckState;
   closeQuickCheckModal();
-  showToast('Отметка сохранена');
+  if (next) {
+    openClCheckModal(next.id, d, s);
+  } else {
+    showToast(goNext ? 'Отметка сохранена — все проверки смены отмечены' : 'Отметка сохранена');
+  }
 }
 
 /* ============================================================
@@ -307,73 +383,23 @@ function getRowMeasurementBlock(row, brand) {
   return measurements.find(x => !x.brand) || measurements[0];
 }
 
-function renderQcPointsList(points, existing, draft) {
-  const list = $('#qcPointsList');
-  if (!list) return;
+/* --- Ввод значений: подсветка, Enter — следующее поле / сохранить --- */
+document.addEventListener('input', (e) => {
+  if (e.target.closest('#quickCheckModal .qc-point-input')) updateQcResult();
+});
+document.addEventListener('change', (e) => {
+  if (e.target.name === 'qc_answer') updateQcResult();
+});
+document.addEventListener('keydown', (e) => {
+  const inp = e.target.closest && e.target.closest('#quickCheckModal .qc-point-input');
+  if (!inp || e.key !== 'Enter') return;
+  e.preventDefault();
+  const all = [...$$('#qcPointsList .qc-point-input')];
+  const next = all[all.indexOf(inp) + 1];
+  if (next) next.focus();
+  else saveQuickCheck(!!getQcNext());
+});
 
-  if (!points.length) {
-    list.innerHTML = '<div class="empty-state" style="padding:12px">Точки не заданы</div>';
-    return;
-  }
-
-  const savedValues = [];
-  if (draft?.value != null && draft.value !== '') {
-    savedValues.push(String(draft.value));
-  }
-  if (existing?.answer) {
-    String(existing.answer).split(',').forEach(v => savedValues.push(v.trim()));
-  }
-
-  list.innerHTML = points.map((p, i) => {
-    const norm = parseNorm(p.value);
-    const normStr = norm ? `[${norm.min}…${norm.max}]` : '';
-    const value = savedValues[i] || '';
-
-    return `
-      <div class="qc-point-row" data-index="${i}">
-        <div class="qc-point-head">
-          <span class="qc-point-num">Т${i + 1}</span>
-          <span class="qc-point-norm">${escapeHtml(p.value || '—')}</span>
-          ${normStr ? `<span class="qc-point-range">${escapeHtml(normStr)}</span>` : ''}
-          <span class="qc-point-status" data-qc-status="${i}"></span>
-        </div>
-        <div class="qc-point-input-wrap">
-          <input type="number" step="any" class="qc-point-input" data-qc-point="${i}"
-                 value="${escapeAttr(value)}" placeholder="0">
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  list.querySelectorAll('.qc-point-input').forEach(inp => {
-    updateQcPointStatus(inp);
-    inp.addEventListener('input', () => updateQcPointStatus(inp));
-  });
-}
-
-function updateQcPointStatus(inp) {
-  const row = inp.closest('.qc-point-row');
-  if (!row) return;
-  const idx = parseInt(row.dataset.index, 10);
-  const statusEl = row.querySelector('[data-qc-status]');
-  const points = getRowMeasurementBlock(quickCheckState.row, quickCheckState.brand)?.points || [];
-  const norm = parseNorm(points[idx]?.value);
-
-  row.classList.remove('qc-point-ok', 'qc-point-fail');
-  if (statusEl) { statusEl.textContent = ''; statusEl.className = 'qc-point-status'; }
-
-  if (inp.value === '') return;
-  const v = parseFloat(inp.value);
-  if (isNaN(v)) return;
-  if (!norm) return;
-
-  const inRange = v >= norm.min && v <= norm.max;
-  row.classList.add(inRange ? 'qc-point-ok' : 'qc-point-fail');
-  if (statusEl) {
-    statusEl.textContent = inRange ? '✓' : '✕';
-    statusEl.className = 'qc-point-status ' + (inRange ? 'ok' : 'fail');
-  }
-}
 /* --- Быстрая проверка: обработчики через делегирование --- */
 /* Работает всегда, даже если модалка пересоздана */
 document.addEventListener('click', (e) => {
@@ -387,6 +413,10 @@ document.addEventListener('click', (e) => {
   }
   if (e.target.closest('#quickCheckSaveBtn')) {
     saveQuickCheck();
+    return;
+  }
+  if (e.target.closest('#quickCheckNextBtn')) {
+    saveQuickCheck(true);
     return;
   }
   // Клик по фону модалки
