@@ -182,137 +182,108 @@
 <!-- ======================= ВКЛАДКА ПРОВЕРКА ======================= -->
 <div class="tab" id="tab-check">
 
-  <div class="card cocl-setup" id="coclSetupCard">
+  <div class="cocl-layout" id="coclLayout">
+
+  <!-- Условия проверки (слева) -->
+  <aside class="card cocl-setup" id="coclSetupCard">
     <div class="cocl-setup-head">
       <h2>Проверка COCL</h2>
+      <button type="button" class="cocl-edit-link" id="editConditionsBtn" hidden>Изменить</button>
+    </div>
+
+    <!-- Линия -->
+    <div class="cocl-sec" id="coclStepLine">
+      <select id="lineSelect" style="display:none"><option value="">— выберите —</option></select>
+      <button type="button" class="cocl-line-pill" id="coclLinePill" title="Выбрать линию">
+        <span class="cocl-line-pill-code" id="coclLinePillCode">Выбрать линию</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
       <div class="cocl-line-context" id="coclLineContext" style="display:none"></div>
     </div>
 
-    <div class="cocl-steps">
-      <!-- Линия -->
-      <div class="cocl-step" id="coclStepLine">
-        <div class="cocl-step-label"><span class="cocl-step-num"></span>Линия</div>
-        <div class="cocl-step-body">
-          <!-- Скрытый источник значения: заполняется выбором из модалки -->
-          <select id="lineSelect" style="display:none"><option value="">— выберите —</option></select>
-          <button type="button" class="editor-line-pill cocl-line-pill" id="coclLinePill" title="Выбрать линию">
-            <span class="editor-line-pill-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-              </svg>
-            </span>
-            <span class="editor-line-pill-code" id="coclLinePillCode">Выбрать линию</span>
-            <span class="editor-line-pill-caret">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="6 9 12 15 18 9"/>
-              </svg>
-            </span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Тип проверки -->
-      <div class="cocl-step" id="coclStepType">
-        <div class="cocl-step-label"><span class="cocl-step-num"></span>Тип проверки</div>
-        <div class="cocl-step-body">
-          <input type="hidden" id="transitionType" value="">
-          <div class="type-selector" id="typeSelector">
-            <button type="button" class="type-option type-option-changeover" data-value="ChangeOver">
-              <span class="type-option-title">Change Over</span>
-              <span class="type-option-time">Смена сорта</span>
-            </button>
-            <button type="button" class="type-option type-option-clto" data-value="CL_TO">
-              <span class="type-option-title">CL в ТО</span>
-              <span class="type-option-time">Тех. обслуживание</span>
-            </button>
-            <button type="button" class="type-option type-option-clconv" data-value="CL_Conversion">
-              <span class="type-option-title">CL в Конвертацию</span>
-              <span class="type-option-time">Конвертация</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Часть линии — только SMD -->
-      <div class="cocl-step" id="partSelectField" style="display:none">
-        <div class="cocl-step-label"><span class="cocl-step-num"></span>Часть линии</div>
-        <div class="cocl-step-body">
-          <select id="partSelect" style="display:none">
-            <option value="">— выберите —</option>
-            <option value="Maker">Maker</option>
-            <option value="Packer">Packer</option>
-          </select>
-          <div class="cocl-part-seg" id="coclPartSeg">
-            <button type="button" class="cocl-part-btn cocl-part-maker" data-part="Maker">
-              <span class="cocl-part-name">Maker</span>
-              <span class="cocl-part-hint">сигаретная часть</span>
-            </button>
-            <button type="button" class="cocl-part-btn cocl-part-packer" data-part="Packer">
-              <span class="cocl-part-name">Packer</span>
-              <span class="cocl-part-hint">упаковка</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Бренды — только Change Over -->
-      <div class="cocl-step" id="brandsCard" style="display:none">
-        <div class="cocl-step-label"><span class="cocl-step-num"></span>Бренды</div>
-        <div class="cocl-step-body">
-          <div class="cocl-brands">
-            <div class="field">
-              <label class="required">С бренда</label>
-              <select id="brandFrom"><option value="">— выберите —</option></select>
-            </div>
-            <span class="cocl-brands-arrow" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="5" y1="12" x2="19" y2="12"/>
-                <polyline points="12 5 19 12 12 19"/>
-              </svg>
-            </span>
-            <div class="field">
-              <label class="required">На бренд</label>
-              <select id="brandTo"><option value="">— выберите —</option></select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Что меняется — только Change Over, по желанию -->
-      <div class="cocl-step cocl-step-optional" id="changesCard" style="display:none">
-        <div class="cocl-step-label">
-          <span class="cocl-step-num"></span>
-          <span>Что меняется<small>по желанию</small></span>
-        </div>
-        <div class="cocl-step-body">
-          <div id="changesContainer"></div>
-        </div>
+    <!-- Тип проверки -->
+    <div class="cocl-sec" id="coclStepType">
+      <div class="cocl-sec-label">Тип проверки</div>
+      <input type="hidden" id="transitionType" value="">
+      <div class="type-selector" id="typeSelector">
+        <button type="button" class="type-option type-option-changeover" data-value="ChangeOver">
+          <span class="type-option-title">Change Over</span>
+          <span class="type-option-time">Смена сорта</span>
+          <span class="cocl-count" data-count-type="ChangeOver"></span>
+        </button>
+        <button type="button" class="type-option type-option-clto" data-value="CL_TO">
+          <span class="type-option-title">CL в ТО</span>
+          <span class="type-option-time">Тех. обслуживание</span>
+          <span class="cocl-count" data-count-type="CL_TO"></span>
+        </button>
+        <button type="button" class="type-option type-option-clconv" data-value="CL_Conversion">
+          <span class="type-option-title">CL в Конвертацию</span>
+          <span class="type-option-time">Конвертация</span>
+          <span class="cocl-count" data-count-type="CL_Conversion"></span>
+        </button>
       </div>
     </div>
 
-    <!-- Сформировать проверку -->
-    <div class="cocl-build" id="buildChecklistCard" style="display:none">
-      <div class="build-checklist-info">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 11l3 3L22 4"/>
-          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-        </svg>
-        <span id="coclBuildInfo">Условия заданы — можно формировать чек-лист.</span>
+    <!-- Часть линии — только SMD -->
+    <div class="cocl-sec" id="partSelectField" style="display:none">
+      <div class="cocl-sec-label">Часть линии</div>
+      <select id="partSelect" style="display:none">
+        <option value="">— выберите —</option>
+        <option value="Maker">Maker</option>
+        <option value="Packer">Packer</option>
+      </select>
+      <div class="cocl-part-seg" id="coclPartSeg">
+        <button type="button" class="cocl-part-btn" data-part="Maker">Maker <span class="cocl-count" data-count-part="Maker"></span></button>
+        <button type="button" class="cocl-part-btn" data-part="Packer">Packer <span class="cocl-count" data-count-part="Packer"></span></button>
       </div>
-      <button class="btn btn-primary btn-icon-text" id="buildChecklistBtn" type="button">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="5 3 19 12 5 21 5 3"/>
-        </svg>
-        <span>Сформировать чек-лист</span>
-      </button>
     </div>
-  </div>
 
-  <!-- Чек-лист -->
-  <div class="card" id="checklistCard" style="display:none">
-    <div class="checklist-header-row">
-      <h2>Чек-лист <span id="progressBadge" class="progress-badge"></span></h2>
-      <button class="btn btn-secondary btn-sm" id="editConditionsBtn" type="button">← Изменить условия</button>
+    <!-- Бренды — только Change Over -->
+    <div class="cocl-sec" id="brandsCard" style="display:none">
+      <div class="cocl-sec-label">
+        Бренды
+        <button type="button" class="cocl-swap" id="coclBrandSwap" title="Поменять местами">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        </button>
+      </div>
+      <select id="brandFrom" style="display:none"><option value="">— выберите —</option></select>
+      <select id="brandTo" style="display:none"><option value="">— выберите —</option></select>
+      <div class="cocl-brand-row">
+        <span class="cocl-brand-cap">С</span>
+        <div class="cocl-brand-tiles" id="coclBrandFromTiles" data-brand-target="brandFrom"></div>
+      </div>
+      <div class="cocl-brand-row">
+        <span class="cocl-brand-cap">На</span>
+        <div class="cocl-brand-tiles" id="coclBrandToTiles" data-brand-target="brandTo"></div>
+      </div>
+      <div class="cocl-brand-hint" id="coclBrandHint"></div>
+    </div>
+
+    <!-- Что меняется — только Change Over -->
+    <div class="cocl-sec" id="changesCard" style="display:none">
+      <div class="cocl-sec-label">Что меняется</div>
+      <div id="changesContainer"></div>
+      <div class="cocl-sec-hint">Не отмечено — показываются все стандарты Change Over.</div>
+    </div>
+  </aside>
+
+  <!-- Чек-лист (справа): до начала — список, после — проверка -->
+  <section class="card cocl-main" id="checklistCard">
+    <div class="cocl-main-head">
+      <div class="cocl-main-title">
+        <h2>Чек-лист <span id="progressBadge" class="progress-badge"></span></h2>
+        <div class="cocl-main-info" id="coclBuildInfo"></div>
+      </div>
+      <div class="cocl-main-actions" id="buildChecklistCard">
+        <button class="btn btn-primary btn-icon-text" id="buildChecklistBtn" type="button" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span>Начать проверку</span>
+        </button>
+      </div>
+      <div class="cocl-main-actions" id="coclCheckActions" hidden>
+        <button class="btn btn-secondary" id="resetCheckBtn">Отменить</button>
+        <button class="btn btn-success" id="saveCheckBtn">Сохранить проверку</button>
+      </div>
     </div>
 
     <div class="progress-wrap" id="progressWrap" style="display:none">
@@ -323,11 +294,9 @@
     </div>
     <div class="progress-text" id="progressText" style="display:none"></div>
 
-    <div id="checklistContainer"></div>
-    <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap">
-      <button class="btn btn-success" id="saveCheckBtn">Сохранить проверку</button>
-      <button class="btn btn-secondary" id="resetCheckBtn">Сбросить</button>
-    </div>
+    <div id="checklistContainer" class="cocl-preview"></div>
+  </section>
+
   </div>
 
   <!-- Экран резюме -->

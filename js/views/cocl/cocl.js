@@ -124,7 +124,7 @@ function renderCoclSummary(record) {
   container.innerHTML = html;
 
   // Прячем чек-лист, показываем резюме
-  $('#checklistCard').style.display = 'none';
+  $('#coclLayout').style.display = 'none';
   $('#coclSummaryView').style.display = 'block';
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -203,35 +203,76 @@ $('#coclLinePill')?.addEventListener('click', () => {
   openLinePickerModal();
 });
 
+/* Состояние вкладки: идёт ли проверка (до «Начать» — только список) */
+const coclState = { checking: false };
+
+/* Бренд дня линии из расписания брендов (если бренд есть у линии) */
+function getCoclBrandOfDay(line) {
+  if (!line || typeof getElectronicBrandForDate !== 'function') return '';
+  const period = getCurrentShiftPeriod();
+  const b = getElectronicBrandForDate(line, period.date) || '';
+  return getBrandsForLine(line).includes(b) ? b : '';
+}
+
+/* Бренды линии → скрытые select + плитки. «С бренда» — бренд дня. */
 function fillBrandsForLine(line) {
   const brands = getBrandsForLine(line);
-  ['#brandFrom','#brandTo'].forEach(sel => {
+  ['#brandFrom', '#brandTo'].forEach(sel => {
     const el = $(sel);
     el.innerHTML = '<option value="">— выберите —</option>' +
       brands.map(b => `<option>${escapeHtml(b)}</option>`).join('');
   });
-  updateBrandToOptions();
+  $('#brandFrom').value = getCoclBrandOfDay(line);
+  renderCoclBrandTiles();
 }
 
-/* Обновить опции brandTo (все бренды линии) */
+/* Совместимость: опции «На бренд» = все бренды линии */
 function updateBrandToOptions() {
-  const line = $('#lineSelect').value;
-  const brandToSelect = $('#brandTo');
-  if (!brandToSelect || !line) return;
-
-  const brands = getBrandsForLine(line);
-
-  const currentValue = brandToSelect.value;
-  brandToSelect.innerHTML = '<option value="">— выберите —</option>' +
-    brands.map(b => `<option>${escapeHtml(b)}</option>`).join('');
-
-  // Восстанавливаем выбор, если он ещё доступен
-  if (brands.includes(currentValue)) {
-    brandToSelect.value = currentValue;
-  }
-
-  brandToSelect.classList.remove('input-error');
+  renderCoclBrandTiles();
 }
+
+/* Плитки брендов «С» / «На» */
+function renderCoclBrandTiles() {
+  const line = $('#lineSelect')?.value || '';
+  const brands = line ? getBrandsForLine(line) : [];
+  const from = $('#brandFrom')?.value || '';
+  const to = $('#brandTo')?.value || '';
+  const ofDay = getCoclBrandOfDay(line);
+
+  const tiles = (selected, disabledBrand) => brands.length
+    ? brands.map(b => `<button type="button" class="cocl-brand-tile${b === selected ? ' active' : ''}"
+        data-brand="${escapeAttr(b)}"${b === disabledBrand ? ' disabled' : ''}>${escapeHtml(b)}${b === ofDay ? '<span class="cocl-brand-day" title="Бренд дня по расписанию"></span>' : ''}</button>`).join('')
+    : '<span class="cocl-sec-hint">У линии нет брендов — добавьте их в Настройках.</span>';
+
+  const fromBox = $('#coclBrandFromTiles');
+  const toBox = $('#coclBrandToTiles');
+  if (fromBox) fromBox.innerHTML = tiles(from, '');
+  if (toBox) toBox.innerHTML = tiles(to, from);
+
+  const hint = $('#coclBrandHint');
+  if (hint) {
+    hint.textContent = ofDay ? `Точка — бренд дня по расписанию (${ofDay}).` : '';
+  }
+}
+
+/* Клик по плитке бренда и «поменять местами» */
+$('#brandsCard')?.addEventListener('click', (e) => {
+  if ($('#coclSetupCard')?.classList.contains('is-locked')) return;
+  const tile = e.target.closest('.cocl-brand-tile');
+  if (tile && !tile.disabled) {
+    const target = tile.closest('[data-brand-target]').dataset.brandTarget;
+    const sel = $('#' + target);
+    sel.value = sel.value === tile.dataset.brand ? '' : tile.dataset.brand;
+    if (target === 'brandFrom' && $('#brandTo').value === sel.value) $('#brandTo').value = '';
+    sel.dispatchEvent(new Event('change'));
+    return;
+  }
+  if (e.target.closest('#coclBrandSwap')) {
+    const f = $('#brandFrom'), t = $('#brandTo');
+    [f.value, t.value] = [t.value, f.value];
+    f.dispatchEvent(new Event('change'));
+  }
+});
 
 $('#lineSelect').addEventListener('change', () => {
   const line = $('#lineSelect').value;
@@ -240,21 +281,16 @@ $('#lineSelect').addEventListener('change', () => {
   if (line) fillBrandsForLine(line);
   renderCoclLineContext(line);
   renderCoclPartStep(line);
+  if (line && $('#transitionType').value === 'ChangeOver') renderMaterialChanges();
   updateChecklist();
 });
 
-/* --- Контекст выбранной линии: Цех · Участок · Блок --- */
+/* --- Контекст выбранной линии: Цех · Участок · Блок · смена --- */
 function renderCoclLineContext(line) {
   const el = $('#coclLineContext');
   if (!el) return;
 
-  if (!line || typeof getBlockForLine !== 'function') {
-    el.style.display = 'none';
-    el.innerHTML = '';
-    return;
-  }
-
-  const ctx = getBlockForLine(line);
+  const ctx = (line && typeof getBlockForLine === 'function') ? getBlockForLine(line) : null;
   if (!ctx) {
     el.style.display = 'none';
     el.innerHTML = '';
@@ -267,7 +303,6 @@ function renderCoclLineContext(line) {
     ctx.block ? { cls: 'cocl-ctx-block', text: ctx.block.name } : null
   ].filter(Boolean);
 
-  // Автовход: показываем, кто проверяет и какая смена сейчас активна
   const period = getCurrentShiftPeriod();
   const shiftLetter = (getShiftsForDate(period.date) || {})[period.shiftType] || '—';
   const user = getCurrentUser();
@@ -282,24 +317,17 @@ function renderCoclLineContext(line) {
   el.style.display = 'flex';
 }
 
-/* --- Шаг «Часть линии»: активен только для SMD, иначе скрыт --- */
+/* --- Часть линии: только для SMD, иначе скрыта --- */
 function renderCoclPartStep(line) {
   const partField = $('#partSelectField');
   const partSelect = $('#partSelect');
   if (!partField || !partSelect) return;
 
-  const workshopId = line ? getWorkshopIdForLine(line) : null;
-  const needsPart = workshopId === 'smd';
-
+  const needsPart = (line ? getWorkshopIdForLine(line) : null) === 'smd';
   partField.style.display = needsPart ? '' : 'none';
-
-  if (!needsPart) {
-    // Для не-SMD часть не выбирается — сбрасываем
-    partSelect.value = '';
-  }
+  if (!needsPart) partSelect.value = '';
 }
 
-/* --- Обновление чек-листа при изменении условий --- */
 $('#partSelect')?.addEventListener('change', () => {
   // Триггеры «Что меняется» зависят от части линии
   if ($('#transitionType').value === 'ChangeOver') renderMaterialChanges();
@@ -309,77 +337,78 @@ $('#partSelect')?.addEventListener('change', () => {
 /* Кнопки Maker / Packer → скрытый #partSelect */
 $('#coclPartSeg')?.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-part]');
-  if (!btn) return;
+  if (!btn || $('#coclSetupCard')?.classList.contains('is-locked')) return;
   const sel = $('#partSelect');
   sel.value = btn.dataset.part;
   sel.dispatchEvent(new Event('change'));
 });
 
-/* Состояние шагов COCL: выполненный шаг — галочка, кнопки части — по select */
+/* Активные кнопки, плитки брендов и счётчики стандартов на кнопках */
 function updateCoclStepStates() {
   const line = $('#lineSelect')?.value || '';
   const type = $('#transitionType')?.value || '';
   const part = $('#partSelect')?.value || '';
-  const done = {
-    coclStepLine: !!line,
-    coclStepType: !!type,
-    partSelectField: !!part,
-    brandsCard: !!($('#brandFrom')?.value && $('#brandTo')?.value),
-    changesCard: $$('#changesContainer input[data-change]:checked').length > 0
-  };
-  Object.entries(done).forEach(([id, isDone]) => {
-    $('#' + id)?.classList.toggle('is-done', isDone);
-  });
+  const needsPart = (line ? getWorkshopIdForLine(line) : null) === 'smd';
+
   $$('#coclPartSeg [data-part]').forEach(b => b.classList.toggle('active', b.dataset.part === part));
+  $$('#typeSelector .type-option').forEach(b => b.classList.toggle('active', b.dataset.value === type));
+  renderCoclBrandTiles();
+
+  const base = {
+    line,
+    brandFrom: $('#brandFrom')?.value || '',
+    brandTo: $('#brandTo')?.value || '',
+    triggers: getSelectedTriggers()
+  };
+  const fmt = (n) => line ? String(n) : '';
+
+  // На кнопках типа: с текущей частью (если не выбрана — обе части)
+  $$('[data-count-type]').forEach(el => {
+    const t = el.dataset.countType;
+    const parts = (needsPart && !part) ? ['Maker', 'Packer'] : [part];
+    const n = parts.reduce((s, p) => s + getCoclRelevant({ ...base, type: t, part: p, loose: true }).length, 0);
+    el.textContent = fmt(n);
+    el.classList.toggle('is-zero', line && n === 0);
+  });
+
+  // На кнопках части: с текущим типом (если не выбран — все типы)
+  $$('[data-count-part]').forEach(el => {
+    const p = el.dataset.countPart;
+    const types = type ? [type] : ['ChangeOver', 'CL_TO', 'CL_Conversion'];
+    const ids = new Set();
+    types.forEach(tp => getCoclRelevant({ ...base, type: tp, part: p, loose: true }).forEach(s => ids.add(s.id)));
+    el.textContent = fmt(ids.size);
+    el.classList.toggle('is-zero', line && ids.size === 0);
+  });
 }
 
-/* Вход на вкладку: без линии — сразу окно выбора линии, как в Чек-листе CL */
+/* Вход на вкладку: без линии — сразу окно выбора линии */
 function openCoclTab() {
   updateCoclStepStates();
   if ($('#lineSelect')?.value) return;
-  if (($('#checklistCard')?.style.display || 'none') !== 'none') return;
+  if (coclState.checking) return;
   setTimeout(() => {
     linePickerOnSelect = (line) => setCoclLine(line);
     openLinePickerModal();
   }, 150);
 }
 
-/* Клик по кнопке-чипу типа перехода (только в блоке «Проверка») */
-$('#typeSelector')?.querySelectorAll('.type-option').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const value = btn.dataset.value;
-    $('#typeSelector').querySelectorAll('.type-option').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    $('#transitionType').value = value;
-    onTransitionTypeChange();
-  });
+/* Клик по кнопке типа проверки */
+$('#typeSelector')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.type-option');
+  if (!btn || $('#coclSetupCard')?.classList.contains('is-locked')) return;
+  $('#transitionType').value = btn.dataset.value;
+  onTransitionTypeChange();
 });
 
-/* Если по какой-то причине кто-то меняет select — тоже работает */
 $('#transitionType').addEventListener('change', onTransitionTypeChange);
 
 function onTransitionTypeChange() {
-  const type = $('#transitionType').value;
-  updateBrandToOptions();
-
-  if (!type) {
-    $('#brandsCard').style.display = 'none';
-    $('#changesCard').style.display = 'none';
-    $('#checklistCard').style.display = 'none';
-    updateCoclStepStates();
-    return;
-  }
-
-  // Бренды и триггеры — ТОЛЬКО для Change Over
-  if (type === 'ChangeOver') {
-    $('#brandsCard').style.display = '';
-    $('#changesCard').style.display = '';
-    renderMaterialChanges();
-  } else {
-    $('#brandsCard').style.display = 'none';
-    $('#changesCard').style.display = 'none';
-  }
-
+  const isCo = $('#transitionType').value === 'ChangeOver';
+  // Бренды и «Что меняется» — только для Change Over
+  $('#brandsCard').style.display = isCo ? '' : 'none';
+  $('#changesCard').style.display = isCo ? '' : 'none';
+  if (isCo) renderMaterialChanges();
   updateChecklist();
 }
 
@@ -389,19 +418,18 @@ function renderMaterialChanges() {
   const line = $('#lineSelect').value;
 
   // Триггеры цеха этой линии (в SMD — с учётом части линии)
-  const items = getTriggersForWorkshop(line ? getWorkshopIdForLine(line) : null, part).map(t => ({
-    value: t.value,
-    label: t.label
-  }));
+  const items = getTriggersForWorkshop(line ? getWorkshopIdForLine(line) : null, part);
+  const checked = new Set($$('#changesContainer input[data-change]:checked').length
+    ? [...$$('#changesContainer input[data-change]:checked')].map(cb => cb.value) : []);
 
   if (!items.length) {
-    c.innerHTML = '<div class="empty-state" style="padding:20px">Триггеры не настроены. Добавьте их в Настройках → «Триггеры Change Over».</div>';
+    c.innerHTML = '<div class="cocl-sec-hint">Триггеры не настроены — Настройки → «Триггеры».</div>';
     return;
   }
 
-  c.innerHTML = '<div class="checkbox-group">' +
-    items.map(m =>
-      `<label><input type="checkbox" value="${escapeHtml(m.value)}" data-change> ${escapeHtml(m.label)}</label>`
+  c.innerHTML = '<div class="cocl-changes">' +
+    items.map(m => `<label class="cocl-change${checked.has(m.value) ? ' checked' : ''}">
+      <input type="checkbox" value="${escapeHtml(m.value)}" data-change${checked.has(m.value) ? ' checked' : ''}>${escapeHtml(m.label)}</label>`
     ).join('') + '</div>';
 
   c.querySelectorAll('input[data-change]').forEach(cb => {
@@ -411,32 +439,18 @@ function renderMaterialChanges() {
     });
   });
 }
-$('#brandFrom').addEventListener('change', () => {
-  updateBrandToOptions();
-  updateChecklist();
-});
 
-$('#brandTo').addEventListener('change', () => {
-  updateChecklist();
-});
+$('#brandFrom').addEventListener('change', () => updateChecklist());
+$('#brandTo').addEventListener('change', () => updateChecklist());
 
 function getSelectedTriggers() {
-  const type = $('#transitionType').value;
   const triggers = [];
-
   // Триггеры «Что меняется» — только для Change Over
-  if (type === 'ChangeOver') {
-    $$('#changesContainer input[data-change]:checked').forEach(cb => {
-      const val = cb.value;
-
-      if (val === 'tobacco_materials') {
-        triggers.push('tobacco');
-        triggers.push('materials');
-      } else {
-        triggers.push(val);
-      }
-    });
-  }
+  if ($('#transitionType')?.value !== 'ChangeOver') return triggers;
+  $$('#changesContainer input[data-change]:checked').forEach(cb => {
+    if (cb.value === 'tobacco_materials') triggers.push('tobacco', 'materials');
+    else triggers.push(cb.value);
+  });
   return triggers;
 }
 
@@ -447,7 +461,6 @@ function getSelectedTriggers() {
 /**
  * Эффективный блок точек для бренда:
  * сначала блок конкретного бренда, иначе блок «Все бренды» (brand === '').
- * Возвращает null, если подходящего блока нет.
  */
 function getEffectiveBrandBlock(blocks, brand) {
   if (!Array.isArray(blocks) || !blocks.length) return null;
@@ -461,9 +474,7 @@ function getEffectiveBrandBlock(blocks, brand) {
   return universal || null;
 }
 
-/**
- * true, если наборы точек различаются (по числу точек или по значению хотя бы одной).
- */
+/** true, если наборы точек различаются (по числу точек или значению хотя бы одной) */
 function brandBlocksDiffer(blockA, blockB) {
   const pa = (blockA && Array.isArray(blockA.points))
     ? blockA.points.map(p => String((p && p.value) || '').trim())
@@ -475,100 +486,91 @@ function brandBlocksDiffer(blockA, blockB) {
   return pa.some((v, i) => v !== pb[i]);
 }
 
-/**
- * Проверка триггеров стандарта для Change Over.
- * Без триггеров — показывается; с триггерами — только при совпадении.
- */
+/** Триггеры стандарта: без триггеров — показывается; с триггерами — при совпадении */
 function standardMatchesTriggers(st, selectedTriggers) {
   if (!st.triggers || !st.triggers.length) return true;
   return st.triggers.some(t => selectedTriggers.includes(t));
 }
 
+/**
+ * Стандарты под условия. loose: для счётчиков Change Over без выбранных
+ * брендов — все стандарты Change Over линии (бренды ещё не известны).
+ */
+function getCoclRelevant({ type, line, part, brandFrom, brandTo, triggers, loose }) {
+  if (!type || !line) return [];
+  const coBrands = type === 'ChangeOver' && brandTo;
+  if (type === 'ChangeOver' && !brandTo && !loose) return [];
+
+  return getStandards().filter(st => {
+    if (st.active === false) return false;
+    if (!st.appliesTo || !st.appliesTo.includes(type)) return false;
+    if (st.line !== line) return false;
+    if (part && st.nodePart && st.nodePart !== part) return false;
+    if (type !== 'ChangeOver') return true;
+
+    const blocks = Array.isArray(st.measurements) ? st.measurements : [];
+    if (!coBrands) return blocks.length > 0 || st.forceInChangeOver === true;
+    if (!blocks.length) return false;
+
+    const blockTo = getEffectiveBrandBlock(blocks, brandTo);
+    if (!blockTo) return false;
+    // Без принудительного показа — только при отличии точек целевого бренда
+    if (st.forceInChangeOver !== true) {
+      const blockFrom = getEffectiveBrandBlock(blocks, brandFrom);
+      if (blockFrom && !brandBlocksDiffer(blockFrom, blockTo)) return false;
+    }
+    return standardMatchesTriggers(st, triggers || []);
+  });
+}
+
+/* Пересчитать список справа по текущим условиям */
 function updateChecklist() {
   const type = $('#transitionType').value;
   const line = $('#lineSelect').value;
   const part = $('#partSelect').value;
   const brandFrom = $('#brandFrom')?.value || '';
+  const brandTo = $('#brandTo')?.value || '';
 
-  const buildCard = $('#buildChecklistCard');
-  const checklistCard = $('#checklistCard');
   updateCoclStepStates();
+  if (coclState.checking) return;
 
-  // --- Если не заполнены основные поля — ничего не показываем ---
-  const workshopId = line ? getWorkshopIdForLine(line) : null;
-  const needsPart = workshopId === 'smd';
-  if (!type || !line || (needsPart && !part)) {
-    if (buildCard) buildCard.style.display = 'none';
-    if (checklistCard) checklistCard.style.display = 'none';
+  const info = $('#coclBuildInfo');
+  const btn = $('#buildChecklistBtn');
+  const c = $('#checklistContainer');
+  const needsPart = (line ? getWorkshopIdForLine(line) : null) === 'smd';
+
+  // Чего не хватает для списка
+  let waiting = '';
+  if (!line) waiting = 'Выберите линию';
+  else if (!type) waiting = 'Выберите тип проверки';
+  else if (needsPart && !part) waiting = 'Выберите часть линии — Maker или Packer';
+  else if (type === 'ChangeOver' && !brandFrom) waiting = 'Выберите бренд, с которого переходите';
+  else if (type === 'ChangeOver' && !brandTo) waiting = 'Выберите бренд, на который переходите';
+
+  if (waiting) {
+    if (info) info.textContent = '';
+    if (btn) btn.disabled = true;
+    c.innerHTML = `<div class="cocl-empty">${escapeHtml(waiting)}</div>`;
+    updateProgress();
     return;
   }
 
-  const triggers = getSelectedTriggers();
-  const all = getStandards();
+  const relevant = getCoclRelevant({ type, line, part, brandFrom, brandTo, triggers: getSelectedTriggers() });
 
-  // Для Change Over нужен выбранный бренд «На бренд»
-  let brandTo = '';
-  if (type === 'ChangeOver') {
-    brandTo = $('#brandTo').value;
-    if (!brandTo) {
-      if (buildCard) buildCard.style.display = 'none';
-      if (checklistCard) checklistCard.style.display = 'none';
-      return;
-    }
+  if (info) {
+    info.textContent = relevant.length
+      ? `${relevant.length} ${pluralizeStandards(relevant.length)} к проверке`
+      : '';
   }
+  if (btn) btn.disabled = relevant.length === 0;
 
-  const relevant = all.filter(st => {
-    if (st.active === false) return false;
-    if (!st.appliesTo || !st.appliesTo.includes(type)) return false;
-    if (st.line !== line) return false;
-    if (st.nodePart && st.nodePart !== part) return false;
-
-    // --- Change Over: стандарт показываем, только если точки целевого
-    //     бренда отличаются от точек исходного (либо технолог принудительно
-    //     включил стандарт в проверку смены сорта) ---
-    if (type === 'ChangeOver') {
-      const blocks = Array.isArray(st.measurements) ? st.measurements : [];
-      if (!blocks.length) return false;
-
-      const blockFrom = getEffectiveBrandBlock(blocks, brandFrom);
-      const blockTo = getEffectiveBrandBlock(blocks, brandTo);
-
-      // Нет релевантного блока для целевого бренда — не показываем
-      if (!blockTo) return false;
-
-      // Если технолог НЕ принудительно указал стандарт — показываем только
-      // при отличии точек целевого бренда от исходного.
-      if (st.forceInChangeOver !== true) {
-        // Блок исходного бренда не задан (и нет «Все бренды») — стандарт
-        // специфичен для целевого бренда, показываем. Иначе требуем отличие.
-        if (blockFrom && !brandBlocksDiffer(blockFrom, blockTo)) {
-          return false;
-        }
-      }
-
-      return standardMatchesTriggers(st, triggers);
-    }
-
-    // --- CL_TO / CL_Conversion: триггеры не проверяем ---
-    return true;
-  });
-
-  // --- Панель «Сформировать чек-лист»: сколько стандартов найдено ---
-  if (buildCard) {
-    buildCard.style.display = '';
-    buildCard.classList.toggle('is-empty', relevant.length === 0);
-    const info = $('#coclBuildInfo');
-    if (info) {
-      info.textContent = relevant.length
-        ? `Найдено ${relevant.length} ${pluralizeStandards(relevant.length)} — можно формировать чек-лист.`
-        : (type === 'ChangeOver'
-            ? 'Для этих брендов нет стандартов с отличающимися точками — проверять нечего.'
-            : 'Под эти условия стандартов нет.');
-    }
-    const btn = $('#buildChecklistBtn');
-    if (btn) btn.disabled = relevant.length === 0;
+  if (!relevant.length) {
+    c.innerHTML = `<div class="cocl-empty cocl-empty-ok">${type === 'ChangeOver'
+      ? `Для ${escapeHtml(brandFrom)} → ${escapeHtml(brandTo)} нет стандартов с отличающимися точками — проверять нечего.`
+      : 'Под эти условия стандартов нет.'}</div>`;
+    updateProgress();
+    return;
   }
-  if (checklistCard) checklistCard.style.display = 'none';
 
   renderChecklist(relevant);
 }
@@ -701,7 +703,7 @@ function renderChecklist(items) {
   c.innerHTML = html;
 
   // Раскрываем первый непроверенный
-  if (firstUncheckedId) {
+  if (firstUncheckedId && coclState.checking) {
     const firstItem = c.querySelector(`.cocl-acc-item[data-std-id="${firstUncheckedId}"]`);
     if (firstItem) expandCoclItem(firstItem, true);
   }
@@ -716,6 +718,7 @@ function renderChecklist(items) {
    ============================================================ */
 
 function expandCoclItem(item, silent) {
+  if (!coclState.checking) return;
   item.dataset.expanded = 'true';
   item.classList.add('expanded');
   const caret = item.querySelector('.cocl-acc-caret');
@@ -879,7 +882,7 @@ function updateProgress() {
   const text = $('#progressText');
   const badge = $('#progressBadge');
 
-  if (!items.length) {
+  if (!items.length || !coclState.checking) {
     badge.textContent = '';
     badge.className = 'progress-badge';
     wrap.style.display = 'none';
@@ -956,57 +959,49 @@ function openCommentModal(item) {
    COCL: Сворачивание верхней части и показ чек-листа
    ============================================================ */
 
-/** Скрыть настройки, показать чек-лист */
+/** Начать проверку: условия фиксируются, список становится чек-листом */
 function buildChecklistView() {
-  // Прячем все карточки настройки
-  ['#brandsCard', '#changesCard', '#buildChecklistCard'].forEach(sel => {
-    const el = $(sel);
-    if (el) el.style.display = 'none';
-  });
-
-  // Карточки с оператором/сменой/линией/типом — тоже скрываем
-  const topCards = document.querySelectorAll('#tab-check .card');
-  topCards.forEach((card, idx) => {
-    if (card.id === 'checklistCard') return;
-    // Скрываем всё, что до чек-листа
-    card.style.display = 'none';
-  });
-
-  // Показываем чек-лист
-  $('#checklistCard').style.display = 'block';
-
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if ($('#buildChecklistBtn')?.disabled) return;
+  coclState.checking = true;
+  setCoclCheckingUi(true);
+  updateChecklistForCheck();
 }
 
-/** Показать настройки, скрыть чек-лист */
-function editChecklistConditions() {
-  // Показываем все карточки настройки обратно
-  const topCards = document.querySelectorAll('#tab-check .card');
-  topCards.forEach(card => {
-    if (card.id === 'checklistCard') {
-      card.style.display = 'none';
-    } else {
-      // Восстанавливаем отображение — но только тех, что были видны
-      // Проще: показываем всё, что должно быть видно по текущему состоянию
-      card.style.display = '';
-    }
+/* Перерисовать текущий список уже в режиме проверки */
+function updateChecklistForCheck() {
+  const relevant = getCoclRelevant({
+    type: $('#transitionType').value,
+    line: $('#lineSelect').value,
+    part: $('#partSelect').value,
+    brandFrom: $('#brandFrom').value,
+    brandTo: $('#brandTo').value,
+    triggers: getSelectedTriggers()
   });
+  renderChecklist(relevant);
+}
 
-  // Применяем видимость через onTransitionTypeChange
-  if (typeof onTransitionTypeChange === 'function') {
-    // Сначала скрыть всё ненужное
-    ['#brandsCard', '#changesCard', '#buildChecklistCard'].forEach(sel => {
-      const el = $(sel);
-      if (el) el.style.display = 'none';
-    });
-    // Затем вызвать логику для актуального типа
-    onTransitionTypeChange();
-  }
+/* Вид панелей: проверка идёт / не идёт */
+function setCoclCheckingUi(on) {
+  $('#coclSetupCard')?.classList.toggle('is-locked', on);
+  $('#checklistContainer')?.classList.toggle('cocl-preview', !on);
+  const edit = $('#editConditionsBtn');
+  if (edit) edit.hidden = !on;
+  const build = $('#buildChecklistCard');
+  if (build) build.hidden = on;
+  const act = $('#coclCheckActions');
+  if (act) act.hidden = !on;
+  const info = $('#coclBuildInfo');
+  if (info) info.hidden = on;
+}
 
-  // Скрываем чек-лист
-  $('#checklistCard').style.display = 'none';
-
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+/** Вернуться к условиям: введённые значения теряются — спросить */
+function editChecklistConditions() {
+  const entered = [...$$('#checklistContainer .checklist-point-input')].some(i => i.value !== '')
+    || $$('#checklistContainer input[data-ans]:checked').length > 0;
+  if (entered && !confirm('Введённые значения не сохранены и будут сброшены. Изменить условия?')) return;
+  coclState.checking = false;
+  setCoclCheckingUi(false);
+  updateChecklist();
 }
 
 // Обработчики
