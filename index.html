@@ -1728,99 +1728,57 @@
 </div>
 <!-- ======================= МОДАЛЬНОЕ ОКНО: БЫСТРАЯ ПРОВЕРКА (из матрицы) ======================= -->
 <div class="modal-overlay" id="quickCheckModal">
-  <div class="modal modal-wide">
-    <div class="modal-header">
-      <h3 id="quickCheckModalTitle">Проверка CL</h3>
+  <div class="modal qcx-modal">
+    <div class="modal-header qcx-head">
+      <div class="qcx-head-main">
+        <div class="qcx-meta" id="qcMeta"></div>
+        <h3 id="quickCheckModalTitle">Проверка CL</h3>
+        <div class="qcx-ctx" id="qcCtx"></div>
+      </div>
       <button class="modal-close" id="quickCheckModalClose">✕</button>
     </div>
-    <div class="modal-body">
+    <div class="modal-body qcx-body">
 
-      <!-- Контекст -->
-      <div class="qc-context">
-        <div class="qc-context-row">
-          <span class="qc-context-label">Линия · Машина:</span>
-          <span class="qc-context-value qc-machine" id="qcMachine">—</span>
-        </div>
-        <div class="qc-context-row">
-          <span class="qc-context-label">Стандарт:</span>
-          <span class="qc-context-value" id="qcParamName">—</span>
-        </div>
-        <div class="qc-context-row">
-          <span class="qc-context-label">Узел:</span>
-          <span class="qc-context-value" id="qcNode">—</span>
-        </div>
-        <div class="qc-context-row">
-          <span class="qc-context-label">Время проверки:</span>
-          <span class="qc-context-value qc-time" id="qcTime">—</span>
-          <span class="qc-work-badge" id="qcWork">—</span>
-        </div>
-        <div class="qc-context-row">
-          <span class="qc-context-label">Дата · смена:</span>
-          <span class="qc-context-value" id="qcDateShift">—</span>
-        </div>
-        <div class="qc-context-row">
-          <span class="qc-context-label">Бренд:</span>
-          <span class="qc-context-value" id="qcBrand">—</span>
+      <!-- Уже проверено ранее -->
+      <div class="qcx-existing" id="qcExistingInfo" style="display:none">
+        Уже проверено: <strong id="qcExistingStatus">—</strong> — новое значение заменит старое.
+      </div>
+
+      <!-- ОК / Не ОК -->
+      <div class="qcx-sec" id="qcAnswerOkNotOk" style="display:none">
+        <div class="qcx-norm-text" id="qcNormText"></div>
+        <div class="qcx-okfail">
+          <label><input type="radio" name="qc_answer" value="OK" id="qcAnswerOk"><span>ОК</span></label>
+          <label><input type="radio" name="qc_answer" value="FAIL" id="qcAnswerFail"><span>Не ОК</span></label>
         </div>
       </div>
 
-      <!-- Норма -->
-      <div class="qc-norm-block" id="qcNormBlock" style="display:none">
-        <div class="qc-norm-label">Норма:</div>
-        <div class="qc-norm-value" id="qcNormValue">—</div>
-      </div>
-      <!-- Описание контроля (сворачиваемое) -->
-      <div class="qc-collapsible" id="qcControlDescBlock">
-        <div class="qc-collapsible-header" id="qcControlDescToggle">
-          <span class="qc-collapsible-toggle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="9 18 15 12 9 6"/>
-            </svg>
-          </span>
-          <span class="qc-collapsible-title">Как проверять</span>
-          <span class="qc-collapsible-hint" id="qcControlDescHint"></span>
+      <!-- Значения (точки замера / значение E-Param) -->
+      <div class="qcx-sec" id="qcAnswerPoints" style="display:none">
+        <div class="qcx-sec-head">
+          <span id="qcPointsTitle">Значения</span>
+          <span class="qcx-result" id="qcResult"></span>
         </div>
-        <div class="qc-collapsible-body" id="qcControlDescBody"></div>
-      </div>
-      <!-- Блок для ok_not_ok -->
-      <div class="qc-answer-block" id="qcAnswerOkNotOk" style="display:none">
-        <label class="required">Результат</label>
-        <div class="radio-group qc-radio-group">
-          <label><input type="radio" name="qc_answer" value="OK" id="qcAnswerOk"> ОК</label>
-          <label><input type="radio" name="qc_answer" value="FAIL" id="qcAnswerFail"> Не ОК</label>
-        </div>
+        <div id="qcPointsList" class="qcx-pts"></div>
       </div>
 
-      <!-- Блок для value_input / range_input — точки замера -->
-      <div class="qc-answer-block" id="qcAnswerPoints" style="display:none">
-        <label class="required">Точки замера</label>
-        <div id="qcPointsList" class="qc-points-list"></div>
-      </div>
+      <!-- Как проверять -->
+      <details class="qcx-how" id="qcControlDescBlock">
+        <summary>Как проверять</summary>
+        <div id="qcControlDescBody"></div>
+      </details>
 
       <!-- Комментарий -->
-      <div class="qc-answer-block">
-        <label>Комментарий (опционально)</label>
-        <textarea id="qcComment" rows="2" placeholder="Если есть отклонение — впишите кратко"></textarea>
-      </div>
-
-      <!-- Инфо-плашка для уже проверенных -->
-      <div class="qc-existing-info" id="qcExistingInfo" style="display:none">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="16" x2="12" y2="12"/>
-          <line x1="12" y1="8" x2="12.01" y2="8"/>
-        </svg>
-        <span>Уже проверено ранее: <strong id="qcExistingStatus">—</strong>. Новое значение перезапишет старое.</span>
+      <div class="qcx-sec qcx-comment" id="qcCommentWrap">
+        <label for="qcComment">Комментарий <span id="qcCommentHint">— по желанию</span></label>
+        <textarea id="qcComment" rows="2" placeholder="Что увидели, что сделали"></textarea>
       </div>
 
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary btn-icon-text modal-add-btn-left" id="qcOpenStandardBtn" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-          <circle cx="12" cy="12" r="3"/>
-        </svg>
-        <span>Открыть полный просмотр</span>
+      <button class="btn btn-secondary btn-icon-text modal-add-btn-left" id="qcOpenStandardBtn" type="button" data-view-btn>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span>Стандарт</span>
       </button>
       <button class="btn btn-secondary" id="quickCheckCancelBtn">Отмена</button>
       <button class="btn btn-primary" id="quickCheckSaveBtn">Сохранить</button>

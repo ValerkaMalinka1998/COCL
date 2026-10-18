@@ -1,0 +1,355 @@
+/* ============================================================ */
+/* === БЫСТРАЯ ПРОВЕРКА (#quickCheckModal) — мех и E-Param ==== */
+/* ============================================================ */
+
+.qcx-modal {
+  max-width: 640px;
+}
+
+.qcx-head {
+  align-items: flex-start;
+  padding: 16px 20px 14px;
+}
+
+.qcx-head-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.qcx-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-second);
+}
+
+.qcx-meta b {
+  color: var(--accent-cyan);
+}
+
+.qcx-meta i {
+  font-style: normal;
+  color: var(--text-dim);
+}
+
+.qcx-tag {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.qcx-tag-run {
+  color: var(--accent-green);
+  background: color-mix(in srgb, var(--accent-green) 12%, transparent);
+}
+
+.qcx-tag-stop {
+  color: var(--accent-amber);
+  background: color-mix(in srgb, var(--accent-amber) 14%, transparent);
+}
+
+.qcx-tag-el {
+  color: var(--accent-purple);
+  background: color-mix(in srgb, var(--accent-purple) 12%, transparent);
+}
+
+.qcx-head h3 {
+  margin: 4px 0 8px;
+  font-size: 18px;
+  line-height: 1.3;
+  color: var(--text-main);
+}
+
+.qcx-ctx {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.qcx-ctx span {
+  padding: 3px 9px;
+  border-radius: 8px;
+  background: var(--bg-hover);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-second);
+}
+
+.qcx-ctx .qcx-brand {
+  color: var(--accent-cyan);
+  background: color-mix(in srgb, var(--accent-cyan) 10%, transparent);
+}
+
+.qcx-ctx .qcx-nobrand {
+  color: var(--accent-amber);
+  background: color-mix(in srgb, var(--accent-amber) 12%, transparent);
+}
+
+.qcx-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 20px;
+}
+
+.qcx-existing {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent-amber) 10%, transparent);
+  font-size: 12.5px;
+  color: var(--text-second);
+}
+
+.qcx-existing strong {
+  color: var(--accent-amber);
+}
+
+.qcx-sec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.qcx-result {
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-dim);
+}
+
+.qcx-result.is-ok {
+  color: var(--accent-green);
+}
+
+.qcx-result.is-fail {
+  color: var(--accent-red);
+}
+
+/* Поля значений */
+.qcx-pts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.qcx-pts-one {
+  grid-template-columns: minmax(0, 260px);
+}
+
+.qcx-pt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: text;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.qcx-pt-norm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-main);
+}
+
+.qcx-pt-norm b {
+  color: var(--text-dim);
+  font-weight: 800;
+}
+
+.qcx-pt-st {
+  margin-left: auto;
+  font-weight: 800;
+}
+
+.qcx-pt input {
+  width: 100%;
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--border-hi);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-main);
+  font-size: 18px;
+  font-weight: 800;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.qcx-pt input:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-cyan) 18%, transparent);
+}
+
+.qcx-pt-range {
+  font-size: 10.5px;
+  color: var(--text-dim);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.qcx-pt.is-ok {
+  border-color: color-mix(in srgb, var(--accent-green) 60%, var(--border));
+  background: color-mix(in srgb, var(--accent-green) 6%, var(--bg-card));
+}
+
+.qcx-pt.is-ok .qcx-pt-st {
+  color: var(--accent-green);
+}
+
+.qcx-pt.is-fail {
+  border-color: var(--accent-red);
+  background: color-mix(in srgb, var(--accent-red) 7%, var(--bg-card));
+}
+
+.qcx-pt.is-fail .qcx-pt-st,
+.qcx-pt.is-fail input {
+  color: var(--accent-red);
+}
+
+.qcx-empty {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+/* ОК / Не ОК */
+.qcx-norm-text {
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: var(--text-second);
+}
+
+.qcx-norm-text b {
+  color: var(--text-main);
+}
+
+.qcx-okfail {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.qcx-okfail label {
+  margin: 0;
+  cursor: pointer;
+}
+
+.qcx-okfail input {
+  display: none;
+}
+
+.qcx-okfail span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 52px;
+  border: 1px solid var(--border-hi);
+  border-radius: 10px;
+  background: var(--bg-input);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-second);
+  text-transform: none;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.qcx-okfail label:hover span {
+  border-color: var(--text-second);
+}
+
+.qcx-okfail input[value="OK"]:checked + span {
+  background: var(--accent-green);
+  border-color: var(--accent-green);
+  color: #fff;
+}
+
+.qcx-okfail input[value="FAIL"]:checked + span {
+  background: var(--accent-red);
+  border-color: var(--accent-red);
+  color: #fff;
+}
+
+/* Как проверять */
+.qcx-how {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+}
+
+.qcx-how summary {
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  cursor: pointer;
+}
+
+.qcx-how > div {
+  padding: 0 12px 12px;
+}
+
+.qcx-how p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-main);
+}
+
+.qcx-how p + p {
+  margin-top: 4px;
+}
+
+/* Комментарий */
+.qcx-comment label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-second);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.qcx-comment label span {
+  font-weight: 500;
+  color: var(--text-dim);
+}
+
+.qcx-comment textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.qcx-comment.is-needed label span {
+  color: var(--accent-red);
+  font-weight: 700;
+}
+
+.qcx-comment.is-needed textarea {
+  border-color: color-mix(in srgb, var(--accent-red) 60%, var(--border-hi));
+}
+
+#qcOpenStandardBtn {
+  width: auto;
+  padding: 0 12px;
+}
