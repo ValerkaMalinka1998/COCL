@@ -249,14 +249,47 @@ function setHistory(v) { save(STORAGE_KEYS.history, v); }
    строка проверяется каждую смену (с from) и идёт в чек-листе последней.
    ============================================================ */
 
-const VALIDATION_DAYS = 14;
+// Срок валидации по умолчанию — 14 смен (7 суток), считая с текущей смены
+const VALIDATION_SHIFTS = 14;
+
+/* Номер смены от «эпохи»: сутки × 2 (+1 для ночи). Нужен, чтобы срок
+   считался в сменах: начало и конец могут попадать на день или ночь. */
+function valShiftIndex(dateStr, shift) {
+  const t = Date.UTC(+dateStr.slice(0, 4), +dateStr.slice(5, 7) - 1, +dateStr.slice(8, 10));
+  return Math.round(t / 864e5) * 2 + (shift === 'night' ? 1 : 0);
+}
+function valShiftFromIndex(idx) {
+  const d = new Date(Math.floor(idx / 2) * 864e5);
+  const p = (n) => String(n).padStart(2, '0');
+  return { date: `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}`, shift: idx % 2 ? 'night' : 'day' };
+}
+
+/* Новая валидация с текущей смены на n смен */
+function makeValidation(shifts) {
+  const cur = getCurrentShiftPeriod();
+  const start = valShiftIndex(cur.date, cur.shiftType);
+  const end = valShiftFromIndex(start + (shifts || VALIDATION_SHIFTS) - 1);
+  return { from: cur.date, fromShift: cur.shiftType, until: end.date, untilShift: end.shift, decidedAt: '', decidedShift: '', result: '' };
+}
+
+/* Сколько смен в сроке валидации */
+function validationShiftCount(v) {
+  if (!v || !v.from) return 0;
+  return valShiftIndex(v.until, v.untilShift) - valShiftIndex(v.from, v.fromShift) + 1;
+}
 
 function normalizeValidation(v) {
   if (!v || typeof v !== 'object' || !v.from) return null;
+  // Старые записи (до счёта в сменах): с дневной смены from до ночной until
+  const fromShift = v.fromShift === 'night' ? 'night' : 'day';
+  const until = String(v.until || valShiftFromIndex(valShiftIndex(String(v.from), fromShift) + VALIDATION_SHIFTS - 1).date);
   return {
     from: String(v.from),
-    until: String(v.until || addDaysISO(v.from, VALIDATION_DAYS)),
+    fromShift,
+    until,
+    untilShift: v.untilShift === 'day' ? 'day' : 'night',
     decidedAt: v.decidedAt ? String(v.decidedAt) : '',
+    decidedShift: v.decidedShift === 'night' ? 'night' : (v.decidedAt ? 'day' : ''),
     result: v.result === 'approved' || v.result === 'rejected' ? v.result : ''
   };
 }
@@ -267,11 +300,23 @@ function isOnValidation(row) {
   return !!(v && v.from && !v.decidedAt);
 }
 
-/* Входит ли дата смены в период валидации: проверка каждую смену */
-function isValidationDay(row, dateStr) {
+/* Входит ли смена в период валидации: каждая смена срока; после срока,
+   пока нет решения аналитика, — каждая смена до текущей */
+function isValidationShift(row, dateStr, shift) {
   const v = row && row.validation;
-  if (!v || !v.from || dateStr < v.from) return false;
-  return !v.decidedAt || dateStr < v.decidedAt;
+  if (!v || !v.from || !dateStr) return false;
+  const i = valShiftIndex(dateStr, shift);
+  if (i < valShiftIndex(v.from, v.fromShift)) return false;
+  if (v.decidedAt) return i < valShiftIndex(v.decidedAt, v.decidedShift || 'day');
+  // Срок — заданные смены; если срок вышел, а решения нет — проверяем и дальше,
+  // но вперёд не планируем (только до текущей смены)
+  const cur = getCurrentShiftPeriod();
+  return i <= Math.max(valShiftIndex(v.until, v.untilShift || 'night'), valShiftIndex(cur.date, cur.shiftType));
+}
+
+/* Есть ли в эти сутки хоть одна смена валидации */
+function isValidationDay(row, dateStr) {
+  return isValidationShift(row, dateStr, 'day') || isValidationShift(row, dateStr, 'night');
 }
 
 /* 'none' | 'active' | 'overdue' | 'approved' | 'rejected' */
@@ -279,5 +324,14 @@ function validationStatus(row) {
   const v = row && row.validation;
   if (!v || !v.from) return 'none';
   if (v.decidedAt) return v.result || 'approved';
-  return getCurrentShiftPeriod().date > v.until ? 'overdue' : 'active';
+  const cur = getCurrentShiftPeriod();
+  return valShiftIndex(cur.date, cur.shiftType) > valShiftIndex(v.until, v.untilShift || 'night') ? 'overdue' : 'active';
+}
+
+/* Сколько смен осталось до конца срока (включая текущую) */
+function validationShiftsLeft(row) {
+  const v = row && row.validation;
+  if (!v) return 0;
+  const cur = getCurrentShiftPeriod();
+  return valShiftIndex(v.until, v.untilShift || 'night') - valShiftIndex(cur.date, cur.shiftType) + 1;
 }

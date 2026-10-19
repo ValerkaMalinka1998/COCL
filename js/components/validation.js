@@ -5,7 +5,15 @@
    Модуль общего пространства имён. Порядок подключения — index.html.
    ============================================================ */
 
-const VAL_DAY_OPTIONS = [7, 14, 21, 30];
+// Варианты срока в сменах (2 смены = сутки)
+const VAL_SHIFT_OPTIONS = [14, 28, 42, 60];
+
+function valShiftLabel(n) {
+  return `${n} ${pluralRu(n, 'смена', 'смены', 'смен')}`;
+}
+function valPointLabel(date, shift) {
+  return `${fmtShortDate(date)} ${shift === 'night' ? 'ночь' : 'день'}`;
+}
 
 /* Метка «Валидация до 02.11» / «срок истёк» для таблиц и чек-листа */
 function valChipHtml(row) {
@@ -17,30 +25,28 @@ function valChipHtml(row) {
     : `<span class="val-chip" title="Временный: проверяется каждую смену до решения аналитика">Валидация · до ${escapeHtml(until)}</span>`;
 }
 
-/* Блок в форме: флажок «На валидации» и срок */
+/* Блок в форме: флажок «На валидации» и срок в сменах */
 function valEditBlockHtml(row, isNew) {
   const v = row.validation;
   const decided = v && v.decidedAt;
   // Новый — по умолчанию на валидации; существующий — как есть
   const on = isNew ? (v ? !decided : true) : isOnValidation(row);
-  const from = (v && !decided) ? v.from : getCurrentShiftPeriod().date;
-  let days = VALIDATION_DAYS;
-  if (v && !decided) {
-    days = Math.round((new Date(v.until) - new Date(v.from)) / 864e5) || VALIDATION_DAYS;
-  }
-  const opts = [...new Set([...VAL_DAY_OPTIONS, days])].sort((a, b) => a - b)
-    .map(d => `<option value="${d}" ${d === days ? 'selected' : ''}>${d} дней</option>`).join('');
+  const base = (v && !decided) ? v : makeValidation(VALIDATION_SHIFTS);
+  const n = (v && !decided) ? validationShiftCount(v) : VALIDATION_SHIFTS;
+  const opts = [...new Set([...VAL_SHIFT_OPTIONS, n])].sort((a, b) => a - b)
+    .map(k => `<option value="${k}" ${k === n ? 'selected' : ''}>${valShiftLabel(k)} (${Math.round(k / 2)} ${pluralRu(Math.round(k / 2), 'сутки', 'суток', 'суток')})</option>`).join('');
+  const end = valShiftFromIndex(valShiftIndex(base.from, base.fromShift) + n - 1);
   const was = decided
     ? `<div class="val-was">Валидация пройдена ${escapeHtml(fmtShortDate(v.decidedAt))} — ${v.result === 'rejected' ? 'отклонён' : 'утверждён'}.</div>` : '';
   return `
-    <div class="sv-full-extra-block val-edit" data-val-from="${escapeAttr(from)}">
+    <div class="sv-full-extra-block val-edit" data-val-from="${escapeAttr(base.from)}" data-val-from-shift="${escapeAttr(base.fromShift)}">
       <label class="val-toggle">
         <input type="checkbox" id="valOn" ${on ? 'checked' : ''}>
-        <span><b>На валидации</b> — временный: проверяется каждую смену, в чек-листе идёт последним и выделен цветом</span>
+        <span><b>На валидации</b> — временный: сразу попадает в Расписание и Чек-лист CL последней строкой и проверяется каждую смену</span>
       </label>
       <div class="val-days" ${on ? '' : 'hidden'}>
         Срок <select id="valDays">${opts}</select>
-        <span>с ${escapeHtml(fmtShortDate(from))} до <b id="valUntil">${escapeHtml(fmtShortDate(addDaysISO(from, days)))}</b>, потом — решение аналитика</span>
+        <span>с ${escapeHtml(valPointLabel(base.from, base.fromShift))} до <b id="valUntil">${escapeHtml(valPointLabel(end.date, end.shift))}</b>, потом — решение аналитика</span>
       </div>
       ${was}
     </div>`;
@@ -53,9 +59,11 @@ function valReadEdit(prev) {
   const on = $('#valOn')?.checked;
   const p = normalizeValidation(prev);
   if (!on) return p && p.decidedAt ? p : null;
+  const n = parseInt($('#valDays')?.value, 10) || VALIDATION_SHIFTS;
   const from = p && !p.decidedAt ? p.from : box.dataset.valFrom;
-  const days = parseInt($('#valDays')?.value, 10) || VALIDATION_DAYS;
-  return { from, until: addDaysISO(from, days), decidedAt: '', result: '' };
+  const fromShift = p && !p.decidedAt ? p.fromShift : (box.dataset.valFromShift || 'day');
+  const end = valShiftFromIndex(valShiftIndex(from, fromShift) + n - 1);
+  return { from, fromShift, until: end.date, untilShift: end.shift, decidedAt: '', decidedShift: '', result: '' };
 }
 
 document.addEventListener('change', (e) => {
@@ -65,7 +73,8 @@ document.addEventListener('change', (e) => {
   }
   if (e.target.id === 'valDays') {
     const box = e.target.closest('.val-edit');
-    $('#valUntil').textContent = fmtShortDate(addDaysISO(box.dataset.valFrom, parseInt(e.target.value, 10)));
+    const end = valShiftFromIndex(valShiftIndex(box.dataset.valFrom, box.dataset.valFromShift || 'day') + parseInt(e.target.value, 10) - 1);
+    $('#valUntil').textContent = valPointLabel(end.date, end.shift);
   }
 });
 
@@ -95,19 +104,18 @@ function valBannerHtml(row, kind) {
       <span>${fmtShortDate(v.from)} – ${fmtShortDate(v.decidedAt)}</span>
     </div>`;
   }
-  const today = getCurrentShiftPeriod().date;
-  const left = Math.round((new Date(v.until) - new Date(today)) / 864e5);
+  const left = validationShiftsLeft(row);
   const st = valCheckStats(row);
   const id = escapeAttr(row.id);
   return `
     <div class="val-banner ${s === 'overdue' ? 'val-banner-over' : ''}">
       <div class="val-banner-main">
         <b>${s === 'overdue' ? 'Срок валидации истёк — нужно решение' : 'На валидации — временный'}</b>
-        <span>с ${fmtShortDate(v.from)} до ${fmtShortDate(v.until)}${s === 'active' ? ` · осталось ${left} ${pluralRu(left, 'день', 'дня', 'дней')}` : ''}
+        <span>с ${valPointLabel(v.from, v.fromShift)} до ${valPointLabel(v.until, v.untilShift)}${s === 'active' ? ` · осталось ${valShiftLabel(left)}` : ''}
           · проверок ${st.n}${st.fail ? `, <em>отклонений ${st.fail}</em>` : ''} · проверяется каждую смену</span>
       </div>
       <div class="val-banner-acts">
-        <button type="button" class="btn btn-secondary btn-sm" data-val-act="extend" data-val-id="${id}" data-val-kind="${kind}">+7 дней</button>
+        <button type="button" class="btn btn-secondary btn-sm" data-val-act="extend" data-val-id="${id}" data-val-kind="${kind}" title="Продлить на 14 смен (7 суток)">+14 смен</button>
         <button type="button" class="btn btn-secondary btn-sm val-btn-reject" data-val-act="reject" data-val-id="${id}" data-val-kind="${kind}">Отклонить</button>
         <button type="button" class="btn btn-primary btn-sm" data-val-act="approve" data-val-id="${id}" data-val-kind="${kind}">Утвердить</button>
       </div>
@@ -123,19 +131,33 @@ document.addEventListener('click', (e) => {
   const all = isElec ? getElectronicParams().map(normalizeElectronicParam) : getStandards();
   const row = all.find(x => x.id === btn.dataset.valId);
   if (!row || !row.validation) return;
-  const today = getCurrentShiftPeriod().date;
+  const cur = getCurrentShiftPeriod();
+  const curIdx = valShiftIndex(cur.date, cur.shiftType);
+  const v = row.validation = normalizeValidation(row.validation);
 
   if (act === 'extend') {
-    const base = row.validation.until > today ? row.validation.until : today;
-    row.validation.until = addDaysISO(base, 7);
+    // +14 смен (7 суток) от конца срока, а если он прошёл — от текущей смены
+    const base = Math.max(valShiftIndex(v.until, v.untilShift), curIdx - 1);
+    const end = valShiftFromIndex(base + 14);
+    v.until = end.date;
+    v.untilShift = end.shift;
   } else if (act === 'approve') {
-    if (!confirm('Утвердить? Стандарт станет постоянным: выйдет из валидации и будет проверяться по «Расписанию CL».')) return;
-    row.validation.decidedAt = today;
-    row.validation.result = 'approved';
+    if (!confirm('Утвердить? Стандарт станет постоянным: выйдет из валидации и останется в «Расписании CL» — отметьте, в какие смены его проверять.')) return;
+    v.decidedAt = cur.date;
+    v.decidedShift = cur.shiftType;
+    v.result = 'approved';
+    // Остаётся в Расписании CL с этой недели (смены задаёт аналитик)
+    const ws = getSchWeekStart(0);
+    if (!getRowForWeek(row, ws, row.line).member) {
+      const t = getRowTemplateForWeek(row, ws);
+      setRowTemplateFrom(row, ws, { ...t, inSchedule: true });
+      row.inSchedule = true;
+    }
   } else if (act === 'reject') {
-    if (!confirm('Отклонить? Стандарт станет неактивным и уйдёт из чек-листа. История проверок сохранится.')) return;
-    row.validation.decidedAt = today;
-    row.validation.result = 'rejected';
+    if (!confirm('Отклонить? Стандарт станет неактивным и уйдёт из чек-листа и расписания. История проверок сохранится.')) return;
+    v.decidedAt = cur.date;
+    v.decidedShift = cur.shiftType;
+    v.result = 'rejected';
     row.active = false;
   }
   row.updatedAt = new Date().toISOString();
@@ -150,8 +172,8 @@ document.addEventListener('click', (e) => {
   }
 
   if (act === 'approve') {
-    showToast(row.inSchedule ? 'Утверждён' : 'Утверждён — добавьте его в «Расписание CL», чтобы проверка продолжалась');
-  } else showToast(act === 'reject' ? 'Отклонён и деактивирован' : 'Срок продлён на 7 дней');
+    showToast('Утверждён — отметьте смены в «Расписании CL»');
+  } else showToast(act === 'reject' ? 'Отклонён и деактивирован' : 'Срок продлён на 14 смен');
 
   if (typeof renderStandardFullView === 'function' && !isElec && svFullState.standardId === row.id) renderStandardFullView();
   if (isElec && typeof epPageState !== 'undefined' && epPageState.data && epPageState.data.id === row.id) {
@@ -161,5 +183,7 @@ document.addEventListener('click', (e) => {
   }
   if (typeof refreshEditorMechTable === 'function') refreshEditorMechTable();
   if (typeof refreshEditorElecTable === 'function') refreshEditorElecTable();
+  if ($('#tab-schedule')?.classList.contains('active') && typeof renderScheduleMatrix === 'function') renderScheduleMatrix();
+  if ($('#tab-electronic')?.classList.contains('active') && typeof renderClMatrix === 'function') renderClMatrix();
   if (logId) askChangeReason(logId);
 });

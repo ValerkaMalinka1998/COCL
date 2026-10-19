@@ -526,7 +526,7 @@ function clRowCells(row, dateByDayIdx, hist) {
   CIL_DAYS.forEach(d => {
     const dateStr = dateByDayIdx[d.idx];
     ['day', 'night'].forEach(shift => {
-      const planned = schedule.some(x => x.day === d.idx && x.shift === shift) || isValidationDay(row, dateStr);
+      const planned = schedule.some(x => x.day === d.idx && x.shift === shift) || isValidationShift(row, dateStr, shift);
       const letter = getShiftsForDate(dateStr)[shift];
       const existing = hist.cell.get(`${dateStr}|${letter}|${row.id}`);
       const draft = clState.quickDraft[`${row.id}|${dateStr}|${shift}`];
