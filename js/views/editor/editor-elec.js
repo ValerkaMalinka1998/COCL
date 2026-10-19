@@ -76,7 +76,7 @@ function refreshEditorElecTable() {
   params.forEach(p => { perMachine[p.machine || '—'] = (perMachine[p.machine || '—'] || 0) + 1; });
 
   let html = `
-    <table class="et-table">
+    <table class="et-table${lineHasParts(localStorage.getItem('cl_editor_line') || '') ? '' : ' et-no-part'}">
       <thead><tr>
         <th class="et-c-check"><input type="checkbox" id="eeCheckAll" title="Выделить все на странице"></th>
         <th>Параметр</th>
@@ -441,7 +441,7 @@ async function parseElectronicParamsExcel(file, targetLine) {
     const id = makeElectronicParamId();
     const p = {
       id, active,
-      line, machine, nodePart, paramName,
+      line, machine, nodePart: lineHasParts(line) ? nodePart : '', paramName,
       work: work === 'Stop' ? 'Stop' : 'Run',
       timeFrom, timeTo,
       controlType, normText,

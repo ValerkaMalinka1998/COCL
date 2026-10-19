@@ -218,7 +218,8 @@ function updateClLinePill() {
 function updateClPartSwitchVisibility() {
   const el = $('#clPartSwitch');
   if (!el) return;
-  el.style.display = (clState.mode === 'mech') ? 'inline-flex' : 'none';
+  // Maker / Packer — только для механики на линиях SMD
+  el.style.display = (clState.mode === 'mech' && lineHasParts(clState.line)) ? 'inline-flex' : 'none';
 }
 
 function updateClCheckButtons() {
@@ -359,7 +360,7 @@ function renderClMatrix() {
       .filter(s => s.line === clState.line)
       .filter(s => s.active !== false || checkedIds.has(s.id))
       .filter(s => isMember(s) || inValidation(s) || checkedIds.has(s.id))
-      .filter(s => !clState.part || s.nodePart === clState.part);
+      .filter(s => !linePartFilter(clState.line, clState.part) || s.nodePart === clState.part);
   } else {
     rows = getElectronicParamsForLine(clState.line)
       .filter(p => p.active !== false || checkedIds.has(p.id))
