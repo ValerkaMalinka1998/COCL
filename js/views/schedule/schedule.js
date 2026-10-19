@@ -120,6 +120,15 @@ function isSchRowMember(row) {
   return getRowForWeek(row, getSchWeekStart(schState.weekOffset || 0), schState.line).member;
 }
 
+/* Идёт ли у строки валидация на просматриваемой неделе: такие стандарты
+   стоят в расписании сами (каждая смена срока), последними строками */
+function isSchRowValidation(row) {
+  return getClWeekDays(schState.weekOffset || 0).some(d => isValidationDay(row, d));
+}
+function isSchRowShown(row) {
+  return isSchRowMember(row) || isSchRowValidation(row);
+}
+
 /* --- Получить отфильтрованные строки расписания --- */
 function getFilteredScheduleRows() {
   let rows = [];
@@ -128,11 +137,11 @@ function getFilteredScheduleRows() {
       .filter(s => s.line === schState.line)
       .filter(s => s.active !== false)
       .filter(s => !schState.part || s.nodePart === schState.part)
-      .filter(isSchRowMember);
+      .filter(isSchRowShown);
   } else {
     rows = getElectronicParamsForLine(schState.line)
       .filter(p => p.active !== false)
-      .filter(isSchRowMember);
+      .filter(isSchRowShown);
   }
 
   // Фильтр по машине
@@ -156,8 +165,9 @@ function getFilteredScheduleRows() {
     });
   }
 
-  // Группы по машинам, внутри — по OPL
-  return cilSortRows(rows);
+  // Группы по машинам, внутри — по OPL; на валидации — последними
+  rows = cilSortRows(rows);
+  return [...rows.filter(r => !isSchRowValidation(r)), ...rows.filter(isSchRowValidation)];
 }
 
 /* --- Обновить счётчики над матрицей расписания --- */
@@ -228,10 +238,10 @@ function renderScheduleMatrix() {
     ? getStandards()
         .filter(s => s.line === schState.line && s.active !== false)
         .filter(s => !schState.part || s.nodePart === schState.part)
-        .filter(isSchRowMember)
+        .filter(isSchRowShown)
     : getElectronicParamsForLine(schState.line)
         .filter(p => p.active !== false)
-        .filter(isSchRowMember);
+        .filter(isSchRowShown);
 
   schState.rows = rows;
   updateSchPanelCount();
@@ -721,14 +731,22 @@ function renderScheduleRow(row, dateByDayIdx, num, zone, isElec) {
   const work = (freq.work != null)
     ? (freq.work === 'Stop' ? 'Stop' : 'Run')
     : (row.work === 'Stop' ? 'Stop' : 'Run');
-  const n = schedule.length;
   const id = escapeAttr(row.id);
   const isPastWeek = (schState.weekOffset || 0) < 0;
+  const valWeek = isSchRowValidation(row);
+  const valOn = valWeek && isOnValidation(row);
+  const member = isSchRowMember(row);
+  const isValCell = (dateStr, shift) => valWeek && isValidationShift(row, dateStr, shift);
+  const valCount = valWeek
+    ? CIL_DAYS.reduce((k, d) => k + ['day', 'night'].filter(sh => isValCell(dateByDayIdx[d.idx], sh)).length, 0) : 0;
+  const n = valWeek
+    ? CIL_DAYS.reduce((k, d) => k + ['day', 'night'].filter(sh => isOn(d.idx, sh) || isValCell(dateByDayIdx[d.idx], sh)).length, 0)
+    : schedule.length;
 
-  let html = `<tr class="cil-row" data-row-id="${id}">
+  let html = `<tr class="cil-row${valOn ? ' cil-row-val' : ''}" data-row-id="${id}">
     <td class="cil-c-zone cil-z${zone}">${escapeHtml(machine)}<small>№ ${num}</small></td>
     <td class="cil-c-std"><div class="cil-std-box">
-      <div class="cil-std-title"><span class="cil-std-m">${escapeHtml(machine)} ·</span><span class="cil-std-name">${escapeHtml(title)}</span></div>
+      <div class="cil-std-title"><span class="cil-std-m">${escapeHtml(machine)} ·</span><span class="cil-std-name">${escapeHtml(title)}</span>${valOn ? valChipHtml(row) : ''}</div>
       <div class="cil-std-sub">
         ${row.oplNumber ? `<span class="cil-opl">${escapeHtml(row.oplNumber)}</span>` : ''}
         ${row.node ? `<span class="cil-node">${CIL_ICONS.gear}${escapeHtml(row.node)}</span>` : ''}
@@ -736,14 +754,18 @@ function renderScheduleRow(row, dateByDayIdx, num, zone, isElec) {
         ${cilTimeChips(freq.timeWindows)}
         <button type="button" class="cil-tag cil-tag-add" data-tw-open="${id}" title="Задать время проверки">${freq.timeWindows && freq.timeWindows.length ? 'время' : '+ время'}</button>
       </div>
-      <button type="button" class="cil-row-del" data-remove-from-schedule="${id}" title="Убрать из расписания">
+      ${member ? `<button type="button" class="cil-row-del" data-remove-from-schedule="${id}" title="Убрать из расписания">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
+      </button>` : ''}
     </div></td>
     <td class="cil-c-cnt">
       <span class="cil-cnt-val">${n}<small> / 14</small></span>
       <span class="cil-cnt-bar"><i style="width:${Math.round(n / 14 * 100)}%"></i></span>
-      ${isPastWeek ? '' : `<div class="cil-quick">
+      ${valOn && !isPastWeek ? `<div class="cil-quick val-quick" title="Валидация: ${valCount} ${pluralRu(valCount, 'смена', 'смены', 'смен')} на этой неделе">
+        <button type="button" data-val-act="extend" data-val-id="${id}" data-val-kind="${isElec ? 'elec' : 'mech'}" title="Продлить на 14 смен">+14</button>
+        <button type="button" class="val-q-ok" data-val-act="approve" data-val-id="${id}" data-val-kind="${isElec ? 'elec' : 'mech'}" title="Утвердить стандарт">утв.</button>
+        <button type="button" class="val-q-no" data-val-act="reject" data-val-id="${id}" data-val-kind="${isElec ? 'elec' : 'mech'}" title="Отклонить (деактивировать)">откл.</button>
+      </div>` : isPastWeek ? '' : `<div class="cil-quick">
         <button type="button" data-sch-fill="all" data-row-id="${id}" title="Все смены недели">все</button>
         <button type="button" data-sch-fill="day" data-row-id="${id}" title="Только дневные смены">день</button>
         <button type="button" data-sch-fill="night" data-row-id="${id}" title="Только ночные смены">ночь</button>
@@ -758,8 +780,22 @@ function renderScheduleRow(row, dateByDayIdx, num, zone, isElec) {
     const dateStr = dateByDayIdx[d.idx] || '';
     ['day', 'night'].forEach(shift => {
       const isPast = isPastWeek || (!!dateStr && isShiftPast(dateStr, shift));
-      const on = isOn(d.idx, shift);
       const shiftName = shift === 'day' ? 'день' : 'ночь';
+      if (isValCell(dateStr, shift)) {
+        // Смена валидации: проверка обязательна, в расписании не снимается
+        html += `<td class="${cilTdClass(shift, dateStr === curDate && !isPastWeek && schState.weekOffset === 0, isPast ? 'cil-past' : '')}">
+          <span class="cil-plan cil-plan-${shift} on cil-plan-val" title="${escapeAttr(`${d.name} · ${shiftName} — валидация: проверка каждую смену`)}">${CIL_ICONS.check}</span>
+        </td>`;
+        return;
+      }
+      if (valWeek && !member) {
+        // Пока идёт валидация, остальные смены задаются после утверждения
+        html += `<td class="${cilTdClass(shift, dateStr === curDate && !isPastWeek && schState.weekOffset === 0, isPast ? 'cil-past' : '')}">
+          <span class="cil-na" title="Смены по расписанию задаются после утверждения">—</span>
+        </td>`;
+        return;
+      }
+      const on = isOn(d.idx, shift);
       const tip = isPast
         ? `${d.name} · ${shiftName} — ${isPastWeek ? 'прошедшая неделя, только просмотр' : 'смена уже прошла'}`
         : `${d.name} · ${shiftName}`;
@@ -848,6 +884,10 @@ function bindScheduleCells() {
   wrap.querySelectorAll('.cil-plan').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
+      if (btn.classList.contains('cil-plan-val')) {
+        showToast('Смена валидации: стандарт проверяется каждую смену до решения аналитика', true);
+        return;
+      }
       if (btn.dataset.locked === '1') {
         if ((schState.weekOffset || 0) < 0) {
           showToast('Прошедшая неделя — только просмотр', true);
@@ -887,7 +927,7 @@ function bindScheduleCells() {
       const day = parseInt(th.dataset.schColDay, 10);
       const shift = th.dataset.schColShift;
       if (!schCellEditable(day, shift)) return;
-      const rows = schState.rows || [];
+      const rows = (schState.rows || []).filter(isSchRowMember);
       const allOn = rows.length && rows.every(r => (getSchRowFreq(r).schedule || []).some(x => x.day === day && x.shift === shift));
       rows.forEach(r => schSetCell(r.id, day, shift, !allOn));
       schAfterCellChange();

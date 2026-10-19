@@ -8,9 +8,9 @@
   margin-left: 6px;
   padding: 1px 8px;
   border-radius: 999px;
-  border: 1px dashed color-mix(in srgb, var(--accent-amber) 70%, transparent);
-  background: color-mix(in srgb, var(--accent-amber) 12%, transparent);
-  color: var(--accent-amber);
+  border: 1px dashed color-mix(in srgb, var(--accent-val) 70%, transparent);
+  background: color-mix(in srgb, var(--accent-val) 12%, transparent);
+  color: var(--accent-val);
   font-size: 10.5px;
   font-weight: 800;
   white-space: nowrap;
@@ -24,21 +24,48 @@
   color: var(--accent-red);
 }
 
-/* Строка чек-листа на валидации: лёгкая амберная заливка */
-tr.cil-row-val > td {
-  background-image: linear-gradient(color-mix(in srgb, var(--accent-amber) 7%, transparent), color-mix(in srgb, var(--accent-amber) 7%, transparent));
+/* Строка на валидации (Чек-лист и Расписание CL): фуксия по всей строке,
+   включая колонку «Машина / №» */
+.cil-table tbody tr.cil-row-val > td {
+  background: color-mix(in srgb, var(--accent-val) 7%, var(--bg-card));
+}
+.cil-table tbody tr.cil-row-val:hover > td {
+  background: color-mix(in srgb, var(--accent-val) 12%, var(--bg-card));
+}
+.cil-table tbody tr.cil-row-val > td.cil-c-zone {
+  --cil-z: var(--accent-val);
+  background: color-mix(in srgb, var(--accent-val) 18%, var(--bg-card));
+  color: var(--accent-val);
+}
+.cil-table tbody tr.cil-row-val > td.cil-c-zone small { color: var(--accent-val); opacity: .8; }
+.cil-table tbody tr.cil-row-val > td.cil-c-std,
+.cil-table tbody tr.cil-row-val > td.cil-c-norm,
+.cil-table tbody tr.cil-row-val > td.cil-c-cnt {
+  background: color-mix(in srgb, var(--accent-val) 11%, var(--bg-card));
+}
+/* Верхняя граница первой строки на валидации — отделяет блок временных */
+.cil-table tbody tr:not(.cil-row-val) + tr.cil-row-val > td {
+  border-top: 2px dashed color-mix(in srgb, var(--accent-val) 55%, transparent);
 }
 
-tr.cil-row-val > td.cil-c-std {
-  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--accent-amber) 70%, transparent);
+/* Смена валидации в Расписании CL: обязательная, не снимается */
+.cil-plan.cil-plan-val,
+.cil-plan.cil-plan-val.on {
+  background: var(--accent-val) !important;
+  border-color: var(--accent-val) !important;
+  color: #fff !important;
+  cursor: help;
 }
+.val-quick button { font-weight: 800; }
+.val-quick .val-q-ok { color: var(--accent-green); }
+.val-quick .val-q-no { color: var(--accent-red); }
 
 /* Блок в форме */
 .val-edit {
   padding: 12px;
-  border: 1px dashed color-mix(in srgb, var(--accent-amber) 60%, var(--border));
+  border: 1px dashed color-mix(in srgb, var(--accent-val) 60%, var(--border));
   border-radius: 10px;
-  background: color-mix(in srgb, var(--accent-amber) 6%, transparent);
+  background: color-mix(in srgb, var(--accent-val) 6%, transparent);
 }
 
 .val-toggle {
@@ -56,11 +83,11 @@ tr.cil-row-val > td.cil-c-std {
 
 .val-toggle input {
   margin-top: 3px;
-  accent-color: var(--accent-amber);
+  accent-color: var(--accent-val);
 }
 
 .val-toggle b {
-  color: var(--accent-amber);
+  color: var(--accent-val);
 }
 
 .val-days {
@@ -104,10 +131,10 @@ tr.cil-row-val > td.cil-c-std {
   align-items: center;
   gap: 16px;
   padding: 12px 16px;
-  border: 1px solid color-mix(in srgb, var(--accent-amber) 55%, var(--border));
-  border-left: 4px solid var(--accent-amber);
+  border: 1px solid color-mix(in srgb, var(--accent-val) 55%, var(--border));
+  border-left: 4px solid var(--accent-val);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--accent-amber) 8%, var(--bg-card));
+  background: color-mix(in srgb, var(--accent-val) 8%, var(--bg-card));
 }
 
 .val-banner-over {
@@ -124,7 +151,7 @@ tr.cil-row-val > td.cil-c-std {
 .val-banner-main b {
   display: block;
   font-size: 14px;
-  color: var(--accent-amber);
+  color: var(--accent-val);
 }
 
 .val-banner-over .val-banner-main b {

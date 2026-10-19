@@ -1281,6 +1281,15 @@ standards-table → toploss-redesign, pull requests #6–#9 цепочкой):
    normalizeValidation, isOnValidation, isValidationDay,
    validationStatus (js/data/standards.js);
    js/components/validation.js, css/components/validation.css.
+   ДОРАБОТКА: срок считается в СМЕНАХ (VALIDATION_SHIFTS = 14,
+   с текущей смены; поля fromShift/untilShift/decidedShift,
+   makeValidation, isValidationShift, valShiftIndex). Стандарт на
+   валидации сам стоит в Расписании CL последней строкой (смены
+   срока фуксией, не снимаются; кнопки +14 / утв. / откл.).
+   После срока без решения — проверка каждую смену до текущей.
+   «Утвердить» оставляет его в Расписании (inSchedule с этой
+   недели, смены задаёт аналитик). Цвет валидации — --accent-val
+   (фуксия), подсветка всей строки вместе с «Машина / №».
 8. Терминология: «технолог» → «аналитик» (стандартами и
    расписанием управляют аналитики участков) — везде.
 9. ЛИСТ ИСТОРИИ ИЗМЕНЕНИЙ: «Стандарты CL» → третий режим
