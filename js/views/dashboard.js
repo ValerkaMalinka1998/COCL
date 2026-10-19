@@ -326,7 +326,7 @@ function renderDashboardHead() {
   if (!bar) return;
   const tabs = [{ id: '', name: 'Общий' }].concat(getWorkshops().map(w => ({ id: w.id, name: w.name })));
   const scope = dashState.line ? dashState.line
-    : (dashboardWorkshop ? (getWorkshop(dashboardWorkshop)?.name || '') : 'весь завод');
+    : (dashboardWorkshop ? (getWorkshop(dashboardWorkshop)?.name || '') : 'вся фабрика');
   bar.innerHTML = `
     <div class="dash-title">Дашборд <small>${escapeHtml(scope)} · ${dashState.period === 'custom' && (dashState.from || dashState.to) ? (dashState.from ? fmtShortDate(dashState.from) : '…') + ' – ' + (dashState.to ? fmtShortDate(dashState.to) : 'сегодня') : DASH_PERIOD_LABELS[dashState.period]}</small></div>
     <span class="hist-sp"></span>
