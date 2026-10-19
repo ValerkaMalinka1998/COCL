@@ -722,7 +722,6 @@
   cursor: pointer;
 }
 .tl2-ib:hover { border-color: var(--accent-purple); }
-.tl2-ib.has-comment { color: var(--accent-amber); border-color: var(--accent-amber); }
 .tl2-hint { margin-top: 10px; font-size: 11px; color: var(--text-dim); }
 
 /* ============================================================ */

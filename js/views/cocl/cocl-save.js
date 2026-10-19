@@ -64,7 +64,7 @@ if (type === 'ChangeOver') {
         const val = inp?.value.trim() || '';
         if (val === '') { allFilled = false; return; }
 
-        const num = parseFloat(val);
+        const num = parseFloat(val.replace(',', '.'));
         const normStr = cell.dataset.norm;
         let inRange = null;
         let norm = null;
@@ -133,7 +133,7 @@ if (type === 'ChangeOver') {
   showMachineJournalNotice(items.filter(it => it.status === 'FAIL'), { line, source: 'Проверка COCL' });
 });
 
-$('#resetCheckBtn').addEventListener('click', resetCheckForm);
+$('#resetCheckBtn').addEventListener('click', () => editChecklistConditions());
 
 function resetCheckForm() {
   // Сброс полей
@@ -160,14 +160,15 @@ function resetCheckForm() {
   const summary = $('#coclSummaryView');
   if (summary) summary.style.display = 'none';
 
-  // Панель условий — снова видна, шаги по типу/цеху — скрыты
-  $('#coclSetupCard').style.display = '';
-  $('#checklistCard').style.display = 'none';
-  ['#brandsCard', '#changesCard', '#buildChecklistCard'].forEach(sel => {
+  // Снова экран условий
+  coclState.checking = false;
+  setCoclCheckingUi(false);
+  $('#coclLayout').style.display = '';
+  ['#brandsCard', '#changesCard'].forEach(sel => {
     const el = $(sel);
     if (el) el.style.display = 'none';
   });
   renderCoclLineContext('');
   renderCoclPartStep('');
-  updateCoclStepStates();
+  updateChecklist();
 }
