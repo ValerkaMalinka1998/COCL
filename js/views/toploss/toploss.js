@@ -96,7 +96,7 @@ function tlRowShiftStatuses(row, shifts, line, hidx) {
     if (st) return st;
     const w = getRowForWeek(row, tlWeekStartOf(date), line);
     const dow = new Date(date + 'T12:00:00').getDay();
-    const planned = w.member && (w.schedule || []).some(x => x.day === dow && x.shift === shift);
+    const planned = isValidationDay(row, date) || (w.member && (w.schedule || []).some(x => x.day === dow && x.shift === shift));
     return planned ? 'missed' : 'na';
   });
 }

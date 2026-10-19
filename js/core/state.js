@@ -26,7 +26,8 @@ const STORAGE_KEYS = {
   electronicParams: 'cl_electronic_params_v1',
   electronicBrandSchedule: 'cl_electronic_brandschedule_v1',
   customTriggers: 'cl_custom_triggers_v1',
-  scheduleWeeks: 'cl_schedule_weeks_v1'
+  scheduleWeeks: 'cl_schedule_weeks_v1',
+  changeLog: 'cl_change_log_v1'          // лист истории изменений стандартов
 };
 
 /* ============================================================

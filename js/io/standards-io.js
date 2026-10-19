@@ -486,6 +486,7 @@ async function parseStandardsExcelV3(file, targetLine) {
     importedStandards.push(newStandard);
     importIndex[`${oplNumber.toLowerCase()}|${machine}`] = newStandard;
     existing.push(newStandard);
+    addChangeLogEntry('mech', newStandard, 'added', 'Новый стандарт (импорт из Excel)');
     existingOplKeys.add(oplKey);
     result.added++;
   }

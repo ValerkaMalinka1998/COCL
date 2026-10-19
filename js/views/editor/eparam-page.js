@@ -95,6 +95,9 @@ function renderEparamPage() {
       : (p.paramName || 'Электронный параметр');
   }
 
+  const valBox = $('#epValidation');
+  if (valBox) valBox.innerHTML = epPageState.isNew ? '' : valBannerHtml(p, 'elec');
+
   // Крошки: Цех › Участок (Блок) › Линия
   const crumbs = $('#epPageCrumbs');
   if (crumbs) {
@@ -313,6 +316,7 @@ function renderEparamExtra(p) {
   const triggersHtml = renderTriggerChipsEditable(p.triggers || []);
 
   wrap.innerHTML = `
+    ${valEditBlockHtml(p, epPageState.isNew)}
     <div class="sv-full-extra-block">
       <div class="sv-full-extra-label">Применять к</div>
       <div class="sv-full-extra-chips">
@@ -558,6 +562,7 @@ $('#epPageSaveBtn')?.addEventListener('click', () => {
     triggers: p.triggers || [],
     topLosses: p.topLosses || [],
     active: p.active !== false,
+    validation: valReadEdit(existing ? existing.validation : p.validation),
     createdAt: existing?.createdAt || now,
     updatedAt: now
   };
@@ -566,10 +571,12 @@ $('#epPageSaveBtn')?.addEventListener('click', () => {
   if (idx !== -1) all[idx] = obj;
   else all.push(obj);
   setElectronicParams(all);
+  const logId = logRowChange('elec', existing || null, obj);
 
   const wasNew = epPageState.isNew;
   closeEparamPage(true);
   if (typeof refreshEditorElecTable === 'function') refreshEditorElecTable();
   showToast(wasNew ? 'Параметр добавлен' : 'Параметр обновлён');
+  askChangeReason(logId);
 });
 

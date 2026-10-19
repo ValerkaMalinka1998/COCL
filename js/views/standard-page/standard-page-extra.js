@@ -212,6 +212,7 @@ function renderSvFullExtra(st, isEdit) {
     .join('');
 
   wrap.innerHTML = `
+    ${valEditBlockHtml(st, svFullState.isNew)}
     <div class="sv-full-extra-block">
       <div class="sv-full-extra-label">Применять к</div>
       <div class="sv-full-extra-chips">
@@ -562,6 +563,7 @@ $('#svFullSaveBtn')?.addEventListener('click', () => {
     tool: toolEl ? toolEl.value.trim() : st.tool,
     controlType: migrateControlType(controlType, measurements),
     active: activeEl ? activeEl.checked : st.active,
+    validation: valReadEdit(st.validation),
     updatedAt: new Date().toISOString()
   };
   if (isNew) {
@@ -571,10 +573,13 @@ $('#svFullSaveBtn')?.addEventListener('click', () => {
 
   // Сохраняем в массив
   const idx = all.findIndex(s => s.id === id);
+  const before = idx !== -1 ? JSON.parse(JSON.stringify(all[idx])) : null;
   if (idx !== -1) all[idx] = updated;
   else all.push(updated);
 
   setStandards(all);
+  // Лист истории изменений: что поменялось → запись + уточнить причину
+  const logId = logRowChange('mech', before, updated);
 
   // Обновляем UI
   if (typeof refreshEditorMechTable === 'function') refreshEditorMechTable();
@@ -590,4 +595,5 @@ $('#svFullSaveBtn')?.addEventListener('click', () => {
   renderStandardFullView();
 
   showToast(isNew ? 'Стандарт создан' : 'Стандарт обновлён');
+  askChangeReason(logId);
 });

@@ -175,7 +175,7 @@ function refreshEditorMechTable() {
         <td class="et-c-check cil-z${zones[m]}"><input type="checkbox" class="et-check-row" data-std-id="${id}" ${isSelected ? 'checked' : ''}></td>
         <td class="et-c-opl"><button type="button" class="et-opl" data-open-view="${id}">${escapeHtml(st.oplNumber || '—')}</button></td>
         <td>
-          <button type="button" class="et-name" data-open-view="${id}">${escapeHtml(st.title || '—')}</button>
+          <button type="button" class="et-name" data-open-view="${id}">${escapeHtml(st.title || '—')}</button>${valChipHtml(st)}
           ${st.node ? `<div class="et-sub">${CIL_ICONS.gear}${escapeHtml(st.node)}</div>` : ''}
         </td>
         <td class="et-c-part">${st.nodePart ? `<span class="et-part-chip et-part-${st.nodePart.toLowerCase()}">${escapeHtml(st.nodePart)}</span>` : '<span class="et-dim">—</span>'}</td>

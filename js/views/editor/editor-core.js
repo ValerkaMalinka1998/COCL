@@ -159,6 +159,7 @@ function selectLine(line) {
   // Перерисовка таблиц
   if (typeof refreshEditorMechTable === 'function') refreshEditorMechTable();
   if (typeof refreshEditorElecTable === 'function') refreshEditorElecTable();
+  if (typeof refreshChangeLogView === 'function') refreshChangeLogView();
 
   closeLinePickerModal();
   showToast('Выбрана линия: ' + line);
@@ -171,7 +172,7 @@ function selectLine(line) {
 function updateEditorLineContext() {
   const line = localStorage.getItem('cl_editor_line') || '';
 
-  ['em', 'ee'].forEach(prefix => {
+  ['em', 'ee', 'el'].forEach(prefix => {
     const codeEl = $(`#${prefix}LinePillCode`);
     const crumbsEl = $(`#${prefix}EditorCrumbs`);
     const countersEl = $(`#${prefix}PartCounters`);
@@ -260,12 +261,19 @@ function updatePartCounters() {
     ee: getElectronicParamsForLine(line)
   };
 
-  ['em', 'ee'].forEach(prefix => {
-    const rows = sources[prefix];
+  // Лист изменений: число записей по части
+  const logRows = getChangeLogForLine(line, '');
+  if ($('#elCounterMaker')) $('#elCounterMaker').textContent = logRows.filter(e => e.part === 'Maker').length;
+  if ($('#elCounterPacker')) $('#elCounterPacker').textContent = logRows.filter(e => e.part === 'Packer').length;
+
+  ['em', 'ee', 'el'].forEach(prefix => {
+    const rows = sources[prefix] || [];
     const mk = $(`#${prefix}CounterMaker`);
     const pk = $(`#${prefix}CounterPacker`);
-    if (mk) mk.textContent = count(rows, 'Maker');
-    if (pk) pk.textContent = count(rows, 'Packer');
+    if (prefix !== 'el') {
+      if (mk) mk.textContent = count(rows, 'Maker');
+      if (pk) pk.textContent = count(rows, 'Packer');
+    }
 
     // Синхронизируем активное состояние переключателя с текущим фильтром
     const switchEl = $(`#${prefix}PartCounters`);
@@ -284,18 +292,18 @@ function updatePartCounters() {
 
 function switchEditorModeInline(mode) {
   // Подсветка кнопок в обеих панелях
-  document.querySelectorAll('#emModeSwitch .editor-mode-inline-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.mode === mode);
-  });
-  document.querySelectorAll('#eeModeSwitch .editor-mode-inline-btn').forEach(btn => {
+  if (!['mech', 'elec', 'log'].includes(mode)) mode = 'mech';
+  document.querySelectorAll('#emModeSwitch .editor-mode-inline-btn, #eeModeSwitch .editor-mode-inline-btn, #elModeSwitch .editor-mode-inline-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.mode === mode);
   });
 
   // Показ панелей (работает ВСЕГДА, даже без линии)
   const mechView = $('#editorMechView');
   const elecView = $('#editorElecView');
-  if (mechView) mechView.style.display = (mode === 'elec') ? 'none' : 'block';
+  const logView = $('#editorLogView');
+  if (mechView) mechView.style.display = (mode === 'mech') ? 'block' : 'none';
   if (elecView) elecView.style.display = (mode === 'elec') ? 'block' : 'none';
+  if (logView) logView.style.display = (mode === 'log') ? 'block' : 'none';
 
   try { localStorage.setItem('cl_editor_mode', mode); } catch (e) {}
 
@@ -304,7 +312,9 @@ function switchEditorModeInline(mode) {
   updatePartCounters();
 
   // Обновить таблицы
-  if (mode === 'elec') {
+  if (mode === 'log') {
+    if (typeof refreshChangeLogView === 'function') refreshChangeLogView();
+  } else if (mode === 'elec') {
     if (typeof refreshEditorElecTable === 'function') refreshEditorElecTable();
   } else {
     if (typeof refreshEditorMechTable === 'function') refreshEditorMechTable();
@@ -382,7 +392,9 @@ function bindPartSwitchHandlers(containerId, prefix) {
       if (sel) sel.value = part;
 
       // Перерисовка таблицы
-      if (prefix === 'em') {
+      if (prefix === 'el') {
+        if (typeof refreshChangeLogView === 'function') refreshChangeLogView();
+      } else if (prefix === 'em') {
         if (typeof refreshEditorMechTable === 'function') refreshEditorMechTable();
       } else {
         if (typeof refreshEditorElecTable === 'function') refreshEditorElecTable();
@@ -393,6 +405,7 @@ function bindPartSwitchHandlers(containerId, prefix) {
 
 bindPartSwitchHandlers('emPartCounters', 'em');
 bindPartSwitchHandlers('eePartCounters', 'ee');
+bindPartSwitchHandlers('elPartCounters', 'el');
 
 /* Крошки — клик по цеху → открыть модалку */
 document.addEventListener('click', (e) => {
@@ -628,14 +641,17 @@ function toggleStandardActive(id, newValue) {
     }
   }
 
+  const before = JSON.parse(JSON.stringify(st));
   st.active = willBeActive;
   st.updatedAt = new Date().toISOString();
   setStandards(all);
+  const logId = logRowChange('mech', before, st);
 
   refreshEditorMechTable();
   if (typeof updatePartCounters === 'function') updatePartCounters();
 
   showToast(willBeActive ? 'Стандарт активирован' : 'Стандарт деактивирован');
+  askChangeReason(logId);
 }
 
 /* ============================================================
@@ -653,12 +669,14 @@ function copyStandardNew(id) {
   copy.number = '';
   // Копия — новый стандарт: в расписание его добавляют отдельно
   copy.inSchedule = false;
+  copy.validation = null;   // копия — новый стандарт, валидацию ставим заново
   copy.frequency = { type: 'weekly', schedule: [], shifts: ['day', 'night'], daysOfWeek: [], dates: [], timeWindows: [] };
   copy.createdAt = new Date().toISOString();
   copy.updatedAt = new Date().toISOString();
 
   all.push(copy);
   setStandards(all);
+  addChangeLogEntry('mech', copy, 'added', `Новый стандарт (копия ${st.oplNumber || st.title})`);
 
   refreshEditorMechTable();
   if (typeof updatePartCounters === 'function') updatePartCounters();
@@ -677,12 +695,14 @@ function deleteStandardNew(id) {
   if (!confirm(`Удалить стандарт "${st.oplNumber || st.title}"?`)) return;
 
   setStandards(getStandards().filter(s => s.id !== id));
+  const logId = addChangeLogEntry('mech', st, 'removed', 'Стандарт удалён');
 
   refreshEditorMechTable();
   if (typeof updatePartCounters === 'function') updatePartCounters();
   if (typeof fillEditorFilters === 'function') fillEditorFilters();
 
   showToast('Стандарт удалён');
+  askChangeReason(logId);
 }
 
 /* ============================================================

@@ -350,21 +350,25 @@ function renderClMatrix() {
 
   // Шаблон, действовавший на этой неделе, + разовые правки недели
   const isMember = (row) => getRowForWeek(row, weekStartForRows, clState.line).member;
+  // На валидации — в чек-листе всю неделю, где идёт валидация
+  const inValidation = (row) => weekDaysForRows.some(d => isValidationDay(row, d));
 
   let rows = [];
   if (clState.mode === 'mech') {
     rows = getStandards()
       .filter(s => s.line === clState.line)
       .filter(s => s.active !== false || checkedIds.has(s.id))
-      .filter(s => isMember(s) || checkedIds.has(s.id))
+      .filter(s => isMember(s) || inValidation(s) || checkedIds.has(s.id))
       .filter(s => !clState.part || s.nodePart === clState.part);
   } else {
     rows = getElectronicParamsForLine(clState.line)
       .filter(p => p.active !== false || checkedIds.has(p.id))
-      .filter(p => isMember(p) || checkedIds.has(p.id));
+      .filter(p => isMember(p) || inValidation(p) || checkedIds.has(p.id));
   }
 
+  // Стандарты на валидации — последними
   rows = cilSortRows(rows);
+  rows = [...rows.filter(r => !isOnValidation(r)), ...rows.filter(r => isOnValidation(r))];
 
   clState.rows = rows;
   updateClPanelCount();
@@ -522,7 +526,7 @@ function clRowCells(row, dateByDayIdx, hist) {
   CIL_DAYS.forEach(d => {
     const dateStr = dateByDayIdx[d.idx];
     ['day', 'night'].forEach(shift => {
-      const planned = schedule.some(x => x.day === d.idx && x.shift === shift);
+      const planned = schedule.some(x => x.day === d.idx && x.shift === shift) || isValidationDay(row, dateStr);
       const letter = getShiftsForDate(dateStr)[shift];
       const existing = hist.cell.get(`${dateStr}|${letter}|${row.id}`);
       const draft = clState.quickDraft[`${row.id}|${dateStr}|${shift}`];
@@ -573,10 +577,11 @@ function renderClRow(row, num, zone, cells, hist, isElec) {
     ? `<span class="cil-std-name">${escapeHtml(title)}</span>`
     : `<button type="button" class="cil-std-name cil-std-link" data-cl-view="${escapeAttr(row.id)}" title="Открыть стандарт">${escapeHtml(title)}</button>`;
 
-  let html = `<tr class="cil-row" data-row-id="${escapeAttr(row.id)}">
+  const valOn = isOnValidation(row);
+  let html = `<tr class="cil-row${valOn ? ' cil-row-val' : ''}" data-row-id="${escapeAttr(row.id)}">
     <td class="cil-c-zone cil-z${zone}">${escapeHtml(machine)}<small>№ ${num}</small></td>
     <td class="cil-c-std">
-      <div class="cil-std-title"><span class="cil-std-m">${escapeHtml(machine)} ·</span>${nameHtml}${devBadge}</div>
+      <div class="cil-std-title"><span class="cil-std-m">${escapeHtml(machine)} ·</span>${nameHtml}${devBadge}${valOn ? valChipHtml(row) : ''}</div>
       <div class="cil-std-sub">
         ${row.oplNumber ? `<span class="cil-opl">${escapeHtml(row.oplNumber)}</span>` : ''}
         ${row.node ? `<span class="cil-node">${CIL_ICONS.gear}${escapeHtml(row.node)}</span>` : ''}
@@ -939,10 +944,3 @@ $('#clPartSwitch')?.addEventListener('click', (e) => {
 
 $('#clStartCheckBtn')?.addEventListener('click', startClCheck);
 $('#clStopCheckBtn')?.addEventListener('click', stopClCheck);
-/* Сворачивание блока «Как проверять» в модалке быстрой проверки */
-document.addEventListener('click', (e) => {
-  const head = e.target.closest('#qcControlDescToggle');
-  if (!head) return;
-  const block = document.getElementById('qcControlDescBlock');
-  if (block) block.classList.toggle('expanded');
-});
