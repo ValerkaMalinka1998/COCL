@@ -1,0 +1,176 @@
+/* ============================================================ */
+/* === СЛАЙДЕР ФОТО СТАНДАРТА ================================= */
+/* ============================================================ */
+
+.psl {
+  outline: none;
+}
+
+.psl-stage {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-input);
+  touch-action: pan-y;
+}
+
+.psl:focus-visible .psl-stage {
+  border-color: var(--accent-cyan);
+}
+
+.psl-track {
+  display: flex;
+  height: 100%;
+  transition: transform 0.28s ease;
+}
+
+.psl-slide {
+  position: relative;
+  flex: 0 0 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+}
+
+.psl-slide img,
+.psl-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.psl-miss {
+  position: absolute;
+  inset: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+  background: repeating-linear-gradient(45deg, var(--bg-input), var(--bg-input) 8px, var(--bg-hover) 8px, var(--bg-hover) 16px);
+}
+
+.psl-miss small {
+  max-width: 90%;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.psl-nav {
+  position: absolute;
+  top: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin-top: -17px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(10, 20, 50, 0.55);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.psl-nav:hover {
+  opacity: 1;
+  background: rgba(10, 20, 50, 0.8);
+}
+
+.psl-prev {
+  left: 8px;
+}
+
+.psl-next {
+  right: 8px;
+}
+
+.psl-count {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(10, 20, 50, 0.6);
+  color: #fff;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.psl-name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 14px 10px 6px;
+  background: linear-gradient(transparent, rgba(10, 20, 50, 0.6));
+  color: #fff;
+  font-size: 11.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.psl-del {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent-red);
+  color: #fff;
+  cursor: pointer;
+}
+
+.psl-thumbs {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.psl-thumb {
+  position: relative;
+  flex: 0 0 56px;
+  height: 42px;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background: var(--bg-input);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s, border-color 0.15s;
+}
+
+.psl-thumb .psl-miss {
+  font-size: 0;
+}
+
+.psl-thumb:hover {
+  opacity: 1;
+}
+
+.psl-thumb.active {
+  border-color: var(--accent-cyan);
+  opacity: 1;
+}

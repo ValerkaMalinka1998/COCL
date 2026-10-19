@@ -9,49 +9,16 @@
    Фото
    ============================================================ */
 
-function renderSvFullPhotos(st, isEdit) {
+function renderSvFullPhotos(st, isEdit, index) {
   const wrap = $('#svFullPhotos');
   if (!wrap) return;
 
   const photos = Array.isArray(st.photos) ? st.photos : [];
+  const sliderHtml = photos.length
+    ? photoSliderHtml(st, { editable: isEdit, index })
+    : '<div class="sv-full-photos-empty">Фотографий пока нет</div>';
 
-  if (!photos.length && !isEdit) {
-    wrap.innerHTML = '<div class="sv-full-photos-empty">Фотографий пока нет</div>';
-    return;
-  }
-
-  // Сетка миниатюр
-  let gridHtml = '';
-  if (photos.length) {
-    gridHtml = photos.map((name, idx) => {
-      const path = getPhotoPath(st, name);
-      return `
-        <div class="sv-full-photo" data-photo-idx="${idx}" title="${escapeAttr(name)}">
-          <img src="${escapeAttr(path)}" alt="${escapeAttr(name)}"
-               onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-          <div class="photo-missing" style="display:none">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-          </div>
-          ${isEdit ? `
-            <button type="button" class="sv-full-photo-remove" data-remove-photo="${idx}" title="Удалить фото">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
-          ` : ''}
-        </div>
-      `;
-    }).join('');
-  } else {
-    gridHtml = '<div class="sv-full-photos-empty">Фотографий пока нет</div>';
-  }
-
-  // Форма добавления
+  // Форма добавления (правка)
   const addFormHtml = isEdit ? `
     <div class="sv-photo-add-form">
       <textarea id="svf_newPhotoName" rows="2"
@@ -63,75 +30,47 @@ function renderSvFullPhotos(st, isEdit) {
     </div>
   ` : '';
 
-  wrap.innerHTML = gridHtml + addFormHtml;
+  wrap.innerHTML = sliderHtml + addFormHtml;
 
-  // === Обработчики ===
+  bindPhotoSlider(wrap, st, {
+    onRemove: isEdit ? (idx) => {
+      if (!st.photos || idx < 0 || idx >= st.photos.length) return;
+      if (!confirm('Удалить фото "' + st.photos[idx] + '"?')) return;
+      st.photos.splice(idx, 1);
+      renderSvFullPhotos(st, true, Math.min(idx, st.photos.length - 1));
+    } : null
+  });
 
-  // Открытие лайтбокса (только в режиме просмотра)
-  if (!isEdit) {
-    wrap.querySelectorAll('[data-photo-idx]').forEach(el => {
-      el.addEventListener('click', () => {
-        const idx = parseInt(el.dataset.photoIdx, 10);
-        if (typeof openLightbox === 'function') openLightbox(st, idx);
-      });
-    });
-  }
+  if (!isEdit) return;
 
-  // Удаление фото (только в режиме редактирования)
-  if (isEdit) {
-    wrap.querySelectorAll('[data-remove-photo]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const idx = parseInt(btn.dataset.removePhoto, 10);
-        if (!st.photos || idx < 0 || idx >= st.photos.length) return;
-        if (!confirm('Удалить фото "' + st.photos[idx] + '"?')) return;
-        st.photos.splice(idx, 1);
-        renderSvFullPhotos(st, true);
-      });
-    });
+  // Добавление фото
+  $('#svf_addPhotoBtn')?.addEventListener('click', () => {
+    const input = $('#svf_newPhotoName');
+    if (!input) return;
 
-    // Добавление фото
-    const addBtn = $('#svf_addPhotoBtn');
-    if (addBtn) {
-      addBtn.addEventListener('click', () => {
-        const input = $('#svf_newPhotoName');
-        if (!input) return;
-        const raw = input.value || '';
-
-        // Разбиваем по запятой / переносам строк
-        const names = raw.split(/[\n,]+/).map(s => s.trim()).filter(s => s.length > 0);
-        if (!names.length) {
-          showToast('Введите хотя бы одно имя файла', true);
-          return;
-        }
-
-        // Инициализируем массив
-        if (!Array.isArray(st.photos)) st.photos = [];
-
-        let added = 0;
-        let skipped = 0;
-        names.forEach(name => {
-          if (st.photos.includes(name)) {
-            skipped++;
-          } else {
-            st.photos.push(name);
-            added++;
-          }
-        });
-
-        input.value = '';
-        renderSvFullPhotos(st, true);
-
-        if (added > 0 && skipped === 0) {
-          showToast('Добавлено: ' + added);
-        } else if (added > 0 && skipped > 0) {
-          showToast('Добавлено: ' + added + ', пропущено дубликатов: ' + skipped);
-        } else if (added === 0 && skipped > 0) {
-          showToast('Все ' + skipped + ' уже добавлены', true);
-        }
-      });
+    // Разбиваем по запятой / переносам строк
+    const names = (input.value || '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    if (!names.length) {
+      showToast('Введите хотя бы одно имя файла', true);
+      return;
     }
-  }
+
+    if (!Array.isArray(st.photos)) st.photos = [];
+    let added = 0;
+    let skipped = 0;
+    names.forEach(name => {
+      if (st.photos.includes(name)) skipped++;
+      else { st.photos.push(name); added++; }
+    });
+
+    input.value = '';
+    // Показать первое из добавленных
+    renderSvFullPhotos(st, true, added ? st.photos.length - added : 0);
+
+    if (added > 0 && skipped === 0) showToast('Добавлено: ' + added);
+    else if (added > 0) showToast('Добавлено: ' + added + ', пропущено дубликатов: ' + skipped);
+    else showToast('Все ' + skipped + ' уже добавлены', true);
+  });
 }
 
 /* ============================================================
