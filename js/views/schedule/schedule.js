@@ -136,7 +136,7 @@ function getFilteredScheduleRows() {
     rows = getStandards()
       .filter(s => s.line === schState.line)
       .filter(s => s.active !== false)
-      .filter(s => !schState.part || s.nodePart === schState.part)
+      .filter(s => !linePartFilter(schState.line, schState.part) || s.nodePart === schState.part)
       .filter(isSchRowShown);
   } else {
     rows = getElectronicParamsForLine(schState.line)
@@ -220,6 +220,9 @@ function fillSchMachineFilter(rows) {
 /* --- Рендер матрицы расписания --- */
 function renderScheduleMatrix() {
   const wrap = $('#schMatrixWrap');
+  // Maker / Packer — только для механики на линиях SMD
+  const partSw = $('#schPartSwitch');
+  if (partSw) partSw.style.display = (schState.mode === 'mech' && lineHasParts(schState.line)) ? '' : 'none';
   const toolbar = $('#schMatrixToolbar');
   if (!wrap) return;
 
@@ -237,7 +240,7 @@ function renderScheduleMatrix() {
   const allRows = schState.mode === 'mech'
     ? getStandards()
         .filter(s => s.line === schState.line && s.active !== false)
-        .filter(s => !schState.part || s.nodePart === schState.part)
+        .filter(s => !linePartFilter(schState.line, schState.part) || s.nodePart === schState.part)
         .filter(isSchRowShown)
     : getElectronicParamsForLine(schState.line)
         .filter(p => p.active !== false)

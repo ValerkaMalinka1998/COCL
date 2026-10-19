@@ -234,3 +234,15 @@ function getAllAreas() {
 function getLineMachines() {
   return load(STORAGE_KEYS.lineMachines, {...DEFAULT_LINE_MACHINES});
 }
+
+/* ============================================================
+   Часть линии (Maker / Packer) есть только у линий SMD.
+   В PMD и FMD её нет: поле скрыто, фильтр по части не действует.
+   ============================================================ */
+function lineHasParts(line) {
+  return !!line && getWorkshopIdForLine(line) === 'smd';
+}
+/* Фильтр по части для линии: у PMD / FMD всегда «все» */
+function linePartFilter(line, part) {
+  return lineHasParts(line) ? (part || '') : '';
+}

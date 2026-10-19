@@ -145,7 +145,7 @@ function refreshEditorMechTable() {
   standards.forEach(s => { perMachine[s.machine || '—'] = (perMachine[s.machine || '—'] || 0) + 1; });
 
   let html = `
-    <table class="et-table">
+    <table class="et-table${lineHasParts(localStorage.getItem('cl_editor_line') || '') ? '' : ' et-no-part'}">
       <thead><tr>
         <th class="et-c-check"><input type="checkbox" id="emCheckAll" title="Выделить все на странице"></th>
         <th class="et-c-opl">OPL №</th>

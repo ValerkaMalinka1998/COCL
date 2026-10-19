@@ -201,3 +201,6 @@
 .sidebar button.active .nav-icon svg {
   filter: drop-shadow(0 0 4px rgba(58, 166, 240, 0.6));
 }
+
+/* Линии PMD / FMD: части линии (Maker / Packer) нет — колонку скрываем */
+.et-table.et-no-part .et-c-part { display: none; }

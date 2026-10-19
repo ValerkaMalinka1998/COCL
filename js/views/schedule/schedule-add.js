@@ -59,7 +59,7 @@ function renderSchAddList() {
     allItems = getStandards()
       .filter(s => s.line === schState.line)
       .filter(s => s.active !== false)
-      .filter(s => !schState.part || s.nodePart === schState.part)
+      .filter(s => !linePartFilter(schState.line, schState.part) || s.nodePart === schState.part)
       .map(s => ({
         id: s.id,
         title: s.title || '—',

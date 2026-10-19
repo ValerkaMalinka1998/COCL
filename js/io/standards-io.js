@@ -226,7 +226,7 @@ $('#editorExportBtn')?.addEventListener('click', async () => {
     ['ЛИСТ «СТАНДАРТЫ» — ОБЯЗАТЕЛЬНЫЕ ПОЛЯ:'],
     ['============================================================'],
     ['  • OPL № — уникален в пределах линии + машины.'],
-    ['  • Часть линии — Maker или Packer.'],
+    ['  • Часть линии — Maker или Packer (только линии SMD; для PMD и FMD оставьте пустой).'],
     ['  • Машина — обозначение (SE, M1, …).'],
     ['  • Узел — свободный текст.'],
     ['  • Название — краткое описание.'],
@@ -384,12 +384,12 @@ async function parseStandardsExcelV3(file, targetLine) {
     const rowErrors = [];
     if (!oplNumber)   rowErrors.push('пустой OPL №');
     if (!machine)     rowErrors.push('пустая машина');
-    if (!nodePart)    rowErrors.push('не указана часть линии');
+    if (!nodePart && lineHasParts(targetLine)) rowErrors.push('не указана часть линии');
     if (!node)        rowErrors.push('пустой узел');
     if (!title)       rowErrors.push('пустое название');
     if (!controlType) rowErrors.push('не указан тип контроля');
 
-    if (nodePart && !VALID_PARTS.includes(nodePart)) {
+    if (nodePart && lineHasParts(targetLine) && !VALID_PARTS.includes(nodePart)) {
       rowErrors.push(`часть линии «${nodePart}» — допустимо Maker / Packer`);
     }
     if (controlType && !VALID_CONTROL.includes(controlType)) {
@@ -464,7 +464,7 @@ async function parseStandardsExcelV3(file, targetLine) {
       title,
       line: targetLine,
       node,
-      nodePart,
+      nodePart: lineHasParts(targetLine) ? nodePart : '',
       controlType,
       work: (workRaw === 'Stop') ? 'Stop' : 'Run',
       timeFrom: timeFromRaw || '',
@@ -669,7 +669,7 @@ async function editorDownloadTemplate() {
     [''],
     ['ОБЯЗАТЕЛЬНЫЕ ПОЛЯ на листе «Стандарты»:'],
     ['  • OPL № — уникален в пределах линии + машины'],
-    ['  • Часть линии — Maker или Packer'],
+    ['  • Часть линии — Maker или Packer (только линии SMD; для PMD и FMD оставьте пустой)'],
     ['  • Машина — обозначение (SE, MAX, …)'],
     ['  • Узел, Название, Линия, Тип контроля'],
     ['  • Тип контроля: ok_not_ok / value_input / range_input'],
