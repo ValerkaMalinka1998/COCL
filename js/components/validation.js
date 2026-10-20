@@ -6,7 +6,7 @@
    ============================================================ */
 
 // Варианты срока в сменах (2 смены = сутки)
-const VAL_SHIFT_OPTIONS = [14, 28, 42, 60];
+const VAL_SHIFT_OPTIONS = [28, 42, 56, 84];
 
 function valShiftLabel(n) {
   return `${n} ${pluralRu(n, 'смена', 'смены', 'смен')}`;
@@ -115,7 +115,7 @@ function valBannerHtml(row, kind) {
           · проверок ${st.n}${st.fail ? `, <em>отклонений ${st.fail}</em>` : ''} · проверяется каждую смену</span>
       </div>
       <div class="val-banner-acts">
-        <button type="button" class="btn btn-secondary btn-sm" data-val-act="extend" data-val-id="${id}" data-val-kind="${kind}" title="Продлить на 14 смен (7 суток)">+14 смен</button>
+        <button type="button" class="btn btn-secondary btn-sm" data-val-act="extend" data-val-id="${id}" data-val-kind="${kind}" title="Продлить на 28 смен (14 суток)">+28 смен</button>
         <button type="button" class="btn btn-secondary btn-sm val-btn-reject" data-val-act="reject" data-val-id="${id}" data-val-kind="${kind}">Отклонить</button>
         <button type="button" class="btn btn-primary btn-sm" data-val-act="approve" data-val-id="${id}" data-val-kind="${kind}">Утвердить</button>
       </div>
@@ -136,9 +136,9 @@ document.addEventListener('click', (e) => {
   const v = row.validation = normalizeValidation(row.validation);
 
   if (act === 'extend') {
-    // +14 смен (7 суток) от конца срока, а если он прошёл — от текущей смены
+    // +28 смен (14 суток) от конца срока, а если он прошёл — от текущей смены
     const base = Math.max(valShiftIndex(v.until, v.untilShift), curIdx - 1);
-    const end = valShiftFromIndex(base + 14);
+    const end = valShiftFromIndex(base + VALIDATION_SHIFTS);
     v.until = end.date;
     v.untilShift = end.shift;
   } else if (act === 'approve') {
@@ -173,7 +173,7 @@ document.addEventListener('click', (e) => {
 
   if (act === 'approve') {
     showToast('Утверждён — отметьте смены в «Расписании CL»');
-  } else showToast(act === 'reject' ? 'Отклонён и деактивирован' : 'Срок продлён на 14 смен');
+  } else showToast(act === 'reject' ? 'Отклонён и деактивирован' : 'Срок продлён на 28 смен');
 
   if (typeof renderStandardFullView === 'function' && !isElec && svFullState.standardId === row.id) renderStandardFullView();
   if (isElec && typeof epPageState !== 'undefined' && epPageState.data && epPageState.data.id === row.id) {

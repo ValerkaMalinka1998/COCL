@@ -22,7 +22,7 @@ function createEmptyStandard() {
     controlType: '',
 
     // --- НОВОЕ: работа и время проверки ---
-    work: 'Run',              // 'Run' | 'Stop'
+    work: 'Run',              // 'Run' | 'Stop' | 'CIL'
     timeFrom: '',             // '09:10'
     timeTo: '',               // '10:00'
     // --- НОВОЕ: периодичность (расписание проверок) ---
@@ -157,6 +157,54 @@ function parseNorm(normStr) {
   return null;
 }
 
+/* Какого типа значение: 'variable' (92 ± 5) | 'interval' (5 до 8) | 'fixed' (одно число)
+   | null — не распознано. Нужен, чтобы в тип контроля не попадали значения чужого типа. */
+function classifyNormValue(raw) {
+  const s = String(raw == null ? '' : raw).trim();
+  if (!s) return null;
+  const num = (x) => {
+    const t = String(x).replace(',', '.').replace(/[^\d.\-+]/g, '');
+    return t !== '' && t !== '-' && t !== '+' && !isNaN(parseFloat(t));
+  };
+  const pm = s.split(/\s*(?:±|\+-)\s*/);
+  if (pm.length === 2 || /±|\+-/.test(s)) return pm.length === 2 && num(pm[0]) && num(pm[1]) ? 'variable' : null;
+  let r = s.replace(/\s+до\s+/gi, ' | ').replace(/\s*…\s*/g, ' | ').replace(/\s*–\s*/g, ' | ');
+  if (!r.includes('|')) r = r.replace(/\s+-\s+/, ' | ');
+  let parts = r.split('|').map(x => x.trim()).filter(Boolean);
+  if (parts.length === 1) {
+    const d = s.split(/(?<=[0-9.])-(?=-?[0-9.])/);
+    if (d.length === 2) parts = d.map(x => x.trim());
+  }
+  if (parts.length === 2) return num(parts[0]) && num(parts[1]) ? 'interval' : null;
+  return num(s) ? 'fixed' : null;
+}
+
+/* Вид работы проверки: 'Run' | 'Stop' | 'CIL' (чистка/осмотр/смазка). Всё прочее → Run. */
+function normWork(w) {
+  return w === 'Stop' ? 'Stop' : (w === 'CIL' ? 'CIL' : 'Run');
+}
+const WORK_CYCLE = ['Run', 'Stop', 'CIL'];
+
+const NORM_TYPE_HINT = {
+  fixed: 'одно значение, например 92',
+  variable: 'формат «92 ± 5»',
+  interval: 'формат «5 до 8»'
+};
+const NORM_TYPE_NAME = { fixed: 'Фиксированный', variable: 'Вариабельный', interval: 'Контролируемый интервал' };
+
+/* Текст ошибки, если значение не подходит типу контроля; '' — всё в порядке.
+   Фиксированный: не принимает «92 ± 5» и «5 до 8» (текст допустим — это ОК/Не ОК).
+   Вариабельный и интервал: принимают только свой формат. */
+function normTypeError(type, raw) {
+  const s = String(raw == null ? '' : raw).trim();
+  if (!s || !NORM_TYPE_HINT[type]) return '';
+  const kind = classifyNormValue(s);
+  if (type === 'fixed') {
+    if (kind !== 'variable' && kind !== 'interval') return '';
+  } else if (kind === type) return '';
+  return `«${s}» не подходит к типу «${NORM_TYPE_NAME[type]}» — ${NORM_TYPE_HINT[type]}`;
+}
+
 /* ============================================================
    ТИПЫ КОНТРОЛЯ — миграция на 3 канонических типа
    fixed       — Фиксированный (жёсткое значение без допуска; точки опциональны)
@@ -249,8 +297,8 @@ function setHistory(v) { save(STORAGE_KEYS.history, v); }
    строка проверяется каждую смену (с from) и идёт в чек-листе последней.
    ============================================================ */
 
-// Срок валидации по умолчанию — 14 смен (7 суток), считая с текущей смены
-const VALIDATION_SHIFTS = 14;
+// Срок валидации по умолчанию и минимум для нового — 28 смен (14 суток), считая с текущей смены
+const VALIDATION_SHIFTS = 28;
 
 /* Номер смены от «эпохи»: сутки × 2 (+1 для ночи). Нужен, чтобы срок
    считался в сменах: начало и конец могут попадать на день или ночь. */

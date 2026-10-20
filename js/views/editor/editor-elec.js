@@ -442,7 +442,7 @@ async function parseElectronicParamsExcel(file, targetLine) {
     const p = {
       id, active,
       line, machine, nodePart: lineHasParts(line) ? nodePart : '', paramName,
-      work: work === 'Stop' ? 'Stop' : 'Run',
+      work: normWork(work),
       timeFrom, timeTo,
       controlType, normText,
       valuesByBrand,

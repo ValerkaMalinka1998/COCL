@@ -274,3 +274,6 @@
   color: var(--text-main);
   word-break: break-word;
 }
+
+/* Значение не подходит типу контроля */
+.bt-point-input.bt-point-bad { border-color: var(--accent-red); color: var(--accent-red); }

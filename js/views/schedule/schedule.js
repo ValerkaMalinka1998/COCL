@@ -415,7 +415,7 @@ function renderScheduleMatrix() {
     });
   });
 
-  // Клик по Run/Stop — переключить прямо в черновике расписания
+  // Клик по Run/Stop/CIL — переключить прямо в черновике расписания
   wrap.querySelectorAll('[data-work-toggle]').forEach(el => {
     el.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -423,7 +423,7 @@ function renderScheduleMatrix() {
       if (!rowId) return;
       if (isSchReadOnly()) return;
       const d = ensureSchDraft(rowId);
-      d.work = (d.work === 'Stop') ? 'Run' : 'Stop';
+      d.work = WORK_CYCLE[(WORK_CYCLE.indexOf(normWork(d.work)) + 1) % WORK_CYCLE.length];
       schState.dirty = true;
       updateSchSaveBtn();
       renderScheduleMatrix();
@@ -447,10 +447,16 @@ function getTimeWindowShift(from) {
   if (hh >= '21' || hh < '09') return 'night';
   return 'day';
 }
-/* Предустановки: окна по 30 минут, каждые 2 часа своей смены */
+/* Предустановки: проверка стандартов — первый час смены; CIL — середина смены (≈30 мин) */
 const TW_PRESETS = {
-  day: ['09:00', '11:00', '13:00', '15:00', '17:00', '19:00'],
-  night: ['21:00', '23:00', '01:00', '03:00', '05:00', '07:00']
+  day: [
+    { from: '09:00', to: '10:00', label: 'Проверка' },
+    { from: '13:00', to: '13:30', label: 'CIL' }
+  ],
+  night: [
+    { from: '21:00', to: '22:00', label: 'Проверка' },
+    { from: '03:00', to: '03:30', label: 'CIL' }
+  ]
 };
 let twDuration = 30;
 
@@ -519,11 +525,11 @@ function renderTimeWindowsList() {
   ['day', 'night'].forEach(shift => {
     const box = $(shift === 'day' ? '#twPresetsDay' : '#twPresetsNight');
     if (!box) return;
-    box.innerHTML = TW_PRESETS[shift].map(from => {
-      const to = twAddMinutes(from, 30);
+    box.innerHTML = TW_PRESETS[shift].map(({ from, to, label }) => {
       const on = has(from, to);
-      return `<button type="button" class="tw-preset${on ? ' active' : ''}" data-from="${from}" data-to="${to}">
-        ${on ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}${from}–${to}</button>`;
+      const cls = label === 'CIL' ? ' tw-preset-cil' : '';
+      return `<button type="button" class="tw-preset${cls}${on ? ' active' : ''}" data-from="${from}" data-to="${to}">
+        ${on ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}${from}–${to}<small class="tw-preset-label">${label}</small></button>`;
     }).join('');
   });
 
@@ -723,7 +729,7 @@ function ensureSchDraft(rowId) {
     daysOfWeek: [...(f.daysOfWeek || [])],
     dates: [...(f.dates || [])]
   };
-  const w = (f.work != null) ? f.work : (row && row.work === 'Stop' ? 'Stop' : 'Run');
+  const w = (f.work != null) ? f.work : normWork(row && row.work);
   if (w) d.work = w;
 
   schState.draft[rowId] = d;
@@ -738,8 +744,8 @@ function renderScheduleRow(row, dateByDayIdx, num, zone, isElec) {
   const title = isElec ? (row.paramName || '—') : (row.title || '—');
   const machine = row.machine || '—';
   const work = (freq.work != null)
-    ? (freq.work === 'Stop' ? 'Stop' : 'Run')
-    : (row.work === 'Stop' ? 'Stop' : 'Run');
+    ? normWork(freq.work)
+    : normWork(row.work);
   const id = escapeAttr(row.id);
   const isPastWeek = (schState.weekOffset || 0) < 0;
   const valWeek = isSchRowValidation(row);
@@ -759,7 +765,7 @@ function renderScheduleRow(row, dateByDayIdx, num, zone, isElec) {
       <div class="cil-std-sub">
         ${row.oplNumber ? `<span class="cil-opl">${escapeHtml(row.oplNumber)}</span>` : ''}
         ${row.node ? `<span class="cil-node">${CIL_ICONS.gear}${escapeHtml(row.node)}</span>` : ''}
-        <button type="button" class="cil-tag cil-tag-${work.toLowerCase()}" data-work-toggle="${id}" title="Переключить Run / Stop">${work.toUpperCase()}</button>
+        <button type="button" class="cil-tag cil-tag-${work.toLowerCase()}" data-work-toggle="${id}" title="Переключить Run → Stop → CIL">${work.toUpperCase()}</button>
         ${cilTimeChips(freq.timeWindows)}
         <button type="button" class="cil-tag cil-tag-add" data-tw-open="${id}" title="Задать время проверки">${freq.timeWindows && freq.timeWindows.length ? 'время' : '+ время'}</button>
       </div>

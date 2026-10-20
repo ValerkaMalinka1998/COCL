@@ -62,9 +62,9 @@ function cilTimeChips(timeWindows) {
   }).join('');
 }
 
-/* Метка Run / Stop */
+/* Метка Run / Stop / CIL */
 function cilWorkTag(work, attrs = '') {
-  const w = work === 'Stop' ? 'Stop' : 'Run';
+  const w = normWork(work);
   return `<span class="cil-tag cil-tag-${w.toLowerCase()}" ${attrs}>${w.toUpperCase()}</span>`;
 }
 
