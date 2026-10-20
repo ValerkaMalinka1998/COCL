@@ -15,7 +15,9 @@
      id, date (ISO), line, part ('Maker'|'Packer'|''),
      kind ('mech'|'elec'), refId, number, machine, node, title,
      action ('added'|'approved'|'changed'|'deactivated'|'activated'|'removed'|'manual'),
-     comment, author, auto (true — создана программой)
+     comment, author, auto (true — создана программой),
+     details (необязательно) — [{ label, from, to }] что именно изменилось;
+       у записей, созданных до появления поля, его нет
    }
 */
 
@@ -89,6 +91,16 @@ function getChangeLogForLine(line, part) {
   return rows.map((e, i) => ({ ...e, n: i + 1 }));
 }
 
+/* Записи одного стандарта / параметра в хронологическом порядке
+   (вкладка «История» на странице стандарта). Нумерация — своя, 1…N. */
+function getChangeLogForRef(kind, refId) {
+  if (!refId) return [];
+  const rows = getChangeLog()
+    .filter(e => e.refId === refId && (e.kind || 'mech') === kind)
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  return rows.map((e, i) => ({ ...e, n: i + 1 }));
+}
+
 /* ------------------------------------------------------------
    Что изменилось: сравнение старой и новой версии
    → { action, text } или null, если ничего не поменялось
@@ -99,13 +111,18 @@ function clJson(v) {
   return JSON.stringify(v);
 }
 
-function clBrandsDiff(oldList, newList, keyOf) {
-  const map = (arr) => {
+/* Сравнение норм по брендам. keyOf — ключ для сравнения, showOf — как
+   показать значение человеку (по умолчанию тот же ключ). Подробности
+   «было → стало» дописываются в массив details, если он передан. */
+function clBrandsDiff(oldList, newList, keyOf, showOf, details) {
+  const show = showOf || keyOf;
+  const map = (arr, fn) => {
     const m = {};
-    (arr || []).forEach(x => { m[x.brand || 'Остальные бренды'] = keyOf(x); });
+    (arr || []).forEach(x => { m[x.brand || 'Остальные бренды'] = fn(x); });
     return m;
   };
-  const a = map(oldList), b = map(newList);
+  const a = map(oldList, keyOf), b = map(newList, keyOf);
+  const sa = map(oldList, show), sb = map(newList, show);
   const brands = [...new Set([...Object.keys(a), ...Object.keys(b)])];
   const added = brands.filter(x => !(x in a));
   const removed = brands.filter(x => !(x in b));
@@ -114,7 +131,19 @@ function clBrandsDiff(oldList, newList, keyOf) {
   if (changed.length) parts.push('изменена норма (' + changed.join(', ') + ')');
   if (added.length) parts.push('добавлен бренд ' + added.join(', '));
   if (removed.length) parts.push('убран бренд ' + removed.join(', '));
+  if (details) {
+    changed.forEach(x => details.push({ label: 'норма (' + x + ')', from: sa[x] || '—', to: sb[x] || '—' }));
+    added.forEach(x => details.push({ label: 'добавлен бренд ' + x, from: '', to: sb[x] || '—' }));
+    removed.forEach(x => details.push({ label: 'убран бренд ' + x, from: sa[x] || '—', to: '' }));
+  }
   return parts;
+}
+
+/* Значение поля для строки «было → стало» */
+function clDetailText(v) {
+  if (v == null || v === '' || (Array.isArray(v) && !v.length)) return '—';
+  const s = (Array.isArray(v) ? v.join(', ') : String(v)).trim();
+  return s.length > 160 ? s.slice(0, 157) + '…' : s;
 }
 
 function describeRowChange(kind, oldRow, newRow) {
@@ -139,41 +168,63 @@ function describeRowChange(kind, oldRow, newRow) {
       ];
 
   const parts = [];
+  const details = [];   // [{ label, from, to }] — для вкладки «История» стандарта
   fields.forEach(([key, label]) => {
     if (clJson(oldRow[key]) !== clJson(newRow[key])) {
       if (key === 'controlType') {
         const lbl = (t) => (typeof controlTypeLabel === 'function' ? controlTypeLabel(t) : t);
         parts.push(`тип контроля: ${lbl(oldRow[key])} → ${lbl(newRow[key])}`);
+        details.push({ label, from: lbl(oldRow[key]) || '—', to: lbl(newRow[key]) || '—' });
       } else if (key === 'oplNumber') {
         parts.push(`OPL №: ${oldRow[key] || '—'} → ${newRow[key] || '—'}`);
+        details.push({ label, from: clDetailText(oldRow[key]), to: clDetailText(newRow[key]) });
       } else {
         parts.push(label);
+        // Top Losses хранятся служебными ID — для них показываем только сам факт
+        details.push(key === 'topLosses'
+          ? { label }
+          : { label, from: clDetailText(oldRow[key]), to: clDetailText(newRow[key]) });
       }
     }
   });
 
+  // Флажок «Всегда показывать в Change Over» (у старых записей поля может не быть)
+  if (kind !== 'elec' && !!oldRow.forceInChangeOver !== !!newRow.forceInChangeOver) {
+    parts.push('всегда показывать в Change Over');
+    details.push({
+      label: 'всегда показывать в Change Over',
+      from: oldRow.forceInChangeOver ? 'да' : 'нет',
+      to: newRow.forceInChangeOver ? 'да' : 'нет'
+    });
+  }
+
   if (kind === 'elec') {
     parts.push(...clBrandsDiff(oldRow.valuesByBrand, newRow.valuesByBrand,
-      x => [x.target, x.tolerance, x.min, x.max].join('|')));
+      x => [x.target, x.tolerance, x.min, x.max].join('|'),
+      x => (x.target !== '' && x.target != null) ? `${x.target} ± ${x.tolerance}` : `${x.min} … ${x.max}`,
+      details));
   } else {
     parts.push(...clBrandsDiff(oldRow.measurements, newRow.measurements,
-      x => (x.points || []).map(p => String(p.value || '').trim()).join('|')));
+      x => (x.points || []).map(p => String(p.value || '').trim()).join('|'),
+      x => (x.points || []).map(p => String(p.value || '').trim()).filter(Boolean).join('; '),
+      details));
   }
 
   if (wasActive && !isActive) {
-    return { action: 'deactivated', text: 'Деактивирован' + (parts.length ? '; изменено: ' + parts.join(', ') : '') };
+    return { action: 'deactivated', details, text: 'Деактивирован' + (parts.length ? '; изменено: ' + parts.join(', ') : '') };
   }
   if (!wasActive && isActive) {
-    return { action: 'activated', text: 'Снова в работе' + (parts.length ? '; изменено: ' + parts.join(', ') : '') };
+    return { action: 'activated', details, text: 'Снова в работе' + (parts.length ? '; изменено: ' + parts.join(', ') : '') };
   }
   if (!parts.length) return null;
   const text = 'Изменено: ' + parts.join(', ');
-  return { action: 'changed', text: text.charAt(0).toUpperCase() + text.slice(1) };
+  return { action: 'changed', details, text: text.charAt(0).toUpperCase() + text.slice(1) };
 }
 
 /* Записать изменение по результату сравнения. Возвращает id записи или null. */
 function logRowChange(kind, oldRow, newRow) {
   const d = describeRowChange(kind, oldRow, newRow);
   if (!d) return null;
-  return addChangeLogEntry(kind, newRow, d.action, d.text);
+  return addChangeLogEntry(kind, newRow, d.action, d.text,
+    d.details && d.details.length ? { details: d.details } : null);
 }

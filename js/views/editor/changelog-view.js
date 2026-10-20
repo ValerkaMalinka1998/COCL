@@ -251,6 +251,8 @@ function saveChangeLogModal() {
     updateChangeLogEntry(clogState.editId, { comment });
     closeModal('changeLogModal');
     refreshChangeLogView();
+    // Если окно открыли со страницы стандарта — обновить его вкладку «История»
+    if (typeof refreshSvHistory === 'function') refreshSvHistory();
     showToast('Записано в лист изменений');
     return;
   }
