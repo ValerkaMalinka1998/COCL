@@ -114,14 +114,14 @@ function openClCheckModal(rowId, dateStr, shift) {
   Object.assign(quickCheckState, { row, date: dateStr, shift, shiftLetter, brand, existing, draft, isElec });
 
   // --- Шапка: машина · узел · часть, название, контекст смены ---
-  const work = getClRowFreq(row).work === 'Stop' ? 'Stop' : 'Run';
+  const work = normWork(getClRowFreq(row).work);
   $('#qcMeta').innerHTML = [
     isElec ? '<span class="qcx-tag qcx-tag-el">E-Param</span>' : (row.oplNumber ? `<b>${escapeHtml(row.oplNumber)}</b>` : ''),
     escapeHtml(clState.line || ''),
     escapeHtml(row.machine || ''),
     isElec ? '' : escapeHtml(row.node || ''),
     escapeHtml(row.nodePart || ''),
-    `<span class="qcx-tag qcx-tag-${work === 'Run' ? 'run' : 'stop'}">${work}</span>`
+    `<span class="qcx-tag qcx-tag-${work.toLowerCase()}">${work}</span>`
   ].filter(Boolean).join('<i>·</i>');
   $('#quickCheckModalTitle').textContent = isElec ? (row.paramName || '—') : (row.title || '—');
 

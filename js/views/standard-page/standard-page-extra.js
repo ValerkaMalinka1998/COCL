@@ -531,6 +531,13 @@ $('#svFullSaveBtn')?.addEventListener('click', () => {
   if ((controlType === 'variable' || controlType === 'interval') && !hasPoints) {
     return showToast('Заполните хотя бы одну точку контроля', true);
   }
+  // Значения должны соответствовать типу: в фиксированный нельзя «92 ± 5» и «5 до 8» и т. д.
+  for (const m of measurements) {
+    for (const pt of (m.points || [])) {
+      const err = normTypeError(controlType, pt.value);
+      if (err) return showToast(err, true);
+    }
+  }
 
   // Проверка дубликата OPL № на линии + машине (кроме текущего)
   const dup = all.find(s =>
@@ -602,4 +609,20 @@ $('#svFullSaveBtn')?.addEventListener('click', () => {
 
   showToast(isNew ? 'Стандарт создан' : 'Стандарт обновлён');
   askChangeReason(logId);
+});
+
+/* === ПОДСВЕТКА ЗНАЧЕНИЙ, НЕ ПОДХОДЯЩИХ ТИПУ КОНТРОЛЯ ======================= */
+function markSvPointTypes() {
+  const type = $('#svf_controlType')?.value;
+  document.querySelectorAll('#svf_brandBlocksContainer .bt-point-input').forEach(inp => {
+    const err = normTypeError(type, inp.value);
+    inp.classList.toggle('bt-point-bad', !!err);
+    inp.title = err;
+  });
+}
+document.addEventListener('input', (e) => {
+  if (e.target.classList && e.target.classList.contains('bt-point-input')) markSvPointTypes();
+});
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'svf_controlType') markSvPointTypes();
 });

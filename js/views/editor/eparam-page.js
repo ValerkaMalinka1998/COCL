@@ -559,6 +559,8 @@ $('#epPageSaveBtn')?.addEventListener('click', () => {
   let valuesByBrand = [];
   if (p.controlType === 'fixed') {
     if (!(p.normText || '').trim()) return showToast('Опишите, что считается «ОК»', true);
+    const normErr = normTypeError('fixed', p.normText);
+    if (normErr) return showToast(normErr, true);
   } else {
     const filled = p.valuesByBrand.filter(r =>
       r.brand || r.target !== '' || r.tolerance !== '' || r.min !== '' || r.max !== '');

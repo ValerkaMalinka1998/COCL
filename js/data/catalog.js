@@ -40,7 +40,7 @@ function normalizeElectronicParam(p) {
     machine: p.machine || '',
     nodePart: p.nodePart || '',
     paramName: p.paramName || '',
-    work: (p.work === 'Stop') ? 'Stop' : 'Run',
+    work: normWork(p.work),
     timeFrom: p.timeFrom || '',
     timeTo: p.timeTo || '',
 
