@@ -373,10 +373,9 @@ function renderTopLossDiag(cats, stats, hidx) {
 
   const rows = tlCollectRows([loss.id], tlState.line)
     .filter(r => tlState.kind === 'all' || (tlState.kind === 'elec') === r.isElec);
-  const shifts7 = tlRecentShifts(7).reverse();   // слева направо: от старой к новой
+  const shifts7 = tlRecentShifts(14).reverse();   // 7 суток = 14 смен, слева направо: от старой к новой
 
   const tableRows = rows.map(({ row, isElec }) => {
-    const norm = cilNorm(row, '', isElec);
     const statuses = tlRowShiftStatuses(row, shifts7, tlState.line, hidx);
     const sq = statuses.map((st, i) => {
       const sh = shifts7[i];
@@ -391,9 +390,8 @@ function renderTopLossDiag(cats, stats, hidx) {
       <td class="tl2-opl">${escapeHtml(row.oplNumber || '—')}</td>
       <td><div class="tl2-nm">${escapeHtml(title || '—')}</div>
         <div class="tl2-sub">${escapeHtml([row.machine, row.nodePart, row.node].filter(Boolean).join(' · '))}</div></td>
-      <td class="tl2-norm">${norm.html}</td>
       <td><span class="tl2-last">${sq}</span></td>
-      <td>${sch.member ? `<span class="tl2-tag tl2-tag-gr">${sch.count} / 14 смен</span>` : '<span class="tl2-tag tl2-tag-dim">не в расписании</span>'}</td>
+      <td>${sch.member ? '<span class="tl2-tag tl2-tag-gr">в чек-листе</span>' : '<span class="tl2-tag tl2-tag-dim">нет в чек-листе</span>'}</td>
       <td class="tl2-act">${isElec
         ? `<button type="button" class="tl2-ib" data-tl-open-ep="${escapeAttr(row.id)}" title="Открыть параметр">${CIL_ICONS.eye}</button>`
         : `<button type="button" class="tl2-ib" data-tl-view="${escapeAttr(row.id)}" title="Открыть стандарт">${CIL_ICONS.eye}</button>`}</td>
@@ -419,7 +417,7 @@ function renderTopLossDiag(cats, stats, hidx) {
       <span class="tl2-sum-i">Последняя проверка TOP Losses: <b>${last ? fmtShortDate(last.slice(0, 10)) : 'ещё не было'}</b></span>
     </div>
     <h3 class="tl2-sec">Стандарты, которые влияют на «${escapeHtml(loss.name)}»
-      <span>Квадраты в таблице — последние 7 смен Чек-листа CL, слева направо от старой к новой</span></h3>
+      <span>Квадраты — как проходила проверка в Чек-листе CL за последние 7 дней (день и ночь), слева направо от старой смены к новой</span></h3>
     <div class="tl2-tools">
       <span class="tl2-seg">
         <button type="button" class="${tlState.kind === 'all' ? 'on' : ''}" data-tl-kind="all">Все ${s.count}</button>
@@ -432,8 +430,8 @@ function renderTopLossDiag(cats, stats, hidx) {
       </span>
     </div>
     <div class="tl2-table-wrap"><table class="tl2-table">
-      <thead><tr><th>Тип</th><th>OPL</th><th>Стандарт / параметр</th><th>Норма</th><th title="Последние 7 смен Чек-листа CL, слева направо — от старой к новой">Последние 7 смен CL</th><th>Расписание</th><th></th></tr></thead>
-      <tbody>${tableRows || '<tr><td colspan="7" class="tl2-muted">Нет строк этого типа</td></tr>'}</tbody>
+      <thead><tr><th>Тип</th><th>OPL</th><th>Стандарт / параметр</th><th title="Последние 7 суток Чек-листа CL (день и ночь), слева направо — от старой смены к новой">Последние 7 дней</th><th>Чек-лист CL</th><th></th></tr></thead>
+      <tbody>${tableRows || '<tr><td colspan="6" class="tl2-muted">Нет строк этого типа</td></tr>'}</tbody>
     </table></div>`;
 }
 
