@@ -2149,6 +2149,31 @@
     </div>
   </div>
 </div>
+<!-- ======================= МОДАЛЬНОЕ ОКНО: БРЕНД НА ЛИНИИ ======================= -->
+<div class="modal-overlay" id="lineBrandModal">
+  <div class="modal lb-modal">
+    <div class="modal-header">
+      <h3 id="lineBrandModalTitle">Бренд на линии</h3>
+      <button class="modal-close" id="lineBrandModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="lb-now" id="lineBrandNow"></p>
+      <div class="field">
+        <label for="lineBrandSelect">Какой бренд сейчас идёт</label>
+        <select id="lineBrandSelect"></select>
+      </div>
+      <div class="field">
+        <label for="lineBrandNote">Комментарий (необязательно)</label>
+        <input type="text" id="lineBrandNote" placeholder="Например: COCL не проведён, переход был в 14:30">
+      </div>
+      <p class="lb-hint" id="lineBrandModalHint"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="lineBrandCancelBtn" type="button">Отмена</button>
+      <button class="btn btn-primary" id="lineBrandSaveBtn" type="button">Сохранить</button>
+    </div>
+  </div>
+</div>
 <!-- ======================= МОДАЛЬНОЕ ОКНО: ЗАПИСЬ ЛИСТА ИЗМЕНЕНИЙ ======================= -->
 <div class="modal-overlay" id="changeLogModal">
   <div class="modal clog-modal">
@@ -2327,6 +2352,7 @@
 <script src="js/data/catalog.js"></script>
 <script src="js/data/schedule.js"></script>
 <script src="js/data/changelog.js"></script>
+<script src="js/data/line-brand.js"></script>
 <script src="js/components/pickers.js"></script>
 <script src="js/components/validation.js"></script>
 <script src="js/components/line-picker.js"></script>
@@ -2335,6 +2361,7 @@
 <script src="js/components/quick-add-machine.js"></script>
 <script src="js/components/cil-table.js"></script>
 <script src="js/components/mj-notice.js"></script>
+<script src="js/components/line-brand-picker.js"></script>
 <script src="js/io/excel-common.js"></script>
 <script src="js/io/standards-io.js"></script>
 <script src="js/views/brand-schedule.js"></script>

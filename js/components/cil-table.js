@@ -87,13 +87,23 @@ function cilNorm(row, brand, isElec) {
     html: '<span class="cil-norm-visual" title="Значений нет — проверка ОК / Не ОК по описанию">' + CIL_ICONS.check + '<span>визуально</span></span>'
   };
   let values = [];
+  // Нет значений для текущего бренда — предупреждение вместо чужой нормы
+  const noNorm = (pick) => ({
+    visual: false, missing: true,
+    html: pick.kind === 'nobrand'
+      ? '<span class="cil-norm-miss" title="Значения разные по брендам — задайте бренд линии">бренд не задан</span>'
+      : `<span class="cil-norm-miss" title="Для бренда ${escapeAttr(brand)} значений нет — сообщите аналитику">нет нормы для ${escapeHtml(brand)}</span>`
+  });
+  let pickTag = '';
 
   if (isElec) {
     const type = row.controlType || 'variable';
     if (type === 'fixed') return visual;
-    const list = Array.isArray(row.valuesByBrand) ? row.valuesByBrand : [];
-    const entry = list.find(v => brand && v.brand === brand) || list.find(v => !v.brand) || list[0];
+    const pick = pickBrandValues(row.valuesByBrand, brand);
+    if (pick.kind === 'missing' || pick.kind === 'nobrand') return noNorm(pick);
+    const entry = pick.item;
     if (!entry) return { visual: false, html: '<span class="cil-dim">—</span>' };
+    pickTag = brandPickLabel(pick, brand);
     if (type === 'interval' && typeof getEparamNormRange === 'function') {
       const r = getEparamNormRange(entry);
       values = [r ? `${r.min} … ${r.max}` : '—'];
@@ -102,7 +112,10 @@ function cilNorm(row, brand, isElec) {
     }
   } else {
     const ms = Array.isArray(row.measurements) ? row.measurements : [];
-    const block = ms.find(b => brand && b.brand === brand) || ms.find(b => !b.brand) || ms[0];
+    const pick = pickBrandValues(ms.filter(b => (b.points || []).some(p => String(p && p.value != null ? p.value : '').trim())), brand);
+    if (pick.kind === 'missing' || pick.kind === 'nobrand') return noNorm(pick);
+    const block = pick.item;
+    pickTag = brandPickLabel(pick, brand);
     values = (block && Array.isArray(block.points) ? block.points : [])
       .map(p => String(p && p.value != null ? p.value : '').trim())
       .filter(Boolean);
@@ -118,16 +131,18 @@ function cilNorm(row, brand, isElec) {
     }
   }
 
+  // Чьи значения: «Kent» / «остальные бренды» (если у стандарта нормы по брендам)
+  const tag = pickTag ? `<em class="cil-norm-brand" title="Значения для бренда">${escapeHtml(pickTag)}</em>` : '';
   if (values.length <= 2) {
     return {
       visual: false,
-      html: `<span class="cil-norm-val">${escapeHtml(values[0])}${values[1] ? `<small>${escapeHtml(values[1])}</small>` : ''}</span>`
+      html: `<span class="cil-norm-val">${escapeHtml(values[0])}${values[1] ? `<small>${escapeHtml(values[1])}</small>` : ''}</span>${tag}`
     };
   }
   const list = values.map((v, i) => `<div><span>т.${i + 1}</span>${escapeHtml(v)}</div>`).join('');
   return {
     visual: false,
-    html: `<span class="cil-norm-pts" tabindex="0">${values.length} ${cilPointsWord(values.length)}<span class="cil-norm-pop">${list}</span></span>`
+    html: `<span class="cil-norm-pts" tabindex="0">${values.length} ${cilPointsWord(values.length)}<span class="cil-norm-pop">${list}</span></span>${tag}`
   };
 }
 

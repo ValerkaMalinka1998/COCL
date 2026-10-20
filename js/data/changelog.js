@@ -102,7 +102,7 @@ function clJson(v) {
 function clBrandsDiff(oldList, newList, keyOf) {
   const map = (arr) => {
     const m = {};
-    (arr || []).forEach(x => { m[x.brand || 'Все бренды'] = keyOf(x); });
+    (arr || []).forEach(x => { m[x.brand || 'Остальные бренды'] = keyOf(x); });
     return m;
   };
   const a = map(oldList), b = map(newList);

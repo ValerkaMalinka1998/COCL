@@ -427,3 +427,14 @@
 .qcx-prev-ok b.fail {
   color: var(--accent-red);
 }
+
+.qcx-empty.qcx-miss {
+  grid-column: 1 / -1;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent-red) 45%, var(--border));
+  border-radius: 10px;
+  color: var(--accent-red);
+  background: color-mix(in srgb, var(--accent-red) 7%, var(--bg-card));
+  line-height: 1.45;
+}

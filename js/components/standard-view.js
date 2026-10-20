@@ -91,7 +91,7 @@ function renderStandardViewContent(st, brand) {
     .filter(b => b && Array.isArray(b.points) && b.points.length);
   const maxPts = blocks.reduce((m, b) => Math.max(m, b.points.length), 0);
 
-  // Какой блок выделить: бренд из контекста, иначе «Все бренды»
+  // Какой блок выделить: бренд из контекста, иначе «Остальные бренды»
   const hl = blocks.find(b => b.brand === brand) ? brand
     : (blocks.find(b => !b.brand) ? '' : null);
 
@@ -107,7 +107,7 @@ function renderStandardViewContent(st, brand) {
         const p = b.points[i];
         return `<td>${p ? escapeHtml(p.value || '—') : ''}</td>`;
       }).join('');
-      return `<tr class="${isHl ? 'is-hl' : ''}"><th>${escapeHtml(b.brand || 'Все бренды')}${isHl && brand ? '<span class="svm-now">сейчас</span>' : ''}</th>${cells}</tr>`;
+      return `<tr class="${isHl ? 'is-hl' : ''}"><th>${escapeHtml(b.brand || REST_BRANDS_LABEL)}${isHl && brand ? '<span class="svm-now">сейчас</span>' : ''}</th>${cells}</tr>`;
     }).join('');
     normHtml = `<div class="svm-norm-wrap"><table class="svm-norm"><thead><tr><th>Бренд</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>`;
   }
