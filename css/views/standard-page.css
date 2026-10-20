@@ -983,3 +983,6 @@
 }
 .sv-hist-arrow,
 .sv-hist-none { color: var(--text-dim); }
+
+/* Просмотр E-Param: кнопок добавления и удаления нет */
+.ep-readonly #epPaneMain button { display: none; }

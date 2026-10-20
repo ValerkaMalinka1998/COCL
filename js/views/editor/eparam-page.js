@@ -131,7 +131,9 @@ function renderEparamPage() {
 /* Просмотр: поля главной вкладки заблокированы, вместо «Сохранить / Отмена» — «Редактировать» */
 function applyEparamMode() {
   const ro = epPageState.readOnly;
-  $$('#epPaneMain input, #epPaneMain select, #epPaneMain textarea, #epPaneMain button').forEach(el => { el.disabled = ro; });
+  // Поля блокируем, кнопки действий («+ Добавить…», ✕) скрываем — как в просмотре механического стандарта
+  $$('#epPaneMain input, #epPaneMain select, #epPaneMain textarea').forEach(el => { el.disabled = ro; });
+  $('#tab-eparam-edit')?.classList.toggle('ep-readonly', ro);
   const show = (id, on) => { const el = $(id); if (el) el.style.display = on ? '' : 'none'; };
   show('#epPageSaveBtn', !ro);
   show('#epPageCancelBtn', !ro);
