@@ -115,6 +115,22 @@ function renderEparamPage() {
   renderEparamNorm(p);
   renderEparamRelated(p);
   renderEparamExtra(p);
+  renderEparamHistory(p);
+}
+
+/* История изменений ЭТОГО параметра — записи листа изменений (cl_change_log_v1).
+   У нового параметра истории ещё нет — карточка скрыта. */
+function renderEparamHistory(p) {
+  const card = $('#epHistoryCard');
+  if (!card) return;
+  card.style.display = epPageState.isNew ? 'none' : '';
+  if (epPageState.isNew) return;
+
+  const rows = getChangeLogForRef('elec', p.id).reverse();   // новые сверху
+  const badge = $('#epHistoryCount');
+  if (badge) badge.textContent = rows.length;
+  const wrap = $('#epHistoryWrap');
+  if (wrap) wrap.innerHTML = changeHistoryHtml(rows);
 }
 
 /* Основная информация */

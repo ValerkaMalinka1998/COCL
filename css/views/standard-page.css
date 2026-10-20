@@ -983,3 +983,7 @@
 }
 .sv-hist-arrow,
 .sv-hist-none { color: var(--text-dim); }
+
+/* История изменений электронного параметра — карточка под основной сеткой */
+.ep-history-card { margin-top: 16px; }
+.ep-history-card .sv-full-card-title { display: flex; align-items: center; gap: 8px; }

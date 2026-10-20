@@ -337,51 +337,7 @@ function renderSvHistoryTable(st) {
   const badge = $('#svHistoryCount');
   if (badge) badge.textContent = rows.length;
 
-  if (!rows.length) {
-    wrap.innerHTML = `
-      <div class="sv-full-empty-table">
-        <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <polyline points="12 6 12 12 16 14"/>
-        </svg>
-        <div>Изменений пока не записано</div>
-      </div>
-    `;
-    return;
-  }
-
-  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-  const detailsHtml = (e) => {
-    if (!Array.isArray(e.details) || !e.details.length) return '';
-    return '<div class="sv-hist-details">' + e.details.map(d => {
-      const label = `<span class="sv-hist-label">${escapeHtml(cap(String(d.label || '')))}</span>`;
-      if (d.from == null && d.to == null) return `<div class="sv-hist-det">${label}</div>`;
-      const from = d.from ? `<span class="sv-hist-from">${escapeHtml(d.from)}</span>` : '<span class="sv-hist-none">—</span>';
-      const to = d.to ? `<span class="sv-hist-to">${escapeHtml(d.to)}</span>` : '<span class="sv-hist-none">—</span>';
-      return `<div class="sv-hist-det">${label}${from}<span class="sv-hist-arrow">→</span>${to}</div>`;
-    }).join('') + '</div>';
-  };
-
-  wrap.innerHTML = `
-    <table class="clog-table sv-hist-table">
-      <thead><tr>
-        <th class="clog-c-n">№</th>
-        <th class="sv-hist-c-date">Дата и время</th>
-        <th>Изменение</th>
-      </tr></thead>
-      <tbody>
-        ${rows.map(e => `
-          <tr>
-            <td class="clog-c-n">${e.n}</td>
-            <td class="sv-hist-c-date">${escapeHtml(formatDateTime(e.date))}</td>
-            <td>
-              ${clogActionChip(e.action)}<span class="clog-cmt">${escapeHtml(e.comment || '')}</span>
-              ${detailsHtml(e)}
-            </td>
-          </tr>`).join('')}
-      </tbody>
-    </table>
-  `;
+  wrap.innerHTML = changeHistoryHtml(rows);
 }
 
 /* Перерисовать вкладку для открытого стандарта (после уточнения причины в окне) */
