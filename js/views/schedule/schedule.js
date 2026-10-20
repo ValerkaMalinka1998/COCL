@@ -862,13 +862,38 @@ function schSetCell(rowId, day, shift, on) {
   else if (!on && idx !== -1) draft.schedule.splice(idx, 1);
   else return false;
 
-  // daysOfWeek и shifts — для совместимости
+  schSyncDraftDays(draft);
+  schState.dirty = true;
+  return true;
+}
+
+/* daysOfWeek и shifts черновика — для совместимости со старым форматом */
+function schSyncDraftDays(draft) {
   draft.daysOfWeek = [...new Set(draft.schedule.map(x => x.day))]
     .sort((a, b) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b));
   draft.shifts = [...new Set(draft.schedule.map(x => x.shift))];
   if (!draft.shifts.length) draft.shifts = ['day', 'night'];
-  schState.dirty = true;
-  return true;
+}
+
+/* Строка, которую только что добавили в расписание недели, не получает
+   смены, которые уже прошли: от прежней раскладки остаются только будущие
+   смены. Прошедшие смены нельзя ни включить, ни отметить, а в чек-листе они
+   горели бы «пропущено». Убранные смены запоминаем в draft.droppedPast —
+   они нужны шаблону следующих недель. */
+function schDropPastCells(row) {
+  if (!row) return;
+  const dateByDay = cilDateByDayIdx(getClWeekDays(schState.weekOffset || 0));
+  const kept = [];
+  const dropped = [];
+  (getSchRowFreq(row).schedule || []).forEach(x => {
+    const dateStr = dateByDay[x.day];
+    (dateStr && isShiftPast(dateStr, x.shift) ? dropped : kept).push({ day: x.day, shift: x.shift });
+  });
+  if (!dropped.length) return;
+  const draft = ensureSchDraft(row.id);
+  draft.schedule = kept;
+  draft.droppedPast = dropped;
+  schSyncDraftDays(draft);
 }
 
 /* Можно ли менять смену (прошлое не меняется) */
@@ -1026,7 +1051,7 @@ function saveScheduleForward(weekOffset) {
     const d = schState.draft[row.id];
     return {
       inSchedule: added.has(row.id) ? true : (removed.has(row.id) ? false : w.member),
-      schedule: d ? d.schedule : w.schedule,
+      schedule: d ? d.schedule.concat(d.droppedPast || []) : w.schedule,
       timeWindows: d ? d.timeWindows : w.timeWindows,
       work: d && d.work != null ? d.work : w.work
     };

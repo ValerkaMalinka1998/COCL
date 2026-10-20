@@ -226,7 +226,15 @@ function confirmScheduleAddStandards() {
   if (!schState.addedToSchedule) schState.addedToSchedule = new Set();
   if (!schState.removedFromSchedule) schState.removedFromSchedule = new Set();
 
+  const isMech = schState.mode === 'mech';
+  const all = isMech ? getStandards() : getElectronicParams().map(normalizeElectronicParam);
+  const weekStart = getSchWeekStart(schState.weekOffset || 0);
+
   ids.forEach(id => {
+    const row = all.find(r => r.id === id);
+    // Строка, убранная из расписания, но ещё не сохранённая, — это отмена
+    // удаления: её прошлые смены не трогаем. Остальные получают только будущие смены.
+    if (row && !getRowForWeek(row, weekStart, schState.line).member) schDropPastCells(row);
     schState.removedFromSchedule.delete(id);
     schState.addedToSchedule.add(id);
   });
