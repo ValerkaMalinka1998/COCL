@@ -235,6 +235,7 @@
 }
 .cil-tag-run { color: var(--accent-green); background: color-mix(in srgb, var(--accent-green) 12%, transparent); }
 .cil-tag-stop { color: var(--accent-amber); background: color-mix(in srgb, var(--accent-amber) 14%, transparent); }
+.cil-tag-cil { color: var(--accent-yellow); background: color-mix(in srgb, var(--accent-yellow) 16%, transparent); }
 .cil-tag-time { color: var(--accent-cyan); background: color-mix(in srgb, var(--accent-cyan) 12%, transparent); }
 .cil-tag-time.night { color: var(--accent-purple); background: color-mix(in srgb, var(--accent-purple) 12%, transparent); }
 .cil-tag-dev { color: var(--accent-red); background: color-mix(in srgb, var(--accent-red) 12%, transparent); }

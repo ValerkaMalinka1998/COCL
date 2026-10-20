@@ -566,7 +566,7 @@ function renderClRow(row, num, zone, cells, hist, isElec) {
       <div class="cil-std-sub">
         ${row.oplNumber ? `<span class="cil-opl">${escapeHtml(row.oplNumber)}</span>` : ''}
         ${row.node ? `<span class="cil-node">${CIL_ICONS.gear}${escapeHtml(row.node)}</span>` : ''}
-        ${cilWorkTag(freq.work === 'Stop' ? 'Stop' : 'Run')}
+        ${cilWorkTag(normWork(freq.work))}
         ${cilTimeChips(freq.timeWindows)}
       </div>
     </td>

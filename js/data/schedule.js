@@ -107,7 +107,7 @@ function getRowTemplateForWeek(row, weekStart) {
     inSchedule: t.inSchedule === true,
     schedule: Array.isArray(t.schedule) ? t.schedule : [],
     timeWindows: Array.isArray(t.timeWindows) ? t.timeWindows : [],
-    work: t.work === 'Stop' ? 'Stop' : 'Run'
+    work: normWork(t.work)
   };
 }
 
@@ -124,7 +124,7 @@ function getRowForWeek(row, weekStart, line) {
     member,
     schedule: snap && Array.isArray(snap.schedule) ? snap.schedule : t.schedule,
     timeWindows: snap && Array.isArray(snap.timeWindows) ? snap.timeWindows : t.timeWindows,
-    work: snap && snap.work != null ? (snap.work === 'Stop' ? 'Stop' : 'Run') : t.work
+    work: snap && snap.work != null ? normWork(snap.work) : t.work
   };
 }
 
@@ -143,7 +143,7 @@ function setRowTemplateFrom(row, from, state) {
       inSchedule: row.inSchedule === true,
       schedule: (f.schedule || []).map(x => ({ ...x })),
       timeWindows: (f.timeWindows || []).map(w => ({ from: w.from, to: w.to })),
-      work: row.work === 'Stop' ? 'Stop' : 'Run'
+      work: normWork(row.work)
     });
   }
   list = list.filter(v => v.from < from);
@@ -152,7 +152,7 @@ function setRowTemplateFrom(row, from, state) {
     inSchedule: state.inSchedule === true,
     schedule: (state.schedule || []).map(x => ({ day: x.day, shift: x.shift })),
     timeWindows: (state.timeWindows || []).map(w => ({ from: w.from, to: w.to })),
-    work: state.work === 'Stop' ? 'Stop' : 'Run'
+    work: normWork(state.work)
   });
   list.sort((a, b) => a.from.localeCompare(b.from));
   f.templates = list;

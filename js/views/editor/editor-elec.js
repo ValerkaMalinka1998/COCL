@@ -101,7 +101,7 @@ function refreshEditorElecTable() {
     html += `
       <tr data-param-id="${id}" class="${isSelected ? 'is-selected' : ''} ${isActive ? '' : 'et-row-inactive'}">
         <td class="et-c-check cil-z${zones[m]}"><input type="checkbox" class="et-check-row" data-param-id="${id}" ${isSelected ? 'checked' : ''}></td>
-        <td><button type="button" class="et-name" data-edit-elec="${id}">${escapeHtml(p.paramName || '—')}</button>${valChipHtml(p)}</td>
+        <td><button type="button" class="et-name" data-view-elec="${id}">${escapeHtml(p.paramName || '—')}</button>${valChipHtml(p)}</td>
         <td class="et-c-part">${p.nodePart ? `<span class="et-part-chip et-part-${p.nodePart.toLowerCase()}">${escapeHtml(p.nodePart)}</span>` : '<span class="et-dim">—</span>'}</td>
         <td class="et-c-type">${etTypeNormHtml(p, true)}</td>
         <td class="et-c-ap">${etAppliesHtml(p.appliesTo)}</td>
@@ -118,7 +118,10 @@ function refreshEditorElecTable() {
 
   renderEditorElecPagination(params.length, totalPages, startIdx, endIdx);
 
-  // Обработчики: название и карандаш открывают страницу параметра
+  // Название — страница параметра в режиме просмотра, карандаш — редактирование
+  wrap.querySelectorAll('[data-view-elec]').forEach(btn => {
+    btn.addEventListener('click', () => openEparamPage(btn.dataset.viewElec, 'view'));
+  });
   wrap.querySelectorAll('[data-edit-elec]').forEach(btn => {
     btn.addEventListener('click', () => openEparamPage(btn.dataset.editElec));
   });
@@ -442,7 +445,7 @@ async function parseElectronicParamsExcel(file, targetLine) {
     const p = {
       id, active,
       line, machine, nodePart: lineHasParts(line) ? nodePart : '', paramName,
-      work: work === 'Stop' ? 'Stop' : 'Run',
+      work: normWork(work),
       timeFrom, timeTo,
       controlType, normText,
       valuesByBrand,

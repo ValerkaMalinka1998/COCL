@@ -35,6 +35,7 @@
   --accent-green:  #10a86a;
   --accent-red:    #e3264f;
   --accent-amber:  #e89a00;
+  --accent-yellow: #c9b100;
   --accent-val:    #c026d3;   /* валидация нового стандарта */
   --accent-emerald:#10b39a;
 
@@ -102,6 +103,7 @@
   --accent-green:  #22c983;
   --accent-red:    #ff4d6d;
   --accent-amber:  #ffb800;
+  --accent-yellow: #ffe433;
   --accent-val:    #e27cf5;
   --accent-emerald:#1fc9ad;
 

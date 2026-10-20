@@ -46,6 +46,11 @@
   background: color-mix(in srgb, var(--accent-green) 12%, transparent);
 }
 
+.qcx-tag-cil {
+  color: var(--accent-yellow);
+  background: color-mix(in srgb, var(--accent-yellow) 16%, transparent);
+}
+
 .qcx-tag-stop {
   color: var(--accent-amber);
   background: color-mix(in srgb, var(--accent-amber) 14%, transparent);

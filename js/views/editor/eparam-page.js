@@ -15,7 +15,8 @@
 const epPageState = {
   isNew: false,     // параметр ещё не сохранён
   data: null,       // рабочая копия параметра
-  dirty: false      // есть несохранённые правки
+  dirty: false,     // есть несохранённые правки
+  readOnly: false   // режим просмотра: поля заблокированы, кнопка «Редактировать»
 };
 
 /* Диапазон нормы бренда: для интервала — min/max, иначе target ± tolerance */
@@ -39,20 +40,23 @@ function getEparamNormLabel(entry, controlType) {
   return `${brand}: ${entry.target} ± ${entry.tolerance}`;
 }
 
-/* Открыть страницу: id — редактирование, без id — новый параметр линии редактора */
-function openEparamPage(id) {
+/* Открыть страницу: id — параметр (mode 'view' — просмотр, иначе редактирование),
+   без id — новый параметр линии редактора */
+function openEparamPage(id, mode) {
   let p;
   if (id) {
     const found = getElectronicParams().find(x => x.id === id);
     if (!found) return showToast('Параметр не найден', true);
     p = normalizeElectronicParam(found);
     epPageState.isNew = false;
+    epPageState.readOnly = mode === 'view';
   } else {
     const line = localStorage.getItem('cl_editor_line');
     if (!line) return showToast('Сначала выберите линию', true);
     p = normalizeElectronicParam({ line, controlType: 'variable' });
     p.createdAt = null;
     epPageState.isNew = true;
+    epPageState.readOnly = false;
   }
   // Для интервала показываем «от / до» — восстанавливаем их из target ± tolerance
   // Строка без бренда = «Остальные бренды»: в форме — значение '*'
@@ -66,6 +70,7 @@ function openEparamPage(id) {
 
   epPageState.data = p;
   epPageState.dirty = false;
+  switchEparamTab('main');
 
   if (typeof switchTab === 'function') switchTab('eparam-edit');
   renderEparamPage();
@@ -80,6 +85,7 @@ function closeEparamPage(force) {
   epPageState.data = null;
   epPageState.isNew = false;
   epPageState.dirty = false;
+  epPageState.readOnly = false;
   if (typeof switchTab === 'function') switchTab('editor');
   if (typeof switchEditorModeInline === 'function') switchEditorModeInline('elec');
 }
@@ -115,6 +121,62 @@ function renderEparamPage() {
   renderEparamNorm(p);
   renderEparamRelated(p);
   renderEparamExtra(p);
+  renderEparamHistory(p);
+  renderEparamStubs();
+  const tabs = $('#epTabs');
+  if (tabs) tabs.style.display = epPageState.isNew ? 'none' : '';
+  applyEparamMode();
+}
+
+/* Просмотр: поля главной вкладки заблокированы, вместо «Сохранить / Отмена» — «Редактировать» */
+function applyEparamMode() {
+  const ro = epPageState.readOnly;
+  $$('#epPaneMain input, #epPaneMain select, #epPaneMain textarea, #epPaneMain button').forEach(el => { el.disabled = ro; });
+  const show = (id, on) => { const el = $(id); if (el) el.style.display = on ? '' : 'none'; };
+  show('#epPageSaveBtn', !ro);
+  show('#epPageCancelBtn', !ro);
+  show('#epPageEditBtn', ro);
+}
+
+/* История изменений ЭТОГО параметра — записи листа изменений (cl_change_log_v1).
+   У нового параметра вкладок нет: истории ещё не существует. */
+function renderEparamHistory(p) {
+  const rows = epPageState.isNew ? [] : getChangeLogForRef('elec', p.id).reverse();   // новые сверху
+  const badge = $('#epHistoryCount');
+  if (badge) badge.textContent = rows.length;
+  const wrap = $('#epHistoryWrap');
+  if (wrap) wrap.innerHTML = changeHistoryHtml(rows);
+}
+
+/* Заглушки вкладок «Ознакомление» и «Комментарии» — как на странице стандарта */
+function renderEparamStubs() {
+  const stub = (id, icon, text) => {
+    const wrap = $(id);
+    if (!wrap) return;
+    wrap.innerHTML = `
+      <div class="sv-full-empty-table">
+        <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>
+        <div>${text}</div>
+      </div>`;
+  };
+  stub('#epAckTableWrap',
+    '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>',
+    'Раздел «Ознакомление» в разработке');
+  stub('#epCommentsTableWrap',
+    '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+    'Раздел «Комментарии» в разработке');
+}
+
+/* Переключение вкладок страницы параметра */
+function switchEparamTab(tabName) {
+  document.querySelectorAll('#epTabs .sv-full-tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.epTab === tabName);
+  });
+  const panes = { main: 'epPaneMain', ack: 'epPaneAck', history: 'epPaneHistory', comments: 'epPaneComments' };
+  Object.entries(panes).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = (key === tabName) ? '' : 'none';
+  });
 }
 
 /* Основная информация */
@@ -487,8 +549,18 @@ $('#tab-eparam-edit')?.addEventListener('click', (e) => {
   }
 });
 
+$('#epTabs')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('.sv-full-tab-btn');
+  if (btn) switchEparamTab(btn.dataset.epTab);
+});
+$('#epAckMarkBtn')?.addEventListener('click', () => showToast('Функция «Ознакомление» в разработке', true));
+$('#epAddCommentBtn')?.addEventListener('click', () => showToast('Функция «Комментарии» в разработке', true));
 $('#epPageBackBtn')?.addEventListener('click', () => closeEparamPage(false));
 $('#epPageCancelBtn')?.addEventListener('click', () => closeEparamPage(false));
+$('#epPageEditBtn')?.addEventListener('click', () => {
+  epPageState.readOnly = false;
+  renderEparamPage();
+});
 
 /* --- Сохранение --- */
 $('#epPageSaveBtn')?.addEventListener('click', () => {
@@ -507,6 +579,8 @@ $('#epPageSaveBtn')?.addEventListener('click', () => {
   let valuesByBrand = [];
   if (p.controlType === 'fixed') {
     if (!(p.normText || '').trim()) return showToast('Опишите, что считается «ОК»', true);
+    const normErr = normTypeError('fixed', p.normText);
+    if (normErr) return showToast(normErr, true);
   } else {
     const filled = p.valuesByBrand.filter(r =>
       r.brand || r.target !== '' || r.tolerance !== '' || r.min !== '' || r.max !== '');
