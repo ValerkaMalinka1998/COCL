@@ -678,8 +678,8 @@
 .tl2-opl { font-family: Consolas, 'Courier New', monospace; font-weight: 700; color: var(--accent-cyan); white-space: nowrap; }
 .tl2-nm { font-weight: 700; color: var(--text-main); }
 .tl2-sub { margin-top: 2px; font-size: 11px; color: var(--text-dim); }
-.tl2-last { display: inline-flex; gap: 2px; }
-.tl2-sq { display: inline-block; width: 13px; height: 16px; border-radius: 3px; }
+.tl2-last { display: inline-flex; gap: 4px; }
+.tl2-sq { display: inline-block; width: 20px; height: 20px; border-radius: 4px; }
 .tl2-sq-ok { background: var(--accent-green); }
 .tl2-sq-fail { background: var(--accent-red); }
 .tl2-sq-missed { background: color-mix(in srgb, var(--accent-amber) 35%, transparent); border: 1px solid var(--accent-amber); }

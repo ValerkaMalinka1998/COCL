@@ -71,6 +71,26 @@ function tlRecentShifts(n) {
   return res;
 }
 
+/* Последние n суток (завершённые смены): [{ date, shifts: [{date, shift}] }], от старой к новой */
+function tlRecentDays(n) {
+  const days = [];
+  tlRecentShifts(n * 2 + 2).reverse().forEach(sh => {
+    let d = days[days.length - 1];
+    if (!d || d.date !== sh.date) { d = { date: sh.date, shifts: [] }; days.push(d); }
+    d.shifts.push(sh);
+  });
+  return days.slice(-n);
+}
+
+/* Итог суток по статусам смен: отклонение > пропуск > ОК > не проверено > не по расписанию */
+function tlDayStatus(sts) {
+  if (sts.includes('FAIL')) return 'fail';
+  if (sts.includes('missed')) return 'missed';
+  if (sts.includes('OK')) return 'ok';
+  if (sts.includes('UNCHECKED')) return 'unchecked';
+  return 'na';
+}
+
 /* Понедельник недели для даты */
 function tlWeekStartOf(dateStr) {
   const d = new Date(dateStr + 'T12:00:00');
@@ -178,7 +198,7 @@ function renderTopLossCategories() {
   }
 
   const hidx = tlHistoryIndex(tlState.line);
-  const shifts14 = tlRecentShifts(14);
+  const shifts14 = tlRecentDays(7).flatMap(d => d.shifts);
   const stats = {};
   cats.forEach(c => (c.items || []).forEach(it => { stats[it.id] = tlLossStats(it.id, tlState.line, hidx, shifts14); }));
 
@@ -373,15 +393,18 @@ function renderTopLossDiag(cats, stats, hidx) {
 
   const rows = tlCollectRows([loss.id], tlState.line)
     .filter(r => tlState.kind === 'all' || (tlState.kind === 'elec') === r.isElec);
-  const shifts7 = tlRecentShifts(14).reverse();   // 7 суток = 14 смен, слева направо: от старой к новой
+  const days7 = tlRecentDays(7);   // 7 суток, слева направо: от старой к новой
 
   const tableRows = rows.map(({ row, isElec }) => {
-    const statuses = tlRowShiftStatuses(row, shifts7, tlState.line, hidx);
-    const sq = statuses.map((st, i) => {
-      const sh = shifts7[i];
-      const cls = st === 'OK' ? 'ok' : st === 'FAIL' ? 'fail' : st === 'missed' ? 'missed' : st === 'UNCHECKED' ? 'unchecked' : 'na';
-      const label = { ok: 'ОК', fail: 'отклонение', missed: 'пропущено', unchecked: 'не проверено', na: 'не по расписанию' }[cls];
-      return `<i class="tl2-sq tl2-sq-${cls}" title="${escapeAttr(`${fmtShortDate(sh.date)} · ${sh.shift === 'day' ? 'день' : 'ночь'} — ${label}`)}"></i>`;
+    const sq = days7.map(d => {
+      const sts = tlRowShiftStatuses(row, d.shifts, tlState.line, hidx);
+      const cls = tlDayStatus(sts);
+      const label = { ok: 'ОК', fail: 'отклонение', missed: 'пропуск', unchecked: 'не проверено', na: 'не по расписанию' };
+      const part = d.shifts.map((sh, k) => {
+        const c = tlDayStatus([sts[k]]);
+        return (sh.shift === 'day' ? 'день' : 'ночь') + ' — ' + label[c];
+      }).join('; ');
+      return `<i class="tl2-sq tl2-sq-${cls}" title="${escapeAttr(`${fmtShortDate(d.date)}: ${label[cls]} (${part})`)}"></i>`;
     }).join('');
     const sch = editorRowSchedule(row, tlState.line);
     const title = isElec ? row.paramName : row.title;
@@ -417,7 +440,7 @@ function renderTopLossDiag(cats, stats, hidx) {
       <span class="tl2-sum-i">Последняя проверка TOP Losses: <b>${last ? fmtShortDate(last.slice(0, 10)) : 'ещё не было'}</b></span>
     </div>
     <h3 class="tl2-sec">Стандарты, которые влияют на «${escapeHtml(loss.name)}»
-      <span>Квадраты — как проходила проверка в Чек-листе CL за последние 7 дней (день и ночь), слева направо от старой смены к новой</span></h3>
+      <span>Квадраты — как проходила проверка в Чек-листе CL за последние 7 дней — один квадрат на день, слева направо от старого дня к новому</span></h3>
     <div class="tl2-tools">
       <span class="tl2-seg">
         <button type="button" class="${tlState.kind === 'all' ? 'on' : ''}" data-tl-kind="all">Все ${s.count}</button>
@@ -430,7 +453,7 @@ function renderTopLossDiag(cats, stats, hidx) {
       </span>
     </div>
     <div class="tl2-table-wrap"><table class="tl2-table">
-      <thead><tr><th>Тип</th><th>OPL</th><th>Стандарт / параметр</th><th title="Последние 7 суток Чек-листа CL (день и ночь), слева направо — от старой смены к новой">Последние 7 дней</th><th>Чек-лист CL</th><th></th></tr></thead>
+      <thead><tr><th>Тип</th><th>OPL</th><th>Стандарт / параметр</th><th title="Последние 7 дней Чек-листа CL: один квадрат — один день (день и ночь вместе), слева направо — от старого к новому">Последние 7 дней</th><th>Чек-лист CL</th><th></th></tr></thead>
       <tbody>${tableRows || '<tr><td colspan="6" class="tl2-muted">Нет строк этого типа</td></tr>'}</tbody>
     </table></div>`;
 }
