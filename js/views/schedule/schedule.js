@@ -1017,6 +1017,19 @@ function saveSchedule() {
   const weekOffset = schState.weekOffset || 0;
   if (weekOffset < 0) return showToast('Прошедшую неделю изменить нельзя', true);
   const weekLabel = getWeekLabel(weekOffset);
+
+  // Время проверки до сохранения — чтобы записать «было → стало» в историю
+  const twChanges = [];
+  Object.keys(schState.draft).forEach(id => {
+    const row = schState.rows.find(r => r.id === id);
+    if (!row) return;
+    twChanges.push({
+      id,
+      before: getRowForWeek(row, getSchWeekStart(weekOffset), schState.line).timeWindows,
+      after: schState.draft[id].timeWindows
+    });
+  });
+
   let msg;
   if (schState.saveScope === 'week') {
     saveScheduleWeekOverride(weekOffset);
@@ -1027,6 +1040,14 @@ function saveSchedule() {
       ? 'Сохранено: оставшиеся смены этой недели и шаблон со следующей недели'
       : `Шаблон сохранён с недели ${weekLabel}`;
   }
+
+  // История изменений: время проверки (в лист линии и в историю стандарта)
+  const twKind = schState.mode === 'mech' ? 'mech' : 'elec';
+  const twList = twKind === 'mech' ? getStandards() : getElectronicParams();
+  twChanges.forEach(c => {
+    const r = twList.find(x => x.id === c.id);
+    if (r) logTimeWindowsChange(twKind, r, c.before, c.after);
+  });
 
   schState.dirty = false;
   schState.draft = {};

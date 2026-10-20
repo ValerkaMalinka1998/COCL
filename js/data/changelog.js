@@ -86,10 +86,20 @@ function removeChangeLogEntry(id) {
    Нумерация — как на бумажном листе: своя для каждой линии + части. */
 function getChangeLogForLine(line, part) {
   const rows = getChangeLog()
-    .filter(e => e.line === line && (!part || (e.part || '') === part))
+    .filter(e => e.sheet !== false && e.line === line && (!part || (e.part || '') === part))
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
   return rows.map((e, i) => ({ ...e, n: i + 1 }));
 }
+
+/* В лист линии (бумажный аналог) попадают только существенные правки: основное описание,
+   точки, инструмент и время проверки, создание и удаление. Смена сорта, триггеры,
+   Top Losses, фото, применяемость, деактивация в лист не идут (entry.sheet === false),
+   но остаются в истории самого стандарта (getChangeLogForRef — без фильтра). */
+const CL_SHEET_KEYS = {
+  mech: ['title', 'oplNumber', 'machine', 'node', 'nodePart', 'controlType', 'problemDescription',
+         'controlDescription', 'purpose', 'whyCreated', 'tool'],
+  elec: ['paramName', 'machine', 'nodePart', 'controlType', 'normText']
+};
 
 /* Записи одного стандарта / параметра в хронологическом порядке
    (вкладка «История» на странице стандарта). Нумерация — своя, 1…N. */
@@ -168,9 +178,12 @@ function describeRowChange(kind, oldRow, newRow) {
       ];
 
   const parts = [];
+  const sheetParts = [];   // то же, но только существенное для листа линии
+  const sheetKeys = CL_SHEET_KEYS[kind === 'elec' ? 'elec' : 'mech'];
   const details = [];   // [{ label, from, to }] — для вкладки «История» стандарта
   fields.forEach(([key, label]) => {
     if (clJson(oldRow[key]) !== clJson(newRow[key])) {
+      const before = parts.length;
       if (key === 'controlType') {
         const lbl = (t) => (typeof controlTypeLabel === 'function' ? controlTypeLabel(t) : t);
         parts.push(`тип контроля: ${lbl(oldRow[key])} → ${lbl(newRow[key])}`);
@@ -185,6 +198,7 @@ function describeRowChange(kind, oldRow, newRow) {
           ? { label }
           : { label, from: clDetailText(oldRow[key]), to: clDetailText(newRow[key]) });
       }
+      if (sheetKeys.includes(key)) sheetParts.push(parts[before]);
     }
   });
 
@@ -198,33 +212,54 @@ function describeRowChange(kind, oldRow, newRow) {
     });
   }
 
-  if (kind === 'elec') {
-    parts.push(...clBrandsDiff(oldRow.valuesByBrand, newRow.valuesByBrand,
-      x => [x.target, x.tolerance, x.min, x.max].join('|'),
-      x => (x.target !== '' && x.target != null) ? `${x.target} ± ${x.tolerance}` : `${x.min} … ${x.max}`,
-      details));
-  } else {
-    parts.push(...clBrandsDiff(oldRow.measurements, newRow.measurements,
-      x => (x.points || []).map(p => String(p.value || '').trim()).join('|'),
-      x => (x.points || []).map(p => String(p.value || '').trim()).filter(Boolean).join('; '),
-      details));
-  }
+  // Точки / нормы по брендам — всегда существенны для листа линии
+  const norms = kind === 'elec'
+    ? clBrandsDiff(oldRow.valuesByBrand, newRow.valuesByBrand,
+        x => [x.target, x.tolerance, x.min, x.max].join('|'),
+        x => (x.target !== '' && x.target != null) ? `${x.target} ± ${x.tolerance}` : `${x.min} … ${x.max}`,
+        details)
+    : clBrandsDiff(oldRow.measurements, newRow.measurements,
+        x => (x.points || []).map(p => String(p.value || '').trim()).join('|'),
+        x => (x.points || []).map(p => String(p.value || '').trim()).filter(Boolean).join('; '),
+        details);
+  parts.push(...norms);
+  sheetParts.push(...norms);
+
+  const sheet = sheetParts.length > 0;
+  const tail = (list) => (list.length ? '; изменено: ' + list.join(', ') : '');
+  // Текст — только существенное для листа; если его нет, запись в лист не попадёт (sheet:false)
+  const pick = sheet ? sheetParts : parts;
 
   if (wasActive && !isActive) {
-    return { action: 'deactivated', details, text: 'Деактивирован' + (parts.length ? '; изменено: ' + parts.join(', ') : '') };
+    return { action: 'deactivated', details, sheet: false, text: 'Деактивирован' + tail(pick) };
   }
   if (!wasActive && isActive) {
-    return { action: 'activated', details, text: 'Снова в работе' + (parts.length ? '; изменено: ' + parts.join(', ') : '') };
+    return { action: 'activated', details, sheet: false, text: 'Снова в работе' + tail(pick) };
   }
   if (!parts.length) return null;
-  const text = 'Изменено: ' + parts.join(', ');
-  return { action: 'changed', details, text: text.charAt(0).toUpperCase() + text.slice(1) };
+  const text = 'Изменено: ' + pick.join(', ');
+  return { action: 'changed', details, sheet, text: text.charAt(0).toUpperCase() + text.slice(1) };
 }
 
 /* Записать изменение по результату сравнения. Возвращает id записи или null. */
 function logRowChange(kind, oldRow, newRow) {
   const d = describeRowChange(kind, oldRow, newRow);
   if (!d) return null;
-  return addChangeLogEntry(kind, newRow, d.action, d.text,
-    d.details && d.details.length ? { details: d.details } : null);
+  const extra = {};
+  if (d.details && d.details.length) extra.details = d.details;
+  if (d.sheet === false) extra.sheet = false;
+  return addChangeLogEntry(kind, newRow, d.action, d.text, extra);
+}
+
+/* Время проверки изменено в Расписании CL: запись «было → стало».
+   Существенно для листа линии. Возвращает id записи или null. */
+function clWindowsText(list) {
+  const t = (Array.isArray(list) ? list : []).map(w => `${w.from}–${w.to}`).join(', ');
+  return t || '—';
+}
+function logTimeWindowsChange(kind, row, oldWindows, newWindows) {
+  const a = clWindowsText(oldWindows), b = clWindowsText(newWindows);
+  if (a === b) return null;
+  return addChangeLogEntry(kind, row, 'changed', 'Изменено: время проверки',
+    { details: [{ label: 'время проверки', from: a, to: b }] });
 }
