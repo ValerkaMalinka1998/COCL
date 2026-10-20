@@ -15,7 +15,8 @@
 const epPageState = {
   isNew: false,     // параметр ещё не сохранён
   data: null,       // рабочая копия параметра
-  dirty: false      // есть несохранённые правки
+  dirty: false,     // есть несохранённые правки
+  readOnly: false   // режим просмотра: поля заблокированы, кнопка «Редактировать»
 };
 
 /* Диапазон нормы бренда: для интервала — min/max, иначе target ± tolerance */
@@ -39,20 +40,23 @@ function getEparamNormLabel(entry, controlType) {
   return `${brand}: ${entry.target} ± ${entry.tolerance}`;
 }
 
-/* Открыть страницу: id — редактирование, без id — новый параметр линии редактора */
-function openEparamPage(id) {
+/* Открыть страницу: id — параметр (mode 'view' — просмотр, иначе редактирование),
+   без id — новый параметр линии редактора */
+function openEparamPage(id, mode) {
   let p;
   if (id) {
     const found = getElectronicParams().find(x => x.id === id);
     if (!found) return showToast('Параметр не найден', true);
     p = normalizeElectronicParam(found);
     epPageState.isNew = false;
+    epPageState.readOnly = mode === 'view';
   } else {
     const line = localStorage.getItem('cl_editor_line');
     if (!line) return showToast('Сначала выберите линию', true);
     p = normalizeElectronicParam({ line, controlType: 'variable' });
     p.createdAt = null;
     epPageState.isNew = true;
+    epPageState.readOnly = false;
   }
   // Для интервала показываем «от / до» — восстанавливаем их из target ± tolerance
   // Строка без бренда = «Остальные бренды»: в форме — значение '*'
@@ -81,6 +85,7 @@ function closeEparamPage(force) {
   epPageState.data = null;
   epPageState.isNew = false;
   epPageState.dirty = false;
+  epPageState.readOnly = false;
   if (typeof switchTab === 'function') switchTab('editor');
   if (typeof switchEditorModeInline === 'function') switchEditorModeInline('elec');
 }
@@ -120,6 +125,17 @@ function renderEparamPage() {
   renderEparamStubs();
   const tabs = $('#epTabs');
   if (tabs) tabs.style.display = epPageState.isNew ? 'none' : '';
+  applyEparamMode();
+}
+
+/* Просмотр: поля главной вкладки заблокированы, вместо «Сохранить / Отмена» — «Редактировать» */
+function applyEparamMode() {
+  const ro = epPageState.readOnly;
+  $$('#epPaneMain input, #epPaneMain select, #epPaneMain textarea, #epPaneMain button').forEach(el => { el.disabled = ro; });
+  const show = (id, on) => { const el = $(id); if (el) el.style.display = on ? '' : 'none'; };
+  show('#epPageSaveBtn', !ro);
+  show('#epPageCancelBtn', !ro);
+  show('#epPageEditBtn', ro);
 }
 
 /* История изменений ЭТОГО параметра — записи листа изменений (cl_change_log_v1).
@@ -541,6 +557,10 @@ $('#epAckMarkBtn')?.addEventListener('click', () => showToast('Функция «
 $('#epAddCommentBtn')?.addEventListener('click', () => showToast('Функция «Комментарии» в разработке', true));
 $('#epPageBackBtn')?.addEventListener('click', () => closeEparamPage(false));
 $('#epPageCancelBtn')?.addEventListener('click', () => closeEparamPage(false));
+$('#epPageEditBtn')?.addEventListener('click', () => {
+  epPageState.readOnly = false;
+  renderEparamPage();
+});
 
 /* --- Сохранение --- */
 $('#epPageSaveBtn')?.addEventListener('click', () => {
