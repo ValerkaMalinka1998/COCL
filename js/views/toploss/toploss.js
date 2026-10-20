@@ -1,8 +1,8 @@
 /* ============================================================
    ВКЛАДКА «TOP Losses»: разбор потерь линии
-   Слева — потери цеха линии по категориям, справа — разбор
-   выбранной потери: стандарты и E-Param, нормы, последние смены
-   Чек-листа CL, расписание. Проверка — по желанию (toploss-check.js).
+   Один путь сверху вниз: «Что случилось?» (категория → потеря) →
+   «Что проверить» (стандарты и E-Param: норма, последние смены
+   Чек-листа CL) → кнопка проверки внизу. Проверка — по желанию (toploss-check.js).
    Модуль общего пространства имён: функции и переменные видны
    во всех файлах. Порядок подключения — index.html.
    ============================================================ */
@@ -12,9 +12,9 @@ const TL_LINE_KEY = 'cl_tl_line';
 /* Состояние экрана разбора */
 const tlState = {
   line: '',
-  lossId: null,               // выбранная потеря
-  extraLossIds: new Set(),    // ещё потери, добавленные в проверку
-  openCats: new Set(),        // раскрытые категории
+  selected: new Set(),        // выбранные потери (по порядку выбора)
+  multi: false,               // режим «выбрать несколько»
+  catId: null,                // открытая категория
   showEmpty: new Set(),       // категории, где показаны потери без стандартов
   query: '',
   kind: 'all'                 // 'all' | 'mech' | 'elec'
@@ -133,16 +133,14 @@ function fillTopLossTab() {
   if (line && !getLines().includes(line)) line = '';
   if (line !== tlState.line) {
     tlState.line = line;
-    tlState.lossId = null;
-    tlState.extraLossIds.clear();
+    tlState.selected.clear();
   }
 }
 
 function setTopLossLine(line) {
   tlState.line = line || '';
-  tlState.lossId = null;
-  tlState.extraLossIds.clear();
-  tlState.openCats.clear();
+  tlState.selected.clear();
+  tlState.catId = null;
   try { localStorage.setItem(TL_LINE_KEY, tlState.line); } catch (e) {}
   backToTopLossSelect();
 }
@@ -185,14 +183,19 @@ function renderTopLossCategories() {
   const stats = {};
   cats.forEach(c => (c.items || []).forEach(it => { stats[it.id] = tlLossStats(it.id, tlState.line, hidx, shifts14); }));
 
-  // По умолчанию выбираем потерю с наибольшим числом отклонений (или первую со стандартами)
-  if (!tlState.lossId || !stats[tlState.lossId]) {
+  // Убираем потери, которых больше нет; если ничего не выбрано — берём потерю
+  // с наибольшим числом отклонений (или первую со стандартами)
+  tlState.selected = new Set([...tlState.selected].filter(id => stats[id] && stats[id].count));
+  if (!tlState.selected.size) {
     const all = cats.flatMap(c => c.items || []).filter(it => stats[it.id].count);
-    all.sort((a, b) => stats[b.id].fails - stats[a.id].fails);
-    tlState.lossId = all[0] ? all[0].id : null;
+    all.sort((a, c) => stats[c.id].fails - stats[a.id].fails);
+    if (all[0]) tlState.selected.add(all[0].id);
   }
-  const selCat = cats.find(c => (c.items || []).some(it => it.id === tlState.lossId));
-  if (selCat && !tlState.openCats.size) tlState.openCats.add(selCat.id);
+  if (!cats.some(c => c.id === tlState.catId)) {
+    const first = [...tlState.selected][0];
+    const selCat = cats.find(c => (c.items || []).some(it => it.id === first));
+    tlState.catId = (selCat || cats[0]).id;
+  }
 
   renderTopLossSide(cats, stats);
   renderTopLossDiag(cats, stats, hidx);
@@ -319,75 +322,105 @@ $('#tlPick')?.addEventListener('input', (e) => {
   if (inp) { inp.focus(); inp.setSelectionRange(pos, pos); }
 });
 
+/* Шаг 1. «Что случилось на линии?»: плитки категорий и потери выбранной категории */
 function renderTopLossSide(cats, stats) {
   const side = $('#tlSideList');
   const q = tlState.query.trim().toLowerCase();
-  side.innerHTML = cats.map(cat => {
+  const activeCat = cats.find(c => c.id === tlState.catId) || cats[0];
+
+  const tiles = cats.map(cat => {
     const kind = tlCatKind(cat);
     const items = cat.items || [];
-    const matching = items.filter(it => !q || it.name.toLowerCase().includes(q));
-    if (q && !matching.length) return '';
-    const withStd = matching.filter(it => stats[it.id].count);
-    const empty = matching.filter(it => !stats[it.id].count);
+    const withStd = items.filter(it => stats[it.id].count);
     const devs = items.reduce((a, it) => a + stats[it.id].fails, 0);
-    const open = q || tlState.openCats.has(cat.id);
-    const showEmpty = tlState.showEmpty.has(cat.id);
-    const itemBtn = (it) => {
-      const s = stats[it.id];
-      const on = it.id === tlState.lossId;
-      const extra = tlState.extraLossIds.has(it.id);
-      return `<button type="button" class="tl2-item ${on ? 'on' : ''} ${extra ? 'extra' : ''} ${s.count ? '' : 'zero'}" data-tl-loss="${escapeAttr(it.id)}" ${s.count ? '' : 'disabled title="Нет стандартов на этой линии"'}>
-        <span class="tl2-item-name">${escapeHtml(it.name)}</span>
-        ${s.fails ? `<span class="tl2-badge-red" title="Отклонений в Чек-листе CL за 7 дней">⚠ ${s.fails}</span>` : ''}
-        <span class="tl2-item-n">${s.count}</span>
-      </button>`;
-    };
-    return `<div class="tl2-cat tl2-c-${TL_CAT_COLORS[kind]} ${open ? 'open' : ''}">
-      <button type="button" class="tl2-cat-head" data-tl-cat="${escapeAttr(cat.id)}">
-        <span class="tl2-cat-ic">${TL_CAT_ICONS[kind]}</span>
-        <span class="tl2-cat-text"><b>${escapeHtml(cat.name)}</b>
-          <span>${withStd.length} ${pluralizeLosses(withStd.length)} со стандартами${devs ? ` · <em>⚠ ${devs} откл.</em>` : ''}</span></span>
-        <span class="tl2-cat-car">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </span>
-      </button>
-      <div class="tl2-cat-items">
-        ${withStd.map(itemBtn).join('')}
-        ${empty.length ? (showEmpty || q
-          ? empty.map(itemBtn).join('')
-          : `<button type="button" class="tl2-more" data-tl-show-empty="${escapeAttr(cat.id)}">+ ещё ${empty.length} без стандартов</button>`) : ''}
-        ${!withStd.length && !empty.length ? '<div class="tl2-muted">В категории нет потерь</div>' : ''}
-      </div>
-    </div>`;
-  }).join('') || `<div class="tl2-muted">Ничего не найдено по «${escapeHtml(tlState.query)}»</div>`;
-}
-
-function renderTopLossDiag(cats, stats, hidx) {
-  const main = $('#tlDiag');
-  const loss = tlState.lossId ? findLossById(tlState.lossId) : null;
-  if (!loss) {
-    main.innerHTML = '<div class="tl2-empty">На этой линии ни одна потеря пока не связана со стандартами. Привяжите потери на странице стандарта или параметра.</div>';
-    return;
-  }
-  const cat = cats.find(c => (c.items || []).some(it => it.id === loss.id));
-  const kind = tlCatKind(cat);
-  const s = stats[loss.id];
-  const checkIds = [...new Set([loss.id, ...tlState.extraLossIds])];
-  const checkRows = tlCollectRows(checkIds, tlState.line);
-  const last = tlLastCheck(loss.id, tlState.line);
-
-  const rows = tlCollectRows([loss.id], tlState.line)
-    .filter(r => tlState.kind === 'all' || (tlState.kind === 'elec') === r.isElec);
-  const shifts7 = tlRecentShifts(7).reverse();   // слева направо: от старой к новой
-
-  const extraChips = [...tlState.extraLossIds].map(id => {
-    const l = findLossById(id);
-    return l ? `<span class="tl2-extra-chip">${escapeHtml(l.name)}<button type="button" data-tl-extra-remove="${escapeAttr(id)}" title="Убрать из проверки">✕</button></span>` : '';
+    const picked = items.filter(it => tlState.selected.has(it.id)).length;
+    const on = !q && cat.id === activeCat.id;
+    return `<button type="button" class="tl4-cat tl2-c-${TL_CAT_COLORS[kind]}${on ? ' on' : ''}" data-tl-cat="${escapeAttr(cat.id)}" aria-pressed="${on}">
+      <span class="tl4-cat-ic">${TL_CAT_ICONS[kind]}</span>
+      <span class="tl4-cat-text">
+        <b>${escapeHtml(cat.name)}</b>
+        <span>${withStd.length} ${pluralizeLosses(withStd.length)} со стандартами</span>
+      </span>
+      <span class="tl4-cat-side">
+        ${devs ? `<em class="tl4-flag red" title="Отклонений в Чек-листе CL за 7 дней">${devs} откл.</em>` : '<em class="tl4-flag ok">всё в норме</em>'}
+        ${picked ? `<em class="tl4-flag pick">выбрано ${picked}</em>` : ''}
+      </span>
+    </button>`;
   }).join('');
 
-  const tableRows = rows.map(({ row, isElec }) => {
-    const norm = cilNorm(row, '', isElec);
+  // Потери: при поиске — по всем категориям, иначе — открытой категории
+  const pool = q
+    ? cats.flatMap(c => (c.items || []).filter(it => it.name.toLowerCase().includes(q)).map(it => ({ it, cat: c })))
+    : (activeCat.items || []).map(it => ({ it, cat: activeCat }));
+  const withStd = pool.filter(x => stats[x.it.id].count)
+    .sort((a, c) => stats[c.it.id].fails - stats[a.it.id].fails || a.it.name.localeCompare(c.it.name, 'ru'));
+  const empty = pool.filter(x => !stats[x.it.id].count);
+  const showEmpty = q || tlState.showEmpty.has(activeCat.id);
+
+  const chip = ({ it, cat }) => {
+    const s = stats[it.id];
+    const on = tlState.selected.has(it.id);
+    const dot = q ? `<i class="tl4-dot tl2-c-${TL_CAT_COLORS[tlCatKind(cat)]}"></i>` : '';
+    return `<button type="button" class="tl4-chip${on ? ' on' : ''}${s.count ? '' : ' zero'}" data-tl-loss="${escapeAttr(it.id)}" aria-pressed="${on}" ${s.count ? '' : 'disabled title="Нет стандартов на этой линии"'}>
+      ${on ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : dot}
+      <span>${escapeHtml(it.name)}</span>
+      ${s.fails ? `<em class="tl4-chip-fail" title="Отклонений в Чек-листе CL за 7 дней">${s.fails}</em>` : ''}
+    </button>`;
+  };
+
+  const chips = withStd.map(chip).join('') +
+    (empty.length
+      ? (showEmpty ? empty.map(chip).join('')
+        : `<button type="button" class="tl4-more" data-tl-show-empty="${escapeAttr(activeCat.id)}">+ ещё ${empty.length} без стандартов</button>`)
+      : '');
+
+  side.innerHTML = `
+    <div class="tl4-cats">${q ? '' : tiles}</div>
+    <div class="tl4-losses-head">
+      <b>${q ? 'Найденные потери' : escapeHtml(activeCat.name)}</b>
+      <button type="button" class="tl4-multi${tlState.multi ? ' on' : ''}" data-tl-multi aria-pressed="${tlState.multi}" title="Отметьте несколько потерь — проверим стандарты сразу по всем">
+        <i></i>Выбрать несколько
+      </button>
+    </div>
+    <div class="tl4-chips">${chips || '<span class="tl2-muted">' + (q ? `Ничего не найдено по «${escapeHtml(tlState.query)}»` : 'В категории нет потерь') + '</span>'}</div>`;
+}
+
+/* Шаг 2. «Что проверить»: стандарты и параметры по выбранным потерям + нижняя панель */
+function renderTopLossDiag(cats, stats, hidx) {
+  const main = $('#tlDiag');
+  const bar = $('#tlBar');
+  const ids = [...tlState.selected];
+  if (!ids.length) {
+    main.innerHTML = '<div class="tl2-empty">На этой линии ни одна потеря пока не связана со стандартами. Привяжите потери на странице стандарта или параметра.</div>';
+    if (bar) bar.innerHTML = '';
+    return;
+  }
+
+  const allRows = tlCollectRows(ids, tlState.line);
+  const rows = allRows.filter(r => tlState.kind === 'all' || (tlState.kind === 'elec') === r.isElec);
+  const shifts7 = tlRecentShifts(7).reverse();    // слева направо: от старой к новой
+  const shifts14 = tlRecentShifts(14);
+  const mechN = allRows.filter(r => !r.isElec).length;
+  const elecN = allRows.length - mechN;
+
+  // Сводка по выбранным потерям: каждая строка считается один раз
+  let fails = 0, missed = 0;
+  allRows.forEach(r => tlRowShiftStatuses(r.row, shifts14, tlState.line, hidx).forEach(st => {
+    if (st === 'FAIL') fails++; else if (st === 'missed') missed++;
+  }));
+  const last = ids.map(id => tlLastCheck(id, tlState.line)).filter(Boolean).sort().pop();
+  const lossName = (id) => { const l = findLossById(id); return l ? l.name : ''; };
+
+  // Карточки: сначала с отклонениями, потом с пропусками
+  const cards = rows.map(({ row, isElec, losses }) => {
     const statuses = tlRowShiftStatuses(row, shifts7, tlState.line, hidx);
+    const sev = statuses.includes('FAIL') ? 'fail' : statuses.includes('missed') ? 'missed' : statuses.includes('OK') ? 'ok' : 'none';
+    return { row, isElec, losses, statuses, sev };
+  }).sort((a, c) => ['fail', 'missed', 'ok', 'none'].indexOf(a.sev) - ['fail', 'missed', 'ok', 'none'].indexOf(c.sev));
+  const sevText = { fail: 'было отклонение', missed: 'есть пропуски', ok: 'в норме', none: 'нет данных за 7 смен' };
+
+  const cardHtml = ({ row, isElec, losses, statuses, sev }) => {
+    const norm = cilNorm(row, '', isElec);
     const sq = statuses.map((st, i) => {
       const sh = shifts7[i];
       const cls = st === 'OK' ? 'ok' : st === 'FAIL' ? 'fail' : st === 'missed' ? 'missed' : st === 'UNCHECKED' ? 'unchecked' : 'na';
@@ -396,56 +429,68 @@ function renderTopLossDiag(cats, stats, hidx) {
     }).join('');
     const sch = editorRowSchedule(row, tlState.line);
     const title = isElec ? row.paramName : row.title;
-    return `<tr>
-      <td>${isElec ? '<span class="tl2-kind tl2-kind-el">E-Param</span>' : '<span class="tl2-kind">Мех</span>'}</td>
-      <td class="tl2-opl">${escapeHtml(row.oplNumber || '—')}</td>
-      <td><div class="tl2-nm">${escapeHtml(title || '—')}</div>
-        <div class="tl2-sub">${escapeHtml([row.machine, row.nodePart, row.node].filter(Boolean).join(' · '))}</div></td>
-      <td class="tl2-norm">${norm.html}</td>
-      <td><span class="tl2-last">${sq}</span></td>
-      <td>${sch.member ? `<span class="tl2-tag tl2-tag-gr">${sch.count} / 14 смен</span>` : '<span class="tl2-tag tl2-tag-dim">не в расписании</span>'}</td>
-      <td class="tl2-act">${isElec
-        ? `<button type="button" class="tl2-ib" data-tl-open-ep="${escapeAttr(row.id)}" title="Открыть параметр">${CIL_ICONS.eye}</button>`
-        : `<button type="button" class="tl2-ib" data-tl-view="${escapeAttr(row.id)}" title="Открыть стандарт">${CIL_ICONS.eye}</button>`}</td>
-    </tr>`;
-  }).join('');
+    const tags = ids.length > 1
+      ? `<div class="tl4-std-losses">${losses.map(id => `<span>${escapeHtml(lossName(id))}</span>`).join('')}</div>` : '';
+    const open = isElec
+      ? `data-tl-open-ep="${escapeAttr(row.id)}" title="Открыть параметр"`
+      : `data-tl-view="${escapeAttr(row.id)}" title="Открыть стандарт"`;
+    return `<article class="tl4-std tl4-sev-${sev}">
+      <div class="tl4-std-top">
+        ${isElec ? '<span class="tl2-kind tl2-kind-el">E-Param</span>' : '<span class="tl2-kind">Мех</span>'}
+        <span class="tl2-opl">${escapeHtml(row.oplNumber || '')}</span>
+        <span class="tl4-std-state">${sevText[sev]}</span>
+        <button type="button" class="tl2-ib" ${open}>${CIL_ICONS.eye}</button>
+      </div>
+      <h3 class="tl4-std-title">${escapeHtml(title || '—')}</h3>
+      <div class="tl2-sub">${escapeHtml([row.machine, row.nodePart, row.node].filter(Boolean).join(' · '))}</div>
+      ${tags}
+      <div class="tl4-std-row"><span class="tl4-lbl">Норма</span><span class="tl2-norm">${norm.html}</span></div>
+      <div class="tl4-std-row"><span class="tl4-lbl">Последние 7 смен</span><span class="tl2-last">${sq}</span>
+        ${sch.member ? `<span class="tl2-tag tl2-tag-gr">${sch.count} / 14 смен</span>` : '<span class="tl2-tag tl2-tag-dim">не в расписании</span>'}</div>
+    </article>`;
+  };
+
+  const chips = ids.length > 1 ? ids.map(id => `<span class="tl4-sel-chip">${escapeHtml(lossName(id))}<button type="button" data-tl-extra-remove="${escapeAttr(id)}" title="Убрать из проверки">✕</button></span>`).join('') : '';
+  const first = lossName(ids[0]);
 
   main.innerHTML = `
-    <div class="tl2-dg-head tl2-c-${TL_CAT_COLORS[kind]}">
-      <span class="tl2-cat-ic tl2-cat-ic-lg">${TL_CAT_ICONS[kind]}</span>
-      <div class="tl2-dg-title">
-        <div class="tl2-dg-cat">${escapeHtml(cat ? cat.name : '')}</div>
-        <h2>${escapeHtml(loss.name)}</h2>
+    <div class="tl4-head">
+      <div class="tl4-head-text">
+        <h2>Что проверить: ${ids.length > 1 ? `${ids.length} ${pluralizeLosses(ids.length)}` : `«${escapeHtml(first)}»`}</h2>
+        <p>Стандарты и параметры, которые влияют ${ids.length > 1 ? 'на выбранные потери' : 'на эту потерю'}</p>
+        ${chips ? `<div class="tl4-sel">${chips}</div>` : ''}
       </div>
-      <span class="tl2-sp"></span>
-      <button type="button" class="btn btn-tl-check" id="tlStartCheckBtn" ${checkRows.length ? '' : 'disabled'}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        <span>Проверить (${checkRows.length})</span>
-      </button>
-    </div>
-    ${extraChips ? `<div class="tl2-extra">В проверку добавлены: ${extraChips}</div>` : ''}
-    <div class="tl2-kpis">
-      <div class="tl2-kpi"><b>${s.count}</b><span>в проверке: ${s.mech} мех.${s.elec ? ` + ${s.elec} E-Param` : ''}</span></div>
-      <div class="tl2-kpi ${s.fails ? 'red' : ''}"><b>${s.fails}</b><span>отклонений в Чек-листе CL за 7 дней</span></div>
-      <div class="tl2-kpi ${s.missed ? 'amber' : ''}"><b>${s.missed}</b><span>пропущенных проверок за 7 дней</span></div>
-      <div class="tl2-kpi"><b>${last ? fmtShortDate(last.slice(0, 10)) : '—'}</b><span>последняя проверка TOP Losses</span></div>
-    </div>
-    <div class="tl2-tools">
       <span class="tl2-seg">
-        <button type="button" class="${tlState.kind === 'all' ? 'on' : ''}" data-tl-kind="all">Все ${s.count}</button>
-        <button type="button" class="${tlState.kind === 'mech' ? 'on' : ''}" data-tl-kind="mech">Механические ${s.mech}</button>
-        <button type="button" class="${tlState.kind === 'elec' ? 'on' : ''}" data-tl-kind="elec">Электронные ${s.elec}</button>
-      </span>
-      <span class="tl2-legend">
-        <span><i class="tl2-sq tl2-sq-ok"></i>ОК</span><span><i class="tl2-sq tl2-sq-fail"></i>Отклонение</span>
-        <span><i class="tl2-sq tl2-sq-missed"></i>Пропуск</span><span><i class="tl2-sq tl2-sq-na"></i>Не по расписанию</span>
+        <button type="button" class="${tlState.kind === 'all' ? 'on' : ''}" data-tl-kind="all">Все ${allRows.length}</button>
+        <button type="button" class="${tlState.kind === 'mech' ? 'on' : ''}" data-tl-kind="mech">Механические ${mechN}</button>
+        <button type="button" class="${tlState.kind === 'elec' ? 'on' : ''}" data-tl-kind="elec">Электронные ${elecN}</button>
       </span>
     </div>
-    <div class="tl2-table-wrap"><table class="tl2-table">
-      <thead><tr><th>Тип</th><th>OPL</th><th>Стандарт / параметр</th><th>Норма</th><th title="Последние 7 смен Чек-листа CL, слева направо — от старой к новой">Последние 7 смен CL</th><th>Расписание</th><th></th></tr></thead>
-      <tbody>${tableRows || '<tr><td colspan="7" class="tl2-muted">Нет строк этого типа</td></tr>'}</tbody>
-    </table></div>
-    <div class="tl2-hint">Чтобы проверить несколько потерь сразу — нажмите на потерю слева с зажатым Ctrl.</div>`;
+    <div class="tl2-sum">
+      <span class="tl2-sum-i ${fails ? 'red' : 'ok'}">${fails ? `Отклонений за 7 дней: <b>${fails}</b>` : 'Отклонений за 7 дней нет'}</span>
+      <span class="tl2-sum-i ${missed ? 'amber' : 'ok'}">${missed ? `Пропущено проверок: <b>${missed}</b>` : 'Пропусков нет'}</span>
+      <span class="tl2-sum-i">Последняя проверка TOP Losses: <b>${last ? fmtShortDate(last.slice(0, 10)) : 'ещё не было'}</b></span>
+    </div>
+    <div class="tl4-grid">${cards.map(cardHtml).join('') || '<div class="tl2-muted">Нет строк этого типа</div>'}</div>
+    <div class="tl2-legend tl4-legend">
+      <span>Квадраты — последние 7 смен Чек-листа CL, слева направо от старой к новой:</span>
+      <span><i class="tl2-sq tl2-sq-ok"></i>ОК</span><span><i class="tl2-sq tl2-sq-fail"></i>Отклонение</span>
+      <span><i class="tl2-sq tl2-sq-missed"></i>Пропуск</span><span><i class="tl2-sq tl2-sq-na"></i>Не по расписанию</span>
+    </div>`;
+
+  // Нижняя панель: всегда на виду, одно главное действие
+  const names = ids.length > 2 ? `${lossName(ids[0])} и ещё ${ids.length - 1}` : ids.map(lossName).join(', ');
+  if (bar) bar.innerHTML = `
+    <div class="tl4-bar-in">
+      <div class="tl4-bar-text">
+        <b>${allRows.length} ${pluralRu(allRows.length, 'стандарт', 'стандарта', 'стандартов')} на проверку</b>
+        <span>${escapeHtml(names)}</span>
+      </div>
+      <button type="button" class="btn btn-tl-check" id="tlStartCheckBtn" ${allRows.length ? '' : 'disabled'}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <span>Начать проверку</span>
+      </button>
+    </div>`;
 }
 
 /* ============================================================
@@ -469,8 +514,9 @@ $('#tlSelectView')?.addEventListener('click', (e) => {
   }
   const cat = e.target.closest('[data-tl-cat]');
   if (cat) {
-    const id = cat.dataset.tlCat;
-    tlState.openCats.has(id) ? tlState.openCats.delete(id) : tlState.openCats.add(id);
+    tlState.catId = cat.dataset.tlCat;
+    tlState.query = '';
+    const s = $('#tlSearch'); if (s) s.value = '';
     return renderTopLossCategories();
   }
   const more = e.target.closest('[data-tl-show-empty]');
@@ -478,21 +524,27 @@ $('#tlSelectView')?.addEventListener('click', (e) => {
     tlState.showEmpty.add(more.dataset.tlShowEmpty);
     return renderTopLossCategories();
   }
+  if (e.target.closest('[data-tl-multi]')) {
+    tlState.multi = !tlState.multi;
+    // Выключили «несколько» — оставляем первую выбранную потерю
+    if (!tlState.multi && tlState.selected.size > 1) tlState.selected = new Set([[...tlState.selected][0]]);
+    return renderTopLossCategories();
+  }
   const lossBtn = e.target.closest('[data-tl-loss]');
   if (lossBtn) {
     const id = lossBtn.dataset.tlLoss;
-    if ((e.ctrlKey || e.metaKey) && tlState.lossId && id !== tlState.lossId) {
-      // Ctrl+клик — добавить / убрать потерю из проверки, не меняя разбор
-      tlState.extraLossIds.has(id) ? tlState.extraLossIds.delete(id) : tlState.extraLossIds.add(id);
+    if (tlState.multi) {
+      // Отметить / снять; последнюю выбранную снять нельзя
+      if (tlState.selected.has(id)) { if (tlState.selected.size > 1) tlState.selected.delete(id); }
+      else tlState.selected.add(id);
     } else {
-      tlState.lossId = id;
-      tlState.extraLossIds.delete(id);
+      tlState.selected = new Set([id]);
     }
     return renderTopLossCategories();
   }
   const rm = e.target.closest('[data-tl-extra-remove]');
   if (rm) {
-    tlState.extraLossIds.delete(rm.dataset.tlExtraRemove);
+    if (tlState.selected.size > 1) tlState.selected.delete(rm.dataset.tlExtraRemove);
     return renderTopLossCategories();
   }
   const kind = e.target.closest('[data-tl-kind]');
@@ -505,7 +557,7 @@ $('#tlSelectView')?.addEventListener('click', (e) => {
   const ep = e.target.closest('[data-tl-open-ep]');
   if (ep && typeof openEparamPage === 'function') return openEparamPage(ep.dataset.tlOpenEp);
   if (e.target.closest('#tlStartCheckBtn')) {
-    const ids = [...new Set([tlState.lossId, ...tlState.extraLossIds])].filter(Boolean);
+    const ids = [...tlState.selected];
     buildTopLossChecklist(ids);
   }
 });

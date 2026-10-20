@@ -332,15 +332,22 @@
       </button>
     </div>
     <section class="card tl-pick" id="tlPick" style="display:none"></section>
-    <div class="tl2-split" id="tlSplit">
-      <aside class="card tl2-side">
-        <label class="tl2-search">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="tlSearch" placeholder="Найти потерю…" autocomplete="off">
-        </label>
-        <div class="tl2-side-scroll" id="tlSideList"></div>
-      </aside>
-      <section class="card tl2-main" id="tlDiag"></section>
+    <div class="tl4-flow" id="tlSplit">
+      <section class="card tl4-what">
+        <div class="tl4-what-head">
+          <div>
+            <h2>Что случилось на линии?</h2>
+            <p>Выберите категорию и потерю — ниже появятся стандарты, которые на неё влияют</p>
+          </div>
+          <label class="tl2-search">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="tlSearch" placeholder="Найти потерю…" autocomplete="off">
+          </label>
+        </div>
+        <div id="tlSideList"></div>
+      </section>
+      <section class="card tl4-check" id="tlDiag"></section>
+      <div class="tl4-bar" id="tlBar"></div>
     </div>
   </div>
 
