@@ -259,9 +259,12 @@ function updateClContext() {
   const shifts = getShiftsForDate(period.date);
   clState.shiftLetter = shifts[clState.shiftType] || '—';
 
-  const brandPlanned = getElectronicBrandForDate(clState.line, period.date) || '';
-  clState.brandPlanned = brandPlanned;
-  clState.brand = brandPlanned;
+  // Текущий бренд линии: последняя смена сорта в COCL или выбор аналитика
+  const brandInfo = getLineBrandNow(clState.line);
+  clState.brandPlanned = getElectronicBrandForDate(clState.line, period.date) || '';
+  clState.brand = brandInfo ? brandInfo.brand : '';
+  clState.brandReason = brandInfo && brandInfo.source !== 'cocl'
+    ? [lineBrandSourceText(brandInfo), brandInfo.note].filter(Boolean).join(' — ') : '';
 
   const dateFormatted = fmtISODate(period.date);
   const shiftLabel = clState.shiftType === 'day' ? 'День' : 'Ночь';
@@ -278,16 +281,7 @@ function updateClContext() {
         <span class="cl-shift-badge cl-shift-${clState.shiftLetter}">${escapeHtml(clState.shiftLetter)}</span>
       </span>
     </div>
-    <div class="cl-context-item">
-      <span class="cl-context-label">Бренд:</span>
-      <span class="cl-context-value cl-brand-value">${escapeHtml(clState.brand || '— не задан —')}</span>
-      <button type="button" class="cl-brand-edit-btn" id="clEditBrandBtn" title="Изменить бренд">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-        </svg>
-      </button>
-    </div>
+    <div class="cl-context-item">${lineBrandBarHtml(clState.line, 'clEditBrandBtn')}</div>
   `;
 
   bar.style.display = 'flex';
@@ -296,24 +290,10 @@ function updateClContext() {
 }
 
 function openClBrandOverrideDialog() {
-  const brands = getBrandsForLine(clState.line);
-  if (!brands.length) return showToast('На линии нет брендов', true);
-
-  const brandList = brands.join(', ');
-  const current = clState.brand || '';
-  const newBrand = prompt(`Бренд на ${fmtISODate(clState.todayISO)}\nДоступные: ${brandList}`, current);
-  if (newBrand === null) return;
-  const trimmed = newBrand.trim();
-  if (!trimmed) return;
-  if (!brands.includes(trimmed)) return showToast('Бренд не найден на линии', true);
-  if (trimmed === clState.brand) return;
-
-  const reason = prompt('Причина изменения (кратко):', '') || '';
-  clState.brand = trimmed;
-  clState.brandReason = reason.trim();
-
-  updateClContext();
-  renderClMatrix();
+  openLineBrandPicker(clState.line, 'operator', () => {
+    updateClContext();
+    renderClMatrix();
+  });
 }
 
 function updateClPanelCount() {

@@ -1,0 +1,72 @@
+/* ============================================================ */
+/* === БРЕНД НА ЛИНИИ (Чек-лист CL, Расписание CL) ============ */
+/* ============================================================ */
+
+.lb-bar {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 5px 6px 5px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 40%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-cyan) 8%, var(--bg-card));
+  font-size: 12px;
+  color: var(--text-second);
+}
+.lb-bar-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.lb-bar-brand { font-size: 14px; font-weight: 800; color: var(--accent-cyan); }
+.lb-bar-src { font-size: 11.5px; color: var(--text-dim); }
+.lb-bar-btn {
+  padding: 3px 10px;
+  border: 1px solid var(--border-hi);
+  border-radius: 999px;
+  background: var(--bg-card);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-second);
+  cursor: pointer;
+}
+.lb-bar-btn:hover { color: var(--accent-cyan); border-color: var(--accent-cyan); }
+
+.lb-bar-empty {
+  border-color: color-mix(in srgb, var(--accent-amber) 55%, var(--border));
+  background: color-mix(in srgb, var(--accent-amber) 9%, var(--bg-card));
+}
+.lb-bar-empty .lb-bar-brand { color: var(--accent-amber); }
+
+/* Окно выбора */
+.lb-modal { max-width: 480px; }
+.lb-modal .field { margin-bottom: 12px; }
+.lb-now { margin: 0 0 12px; font-size: 13px; color: var(--text-second); }
+.lb-now b { color: var(--text-main); }
+.lb-hint { margin: 0; font-size: 12px; color: var(--text-dim); }
+
+/* Колонка «Норма»: чьи значения и нет нормы для бренда */
+.cil-norm-brand {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cil-norm-miss {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: var(--accent-red);
+  background: color-mix(in srgb, var(--accent-red) 10%, transparent);
+}

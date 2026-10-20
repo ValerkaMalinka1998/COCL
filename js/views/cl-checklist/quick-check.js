@@ -24,14 +24,23 @@ function qcNum(v) {
   return parseFloat(String(v || '').trim().replace(',', '.'));
 }
 
+/* Чьи значения проверяем для текущего бренда (см. pickBrandValues) */
+function getQcBrandPick() {
+  const row = quickCheckState.row;
+  if (!row) return { item: null, kind: 'none' };
+  if (quickCheckState.isElec) return pickBrandValues(row.valuesByBrand, quickCheckState.brand);
+  const ms = (Array.isArray(row.measurements) ? row.measurements : [])
+    .filter(b => (b.points || []).some(p => String(p && p.value != null ? p.value : '').trim()));
+  return pickBrandValues(ms, quickCheckState.brand);
+}
+
 /* Нормы полей ввода текущей проверки: [{ label, text, norm:{min,max}|null }] */
 function getQcFields() {
   const row = quickCheckState.row;
   if (!row) return [];
   if (quickCheckState.isElec) {
-    const values = Array.isArray(row.valuesByBrand) ? row.valuesByBrand : [];
-    const brand = quickCheckState.brand;
-    const entry = (brand && values.find(v => v.brand === brand)) || values[0] || null;
+    const entry = pickBrandValues(row.valuesByBrand, quickCheckState.brand).item;
+    if (!entry) return [];
     const ct = migrateControlType(row.controlType, row.measurements);
     return [{ label: 'Значение', text: entry ? getEparamNormLabel(entry, ct) : '—', norm: getEparamNormRange(entry) }];
   }
@@ -128,7 +137,11 @@ function openClCheckModal(rowId, dateStr, shift) {
   $('#qcCtx').innerHTML = [
     `<span>${fmtISODate(dateStr)} · ${shift === 'day' ? 'День' : 'Ночь'} · смена ${escapeHtml(shiftLetter)}</span>`,
     tw ? `<span>время ${escapeHtml(tw)}</span>` : '',
-    `<span class="${brand ? 'qcx-brand' : 'qcx-nobrand'}">${brand ? 'бренд ' + escapeHtml(brand) : 'бренд не задан'}</span>`
+    `<span class="${brand ? 'qcx-brand' : 'qcx-nobrand'}">${brand ? 'бренд ' + escapeHtml(brand) : 'бренд не задан'}</span>`,
+    (() => {
+      const pick = getQcBrandPick();
+      return pick.kind === 'rest' ? '<span class="qcx-brand">значения: остальные бренды</span>' : '';
+    })()
   ].filter(Boolean).join('');
 
   // --- Как проверять ---
@@ -179,7 +192,12 @@ function openClCheckModal(rowId, dateStr, shift) {
           return `<span class="qcx-pt-prev${bad ? ' is-bad' : ''}" title="Прошлая проверка: ${escapeAttr(prev.label)}">было ${escapeHtml(prev.values[i])}</span>`;
         })() : ''}
       </label>`).join('')
-      : '<div class="qcx-empty">Точки не заданы в стандарте</div>';
+      : (() => {
+        const pick = getQcBrandPick();
+        if (pick.kind === 'missing') return `<div class="qcx-empty qcx-miss">Для бренда <b>${escapeHtml(brand)}</b> в ${isElec ? 'параметре' : 'стандарте'} нет значений и нет строки «Остальные бренды». Сообщите аналитику или проверьте, верно ли указан бренд на линии.</div>`;
+        if (pick.kind === 'nobrand') return '<div class="qcx-empty qcx-miss">Значения разные по брендам, а бренд на линии не задан. Укажите бренд в Чек-листе («Бренд на линии → изменить»).</div>';
+        return '<div class="qcx-empty">Точки не заданы в стандарте</div>';
+      })();
     $('#qcPointsList').classList.toggle('qcx-pts-one', fields.length === 1);
     $('#qcPrevLabel').textContent = prev ? `«было» — ${prev.label}` : '';
   }
@@ -309,9 +327,7 @@ function saveQuickCheck(goNext) {
     }
 
     // Ищем target/tolerance для бренда
-    const values = Array.isArray(row.valuesByBrand) ? row.valuesByBrand : [];
-    let entry = brand ? values.find(v => v.brand === brand) : null;
-    if (!entry && values.length) entry = values[0];
+    const entry = pickBrandValues(row.valuesByBrand, brand).item;
 
     let inRange = true;
     const range = getEparamNormRange(entry);
@@ -374,13 +390,9 @@ function saveQuickCheck(goNext) {
    ============================================================ */
 
 function getRowMeasurementBlock(row, brand) {
-  const measurements = Array.isArray(row.measurements) ? row.measurements : [];
-  if (!measurements.length) return null;
-  if (brand) {
-    const b = measurements.find(x => x.brand === brand);
-    if (b) return b;
-  }
-  return measurements.find(x => !x.brand) || measurements[0];
+  const measurements = (Array.isArray(row.measurements) ? row.measurements : [])
+    .filter(b => (b.points || []).some(p => String(p && p.value != null ? p.value : '').trim()));
+  return pickBrandValues(measurements, brand).item;
 }
 
 /* --- Ввод значений: подсветка, Enter — следующее поле / сохранить --- */

@@ -126,6 +126,8 @@ if (type === 'ChangeOver') {
   const hist = getHistory();
   hist.push(record);
   setHistory(hist);
+  // Смена сорта — новый текущий бренд линии для Чек-листа CL
+  if (type === 'ChangeOver' && brandTo) addLineBrandEvent(line, brandTo, 'cocl', brandFrom ? `${brandFrom} → ${brandTo}` : '');
   updateNavHistoryCounter();
 
   showToast('Проверка сохранена');

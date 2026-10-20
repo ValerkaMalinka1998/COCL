@@ -341,6 +341,7 @@ function renderScheduleMatrix() {
         <button type="button" class="sch-week-chip ${off === 0 ? 'active' : ''}" data-sch-week="0">Эта</button>
         <button type="button" class="sch-week-chip ${off === 1 ? 'active' : ''}" data-sch-week="1">Следующая</button>
       </div>
+      ${lineBrandBarHtml(schState.line, 'schEditBrandBtn')}
       ${scopeHtml}
     </div>
     <div class="sch-cil-hint">${escapeHtml(weekSub)}</div>
@@ -389,6 +390,11 @@ function renderScheduleMatrix() {
 
   // Навигация по неделям
   bindSchWeekNav();
+
+  // Бренд на линии — аналитик правит, если оператор не провёл COCL
+  $('#schEditBrandBtn')?.addEventListener('click', () => {
+    openLineBrandPicker(schState.line, 'analyst', () => renderScheduleMatrix());
+  });
 
   // Клик по «×» — убрать из расписания
   wrap.querySelectorAll('[data-remove-from-schedule]').forEach(btn => {

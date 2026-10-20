@@ -31,7 +31,7 @@ function getEparamNormRange(entry) {
 /* Подпись нормы бренда для оператора */
 function getEparamNormLabel(entry, controlType) {
   if (!entry) return '— норма не задана —';
-  const brand = entry.brand || 'Все бренды';
+  const brand = entry.brand || REST_BRANDS_LABEL;
   if (controlType === 'interval') {
     const r = getEparamNormRange(entry);
     return r ? `${brand}: ${r.min} … ${r.max}` : `${brand}: —`;
@@ -55,9 +55,10 @@ function openEparamPage(id) {
     epPageState.isNew = true;
   }
   // Для интервала показываем «от / до» — восстанавливаем их из target ± tolerance
+  // Строка без бренда = «Остальные бренды»: в форме — значение '*'
   p.valuesByBrand = p.valuesByBrand.map(v => {
     const r = getEparamNormRange(v);
-    return { ...v, min: r ? r.min : '', max: r ? r.max : '' };
+    return { ...v, brand: v.brand || '*', min: r ? r.min : '', max: r ? r.max : '' };
   });
   if (!p.valuesByBrand.length && p.controlType !== 'fixed') {
     p.valuesByBrand = [{ brand: '', target: '', tolerance: '', min: '', max: '' }];
@@ -194,8 +195,9 @@ function renderEparamNorm(p) {
   const rows = p.valuesByBrand.length ? p.valuesByBrand : [];
 
   const brandSelect = (value) => {
-    const opts = ['<option value="">— бренд —</option>']
-      .concat(value && !lineBrands.includes(value)
+    const opts = ['<option value="">— бренд —</option>',
+      `<option value="*"${value === '*' ? ' selected' : ''}>${REST_BRANDS_LABEL}</option>`]
+      .concat(value && value !== '*' && !lineBrands.includes(value)
         ? [`<option value="${escapeAttr(value)}" selected>${escapeHtml(value)}</option>`]
         : [])
       .concat(lineBrands.map(b =>
@@ -512,29 +514,30 @@ $('#epPageSaveBtn')?.addEventListener('click', () => {
       if (!r.brand) return showToast('Выберите бренд в каждой строке нормы', true);
       if (p.controlType === 'interval') {
         if (r.min === '' || r.max === '' || !Number.isFinite(Number(r.min)) || !Number.isFinite(Number(r.max))) {
-          return showToast(`Бренд ${r.brand}: укажите числа «от» и «до»`, true);
+          return showToast(`Бренд ${r.brand === '*' ? REST_BRANDS_LABEL : r.brand}: укажите числа «от» и «до»`, true);
         }
-        if (Number(r.min) > Number(r.max)) return showToast(`Бренд ${r.brand}: «от» больше, чем «до»`, true);
+        if (Number(r.min) > Number(r.max)) return showToast(`Бренд ${r.brand === '*' ? REST_BRANDS_LABEL : r.brand}: «от» больше, чем «до»`, true);
       } else {
         if (r.target === '' || r.tolerance === '' || !Number.isFinite(Number(r.target)) || !Number.isFinite(Number(r.tolerance))) {
-          return showToast(`Бренд ${r.brand}: укажите числа нормы и допуска`, true);
+          return showToast(`Бренд ${r.brand === '*' ? REST_BRANDS_LABEL : r.brand}: укажите числа нормы и допуска`, true);
         }
-        if (Number(r.tolerance) < 0) return showToast(`Бренд ${r.brand}: допуск не может быть отрицательным`, true);
+        if (Number(r.tolerance) < 0) return showToast(`Бренд ${r.brand === '*' ? REST_BRANDS_LABEL : r.brand}: допуск не может быть отрицательным`, true);
       }
     }
     if (!filled.length) return showToast('Добавьте хотя бы один бренд с нормой', true);
     const brands = filled.map(r => r.brand);
     const dupBrand = brands.find((b, i) => brands.indexOf(b) !== i);
-    if (dupBrand) return showToast(`Бренд ${dupBrand} указан дважды`, true);
+    if (dupBrand) return showToast(`Бренд ${dupBrand === '*' ? REST_BRANDS_LABEL : dupBrand} указан дважды`, true);
 
     // Интервал хранится и как min/max, и как target ± tolerance —
     // так его понимают проверка, Чек-лист и экспорт в Excel.
     valuesByBrand = filled.map(r => {
+      const brand = r.brand === '*' ? '' : r.brand;   // «Остальные бренды»
       if (p.controlType === 'interval') {
         const min = Number(r.min), max = Number(r.max);
-        return { brand: r.brand, min, max, target: (min + max) / 2, tolerance: (max - min) / 2 };
+        return { brand, min, max, target: (min + max) / 2, tolerance: (max - min) / 2 };
       }
-      return { brand: r.brand, target: Number(r.target), tolerance: Number(r.tolerance) };
+      return { brand, target: Number(r.target), tolerance: Number(r.tolerance) };
     });
   }
 

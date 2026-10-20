@@ -1304,6 +1304,17 @@ standards-table → toploss-redesign, pull requests #6–#9 цепочкой):
    Ключ STORAGE_KEYS.changeLog = 'cl_change_log_v1' (в бэкапе).
    js/data/changelog.js, js/views/editor/changelog-view.js,
    css/views/changelog.css.
+10. ТЕКУЩИЙ БРЕНД ЛИНИИ (Чек-лист CL): последнее событие из
+   cl_line_brand_events_v1 (STORAGE_KEYS.lineBrandEvents): смена
+   сорта в COCL (brandTo), выбор аналитика в Расписании CL или
+   оператора в Чек-листе; иначе старый план брендов по датам.
+   js/data/line-brand.js (getLineBrandNow, addLineBrandEvent,
+   pickBrandValues), js/components/line-brand-picker.js
+   (#lineBrandModal), css/components/line-brand.css.
+   Норма для бренда: своя строка → «Остальные бренды» (строка без
+   бренда, бывш. «Все бренды»; есть и у E-Param, в форме '*') →
+   иначе «нет нормы для X» / «бренд не задан». Первый бренд по
+   списку больше НЕ подставляется.
 
 ================================================================
 16. ЧТО ОСТАЛОСЬ

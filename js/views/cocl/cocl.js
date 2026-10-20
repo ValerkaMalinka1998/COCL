@@ -507,7 +507,7 @@ function getSelectedTriggers() {
 
 /**
  * Эффективный блок точек для бренда:
- * сначала блок конкретного бренда, иначе блок «Все бренды» (brand === '').
+ * сначала блок конкретного бренда, иначе блок «Остальные бренды» (brand === '').
  */
 function getEffectiveBrandBlock(blocks, brand) {
   if (!Array.isArray(blocks) || !blocks.length) return null;

@@ -536,7 +536,7 @@ function renderReadonlyBrandsTable(measurements) {
       const val = points[i]?.value || '';
       cells += `<td class="bt-td-value">${escapeHtml(val) || '<span style="color:var(--text-dim)">—</span>'}</td>`;
     }
-    return `<tr><td class="bt-td-brand">${escapeHtml(block && block.brand ? block.brand : 'Все бренды')}</td>${cells}</tr>`;
+    return `<tr><td class="bt-td-brand">${escapeHtml(block && block.brand ? block.brand : REST_BRANDS_LABEL)}</td>${cells}</tr>`;
   }).join('');
 
   return `
@@ -611,7 +611,7 @@ function renderSvBrandsTable(measurements) {
         </td>`;
       }
 
-      const brandOptions = ['<option value="">Все бренды</option>']
+      const brandOptions = ['<option value="">Остальные бренды</option>']
         .concat(brands.map(b => {
           const selected = (b === block.brand) ? ' selected' : '';
           return `<option value="${escapeHtml(b)}"${selected}>${escapeHtml(b)}</option>`;
