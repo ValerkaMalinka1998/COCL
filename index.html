@@ -1407,7 +1407,44 @@
 
   <div class="val-slot" id="epValidation"></div>
 
+  <!-- ===== Вкладки внутри параметра ===== -->
+  <div class="sv-full-tabs" id="epTabs">
+    <button type="button" class="sv-full-tab-btn active" data-ep-tab="main">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="16" x2="12" y2="12"/>
+        <line x1="12" y1="8" x2="12.01" y2="8"/>
+      </svg>
+      <span>Основное</span>
+    </button>
+    <button type="button" class="sv-full-tab-btn" data-ep-tab="ack">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 0 0 7.75"/>
+      </svg>
+      <span>Ознакомление</span>
+    </button>
+    <button type="button" class="sv-full-tab-btn" data-ep-tab="history">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+      <span>История изменений</span>
+      <span class="sv-full-tab-badge" id="epHistoryCount">0</span>
+    </button>
+    <button type="button" class="sv-full-tab-btn" data-ep-tab="comments">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      <span>Комментарии</span>
+      <span class="sv-full-tab-badge" id="epCommentsCount">0</span>
+    </button>
+  </div>
+
   <div class="sv-full-content">
+    <div class="sv-full-pane" id="epPaneMain">
     <div class="sv-full-grid">
 
       <div class="sv-full-col-main">
@@ -1459,18 +1496,70 @@
       </div>
 
     </div>
-
-    <div class="card sv-full-card ep-history-card" id="epHistoryCard" style="display:none">
-      <div class="sv-full-card-title">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <polyline points="12 6 12 12 16 14"/>
-        </svg>
-        История изменений параметра
-        <span class="sv-full-tab-badge" id="epHistoryCount">0</span>
-      </div>
-      <div class="sv-full-table-wrap" id="epHistoryWrap"></div>
     </div>
+
+    <!-- ========== ВКЛАДКА: ОЗНАКОМЛЕНИЕ ========== -->
+    <div class="sv-full-pane" id="epPaneAck" style="display:none">
+      <div class="card sv-full-card">
+        <div class="sv-full-card-head-row">
+          <div class="sv-full-card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 0 0 7.75"/>
+            </svg>
+            Ознакомление с версиями параметра
+          </div>
+          <button type="button" class="btn btn-success btn-icon-text" id="epAckMarkBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>Отметить ознакомление</span>
+          </button>
+        </div>
+        <div class="sv-full-table-wrap" id="epAckTableWrap"></div>
+      </div>
+    </div>
+
+    <!-- ========== ВКЛАДКА: ИСТОРИЯ ========== -->
+    <div class="sv-full-pane" id="epPaneHistory" style="display:none">
+      <div class="card sv-full-card">
+        <div class="sv-full-card-head-row">
+          <div class="sv-full-card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            История изменений параметра
+          </div>
+        </div>
+        <div class="sv-full-table-wrap" id="epHistoryWrap"></div>
+      </div>
+    </div>
+
+    <!-- ========== ВКЛАДКА: КОММЕНТАРИИ ========== -->
+    <div class="sv-full-pane" id="epPaneComments" style="display:none">
+      <div class="card sv-full-card">
+        <div class="sv-full-card-head-row">
+          <div class="sv-full-card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            Комментарии к параметру
+          </div>
+          <button type="button" class="btn btn-secondary btn-icon-text" id="epAddCommentBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            <span>Добавить комментарий</span>
+          </button>
+        </div>
+        <div class="sv-full-table-wrap" id="epCommentsTableWrap"></div>
+      </div>
+    </div>
+
   </div>
 </div>
 
