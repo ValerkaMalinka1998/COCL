@@ -939,3 +939,47 @@
 .sv-content-blocks-col .sv-content-block {
   margin: 0;
 }
+
+/* ============================================================ */
+/* === ВКЛАДКА «ИСТОРИЯ» СТАНДАРТА ============================ */
+/* ============================================================ */
+
+.sv-hist-table .sv-hist-c-date {
+  width: 140px;
+  white-space: nowrap;
+  color: var(--text-second);
+  font-variant-numeric: tabular-nums;
+}
+.sv-hist-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+.sv-hist-det {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  font-size: 12px;
+}
+.sv-hist-label { font-weight: 700; color: var(--text-second); }
+.sv-hist-from,
+.sv-hist-to {
+  padding: 1px 6px;
+  border-radius: 6px;
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.sv-hist-from {
+  color: var(--accent-red);
+  background: color-mix(in srgb, var(--accent-red) 10%, transparent);
+  text-decoration: line-through;
+}
+.sv-hist-to {
+  color: var(--accent-green);
+  background: color-mix(in srgb, var(--accent-green) 12%, transparent);
+}
+.sv-hist-arrow,
+.sv-hist-none { color: var(--text-dim); }

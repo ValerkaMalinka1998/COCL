@@ -166,9 +166,7 @@ function renderStandardFullView() {
   const versionsCount = Array.isArray(st.versions) ? st.versions.length : 0;
   const commentsCount = Array.isArray(st.comments) ? st.comments.length : 0;
 
-  const historyBadge = $('#svHistoryCount');
-  if (historyBadge) historyBadge.textContent = versionsCount;
-
+  // Счётчик вкладки «История изменений» ставит renderSvHistoryTable
   const commentsBadge = $('#svCommentsCount');
   if (commentsBadge) commentsBadge.textContent = commentsCount;
 
