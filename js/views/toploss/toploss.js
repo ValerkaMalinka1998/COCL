@@ -13,7 +13,6 @@ const TL_LINE_KEY = 'cl_tl_line';
 const tlState = {
   line: '',
   lossId: null,               // выбранная потеря
-  extraLossIds: new Set(),    // ещё потери, добавленные в проверку
   openCats: new Set(),        // раскрытые категории
   showEmpty: new Set(),       // категории, где показаны потери без стандартов
   query: '',
@@ -134,14 +133,12 @@ function fillTopLossTab() {
   if (line !== tlState.line) {
     tlState.line = line;
     tlState.lossId = null;
-    tlState.extraLossIds.clear();
   }
 }
 
 function setTopLossLine(line) {
   tlState.line = line || '';
   tlState.lossId = null;
-  tlState.extraLossIds.clear();
   tlState.openCats.clear();
   try { localStorage.setItem(TL_LINE_KEY, tlState.line); } catch (e) {}
   backToTopLossSelect();
@@ -335,8 +332,7 @@ function renderTopLossSide(cats, stats) {
     const itemBtn = (it) => {
       const s = stats[it.id];
       const on = it.id === tlState.lossId;
-      const extra = tlState.extraLossIds.has(it.id);
-      return `<button type="button" class="tl2-item ${on ? 'on' : ''} ${extra ? 'extra' : ''} ${s.count ? '' : 'zero'}" data-tl-loss="${escapeAttr(it.id)}" ${s.count ? '' : 'disabled title="Нет стандартов на этой линии"'}>
+      return `<button type="button" class="tl2-item ${on ? 'on' : ''} ${s.count ? '' : 'zero'}" data-tl-loss="${escapeAttr(it.id)}" ${s.count ? '' : 'disabled title="Нет стандартов на этой линии"'}>
         <span class="tl2-item-name">${escapeHtml(it.name)}</span>
         ${s.fails ? `<span class="tl2-badge-red" title="Отклонений в Чек-листе CL за 7 дней">${s.fails} ${pluralRu(s.fails, 'откл.', 'откл.', 'откл.')}</span>` : ''}
         <span class="tl2-item-n" title="Сколько стандартов и параметров влияют на эту потерю">${s.count} ${s.count ? 'станд.' : ''}</span>
@@ -372,18 +368,12 @@ function renderTopLossDiag(cats, stats, hidx) {
   const cat = cats.find(c => (c.items || []).some(it => it.id === loss.id));
   const kind = tlCatKind(cat);
   const s = stats[loss.id];
-  const checkIds = [...new Set([loss.id, ...tlState.extraLossIds])];
-  const checkRows = tlCollectRows(checkIds, tlState.line);
+  const checkRows = tlCollectRows([loss.id], tlState.line);
   const last = tlLastCheck(loss.id, tlState.line);
 
   const rows = tlCollectRows([loss.id], tlState.line)
     .filter(r => tlState.kind === 'all' || (tlState.kind === 'elec') === r.isElec);
   const shifts7 = tlRecentShifts(7).reverse();   // слева направо: от старой к новой
-
-  const extraChips = [...tlState.extraLossIds].map(id => {
-    const l = findLossById(id);
-    return l ? `<span class="tl2-extra-chip">${escapeHtml(l.name)}<button type="button" data-tl-extra-remove="${escapeAttr(id)}" title="Убрать из проверки">✕</button></span>` : '';
-  }).join('');
 
   const tableRows = rows.map(({ row, isElec }) => {
     const norm = cilNorm(row, '', isElec);
@@ -423,7 +413,6 @@ function renderTopLossDiag(cats, stats, hidx) {
         <span>Проверить ${checkRows.length} ${pluralRu(checkRows.length, 'стандарт', 'стандарта', 'стандартов')}</span>
       </button>
     </div>
-    ${extraChips ? `<div class="tl2-extra">В проверку добавлены: ${extraChips}</div>` : ''}
     <div class="tl2-sum">
       <span class="tl2-sum-i ${s.fails ? 'red' : 'ok'}">${s.fails ? `Отклонений за 7 дней: <b>${s.fails}</b>` : 'Отклонений за 7 дней нет'}</span>
       <span class="tl2-sum-i ${s.missed ? 'amber' : 'ok'}">${s.missed ? `Пропущено проверок: <b>${s.missed}</b>` : 'Пропусков нет'}</span>
@@ -480,19 +469,7 @@ $('#tlSelectView')?.addEventListener('click', (e) => {
   }
   const lossBtn = e.target.closest('[data-tl-loss]');
   if (lossBtn) {
-    const id = lossBtn.dataset.tlLoss;
-    if ((e.ctrlKey || e.metaKey) && tlState.lossId && id !== tlState.lossId) {
-      // Ctrl+клик — добавить / убрать потерю из проверки, не меняя разбор
-      tlState.extraLossIds.has(id) ? tlState.extraLossIds.delete(id) : tlState.extraLossIds.add(id);
-    } else {
-      tlState.lossId = id;
-      tlState.extraLossIds.delete(id);
-    }
-    return renderTopLossCategories();
-  }
-  const rm = e.target.closest('[data-tl-extra-remove]');
-  if (rm) {
-    tlState.extraLossIds.delete(rm.dataset.tlExtraRemove);
+    tlState.lossId = lossBtn.dataset.tlLoss;
     return renderTopLossCategories();
   }
   const kind = e.target.closest('[data-tl-kind]');
@@ -505,7 +482,7 @@ $('#tlSelectView')?.addEventListener('click', (e) => {
   const ep = e.target.closest('[data-tl-open-ep]');
   if (ep && typeof openEparamPage === 'function') return openEparamPage(ep.dataset.tlOpenEp);
   if (e.target.closest('#tlStartCheckBtn')) {
-    const ids = [...new Set([tlState.lossId, ...tlState.extraLossIds])].filter(Boolean);
+    const ids = [tlState.lossId].filter(Boolean);
     buildTopLossChecklist(ids);
   }
 });

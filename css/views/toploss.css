@@ -572,7 +572,6 @@
   background: color-mix(in srgb, var(--accent-amber) 12%, var(--bg-card));
   box-shadow: inset 3px 0 0 var(--accent-amber);
 }
-.tl2-item.extra { box-shadow: inset 3px 0 0 color-mix(in srgb, var(--accent-amber) 55%, transparent); }
 .tl2-item.zero { cursor: default; opacity: 0.45; }
 .tl2-item-name { flex: 1; min-width: 0; }
 .tl2-item-n { font-size: 11px; font-weight: 700; color: var(--text-dim); }
@@ -622,18 +621,6 @@
 }
 .btn-tl-check:hover:not(:disabled) { filter: brightness(1.05); }
 .btn-tl-check:disabled { opacity: 0.5; cursor: not-allowed; }
-.tl2-extra { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: var(--text-second); }
-.tl2-extra-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 4px 3px 10px;
-  font-weight: 700;
-  color: var(--accent-amber);
-  background: color-mix(in srgb, var(--accent-amber) 12%, transparent);
-  border-radius: 999px;
-}
-.tl2-extra-chip button { padding: 0 6px; color: inherit; background: none; border: 0; cursor: pointer; }
 .tl2-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
 .tl2-seg { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--border); border-radius: 9px; }
 .tl2-seg button {
@@ -650,7 +637,8 @@
 .tl2-seg button.on { color: var(--text-main); background: var(--bg-hover); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
 .tl2-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; color: var(--text-second); }
 .tl2-legend span { display: inline-flex; align-items: center; gap: 5px; }
-.tl2-table-wrap { overflow-x: auto; }
+/* Длинный список стандартов прокручивается внутри блока, шапка таблицы остаётся на месте */
+.tl2-table-wrap { overflow: auto; max-height: calc(100vh - 330px); min-height: 240px; }
 .tl2-table { width: 100%; border-collapse: separate; border-spacing: 0; }
 .tl2-table th {
   padding: 9px 10px;
@@ -662,6 +650,9 @@
   white-space: nowrap;
   color: var(--nav-text);
   background: var(--blue-deep);
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 .tl2-table th:first-child { border-top-left-radius: 10px; }
 .tl2-table th:last-child { border-top-right-radius: 10px; }
@@ -924,7 +915,6 @@ div.tl-pick-area-h { cursor: default; }
 .tl2-side-title { padding: 4px 4px 10px; }
 .tl2-side-title b { display: block; font-size: 14px; font-weight: 800; color: var(--text-main); }
 .tl2-side-title span { display: block; margin-top: 2px; font-size: 12px; line-height: 1.35; color: var(--text-dim); }
-.tl2-side-foot { padding: 10px 4px 2px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-dim); }
 
 .tl2-sum { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 18px; }
 .tl2-sum-i {
