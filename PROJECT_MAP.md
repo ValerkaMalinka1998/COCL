@@ -1,8 +1,8 @@
 # Карта проекта COCL
 
-Сгенерировано 2026-10-21 по коммиту `6b4766c Merge pull request #37 from ValerkaMalinka1998/claude/eparam-all-to-main` скриптом `.claude/skills/cocl-session-close/scripts/gen_project_map.py` — пересоздавайте после крупных правок.
+Сгенерировано 2026-10-21 по коммиту `d7c5c39 Merge pull request #42 from ValerkaMalinka1998/claude/session-docs` скриптом `.claude/skills/cocl-session-close/scripts/gen_project_map.py` — пересоздавайте после крупных правок.
 
-JS — 53 модулей, 19997 строк, 640 функций · CSS — 35 файлов, 12115 строк.
+JS — 53 модулей, 19879 строк, 641 функций · CSS — 35 файлов, 12129 строк.
 Как искать: модуль по назначению → раздел в таблице ниже → `Grep` по имени функции в этом файле.
 
 ## JS-модули (в порядке подключения в index.html)
@@ -20,11 +20,11 @@ JS — 53 модулей, 19997 строк, 640 функций · CSS — 35 ф�
 | `js/data/workshops.js` | 249 | 19 | ДАННЫЕ: структура производства |
 | `js/data/catalog.js` | 477 | 40 | ДАННЫЕ: справочники |
 | `js/data/schedule.js` | 179 | 10 | ДАННЫЕ: расписание CL |
-| `js/data/changelog.js` | 231 | 13 | ЛИСТ ИСТОРИИ ИЗМЕНЕНИЙ СТАНДАРТОВ |
+| `js/data/changelog.js` | 266 | 15 | ЛИСТ ИСТОРИИ ИЗМЕНЕНИЙ СТАНДАРТОВ |
 | `js/data/line-brand.js` | 100 | 7 | ТЕКУЩИЙ БРЕНД ЛИНИИ |
 | `js/components/pickers.js` | 420 | 14 | КОМПОНЕНТЫ: окна выбора |
 | `js/components/validation.js` | 190 | 7 | КОМПОНЕНТЫ: валидация нового стандарта / E-Param |
-| `js/components/line-picker.js` | 368 | 14 | КОМПОНЕНТЫ: выбор линии |
+| `js/components/line-picker.js` | 181 | 10 | КОМПОНЕНТЫ: выбор линии |
 | `js/components/photo-slider.js` | 105 | 3 | КОМПОНЕНТЫ: слайдер фото стандарта |
 | `js/components/standard-view.js` | 297 | 14 | КОМПОНЕНТЫ: окно просмотра стандарта |
 | `js/components/quick-add-machine.js` | 81 | 2 | КОМПОНЕНТЫ: быстрое добавление машины к линии |
@@ -38,7 +38,7 @@ JS — 53 модулей, 19997 строк, 640 функций · CSS — 35 ф�
 | `js/views/cocl/cocl-save.js` | 177 | 1 | ВКЛАДКА «Проверка COCL»: сохранение |
 | `js/views/cl-checklist/cl-checklist.js` | 928 | 25 | ВКЛАДКА «Чек-лист CL» |
 | `js/views/cl-checklist/quick-check.js` | 477 | 13 | ВКЛАДКА «Чек-лист CL»: быстрая проверка |
-| `js/views/toploss/toploss.js` | 520 | 17 | ВКЛАДКА «TOP Losses»: разбор потерь линии |
+| `js/views/toploss/toploss.js` | 518 | 19 | ВКЛАДКА «TOP Losses»: разбор потерь линии |
 | `js/views/toploss/toploss-check.js` | 382 | 8 | TOP LOSSES: проверка, сохранение, итог |
 | `js/views/history/history-data.js` | 294 | 27 | ИСТОРИЯ: данные |
 | `js/views/history/history.js` | 525 | 24 | ВКЛАДКА «История»: лента проверок и журнал отклонений |
@@ -49,11 +49,11 @@ JS — 53 модулей, 19997 строк, 640 функций · CSS — 35 ф�
 | `js/views/editor/editor-core.js` | 777 | 16 | ВКЛАДКА «Стандарты CL»: каркас |
 | `js/views/editor/editor-mech.js` | 321 | 12 | СТАНДАРТЫ CL: таблица механических стандартов |
 | `js/views/editor/editor-elec.js` | 468 | 10 | СТАНДАРТЫ CL: таблица электронных параметров + Excel |
-| `js/views/editor/eparam-page.js` | 660 | 14 | СТРАНИЦА электронного параметра |
+| `js/views/editor/eparam-page.js` | 664 | 14 | СТРАНИЦА электронного параметра |
 | `js/views/editor/changelog-view.js` | 508 | 19 | СТАНДАРТЫ CL: ЛИСТ ИСТОРИИ ИЗМЕНЕНИЙ |
 | `js/views/standard-page/standard-page.js` | 732 | 18 | СТРАНИЦА стандарта: открытие, поля, точки |
-| `js/views/standard-page/standard-page-extra.js` | 629 | 9 | СТРАНИЦА стандарта: фото, связи, доп. информация, сохранение |
-| `js/views/schedule/schedule.js` | 1142 | 38 | ВКЛАДКА «Расписание CL» |
+| `js/views/standard-page/standard-page-extra.js` | 640 | 10 | СТРАНИЦА стандарта: фото, связи, доп. информация, сохранение |
+| `js/views/schedule/schedule.js` | 1163 | 38 | ВКЛАДКА «Расписание CL» |
 | `js/views/schedule/schedule-add.js` | 446 | 8 | РАСПИСАНИЕ CL: добавление стандартов |
 | `js/views/settings/settings-shell.js` | 154 | 9 | НАСТРОЙКИ: каркас вкладки |
 | `js/views/settings/structure-tree.js` | 659 | 18 | НАСТРОЙКИ: структура производства — дерево и карточка линии |
@@ -83,14 +83,14 @@ JS — 53 модулей, 19997 строк, 640 функций · CSS — 35 ф�
 | js/data/catalog.js:8 | TOP LOSSES — доступ к данным | `getTopLosses`, `getElectronicParams`, `setElectronicParams`, `makeElectronicParamId`, `normalizeElectronicParam`, `normalizeElectronicFrequency`, `getElectronicParamsForLine`, `getElectronicParamsForMachine`, `getElectronicBrandsForLine`, `getElectronicBrandScheduleForLine`, `getElectronicBrandForDate`, `setElectronicBrandForDate`, `setElectronicBrandScheduleBulk`, `setTopLosses` … +26 |
 | js/data/schedule.js:8 | РАСПИСАНИЕ CL — ПОНЕДЕЛЬНЫЕ ПРАВКИ (оверрайды) | `getSchWeekStart`, `getScheduleWeeks`, `setScheduleWeeks`, `getScheduleWeekOverride`, `setScheduleWeekOverride`, `hasScheduleWeekOverride` |
 | js/data/schedule.js:76 | РАСПИСАНИЕ CL — ВЕРСИИ ШАБЛОНА | `getRowTemplateForWeek`, `getRowForWeek`, `setRowTemplateFrom`, `isShiftPast` |
-| js/data/changelog.js:1 | (начало модуля) | `getChangeLog`, `setChangeLog`, `changeLogSnapshot`, `addChangeLogEntry`, `updateChangeLogEntry`, `removeChangeLogEntry`, `getChangeLogForLine`, `getChangeLogForRef`, `clJson`, `clBrandsDiff`, `clDetailText`, `describeRowChange`, `logRowChange` |
+| js/data/changelog.js:1 | (начало модуля) | `getChangeLog`, `setChangeLog`, `changeLogSnapshot`, `addChangeLogEntry`, `updateChangeLogEntry`, `removeChangeLogEntry`, `getChangeLogForLine`, `getChangeLogForRef`, `clJson`, `clBrandsDiff`, `clDetailText`, `describeRowChange`, `logRowChange`, `clWindowsText` … +1 |
 | js/data/line-brand.js:1 | (начало модуля) | `getLineBrandEvents`, `setLineBrandEvents`, `addLineBrandEvent`, `getLineBrandNow`, `lineBrandSourceText`, `pickBrandValues`, `brandPickLabel` |
 | js/components/pickers.js:18 | КОММЕНТАРИЙ К ДЕАКТИВАЦИИ | `openDeactivationCommentModal`, `closeDeactivationCommentModal` |
 | js/components/pickers.js:124 | TOP LOSSES стандарта — выбор через окно | `openTopLossPickerFor` |
 | js/components/pickers.js:143 | Модалка выбора потерь | `openTopLossPickerModal`, `closeTopLossPickerModal`, `getTopLossPickerWorkshop`, `renderTopLossPickerList`, `updateTopLossPickerCounter`, `applyTopLossPicker` |
 | js/components/pickers.js:298 | ВЫБОР ТРИГГЕРОВ CHANGE OVER — общая модалка | `openTriggerPickerModal`, `renderTriggerPickerList`, `updateTriggerPickerCounter`, `closeTriggerPickerModal`, `renderTriggerChipsEditable` |
 | js/components/validation.js:1 | (начало модуля) | `valShiftLabel`, `valPointLabel`, `valChipHtml`, `valEditBlockHtml`, `valReadEdit`, `valCheckStats`, `valBannerHtml` |
-| js/components/line-picker.js:8 | ВЫБОР ЛИНИИ — компактный dropdown (#linePickerModal) | `resetLinePickerState`, `openLinePickerModal`, `closeLinePickerModal`, `renderLinePickerModal`, `renderLinePickerStart`, `renderLinePickerWorkshopView`, `renderLinePickerRecent`, `renderLinePickerBreadcrumbs`, `renderLinePickerAreaTiles`, `renderLinePickerBlockTiles`, `renderLinePickerRowsForArea`, `renderLinePickerRowsForBlock`, `renderLinePickerSearch`, `bindLinePickerEvents` |
+| js/components/line-picker.js:8 | ВЫБОР ЛИНИИ — двухпанельное окно (#linePickerModal) | `resetLinePickerState`, `getLinePickerGroups`, `countLinePickerLines`, `openLinePickerModal`, `closeLinePickerModal`, `renderLinePickerModal`, `renderLinePickerRecent`, `renderLinePickerBrowse`, `renderLinePickerGroup`, `renderLinePickerSearch` |
 | js/components/photo-slider.js:1 | (начало модуля) | `photoSliderHtml`, `photoSliderGo`, `bindPhotoSlider` |
 | js/components/standard-view.js:8 | ПРОСМОТР СТАНДАРТА — полноценная модалка | `controlTypeLabel`, `formatDateTime`, `openStandardView`, `renderStandardViewHeaderChips`, `svmText`, `renderStandardViewContent`, `closeStandardView` |
 | js/components/standard-view.js:181 | ЛАЙТБОКС — просмотр фото | `openLightbox`, `updateLightbox`, `lightboxPrev`, `lightboxNext`, `closeLightbox`, `lightboxKeyHandler`, `closeCommentModal` |
@@ -121,12 +121,12 @@ JS — 53 модулей, 19997 строк, 640 функций · CSS — 35 ф�
 | js/views/cl-checklist/quick-check.js:272 | БЫСТРАЯ ПРОВЕРКА — закрытие | `closeQuickCheckModal` |
 | js/views/cl-checklist/quick-check.js:283 | БЫСТРАЯ ПРОВЕРКА — сохранение | `saveQuickCheck` |
 | js/views/cl-checklist/quick-check.js:388 | БЫСТРАЯ ПРОВЕРКА — хелперы | `getRowMeasurementBlock`, `openCommentModalElec`, `openElecBrandOverrideDialog` |
-| js/views/toploss/toploss.js:23 | ИКОНКИ КАТЕГОРИЙ (Feather-стиль) | `tlCatKind` |
-| js/views/toploss/toploss.js:36 | ДАННЫЕ | `tlCollectRows`, `tlRecentShifts`, `tlWeekStartOf`, `tlHistoryIndex`, `tlRowShiftStatuses`, `tlLossStats`, `tlLastCheck` |
-| js/views/toploss/toploss.js:126 | ЛИНИЯ | `fillTopLossTab`, `setTopLossLine` |
-| js/views/toploss/toploss.js:150 | РЕНДЕР ЭКРАНА РАЗБОРА | `renderTopLossCategories` |
-| js/views/toploss/toploss.js:201 | ВЫБОР ЛИНИИ НА ЭКРАНЕ (линия ещё не выбрана) | `tlLinePickStats`, `tlPickTile`, `renderTopLossLinePick`, `renderTopLossSide`, `renderTopLossDiag` |
-| js/views/toploss/toploss.js:451 | ОБРАБОТЧИКИ | `backToTopLossSelect` |
+| js/views/toploss/toploss.js:22 | ИКОНКИ КАТЕГОРИЙ (Feather-стиль) | `tlCatKind` |
+| js/views/toploss/toploss.js:35 | ДАННЫЕ | `tlCollectRows`, `tlRecentShifts`, `tlRecentDays`, `tlDayStatus`, `tlWeekStartOf`, `tlHistoryIndex`, `tlRowShiftStatuses`, `tlLossStats`, `tlLastCheck` |
+| js/views/toploss/toploss.js:145 | ЛИНИЯ | `fillTopLossTab`, `setTopLossLine` |
+| js/views/toploss/toploss.js:167 | РЕНДЕР ЭКРАНА РАЗБОРА | `renderTopLossCategories` |
+| js/views/toploss/toploss.js:218 | ВЫБОР ЛИНИИ НА ЭКРАНЕ (линия ещё не выбрана) | `tlLinePickStats`, `tlPickTile`, `renderTopLossLinePick`, `renderTopLossSide`, `renderTopLossDiag` |
+| js/views/toploss/toploss.js:461 | ОБРАБОТЧИКИ | `backToTopLossSelect` |
 | js/views/toploss/toploss-check.js:1 | (начало модуля) | `tlCheckPoints`, `tlCheckStatusFromValues` |
 | js/views/toploss/toploss-check.js:52 | ОТКРЫТИЕ ПРОВЕРКИ | `buildTopLossChecklist`, `renderTopLossChecklist`, `updateTlCheckProgress`, `tlCheckRefreshItem` |
 | js/views/toploss/toploss-check.js:185 | СОХРАНЕНИЕ | `saveTopLossCheck` |
@@ -177,7 +177,7 @@ JS — 53 модулей, 19997 строк, 640 функций · CSS — 35 ф�
 | js/views/standard-page/standard-page-extra.js:113 | Дополнительная информация (Применять к, Триггеры, Top Losses | `renderSvFullExtra` |
 | js/views/standard-page/standard-page-extra.js:312 | Заглушки для таблиц вкладок | `renderSvAckTable`, `renderSvHistoryTable`, `refreshSvHistory`, `renderSvCommentsTable` |
 | js/views/standard-page/standard-page-extra.js:363 | Переключение вкладок внутри просмотра | `switchSvFullTab` |
-| js/views/standard-page/standard-page-extra.js:614 | ПОДСВЕТКА ЗНАЧЕНИЙ, НЕ ПОДХОДЯЩИХ ТИПУ КОНТРОЛЯ | `markSvPointTypes` |
+| js/views/standard-page/standard-page-extra.js:614 | ПОДСВЕТКА ЗНАЧЕНИЙ, НЕ ПОДХОДЯЩИХ ТИПУ КОНТРОЛЯ | `svPointTypeError`, `markSvPointTypes` |
 | js/views/schedule/schedule.js:8 | РАСПИСАНИЕ CL — вкладка аналитика | `openScheduleTab`, `updateSchLinePill`, `updateSchPanelCount`, `isSchRowMember`, `isSchRowValidation`, `isSchRowShown`, `getFilteredScheduleRows`, `updateSchMatrixCounters`, `fillSchMachineFilter`, `renderScheduleMatrix` |
 | js/views/schedule/schedule.js:433 | РАСПИСАНИЕ CL — время проверки (timeWindows) | `getTimeWindowShift`, `twMinutesFromShiftStart`, `twAddMinutes`, `twNormalizeTime`, `openTimeWindowsModal`, `closeTimeWindowsModal`, `renderTimeWindowsList`, `updateTwCustomPreview`, `addTimeWindow`, `saveTimeWindows`, `getSchRowFreq`, `getClRowFreq`, `getCheckedStandardIdsForWeek`, `ensureSchDraft` … +14 |
 | js/views/schedule/schedule-add.js:7 | РАСПИСАНИЕ CL — модалка добавления стандартов | `openScheduleAddStandardsModal`, `closeScheduleAddStandardsModal`, `renderSchAddList`, `toggleSchAddItem`, `updateSchAddCounter`, `updateSchAddCheckAllState`, `confirmScheduleAddStandards`, `selectLine` |
@@ -219,19 +219,19 @@ JS — 53 модулей, 19997 строк, 640 функций · CSS — 35 ф�
 | `css/components/photos.css` | 353 | Результат проверки фото; Фотографии в форме стандарта; Строка добавления фото (textarea + кнопк; МОДАЛКА ПРОСМОТРА СТАНДАРТА; ЛАЙТБОКС; Лайтбокс: счётчик фото |
 | `css/components/theme-transition.css` | 17 |  |
 | `css/views/editor-table.css` | 207 | Блоки в редакторе — плитки; Хлебные крошки; Пагинация; ТАБЛИЦА СТАНДАРТОВ; Кнопки-иконки (векторные SVG); Кнопки «иконка + текст» |
-| `css/views/toploss.css` | 930 | TOP LOSSES — вкладка (экран выбора); TOP LOSSES — экран резюме (Этап 4.2); ИСТОРИЯ: режимы (COCL / TOP Losses); TOP LOSSES: новое резюме (визуальное); TOP LOSSES: статус «Не проверено»; TOP LOSSES: подсказка про Journal Machin … +8 |
+| `css/views/toploss.css` | 934 | TOP LOSSES — вкладка (экран выбора); TOP LOSSES — экран резюме (Этап 4.2); ИСТОРИЯ: режимы (COCL / TOP Losses); TOP LOSSES: новое резюме (визуальное); TOP LOSSES: статус «Не проверено»; TOP LOSSES: подсказка про Journal Machin … +9 |
 | `css/views/cl-electronic.css` | 1034 | CL ELECTRONIC: дерево в редакторе; CL ELECTRONIC: расписание брендов; CL ELECTRONIC: вкладка оператора; CL ELECTRONIC: тулбар над матрицей недел; CL ELECTRONIC: матрица недели; CL Electronic: строка ответа и статус … +4 |
 | `css/views/settings-brands-operators.css` | 104 | ОБЩИЙ СПИСОК БРЕНДОВ — группы по цехам; ОПЕРАТОРЫ — строки + inline + пагинация; Подсветка совпадений поиска |
 | `css/components/points-table.css` | 280 | Точки замера: таблица по брендам; Модалка просмотра стандарта: блоки бренд |
 | `css/views/cocl-accordion.css` | 249 | COCL: строки чек-листа (группы по машина |
 | `css/views/toploss-accordion.css` | 93 | Модалка выбора потерь |
 | `css/views/editor.css` | 778 | Редактор: список линий в блоке; CL Electronic: аккордеон в «Параметры на; РЕДАКТОР: чипы типов (ChangeOver / CL_TO; РЕДАКТОР: единая панель + фильтры + табл; РЕДАКТОР: карточка таблицы; РЕДАКТОР: таблица стандартов … +7 |
-| `css/components/line-picker.css` | 312 | МОДАЛКА-ВЫБОР ЛИНИИ (компактный dropdown |
+| `css/components/line-picker.css` | 319 | МОДАЛКА-ВЫБОР ЛИНИИ (двухпанельная) |
 | `css/views/editor-part-switch.css` | 75 | РЕДАКТОР: переключатель по части линии |
 | `css/views/schedule.css` | 462 | РАСПИСАНИЕ CL: матрица (с инфо-колонками; Тулбар над матрицей: фильтр+поиск слева,; Пустое состояние; Панель массовых операций; Адаптив; РАСПИСАНИЕ CL: модалка добавления станда … +1 |
 | `css/views/cl-checklist.css` | 59 | ПРОВЕРКА CL: контекстная строка |
 | `css/views/schedule-time.css` | 334 | МОДАЛКА ВРЕМЕНИ ПРОВЕРКИ; Шкала суток 09:00 → 09:00; Смены с предустановками; Своё время; Выбранные окна |
-| `css/views/standard-page.css` | 986 | ПОЛНОЭКРАННЫЙ СТАНДАРТ (sv-full); Шапка; Вкладки внутри; Контент; Карточки; Поля «Основная информация» … +10 |
+| `css/views/standard-page.css` | 989 | ПОЛНОЭКРАННЫЙ СТАНДАРТ (sv-full); Шапка; Вкладки внутри; Контент; Карточки; Поля «Основная информация» … +10 |
 | `css/views/eparam-page.css` | 115 | СТРАНИЦА ЭЛЕКТРОННОГО ПАРАМЕТРА |
 | `css/views/changelog.css` | 133 | СТАНДАРТЫ CL: ЛИСТ ИСТОРИИ ИЗМЕНЕНИЙ |
 | `css/components/line-brand.css` | 73 | БРЕНД НА ЛИНИИ (Чек-лист CL, Расписание  |
