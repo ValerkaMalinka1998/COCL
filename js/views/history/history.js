@@ -94,7 +94,8 @@ function histPeriodMatch(h) {
 
 function histSearchMatch(h, q) {
   if (!q) return true;
-  /* Поиск только по названию стандарта, машине, части линии и узлу */
+  /* Поиск: бренд записи, название стандарта, машина, часть линии, узел */
+  if ([h.brandActual, h.brandFrom, h.brandTo].some(v => v && String(v).toLowerCase().includes(q))) return true;
   return (h.items || []).some(it =>
     [it.title, it.paramName, it.machine, it.nodePart, it.node]
       .some(v => v && String(v).toLowerCase().includes(q)));
