@@ -320,9 +320,11 @@ function renderScheduleMatrix() {
   const zones = cilZoneMap(rows);
   const cur = getCurrentShiftPeriod();
   const perShift = {};
+  const perShiftSec = {};
   rows.forEach(row => (getSchRowFreq(row).schedule || []).forEach(x => {
     const k = `${x.day}|${x.shift}`;
     perShift[k] = (perShift[k] || 0) + 1;
+    perShiftSec[k] = (perShiftSec[k] || 0) + cilRowDurationSec(row);
   }));
 
   let html = `
@@ -356,7 +358,7 @@ function renderScheduleMatrix() {
     shiftSub: (dateStr, shift) => {
       const dayIdx = new Date(dateStr + 'T12:00:00').getDay();
       const n = perShift[`${dayIdx}|${shift}`] || 0;
-      return `<span class="cil-shift-sub">${shift === 'day' ? 'день' : 'ночь'} · ${n}</span>`;
+      return `<span class="cil-shift-sub">${shift === 'day' ? 'день' : 'ночь'} · ${n}</span>${cilShiftTotalHtml(perShiftSec[`${dayIdx}|${shift}`])}`;
     },
     colAttrs: (dateStr, dayIdx, shift) => {
       const locked = isPastWeek || isShiftPast(dateStr, shift);

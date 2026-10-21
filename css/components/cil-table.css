@@ -153,6 +153,15 @@
   border-radius: 2px;
 }
 .cil-prog i { display: block; height: 100%; background: var(--accent-green); }
+.cil-shift-total {
+  display: block;
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  text-transform: none;
+  color: var(--cil-head-text);
+}
 
 /* --- Закреплённые левые колонки --- */
 .cil-c-zone, .cil-c-std, .cil-c-norm, .cil-c-cnt { position: sticky; z-index: 2; }
