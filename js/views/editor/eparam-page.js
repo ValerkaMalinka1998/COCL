@@ -581,7 +581,9 @@ $('#epPageSaveBtn')?.addEventListener('click', () => {
   let valuesByBrand = [];
   if (p.controlType === 'fixed') {
     if (!(p.normText || '').trim()) return showToast('Опишите, что считается «ОК»', true);
-    const normErr = normTypeError('fixed', p.normText);
+    // Уже сохранённый текст нормы не трогали — не блокируем сохранение данными из прошлого
+    const stored = epPageState.isNew ? null : getElectronicParams().find(x => x.id === p.id);
+    const normErr = (stored && stored.controlType === 'fixed' && (stored.normText || '') === p.normText) ? '' : normTypeError('fixed', p.normText);
     if (normErr) return showToast(normErr, true);
   } else {
     const filled = p.valuesByBrand.filter(r =>
