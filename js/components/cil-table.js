@@ -180,16 +180,16 @@ function cilRowDurationSec(row) {
   return Math.max(0, Number(row && row.durationSec) || 0);
 }
 
-/* Компактная длительность для шапки смены: 45с · 12м · 12м 30с · 1ч 05м */
+/* Длительность для шапки смены в формате мм:сс (от часа — ч:мм:сс) */
 function formatCilDuration(sec) {
   const n = Math.round(Number(sec) || 0);
   if (n <= 0) return '';
-  if (n < 60) return `${n}с`;
   const h = Math.floor(n / 3600);
   const m = Math.floor((n % 3600) / 60);
   const s = n % 60;
-  if (h) return `${h}ч ${String(m).padStart(2, '0')}м`;
-  return s ? `${m}м ${s}с` : `${m}м`;
+  const mm = String(m).padStart(2, '0');
+  const ss = String(s).padStart(2, '0');
+  return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
 /* Строка «∑ время» под подписью смены; пусто, если времени нет */
