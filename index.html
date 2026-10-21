@@ -316,11 +316,17 @@
   <!-- ЭКРАН 1: РАЗБОР ПОТЕРЬ ЛИНИИ -->
   <div id="tlSelectView">
     <div class="card tl2-top">
-      <h2 class="tl2-h">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-        TOP Losses
-        <small>разбор потерь линии · проверка по желанию</small>
-      </h2>
+      <div class="tl2-top-l">
+        <button type="button" class="btn btn-secondary tl2-back" id="tlBackToLinePick" style="display:none" title="Вернуться к выбору линии">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          К выбору линии
+        </button>
+        <h2 class="tl2-h">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+          TOP Losses
+          <small>разбор потерь линии · проверка по желанию</small>
+        </h2>
+      </div>
       <button type="button" class="editor-line-pill" id="tlLinePill" title="Сменить линию">
         <span class="editor-line-pill-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
