@@ -17,13 +17,6 @@
   vertical-align: middle;
 }
 
-.val-chip-over {
-  border-style: solid;
-  border-color: var(--accent-red);
-  background: color-mix(in srgb, var(--accent-red) 10%, transparent);
-  color: var(--accent-red);
-}
-
 /* Строка на валидации (Чек-лист и Расписание CL): фуксия по всей строке,
    включая колонку «Машина / №» */
 .cil-table tbody tr.cil-row-val > td {
@@ -137,12 +130,6 @@
   background: color-mix(in srgb, var(--accent-val) 8%, var(--bg-card));
 }
 
-.val-banner-over {
-  border-color: color-mix(in srgb, var(--accent-red) 55%, var(--border));
-  border-left-color: var(--accent-red);
-  background: color-mix(in srgb, var(--accent-red) 6%, var(--bg-card));
-}
-
 .val-banner-main {
   flex: 1;
   min-width: 0;
@@ -152,10 +139,6 @@
   display: block;
   font-size: 14px;
   color: var(--accent-val);
-}
-
-.val-banner-over .val-banner-main b {
-  color: var(--accent-red);
 }
 
 .val-banner-main span {

@@ -16,6 +16,7 @@ function getFilteredMechStandards() {
   const sched = $('#emFilterSchedule')?.value || '';
   const part = $('#emFilterPart')?.value || '';
   const activeFilter = $('#emFilterActive')?.value || '';
+  const valFilter = $('#emFilterValidation')?.value || '';
   const search = ($('#emFilterSearch')?.value || '').trim().toLowerCase();
 
   const filtered = getStandards().filter(st => {
@@ -26,6 +27,8 @@ function getFilteredMechStandards() {
     if (part && st.nodePart !== part) return false;
     if (activeFilter === 'active' && st.active === false) return false;
     if (activeFilter === 'inactive' && st.active !== false) return false;
+    if (valFilter === 'on' && !isOnValidation(st)) return false;
+    if (valFilter === 'done' && !['ended', 'approved', 'rejected'].includes(validationStatus(st))) return false;
     if (sched && (editorRowSchedule(st, line).member ? 'in' : 'out') !== sched) return false;
     if (search) {
       const hay = [st.title, st.oplNumber, st.node, st.machine, st.nodePart, st.number]

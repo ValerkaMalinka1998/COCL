@@ -16,6 +16,7 @@ function getFilteredElecParams() {
   const sched = $('#eeFilterSchedule')?.value || '';
   const part = $('#eeFilterPart')?.value || '';
   const activeFilter = $('#eeFilterActive')?.value || '';
+  const valFilter = $('#eeFilterValidation')?.value || '';
   const search = ($('#eeFilterSearch')?.value || '').trim().toLowerCase();
 
   const filtered = getElectronicParams().map(normalizeElectronicParam).filter(p => {
@@ -26,6 +27,8 @@ function getFilteredElecParams() {
     if (part && p.nodePart !== part) return false;
     if (activeFilter === 'active' && p.active === false) return false;
     if (activeFilter === 'inactive' && p.active !== false) return false;
+    if (valFilter === 'on' && !isOnValidation(p)) return false;
+    if (valFilter === 'done' && !['ended', 'approved', 'rejected'].includes(validationStatus(p))) return false;
     if (sched && (editorRowSchedule(p, line).member ? 'in' : 'out') !== sched) return false;
     if (search) {
       const hay = [p.paramName, p.machine, p.nodePart].map(v => String(v || '').toLowerCase()).join(' ');
