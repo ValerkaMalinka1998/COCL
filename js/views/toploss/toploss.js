@@ -13,7 +13,6 @@ const TL_LINE_KEY = 'cl_tl_line';
 const tlState = {
   line: '',
   lossId: null,               // выбранная потеря
-  extraLossIds: new Set(),    // ещё потери, добавленные в проверку
   openCats: new Set(),        // раскрытые категории
   showEmpty: new Set(),       // категории, где показаны потери без стандартов
   query: '',
@@ -70,6 +69,26 @@ function tlRecentShifts(n) {
     res.push({ date, shift });
   }
   return res;
+}
+
+/* Последние n суток (завершённые смены): [{ date, shifts: [{date, shift}] }], от старой к новой */
+function tlRecentDays(n) {
+  const days = [];
+  tlRecentShifts(n * 2 + 2).reverse().forEach(sh => {
+    let d = days[days.length - 1];
+    if (!d || d.date !== sh.date) { d = { date: sh.date, shifts: [] }; days.push(d); }
+    d.shifts.push(sh);
+  });
+  return days.slice(-n);
+}
+
+/* Итог суток по статусам смен: отклонение > пропуск > ОК > не проверено > не по расписанию */
+function tlDayStatus(sts) {
+  if (sts.includes('FAIL')) return 'fail';
+  if (sts.includes('missed')) return 'missed';
+  if (sts.includes('OK')) return 'ok';
+  if (sts.includes('UNCHECKED')) return 'unchecked';
+  return 'na';
 }
 
 /* Понедельник недели для даты */
@@ -134,14 +153,12 @@ function fillTopLossTab() {
   if (line !== tlState.line) {
     tlState.line = line;
     tlState.lossId = null;
-    tlState.extraLossIds.clear();
   }
 }
 
 function setTopLossLine(line) {
   tlState.line = line || '';
   tlState.lossId = null;
-  tlState.extraLossIds.clear();
   tlState.openCats.clear();
   try { localStorage.setItem(TL_LINE_KEY, tlState.line); } catch (e) {}
   backToTopLossSelect();
@@ -181,7 +198,7 @@ function renderTopLossCategories() {
   }
 
   const hidx = tlHistoryIndex(tlState.line);
-  const shifts14 = tlRecentShifts(14);
+  const shifts14 = tlRecentDays(7).flatMap(d => d.shifts);
   const stats = {};
   cats.forEach(c => (c.items || []).forEach(it => { stats[it.id] = tlLossStats(it.id, tlState.line, hidx, shifts14); }));
 
@@ -335,11 +352,10 @@ function renderTopLossSide(cats, stats) {
     const itemBtn = (it) => {
       const s = stats[it.id];
       const on = it.id === tlState.lossId;
-      const extra = tlState.extraLossIds.has(it.id);
-      return `<button type="button" class="tl2-item ${on ? 'on' : ''} ${extra ? 'extra' : ''} ${s.count ? '' : 'zero'}" data-tl-loss="${escapeAttr(it.id)}" ${s.count ? '' : 'disabled title="Нет стандартов на этой линии"'}>
+      return `<button type="button" class="tl2-item ${on ? 'on' : ''} ${s.count ? '' : 'zero'}" data-tl-loss="${escapeAttr(it.id)}" ${s.count ? '' : 'disabled title="Нет стандартов на этой линии"'}>
         <span class="tl2-item-name">${escapeHtml(it.name)}</span>
-        ${s.fails ? `<span class="tl2-badge-red" title="Отклонений в Чек-листе CL за 7 дней">⚠ ${s.fails}</span>` : ''}
-        <span class="tl2-item-n">${s.count}</span>
+        ${s.fails ? `<span class="tl2-badge-red" title="Отклонений в Чек-листе CL за 7 дней">${s.fails} ${pluralRu(s.fails, 'откл.', 'откл.', 'откл.')}</span>` : ''}
+        <span class="tl2-item-n" title="Сколько стандартов и параметров влияют на эту потерю">${s.count} ${s.count ? 'станд.' : ''}</span>
       </button>`;
     };
     return `<div class="tl2-cat tl2-c-${TL_CAT_COLORS[kind]} ${open ? 'open' : ''}">
@@ -372,27 +388,23 @@ function renderTopLossDiag(cats, stats, hidx) {
   const cat = cats.find(c => (c.items || []).some(it => it.id === loss.id));
   const kind = tlCatKind(cat);
   const s = stats[loss.id];
-  const checkIds = [...new Set([loss.id, ...tlState.extraLossIds])];
-  const checkRows = tlCollectRows(checkIds, tlState.line);
+  const checkRows = tlCollectRows([loss.id], tlState.line);
   const last = tlLastCheck(loss.id, tlState.line);
 
   const rows = tlCollectRows([loss.id], tlState.line)
     .filter(r => tlState.kind === 'all' || (tlState.kind === 'elec') === r.isElec);
-  const shifts7 = tlRecentShifts(7).reverse();   // слева направо: от старой к новой
-
-  const extraChips = [...tlState.extraLossIds].map(id => {
-    const l = findLossById(id);
-    return l ? `<span class="tl2-extra-chip">${escapeHtml(l.name)}<button type="button" data-tl-extra-remove="${escapeAttr(id)}" title="Убрать из проверки">✕</button></span>` : '';
-  }).join('');
+  const days7 = tlRecentDays(7);   // 7 суток, слева направо: от старой к новой
 
   const tableRows = rows.map(({ row, isElec }) => {
-    const norm = cilNorm(row, '', isElec);
-    const statuses = tlRowShiftStatuses(row, shifts7, tlState.line, hidx);
-    const sq = statuses.map((st, i) => {
-      const sh = shifts7[i];
-      const cls = st === 'OK' ? 'ok' : st === 'FAIL' ? 'fail' : st === 'missed' ? 'missed' : st === 'UNCHECKED' ? 'unchecked' : 'na';
-      const label = { ok: 'ОК', fail: 'отклонение', missed: 'пропущено', unchecked: 'не проверено', na: 'не по расписанию' }[cls];
-      return `<i class="tl2-sq tl2-sq-${cls}" title="${escapeAttr(`${fmtShortDate(sh.date)} · ${sh.shift === 'day' ? 'день' : 'ночь'} — ${label}`)}"></i>`;
+    const sq = days7.map(d => {
+      const sts = tlRowShiftStatuses(row, d.shifts, tlState.line, hidx);
+      const cls = tlDayStatus(sts);
+      const label = { ok: 'ОК', fail: 'отклонение', missed: 'пропуск', unchecked: 'не проверено', na: 'не по расписанию' };
+      const part = d.shifts.map((sh, k) => {
+        const c = tlDayStatus([sts[k]]);
+        return (sh.shift === 'day' ? 'день' : 'ночь') + ' — ' + label[c];
+      }).join('; ');
+      return `<i class="tl2-sq tl2-sq-${cls}" title="${escapeAttr(`${fmtShortDate(d.date)}: ${label[cls]} (${part})`)}"></i>`;
     }).join('');
     const sch = editorRowSchedule(row, tlState.line);
     const title = isElec ? row.paramName : row.title;
@@ -401,9 +413,8 @@ function renderTopLossDiag(cats, stats, hidx) {
       <td class="tl2-opl">${escapeHtml(row.oplNumber || '—')}</td>
       <td><div class="tl2-nm">${escapeHtml(title || '—')}</div>
         <div class="tl2-sub">${escapeHtml([row.machine, row.nodePart, row.node].filter(Boolean).join(' · '))}</div></td>
-      <td class="tl2-norm">${norm.html}</td>
       <td><span class="tl2-last">${sq}</span></td>
-      <td>${sch.member ? `<span class="tl2-tag tl2-tag-gr">${sch.count} / 14 смен</span>` : '<span class="tl2-tag tl2-tag-dim">не в расписании</span>'}</td>
+      <td>${sch.member ? '<span class="tl2-tag tl2-tag-gr">в чек-листе</span>' : '<span class="tl2-tag tl2-tag-dim">нет в чек-листе</span>'}</td>
       <td class="tl2-act">${isElec
         ? `<button type="button" class="tl2-ib" data-tl-open-ep="${escapeAttr(row.id)}" title="Открыть параметр">${CIL_ICONS.eye}</button>`
         : `<button type="button" class="tl2-ib" data-tl-view="${escapeAttr(row.id)}" title="Открыть стандарт">${CIL_ICONS.eye}</button>`}</td>
@@ -420,16 +431,16 @@ function renderTopLossDiag(cats, stats, hidx) {
       <span class="tl2-sp"></span>
       <button type="button" class="btn btn-tl-check" id="tlStartCheckBtn" ${checkRows.length ? '' : 'disabled'}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        <span>Проверить (${checkRows.length})</span>
+        <span>Проверить ${checkRows.length} ${pluralRu(checkRows.length, 'стандарт', 'стандарта', 'стандартов')}</span>
       </button>
     </div>
-    ${extraChips ? `<div class="tl2-extra">В проверку добавлены: ${extraChips}</div>` : ''}
-    <div class="tl2-kpis">
-      <div class="tl2-kpi"><b>${s.count}</b><span>в проверке: ${s.mech} мех.${s.elec ? ` + ${s.elec} E-Param` : ''}</span></div>
-      <div class="tl2-kpi ${s.fails ? 'red' : ''}"><b>${s.fails}</b><span>отклонений в Чек-листе CL за 7 дней</span></div>
-      <div class="tl2-kpi ${s.missed ? 'amber' : ''}"><b>${s.missed}</b><span>пропущенных проверок за 7 дней</span></div>
-      <div class="tl2-kpi"><b>${last ? fmtShortDate(last.slice(0, 10)) : '—'}</b><span>последняя проверка TOP Losses</span></div>
+    <div class="tl2-sum">
+      <span class="tl2-sum-i ${s.fails ? 'red' : 'ok'}">${s.fails ? `Отклонений за 7 дней: <b>${s.fails}</b>` : 'Отклонений за 7 дней нет'}</span>
+      <span class="tl2-sum-i ${s.missed ? 'amber' : 'ok'}">${s.missed ? `Пропущено проверок: <b>${s.missed}</b>` : 'Пропусков нет'}</span>
+      <span class="tl2-sum-i">Последняя проверка TOP Losses: <b>${last ? fmtShortDate(last.slice(0, 10)) : 'ещё не было'}</b></span>
     </div>
+    <h3 class="tl2-sec">Стандарты, которые влияют на «${escapeHtml(loss.name)}»
+      <span>Квадраты — как проходила проверка в Чек-листе CL за последние 7 дней — один квадрат на день, слева направо от старого дня к новому</span></h3>
     <div class="tl2-tools">
       <span class="tl2-seg">
         <button type="button" class="${tlState.kind === 'all' ? 'on' : ''}" data-tl-kind="all">Все ${s.count}</button>
@@ -442,10 +453,9 @@ function renderTopLossDiag(cats, stats, hidx) {
       </span>
     </div>
     <div class="tl2-table-wrap"><table class="tl2-table">
-      <thead><tr><th>Тип</th><th>OPL</th><th>Стандарт / параметр</th><th>Норма</th><th title="Последние 7 смен Чек-листа CL, слева направо — от старой к новой">Последние 7 смен CL</th><th>Расписание</th><th></th></tr></thead>
-      <tbody>${tableRows || '<tr><td colspan="7" class="tl2-muted">Нет строк этого типа</td></tr>'}</tbody>
-    </table></div>
-    <div class="tl2-hint">Чтобы проверить несколько потерь сразу — нажмите на потерю слева с зажатым Ctrl.</div>`;
+      <thead><tr><th>Тип</th><th>OPL</th><th>Стандарт / параметр</th><th title="Последние 7 дней Чек-листа CL: один квадрат — один день (день и ночь вместе), слева направо — от старого к новому">Последние 7 дней</th><th>Чек-лист CL</th><th></th></tr></thead>
+      <tbody>${tableRows || '<tr><td colspan="6" class="tl2-muted">Нет строк этого типа</td></tr>'}</tbody>
+    </table></div>`;
 }
 
 /* ============================================================
@@ -480,19 +490,7 @@ $('#tlSelectView')?.addEventListener('click', (e) => {
   }
   const lossBtn = e.target.closest('[data-tl-loss]');
   if (lossBtn) {
-    const id = lossBtn.dataset.tlLoss;
-    if ((e.ctrlKey || e.metaKey) && tlState.lossId && id !== tlState.lossId) {
-      // Ctrl+клик — добавить / убрать потерю из проверки, не меняя разбор
-      tlState.extraLossIds.has(id) ? tlState.extraLossIds.delete(id) : tlState.extraLossIds.add(id);
-    } else {
-      tlState.lossId = id;
-      tlState.extraLossIds.delete(id);
-    }
-    return renderTopLossCategories();
-  }
-  const rm = e.target.closest('[data-tl-extra-remove]');
-  if (rm) {
-    tlState.extraLossIds.delete(rm.dataset.tlExtraRemove);
+    tlState.lossId = lossBtn.dataset.tlLoss;
     return renderTopLossCategories();
   }
   const kind = e.target.closest('[data-tl-kind]');
@@ -505,7 +503,7 @@ $('#tlSelectView')?.addEventListener('click', (e) => {
   const ep = e.target.closest('[data-tl-open-ep]');
   if (ep && typeof openEparamPage === 'function') return openEparamPage(ep.dataset.tlOpenEp);
   if (e.target.closest('#tlStartCheckBtn')) {
-    const ids = [...new Set([tlState.lossId, ...tlState.extraLossIds])].filter(Boolean);
+    const ids = [tlState.lossId].filter(Boolean);
     buildTopLossChecklist(ids);
   }
 });
