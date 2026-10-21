@@ -94,10 +94,10 @@ function histPeriodMatch(h) {
 
 function histSearchMatch(h, q) {
   if (!q) return true;
-  const hay = [h.line, h.brandActual, h.brandFrom, h.brandTo, h.operator, h.type]
-    .concat(...(h.items || []).map(it => [it.oplNumber, it.title, it.paramName, it.machine, it.node, it.comment]))
-    .filter(Boolean).join(' ').toLowerCase();
-  return hay.includes(q);
+  /* Поиск только по названию стандарта, машине, части линии и узлу */
+  return (h.items || []).some(it =>
+    [it.title, it.paramName, it.machine, it.nodePart, it.node]
+      .some(v => v && String(v).toLowerCase().includes(q)));
 }
 
 /* Записи по фильтрам (используется и экспортом) */
