@@ -201,7 +201,7 @@ function openClCheckModal(rowId, dateStr, shift) {
       : (() => {
         const pick = getQcBrandPick();
         if (pick.kind === 'missing') return `<div class="qcx-empty qcx-miss">Для бренда <b>${escapeHtml(brand)}</b> в ${isElec ? 'параметре' : 'стандарте'} нет значений и нет строки «Остальные бренды». Сообщите аналитику или проверьте, верно ли указан бренд на линии.</div>`;
-        if (pick.kind === 'nobrand') return '<div class="qcx-empty">Значения разные по брендам, а бренд на линии не задан. Укажите бренд в Чек-листе («Бренд на линии → изменить»).</div>';
+        if (pick.kind === 'nobrand') return '<div class="qcx-empty qcx-miss">Значения разные по брендам, а бренд на линии не задан. Укажите бренд в Чек-листе («Бренд на линии → изменить»).</div>';
         return '<div class="qcx-empty">Точки не заданы в стандарте</div>';
       })();
     $('#qcPointsList').classList.toggle('qcx-pts-one', fields.length === 1);

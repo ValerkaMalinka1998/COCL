@@ -88,13 +88,11 @@ function cilNorm(row, brand, isElec) {
   };
   let values = [];
   // Нет значений для текущего бренда — предупреждение вместо чужой нормы
-  // Бренд линии не задан, а строки «Остальные бренды» нет — это не ошибка, норму просто не показываем
-  const noNorm = (pick) => pick.kind === 'nobrand' ? ({
-    visual: false,
-    html: '<span class="cil-dim" title="Значения разные по брендам, бренд линии не задан">—</span>'
-  }) : ({
+  const noNorm = (pick) => ({
     visual: false, missing: true,
-    html: `<span class="cil-norm-miss" title="Для бренда ${escapeAttr(brand)} значений нет — сообщите аналитику">нет нормы для ${escapeHtml(brand)}</span>`
+    html: pick.kind === 'nobrand'
+      ? '<span class="cil-norm-miss" title="Значения разные по брендам — задайте бренд линии">бренд не задан</span>'
+      : `<span class="cil-norm-miss" title="Для бренда ${escapeAttr(brand)} значений нет — сообщите аналитику">нет нормы для ${escapeHtml(brand)}</span>`
   });
   let pickTag = '';
 
