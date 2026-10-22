@@ -9,7 +9,7 @@
   border-radius: 14px;
   background: color-mix(in srgb, var(--th) 13%, var(--bg-card));
 }
-.th-band-amber { --th: var(--accent-amber); }
+.th-band-coral { --th: #d85a30; }
 .th-band-cyan { --th: var(--accent-cyan); }
 
 .th-top {
