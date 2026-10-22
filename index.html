@@ -1377,17 +1377,37 @@
       </div>
       <div class="hist-kpis" id="histKpis"></div>
       <div class="hist-fbar">
-        <label class="hist-search">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="histSearch" placeholder="Поиск: стандарт, машина, часть линии, узел, бренд…">
-        </label>
-        <select id="filterLine" class="hist-select" title="Линия"></select>
-        <div class="hist-kind-chips" id="histKindChips"></div>
-        <select id="histBrigade" class="hist-select" title="Бригада"></select>
-        <select id="histMachine" class="hist-select" title="Машина"></select>
-        <label class="hist-toggle" title="Показать только проверки с отклонениями">
-          <input type="checkbox" id="histOnlyDev"><span class="hist-toggle-sw"></span>только с отклонениями
-        </label>
+        <div class="hist-frow">
+          <label class="hist-f hist-f-line">
+            <span class="hist-f-lbl">Линия</span>
+            <select id="filterLine" class="hist-select" title="Линия"></select>
+          </label>
+          <label class="hist-f">
+            <span class="hist-f-lbl">Машина</span>
+            <select id="histMachine" class="hist-select" title="Машина"></select>
+          </label>
+          <label class="hist-f">
+            <span class="hist-f-lbl">Смена</span>
+            <select id="histBrigade" class="hist-select" title="Смена"></select>
+          </label>
+          <label class="hist-f hist-f-search">
+            <span class="hist-f-lbl">Поиск</span>
+            <span class="hist-search">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="histSearch" placeholder="Стандарт, узел, часть линии, бренд…">
+            </span>
+          </label>
+        </div>
+        <div class="hist-frow hist-frow-2">
+          <div class="hist-f">
+            <span class="hist-f-lbl">Тип проверки</span>
+            <div class="hist-kind-chips" id="histKindChips"></div>
+          </div>
+          <span class="hist-sp"></span>
+          <label class="hist-toggle" title="Показать только проверки с отклонениями">
+            <input type="checkbox" id="histOnlyDev"><span class="hist-toggle-sw"></span>только с отклонениями
+          </label>
+        </div>
       </div>
     </div>
 

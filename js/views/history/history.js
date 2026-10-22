@@ -46,7 +46,7 @@ function fillHistoryFilters() {
   const brSel = $('#histBrigade');
   if (brSel) {
     brSel.innerHTML = '<option value="">Все смены</option>' +
-      ['A', 'B', 'C', 'D'].map(b => `<option value="${b}">Бригада ${b}</option>`).join('');
+      ['A', 'B', 'C', 'D'].map(b => `<option value="${b}">Смена ${b}</option>`).join('');
     brSel.value = histState.brigade || '';
   }
   const chips = $('#histKindChips');
