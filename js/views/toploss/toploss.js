@@ -180,6 +180,8 @@ function renderTopLossCategories() {
 
   const split = $('#tlSplit');
   const pick = $('#tlPick');
+  const backBtn = $('#tlBackToLinePick');
+  if (backBtn) backBtn.style.display = tlState.line ? '' : 'none';
   if (!tlState.line) {
     side.innerHTML = '';
     main.innerHTML = '';
@@ -466,6 +468,19 @@ $('#tlLinePill')?.addEventListener('click', () => {
   linePickerOnSelect = (line) => setTopLossLine(line);
   openLinePickerModal();
 });
+
+/* Назад к выбору линии: сбрасываем линию, снова показывается экран выбора */
+function backToTopLossLinePick() {
+  tlState.line = '';
+  tlState.lossId = null;
+  tlState.query = '';
+  tlState.openCats.clear();
+  try { localStorage.removeItem(TL_LINE_KEY); } catch (e) { /* нет доступа */ }
+  const search = $('#tlSearch');
+  if (search) search.value = '';
+  backToTopLossSelect();
+}
+$('#tlBackToLinePick')?.addEventListener('click', () => backToTopLossLinePick());
 
 $('#tlSearch')?.addEventListener('input', (e) => {
   tlState.query = e.target.value;
