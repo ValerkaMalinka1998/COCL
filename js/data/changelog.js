@@ -28,7 +28,7 @@ const CHANGE_ACTIONS = {
   deactivated: { label: 'Деактивирован', cls: 'off' },
   activated:   { label: 'Восстановлен',  cls: 'on' },
   removed:     { label: 'Удалён',        cls: 'del' },
-  manual:      { label: 'Запись',        cls: 'man' }
+  manual:      { label: 'Другое',        cls: 'man' }
 };
 
 function getChangeLog() {
