@@ -342,24 +342,21 @@ function normalizeValidation(v) {
   };
 }
 
-/* Идёт ли валидация (решения ещё нет) */
+/* Идёт ли валидация: решения нет и срок не вышел. После срока стандарт
+   автоматически становится обычным — в расписании не продлевается */
 function isOnValidation(row) {
-  const v = row && row.validation;
-  return !!(v && v.from && !v.decidedAt);
+  return validationStatus(row) === 'active';
 }
 
-/* Входит ли смена в период валидации: каждая смена срока; после срока,
-   пока нет решения аналитика, — каждая смена до текущей */
+/* Входит ли смена в период валидации: только смены срока (с начала до конца).
+   После срока смены сами не добавляются — продлить может только аналитик */
 function isValidationShift(row, dateStr, shift) {
   const v = row && row.validation;
   if (!v || !v.from || !dateStr) return false;
   const i = valShiftIndex(dateStr, shift);
   if (i < valShiftIndex(v.from, v.fromShift)) return false;
   if (v.decidedAt) return i < valShiftIndex(v.decidedAt, v.decidedShift || 'day');
-  // Срок — заданные смены; если срок вышел, а решения нет — проверяем и дальше,
-  // но вперёд не планируем (только до текущей смены)
-  const cur = getCurrentShiftPeriod();
-  return i <= Math.max(valShiftIndex(v.until, v.untilShift || 'night'), valShiftIndex(cur.date, cur.shiftType));
+  return i <= valShiftIndex(v.until, v.untilShift || 'night');
 }
 
 /* Есть ли в эти сутки хоть одна смена валидации */
@@ -367,13 +364,13 @@ function isValidationDay(row, dateStr) {
   return isValidationShift(row, dateStr, 'day') || isValidationShift(row, dateStr, 'night');
 }
 
-/* 'none' | 'active' | 'overdue' | 'approved' | 'rejected' */
+/* 'none' | 'active' | 'ended' (срок вышел сам) | 'approved' | 'rejected' */
 function validationStatus(row) {
   const v = row && row.validation;
   if (!v || !v.from) return 'none';
   if (v.decidedAt) return v.result || 'approved';
   const cur = getCurrentShiftPeriod();
-  return valShiftIndex(cur.date, cur.shiftType) > valShiftIndex(v.until, v.untilShift || 'night') ? 'overdue' : 'active';
+  return valShiftIndex(cur.date, cur.shiftType) > valShiftIndex(v.until, v.untilShift || 'night') ? 'ended' : 'active';
 }
 
 /* Сколько смен осталось до конца срока (включая текущую) */

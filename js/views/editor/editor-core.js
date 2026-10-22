@@ -435,7 +435,7 @@ const editorTableState = {
 
 function resetMechFilters() {
   ['emFilterMachine', 'emFilterNode', 'emFilterType', 'emFilterSchedule',
-   'emFilterPart', 'emFilterActive', 'emFilterSearch'
+   'emFilterPart', 'emFilterActive', 'emFilterValidation', 'emFilterSearch'
   ].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
@@ -449,7 +449,7 @@ function resetMechFilters() {
 
 function resetElecFilters() {
   ['eeFilterMachine', 'eeFilterControlType', 'eeFilterType', 'eeFilterSchedule',
-   'eeFilterPart', 'eeFilterActive', 'eeFilterSearch'
+   'eeFilterPart', 'eeFilterActive', 'eeFilterValidation', 'eeFilterSearch'
   ].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
@@ -466,7 +466,7 @@ function resetElecFilters() {
    ============================================================ */
 
 /* Фильтры мех-таблицы */
-['emFilterNode', 'emFilterType', 'emFilterSchedule', 'emFilterActive'
+['emFilterNode', 'emFilterType', 'emFilterSchedule', 'emFilterActive', 'emFilterValidation'
 ].forEach(id => {
   document.getElementById(id)?.addEventListener('change', () => {
     editorTableState.mechPage = 1;
@@ -482,7 +482,7 @@ $('#emFilterSearch')?.addEventListener('input', () => {
 $('#emFilterResetBtn')?.addEventListener('click', resetMechFilters);
 
 /* Фильтры электронной таблицы */
-['eeFilterControlType', 'eeFilterType', 'eeFilterSchedule', 'eeFilterActive'
+['eeFilterControlType', 'eeFilterType', 'eeFilterSchedule', 'eeFilterActive', 'eeFilterValidation'
 ].forEach(id => {
   document.getElementById(id)?.addEventListener('change', () => {
     editorTableState.elecPage = 1;
