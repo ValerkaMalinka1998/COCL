@@ -654,17 +654,19 @@ function renderChecklist(items) {
     const blocks = Array.isArray(st.measurements) ? st.measurements : [];
     const block = (type === 'ChangeOver' && brandTo) ? getEffectiveBrandBlock(blocks, brandTo) : (blocks[0] || null);
     const points = block && Array.isArray(block.points) ? block.points : [];
-    const isOkNotOk = st.controlType === 'fixed' && !points.length;
+    const isOkNotOk = migrateControlType(st.controlType, st.measurements) === 'fixed' && pointsAreMarksOnly(points);
 
     // Норма текстом (для списка до начала проверки)
     let normText = '';
-    if (isOkNotOk) normText = 'ОК / Не ОК';
+    if (isOkNotOk) normText = marksText(points) || 'ОК / Не ОК';
     else if (points.length === 1) normText = points[0].value || '—';
     else normText = `${points.length} ${points.length < 5 ? 'точки' : 'точек'}`;
 
     let ans = '';
     if (isOkNotOk) {
+      const marks = marksText(points);
       ans = `
+        ${marks ? `<div class="cocl-marks">Должно совпадать: <b>${escapeHtml(marks)}</b></div>` : ''}
         <div class="cocl-okfail">
           <label><input type="radio" name="ans_${st.id}" value="OK" data-ans><span>ОК</span></label>
           <label><input type="radio" name="ans_${st.id}" value="FAIL" data-ans><span>Не ОК</span></label>

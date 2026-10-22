@@ -42,10 +42,8 @@ if (type === 'ChangeOver') {
     let answer = '—';
     let status = 'UNCHECKED';
 
-    const hasPoints = Array.isArray(st.measurements) &&
-      st.measurements.some(b => b && Array.isArray(b.points) && b.points.length > 0);
-
-    if (st.controlType === 'fixed' && !hasPoints) {
+    // Строка с кнопками ОК / Не ОК (фиксированный без чисел в точках)
+    if (item.querySelector('input[data-ans]')) {
       const r = item.querySelector('input[data-ans]:checked');
       if (!r) { hasEmpty = true; return; }
       answer = r.value === 'OK' ? 'ОК' : 'Не ОК';

@@ -232,6 +232,22 @@ function hasToleranceInMeasurements(measurements) {
   return false;
 }
 
+/* Фиксированный стандарт «по меткам»: в точках нет чисел (пусто или текст вроде
+   «в одну линию») — оператор выбирает ОК / Не ОК. Есть число — вводит значение. */
+function pointsAreMarksOnly(points) {
+  return (Array.isArray(points) ? points : [])
+    .map(p => String(p && p.value != null ? p.value : p == null ? '' : p).trim())
+    .filter(Boolean)
+    .every(v => parseNorm(v) == null);
+}
+
+/* Метки блока брендов текстом: «в одну линию; по рискам» */
+function marksText(points) {
+  return (Array.isArray(points) ? points : [])
+    .map(p => String(p && p.value != null ? p.value : '').trim())
+    .filter(Boolean).join('; ');
+}
+
 /* Приводит legacy-тип к каноническому (с учётом точек) */
 function migrateControlType(type, measurements) {
   if (type === 'fixed' || type === 'variable' || type === 'interval') return type;

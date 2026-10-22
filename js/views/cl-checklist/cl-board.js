@@ -5,8 +5,9 @@
    вместе, независимо от выбранного режима.
    ============================================================ */
 
-/* Считает итог текущей смены линии: [{ part, planned, done, fail, missedSec, planSec, doneSec, items }] */
-function clBoardSummary() {
+/* Считает итог текущей смены линии: [{ part, planned, done, fail, planSec, doneSec, items }]
+   mode — 'mech' | 'elec' (только этот режим) или не задан (оба вместе) */
+function clBoardSummary(mode) {
   const line = clState.line;
   const weekDays = getClWeekDays(0);
   const weekStart = weekDays[0];
@@ -17,8 +18,8 @@ function clBoardSummary() {
   const inValidation = (row) => weekDays.some(d => isValidationDay(row, d));
 
   const rows = [
-    ...getStandards().filter(s => s.line === line),
-    ...getElectronicParamsForLine(line)
+    ...(mode === 'elec' ? [] : getStandards().filter(s => s.line === line)),
+    ...(mode === 'mech' ? [] : getElectronicParamsForLine(line))
   ].filter(r => r.active !== false || checkedIds.has(r.id))
    .filter(r => isMember(r) || inValidation(r) || checkedIds.has(r.id));
 

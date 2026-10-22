@@ -227,8 +227,12 @@ function updateClCheckButtons() {
   const stopBtn = $('#clStopCheckBtn');
   if (!startBtn || !stopBtn) return;
 
-  const canStart = clState.line && !clState.checkMode;
+  // Без проверок в текущей смене начинать нечего
+  const needNow = clState.line ? clShiftPlannedCount() : 0;
+  const canStart = clState.line && !clState.checkMode && needNow > 0;
   startBtn.disabled = !canStart;
+  startBtn.title = clState.line && !clState.checkMode && !needNow
+    ? 'В текущую смену нет запланированных проверок' : '';
 
   if (clState.checkMode) {
     startBtn.style.display = 'none';
@@ -364,9 +368,10 @@ function renderClMatrix() {
           <line x1="3" y1="10" x2="21" y2="10"/>
         </svg>
         <div class="sch-empty-title">На линии нет стандартов в расписании</div>
-        <div class="sch-empty-sub">Обратитесь к техническому специалисту — он должен добавить стандарты в «Расписание CL».</div>
+        <div class="sch-empty-sub">Обратитесь к аналитику — он должен добавить стандарты в «Расписание CL».</div>
       </div>
     `;
+    updateClCheckButtons();
     return;
   }
 
@@ -441,6 +446,7 @@ function renderClMatrix() {
 
   bindClCells();
   bindClWeekNav();
+  updateClCheckButtons();
 }
 
 /* Счётчики «сделано / надо» текущей смены на кнопках Maker / Packer */
@@ -772,8 +778,15 @@ function quickSetClCell(rowId, dateStr, shift, status) {
   renderClMatrix();
 }
 
+/* Сколько проверок запланировано на текущую смену в выбранном режиме (и части линии) */
+function clShiftPlannedCount() {
+  return clBoardSummary(clState.mode === 'mech' ? 'mech' : 'elec')
+    .filter(g => clState.mode !== 'mech' || !linePartFilter(clState.line, clState.part) || g.part === clState.part)
+    .reduce((s, g) => s + g.planned, 0);
+}
+
 function startClCheck() {
-  if (!clState.line) return;
+  if (!clState.line || !clShiftPlannedCount()) return;
   clState.checkMode = true;
   clState.quickDraft = {};
   updateClCheckButtons();
