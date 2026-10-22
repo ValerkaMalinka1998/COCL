@@ -104,3 +104,11 @@ button.dash-li:hover { background: var(--bg-hover); }
   .dash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .dash-custom { padding: 0; flex-basis: 100%; }
+
+/* Топ по отклонениям: машины и линии */
+.dash-top + .dash-top { margin-top: 14px; }
+.dash-top-h {
+  font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--text-dim); margin-bottom: 6px;
+}
+.dash-li-bar[role="button"] { cursor: pointer; }

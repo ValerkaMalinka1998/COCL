@@ -12,8 +12,6 @@
 const DASH_PERIODS = { shift: 1, day: 2, '7': 14, '30': 60, all: 0, custom: 0 };
 const DASH_PERIOD_LABELS = { shift: 'текущая смена', day: 'последние сутки', '7': '7 дней', '30': '30 дней', all: 'всё время', custom: 'выбранный период' };
 const DASH_PERIOD_BTNS = [['shift', 'Смена'], ['day', 'Сутки'], ['7', '7 дней'], ['30', '30 дней'], ['all', 'Всё'], ['custom', 'Период…']];
-const DASH_NEAR_LIMIT = 0.15;   // запас до границы нормы < 15%
-const DASH_STALE_DAYS = 30;
 
 const dashState = {
   period: (() => { try { return localStorage.getItem('cl_dashboard_period') || '7'; } catch (e) { return '7'; } })(),
@@ -104,23 +102,6 @@ function dashRecords(slots, lineSet) {
   return getHistory().filter(h => (!lineSet || lineSet.has(h.line)) && keys.has(dashSlotKey(histShift(h))));
 }
 
-/* Запас последнего замера до границы нормы (0…0.5) или null */
-function dashMargin(h, it) {
-  if (it.status !== 'OK') return null;
-  const pts = histItemPoints(h, it);
-  if (!pts) return null;
-  let best = null;
-  pts.forEach((p, i) => {
-    const v = histNum(p.value);
-    if (v == null || !p.range) return;
-    const w = p.range.max - p.range.min;
-    if (w <= 0) return;
-    const m = Math.min(v - p.range.min, p.range.max - v) / w;
-    if (best == null || m < best.m) best = { m, i, p, n: pts.length };
-  });
-  return best;
-}
-
 /* Сводка периода по набору линий */
 function dashSummary(lines, slots) {
   const includeCurrent = dashState.period === 'shift';
@@ -193,59 +174,6 @@ function dashAttention(lines, sum) {
     });
   });
 
-  // 3. Значения у границы нормы (последний замер)
-  const near = [];
-  lines.forEach(x => {
-    histStdEntries(x.line).forEach(list => {
-      const last = list[list.length - 1];
-      if (!last) return;
-      const mg = dashMargin(last.h, last.it);
-      if (mg && mg.m < DASH_NEAR_LIMIT) near.push({ line: x.line, last, mg });
-    });
-  });
-  near.sort((a, b) => a.mg.m - b.mg.m).slice(0, 3).forEach(({ line, last, mg }) => {
-    items.push({
-      sev: 1.5, kind: 'amber',
-      title: `${line} — значение у границы нормы`,
-      sub: `${last.it.oplNumber ? last.it.oplNumber + ' ' : ''}${histItemTitle(last.it)}${mg.n > 1 ? ' т.' + (mg.i + 1) : ''}: запас ${Math.round(mg.m * 100)}% (${mg.p.value} при ${mg.p.label})`,
-      act: `data-dash-std="${escapeAttr(last.it.standardId)}" data-dash-line="${escapeAttr(line)}"`
-    });
-  });
-
-  // 4. Потери без проверки 30+ дней
-  const cats = dashboardWorkshop ? getTopLossesForWorkshop(dashboardWorkshop) : getTopLosses();
-  const lastTl = {};
-  getHistory().forEach(h => {
-    if (h.mode !== 'toploss' || (lineSet.size && !lineSet.has(h.line))) return;
-    (h.topLosses || []).forEach(id => { if (!lastTl[id] || h.timestamp > lastTl[id]) lastTl[id] = h.timestamp; });
-  });
-  const border = Date.now() - DASH_STALE_DAYS * 86400000;
-  const stale = [];
-  cats.forEach(c => (c.items || []).forEach(l => {
-    if (!lastTl[l.id] || new Date(lastTl[l.id]).getTime() < border) stale.push(l.name);
-  }));
-  if (stale.length) {
-    items.push({
-      sev: 1, kind: 'purple',
-      title: `TOP Losses: ${stale.length} ${pluralRu(stale.length, 'потеря', 'потери', 'потерь')} без проверки ${DASH_STALE_DAYS}+ дней`,
-      sub: stale.slice(0, 4).join(', ') + (stale.length > 4 ? '…' : ''),
-      act: 'data-dash-go="toploss"'
-    });
-  }
-
-  // 5. Активные стандарты вне расписания
-  const weekStart = getSchWeekStart(0);
-  lines.forEach(x => {
-    const n = histClRows(x.line).filter(({ row }) => !getRowForWeek(row, weekStart, x.line).member).length;
-    if (!n) return;
-    items.push({
-      sev: 0.5, kind: 'cyan',
-      title: `${x.line} — ${n} ${pluralRu(n, 'стандарт', 'стандарта', 'стандартов')} не в расписании`,
-      sub: 'Активны, но не проверяются регулярно',
-      act: `data-dash-schedule="${escapeAttr(x.line)}"`
-    });
-  });
-
   return items.sort((a, b) => b.sev - a.sev);
 }
 
@@ -309,6 +237,12 @@ function renderDashboard() {
         ${dashTrendHtml(dashWeeks(lines))}
       </div>
       <div class="card dash-card">
+        <h3 class="dash-h">Где чаще отклонения <small>за период</small></h3>
+        ${dashTopHtml(sum)}
+      </div>
+    </div>
+    <div class="dash-g2">
+      <div class="card dash-card">
         <h3 class="dash-h">Повторяющиеся отклонения <small>≥ 2 раз за период</small></h3>
         ${sum.repeats.length ? sum.repeats.slice(0, 8).map(r => `
           <button type="button" class="dash-li" data-dash-std="${escapeAttr(r.it.standardId)}" data-dash-line="${escapeAttr(r.line)}">
@@ -319,6 +253,35 @@ function renderDashboard() {
           </button>`).join('') : '<div class="dash-empty">Повторов нет</div>'}
       </div>
     </div>`;
+}
+
+/* Топ по отклонениям: машины и линии за период */
+function dashTop(sum, by) {
+  const map = {};
+  sum.recs.forEach(h => (h.items || []).forEach(it => {
+    if (it.status !== 'FAIL') return;
+    const key = by === 'line' ? h.line : [it.machine || 'без машины', it.nodePart].filter(Boolean).join(' · ');
+    if (!key) return;
+    map[key] = (map[key] || 0) + 1;
+  }));
+  return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 6);
+}
+
+function dashTopHtml(sum) {
+  const groups = [['Машины', dashTop(sum, 'machine'), 'machine'], ['Линии', dashTop(sum, 'line'), 'line']];
+  const body = groups.map(([title, list, kind]) => {
+    if (!list.length) return '';
+    const max = list[0][1];
+    return `<div class="dash-top">
+      <div class="dash-top-h">${title}</div>
+      ${list.map(([name, n]) => `
+        <div class="dash-li dash-li-bar"${kind === 'line' ? ` data-dash-open-line="${escapeAttr(name)}" role="button" tabindex="0"` : ''}>
+          <div><span>${escapeHtml(name)}</span><b class="hist-c-fail">${n} ${pluralRu(n, 'откл.', 'откл.', 'откл.')}</b></div>
+          <div class="dash-bar"><i style="width:${Math.round(n / max * 100)}%"></i></div>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+  return body || '<div class="dash-empty">Отклонений за период нет</div>';
 }
 
 function renderDashboardHead() {
@@ -448,33 +411,20 @@ function renderDashboardLine() {
   const weekStart = getSchWeekStart(0);
   const rows = histClRows(line);
   const entries = histStdEntries(line);
-  const staleBorder = addDaysISO(getCurrentShiftPeriod().date, -DASH_STALE_DAYS);
-  let inMech = 0, inElec = 0, outSch = 0, noPoints = 0, stale = 0;
+  let inMech = 0, inElec = 0, noPoints = 0;
   rows.forEach(({ row, isElec }) => {
     const member = getRowForWeek(row, weekStart, line).member;
-    if (member) { if (isElec) inElec++; else inMech++; } else outSch++;
+    if (member) { if (isElec) inElec++; else inMech++; }
     if (!isElec) {
       const t = migrateControlType(row.controlType, row.measurements);
       const hasPts = (row.measurements || []).some(b => (b.points || []).length);
       if ((t === 'variable' || t === 'interval') && !hasPts) noPoints++;
-    }
-    if (member) {
-      const list = entries.get(row.id) || [];
-      const last = list[list.length - 1];
-      if (!last || histShift(last.h).date < staleBorder) stale++;
     }
   });
 
   // Проблемные стандарты
   const problems = [];
   sum.repeats.forEach(r => problems.push({ id: r.it.standardId, it: r.it, tag: `×${r.n}`, cls: 'fail', why: `${r.n} откл. за период` }));
-  entries.forEach((list, id) => {
-    const last = list[list.length - 1];
-    const mg = last && dashMargin(last.h, last.it);
-    if (mg && mg.m < DASH_NEAR_LIMIT && !problems.some(p => p.id === id)) {
-      problems.push({ id, it: last.it, tag: 'граница', cls: 'warn', why: `запас ${Math.round(mg.m * 100)}%${mg.n > 1 ? ' по т.' + (mg.i + 1) : ''}` });
-    }
-  });
   const idx = histClIndex(line);
   const cur = getCurrentShiftPeriod();
   rows.forEach(({ row }) => {
@@ -527,9 +477,7 @@ function renderDashboardLine() {
           <div class="hist-ring dash-ring" style="--p:${pct || 0}%"><div>${pct == null ? '—' : pct + '%'}<small>выполнено</small></div></div>
           <div class="dash-pass-list">
             <div class="dash-li"><span>В расписании</span><b>${inMech} мех · ${inElec} E-Param</b></div>
-            <button type="button" class="dash-li" data-dash-schedule="${escapeAttr(line)}"><span>Активных, но не в расписании</span><b class="${outSch ? 'hist-c-warn' : ''}">${outSch}</b></button>
             <button type="button" class="dash-li" data-dash-editor="${escapeAttr(line)}"><span>Без точек замера (вариабельный / интервал)</span><b class="${noPoints ? 'hist-c-warn' : ''}">${noPoints}</b></button>
-            <div class="dash-li"><span>Не проверялись ${DASH_STALE_DAYS}+ дней</span><b class="${stale ? 'hist-c-fail' : ''}">${stale}</b></div>
           </div>
         </div>
       </div>
@@ -603,11 +551,6 @@ $('#tab-dashboard')?.addEventListener('click', (e) => {
     const [date, shift] = sh.dataset.histShift.split('|');
     dashState.keepLine = true;
     return openHistoryShift(dashState.line, date, shift, { from: 'dashboard' });
-  }
-  const sch = t.closest('[data-dash-schedule]');
-  if (sch) {
-    try { localStorage.setItem('cl_schedule_line', sch.dataset.dashSchedule); } catch (err) { /* нет доступа */ }
-    return switchTab('schedule');
   }
   const ed = t.closest('[data-dash-editor]');
   if (ed) {
