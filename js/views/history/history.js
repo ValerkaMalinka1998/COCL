@@ -39,8 +39,16 @@ function fillHistoryFilters() {
   }
   const lineSel = $('#filterLine');
   if (lineSel) {
+    // Линии сгруппированы по цехам; линии вне структуры — отдельной группой
+    const ctx = getAllLinesWithContext();
+    const known = new Set(ctx.map(c => c.line));
+    const groups = {};
+    ctx.forEach(c => { (groups[c.workshopName] = groups[c.workshopName] || []).push(c.line); });
+    const extra = getLines().filter(l => !known.has(l));
+    const opt = l => `<option value="${escapeAttr(l)}">${escapeHtml(l)}</option>`;
     lineSel.innerHTML = '<option value="">Все линии</option>' +
-      getLines().map(l => `<option value="${escapeAttr(l)}">${escapeHtml(l)}</option>`).join('');
+      Object.entries(groups).map(([ws, ls]) => `<optgroup label="${escapeAttr(ws)}">${ls.map(opt).join('')}</optgroup>`).join('') +
+      (extra.length ? `<optgroup label="Вне структуры">${extra.map(opt).join('')}</optgroup>` : '');
     lineSel.value = histState.line || '';
   }
   const brSel = $('#histBrigade');
