@@ -525,17 +525,17 @@ $('#svFullSaveBtn')?.addEventListener('click', () => {
 
   const controlType = controlEl ? controlEl.value : st.controlType;
   if (!controlType) return showToast('Выберите тип контроля', true);
-  // Вариабельный и интервал без точек проверить нечем
-  const hasPoints = measurements.some(m =>
-    (m.points || []).some(pt => String(pt.value || '').trim()));
-  if ((controlType === 'variable' || controlType === 'interval') && !hasPoints) {
-    return showToast('Заполните хотя бы одну точку контроля', true);
-  }
   // Один бренд — одна строка точек
   const brandKeys = measurements.map(m => m.brand || '');
   const dupBrand = brandKeys.find((b, i) => brandKeys.indexOf(b) !== i);
   if (dupBrand !== undefined) {
     return showToast(`Бренд «${dupBrand || 'Остальные бренды'}» добавлен дважды — оставьте одну строку`, true);
+  }
+  // Вариабельный и интервал без точек проверить нечем
+  const hasPoints = measurements.some(m =>
+    (m.points || []).some(pt => String(pt.value || '').trim()));
+  if ((controlType === 'variable' || controlType === 'interval') && !hasPoints) {
+    return showToast('Заполните хотя бы одну точку контроля', true);
   }
   // Значения должны соответствовать типу: в фиксированный нельзя «92 ± 5» и «5 до 8» и т. д.
   for (const m of measurements) {
