@@ -175,11 +175,34 @@ function cilHeadHtml(dateByDayIdx, opts) {
   return `<thead>${r1}</tr>${r2}</tr></thead>`;
 }
 
+/* Время на проверку строки, сек (только механические стандарты) */
+function cilRowDurationSec(row) {
+  return Math.max(0, Number(row && row.durationSec) || 0);
+}
+
+/* Длительность для шапки смены в формате мм:сс (от часа — ч:мм:сс) */
+function formatCilDuration(sec) {
+  const n = Math.round(Number(sec) || 0);
+  if (n <= 0) return '';
+  const h = Math.floor(n / 3600);
+  const m = Math.floor((n % 3600) / 60);
+  const s = n % 60;
+  const mm = String(m).padStart(2, '0');
+  const ss = String(s).padStart(2, '0');
+  return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+/* Строка «∑ время» под подписью смены; пусто, если времени нет */
+function cilShiftTotalHtml(sec) {
+  const txt = formatCilDuration(sec);
+  return txt ? `<span class="cil-shift-total" title="Общее время на проверку всех стандартов смены">∑ ${txt}</span>` : '';
+}
+
 /* Подпись смены с прогрессом «сделано / запланировано» */
-function cilShiftProgress(shift, done, planned) {
+function cilShiftProgress(shift, done, planned, totalSec) {
   const pct = planned ? Math.round(done / planned * 100) : 0;
   return `<span class="cil-shift-sub">${shift === 'day' ? 'день' : 'ночь'}${planned ? ` · ${done}/${planned}` : ''}</span>
-    <span class="cil-prog"><i style="width:${pct}%"></i></span>`;
+    <span class="cil-prog"><i style="width:${pct}%"></i></span>${cilShiftTotalHtml(totalSec)}`;
 }
 
 /* Классы ячейки по смене и дню */

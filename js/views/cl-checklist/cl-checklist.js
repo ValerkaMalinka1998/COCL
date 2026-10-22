@@ -380,11 +380,12 @@ function renderClMatrix() {
   const cellsByRow = rows.map(row => clRowCells(row, dateByDayIdx, hist));
   updateClPartCounts(dateByDayIdx, hist, isMember, checkedIds);
   const prog = {};
-  cellsByRow.forEach(cells => cells.forEach(c => {
+  cellsByRow.forEach((cells, ri) => cells.forEach(c => {
     if (c.status === 'na') return;
     const k = `${c.dateStr}|${c.shift}`;
-    if (!prog[k]) prog[k] = { done: 0, planned: 0 };
+    if (!prog[k]) prog[k] = { done: 0, planned: 0, sec: 0 };
     prog[k].planned++;
+    prog[k].sec += cilRowDurationSec(rows[ri]);
     if (c.status === 'OK' || c.status === 'FAIL' || c.status === 'UNCHECKED') prog[k].done++;
   }));
 
@@ -423,8 +424,8 @@ function renderClMatrix() {
       <th class="cil-c-std" rowspan="2">${isElec ? 'Параметр' : 'Стандарт'}</th>
       <th class="cil-c-norm" rowspan="2">Норма / точки</th>`,
     shiftSub: (dateStr, shift) => {
-      const p = prog[`${dateStr}|${shift}`] || { done: 0, planned: 0 };
-      return cilShiftProgress(shift, p.done, p.planned);
+      const p = prog[`${dateStr}|${shift}`] || { done: 0, planned: 0, sec: 0 };
+      return cilShiftProgress(shift, p.done, p.planned, p.sec);
     }
   });
 
