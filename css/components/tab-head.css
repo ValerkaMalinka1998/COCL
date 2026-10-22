@@ -9,7 +9,16 @@
   border-radius: 14px;
   background: color-mix(in srgb, var(--th) 13%, var(--bg-card));
 }
-.th-band-coral { --th: #d85a30; }
+.th-band-coral { --th: var(--tab-coral); }
+
+/* Коралловый цвет TOP Losses: в тёмной теме ярче, иначе плашка тускнеет */
+:root { --tab-coral: #d85a30; }
+[data-theme="dark"] { --tab-coral: #ff7a59; }
+[data-theme="dark"] .th-band {
+  border-color: color-mix(in srgb, var(--th) 70%, transparent);
+  background: color-mix(in srgb, var(--th) 20%, var(--bg-card));
+}
+[data-theme="dark"] .th-ic { background: color-mix(in srgb, var(--th) 22%, var(--bg-card)); }
 .th-band-cyan { --th: var(--accent-cyan); }
 
 .th-top {

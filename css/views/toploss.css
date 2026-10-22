@@ -865,7 +865,7 @@
    ============================================================ */
 .tl-pick { padding: 8px 20px 20px; }
 .tl-pick-hero { text-align: center; padding: 18px 10px 6px; }
-.tl-pick-hero > svg { color: var(--accent-amber); }
+.tl-pick-hero > svg { color: var(--tab-coral, var(--accent-amber)); }
 .tl-pick-hero h3 { margin: 8px 0 4px; font-size: 20px; font-style: italic; font-weight: 800; color: var(--text-main); }
 .tl-pick-hero p { margin: 0; color: var(--text-second); font-size: 13px; }
 .tl-pick-search {
