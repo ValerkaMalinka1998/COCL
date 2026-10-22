@@ -412,13 +412,7 @@ function renderClMatrix() {
         </button>
         ${!isCurrentWeek ? '<button type="button" class="cil-week-today" id="clWeekToday">Сегодня</button>' : ''}
       </div>
-      <div class="cil-legend">
-        <span><i class="cil-cell cil-cell-ok cil-cell-mini">${CIL_ICONS.check}</i>ОК</span>
-        <span><i class="cil-cell cil-cell-fail cil-cell-mini">${CIL_ICONS.x}</i>Отклонение</span>
-        <span><i class="cil-cell cil-cell-missed cil-cell-mini">?</i>Пропущено</span>
-        <span><i class="cil-cell cil-cell-mini">${CIL_ICONS.ruler}</i>Замер</span>
-        <span><i class="cil-cell cil-cell-mini">${CIL_ICONS.eye}</i>Визуально</span>
-      </div>
+      ${legendHtml(['ok', 'fail', 'missed', 'due', 'na', 'ruler', 'eye', 'val'])}
     </div>
     <div class="cil-scroll"><table class="cil-table">`;
 

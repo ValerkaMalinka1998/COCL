@@ -172,6 +172,8 @@ function getFilteredScheduleRows() {
 
 /* --- Обновить счётчики над матрицей расписания --- */
 function updateSchMatrixCounters(rows) {
+  const lg = $('#schMatrixLegend');
+  if (lg) lg.innerHTML = legendHtml(['day', 'night', 'past', 'val']);
   const el = $('#schMatrixCounters');
   if (!el) return;
 
