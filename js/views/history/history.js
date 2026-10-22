@@ -18,13 +18,13 @@ const histState = Object.assign({
   from: '', to: '',
   line: null,            // null — ещё не выбирали (берём линию Чек-листа CL)
   kinds: ['cl', 'electronic', 'toploss', 'cocl'],
-  brigade: '', machine: '',
+  brigade: '', machine: '', workshop: '',
   onlyDev: false
 }, loadHistFilters(), { q: '', limit: HIST_PAGE, covWeek: 0, scrollY: 0 });
 
 function saveHistFilters() {
-  const { view, period, from, to, line, kinds, brigade, machine, onlyDev } = histState;
-  try { localStorage.setItem(HIST_FILTERS_KEY, JSON.stringify({ view, period, from, to, line, kinds, brigade, machine, onlyDev })); }
+  const { view, period, from, to, line, kinds, brigade, machine, workshop, onlyDev } = histState;
+  try { localStorage.setItem(HIST_FILTERS_KEY, JSON.stringify({ view, period, from, to, line, kinds, brigade, machine, workshop, onlyDev })); }
   catch (e) { /* хранилище недоступно — фильтры просто не запомнятся */ }
 }
 
@@ -40,11 +40,11 @@ function fillHistoryFilters() {
   const lineSel = $('#filterLine');
   if (lineSel) {
     // Линии сгруппированы по цехам; линии вне структуры — отдельной группой
-    const ctx = getAllLinesWithContext();
+    const ctx = getAllLinesWithContext().filter(c => !histState.workshop || c.workshopId === histState.workshop);
     const known = new Set(ctx.map(c => c.line));
     const groups = {};
     ctx.forEach(c => { (groups[c.workshopName] = groups[c.workshopName] || []).push(c.line); });
-    const extra = getLines().filter(l => !known.has(l));
+    const extra = histState.workshop ? [] : getLines().filter(l => !known.has(l));
     const opt = l => `<option value="${escapeAttr(l)}">${escapeHtml(l)}</option>`;
     lineSel.innerHTML = '<option value="">Все линии</option>' +
       Object.entries(groups).map(([ws, ls]) => `<optgroup label="${escapeAttr(ws)}">${ls.map(opt).join('')}</optgroup>`).join('') +
@@ -56,6 +56,12 @@ function fillHistoryFilters() {
     brSel.innerHTML = '<option value="">Все смены</option>' +
       ['A', 'B', 'C', 'D'].map(b => `<option value="${b}">Смена ${b}</option>`).join('');
     brSel.value = histState.brigade || '';
+  }
+  const wsBox = $('#histWsChips');
+  if (wsBox) {
+    wsBox.innerHTML = [['', 'Все']].concat(getWorkshops().map(w => [w.id, w.name])).map(([id, name]) =>
+      `<button type="button" class="hist-chip hist-ws-chip${(histState.workshop || '') === id ? ' on' : ''}" data-hist-ws="${escapeAttr(id)}" style="--k:var(--accent-cyan)">${escapeHtml(name)}</button>`
+    ).join('');
   }
   const chips = $('#histKindChips');
   if (chips) {
@@ -75,6 +81,7 @@ function fillHistMachineFilter() {
   const set = new Set();
   getHistory().forEach(h => {
     if (histState.line && h.line !== histState.line) return;
+    if (!histState.line && histState.workshop && getWorkshopIdForLine(h.line) !== histState.workshop) return;
     (h.items || []).forEach(it => { if (it.machine) set.add(it.machine); });
   });
   const list = [...set].sort((a, b) => String(a).localeCompare(String(b), 'ru', { numeric: true }));
@@ -116,6 +123,7 @@ function getFilteredHistory(opts = {}) {
   return getHistory()
     .filter(h => kinds.has(histKind(h)))
     .filter(h => !histState.line || h.line === histState.line)
+    .filter(h => histState.line || !histState.workshop || getWorkshopIdForLine(h.line) === histState.workshop)
     .filter(histPeriodMatch)
     .filter(h => !histState.brigade || histShift(h).letter === histState.brigade)
     .filter(h => !histState.machine || (h.items || []).some(it => it.machine === histState.machine))
@@ -150,7 +158,7 @@ function renderHistory() {
     shift: 'текущая смена', today: 'сегодня', '7': 'последние 7 дней', '30': 'последние 30 дней',
     all: 'всё время', custom: 'выбранный период'
   }[histState.period] || '';
-  $('#histSubtitle').textContent = `${histState.line || 'Все линии'} · ${periodText}`;
+  $('#histSubtitle').textContent = `${histState.line || (histState.workshop ? 'Цех ' + (getWorkshop(histState.workshop)?.name || '') : 'Все линии')} · ${periodText}`;
 
   const list = getFilteredHistory();
   renderHistKpis(list);
@@ -479,6 +487,15 @@ $('#tab-history')?.addEventListener('click', (e) => {
   if (view) { histState.view = view.dataset.histView; return histFilterChanged(); }
   const period = t.closest('[data-hist-period]');
   if (period) { histState.period = period.dataset.histPeriod; return histFilterChanged(); }
+  const ws = t.closest('[data-hist-ws]');
+  if (ws) {
+    histState.workshop = ws.dataset.histWs || '';
+    // линия другого цеха больше не подходит — сбрасываем на «Все линии»
+    if (histState.line && histState.workshop && getWorkshopIdForLine(histState.line) !== histState.workshop) histState.line = '';
+    histState.covWeek = 0;
+    fillHistoryFilters();
+    return histFilterChanged();
+  }
   const kind = t.closest('[data-hist-kind]');
   if (kind) {
     const k = kind.dataset.histKind;
