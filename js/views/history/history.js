@@ -272,23 +272,21 @@ function histCoverageHtml(line, weekOffset, weekAttr) {
     </div>`;
 
   const first = week[0].date, last = week[6].date;
-  const arrow = (dir, dis) => `<button type="button" class="cil-week-btn" ${weekAttr}="${dir}" title="${dir < 0 ? 'Предыдущая' : 'Следующая'} неделя"${dis ? ' disabled' : ''}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="${dir < 0 ? '15 18 9 12 15 6' : '9 18 15 12 9 6'}"/></svg></button>`;
+  const arrow = (dir, dis) => `<button type="button" class="cil-week-btn hist-cov-arrow" ${weekAttr}="${dir}" title="${dir < 0 ? 'Предыдущая' : 'Следующая'} неделя"${dis ? ' disabled' : ''}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="${dir < 0 ? '15 18 9 12 15 6' : '9 18 15 12 9 6'}"/></svg></button>`;
 
   return `
     <div class="hist-cov-h">
       <div class="hist-cov-week">
         <div class="hist-cov-wk">
+          ${arrow(-1, false)}
           <span class="hist-cov-no">Неделя ${histIsoWeek(first)}</span>
           <span class="hist-cov-range">${fmtShortDate(first)} – ${fmtShortDate(last)}</span>
           <span class="hist-cov-tag ${isCur ? 'is-cur' : ''}">${weekTag}</span>
+          ${arrow(1, isCur)}
+          ${!isCur ? `<button type="button" class="cil-week-today" ${weekAttr}="0">К текущей</button>` : ''}
         </div>
         <div class="hist-cov-sub">Покрытие смен Чек-листа CL · ${escapeHtml(line)} · ${daysText}</div>
         <div class="hist-cov-days">${week.map(d => `<i class="${d.date < today ? 'gone' : d.date === today ? 'now' : ''}"></i>`).join('')}</div>
-      </div>
-      <div class="hist-cov-nav">
-        ${arrow(-1, false)}
-        ${!isCur ? `<button type="button" class="cil-week-today" ${weekAttr}="0">К текущей</button>` : ''}
-        ${arrow(1, isCur)}
       </div>
     </div>
     <div class="hist-cks">

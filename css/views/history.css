@@ -95,7 +95,10 @@
 .hist-cov-days i { height: 5px; border-radius: 3px; background: var(--bg-input); border: 1px solid var(--border); }
 .hist-cov-days i.gone { background: var(--accent-cyan); border-color: var(--accent-cyan); }
 .hist-cov-days i.now { background: color-mix(in srgb, var(--accent-cyan) 45%, transparent); border-color: var(--accent-cyan); }
-.hist-cov-nav { display: flex; align-items: center; gap: 6px; }
+.hist-cov-wk { align-items: center; }
+.hist-cov-wk .hist-cov-arrow { width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-card); color: var(--text-main); }
+.hist-cov-wk .hist-cov-arrow:hover:not(:disabled) { color: #fff; background: var(--accent-cyan); border-color: var(--accent-cyan); }
+.hist-cov-wk .hist-cov-arrow:disabled { opacity: .35; cursor: default; }
 .hist-cks { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-bottom: 12px; }
 .hist-ck { --k: var(--text-main); display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: baseline; padding: 6px 10px; border: 1px solid var(--border); border-left: 3px solid var(--k); border-radius: 10px; background: var(--bg-card); }
 .hist-ck b { grid-row: 1 / span 2; font-size: 18px; font-weight: 800; line-height: 1.2; color: var(--k); font-variant-numeric: tabular-nums; }
