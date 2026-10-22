@@ -111,6 +111,18 @@ function getRowTemplateForWeek(row, weekStart) {
   };
 }
 
+/* Существовал ли стандарт/параметр к концу смены. До создания его нет в чек-листе,
+   поэтому такие смены не планируются и не считаются пропущенными.
+   День: 09:00–21:00 даты, ночь: 21:00 даты – 09:00 следующих суток. */
+function rowExistedByShiftEnd(row, dateStr, shift) {
+  const created = row && row.createdAt ? new Date(row.createdAt).getTime() : NaN;
+  if (isNaN(created)) return true;
+  const end = shift === 'day'
+    ? new Date(`${dateStr}T21:00:00`)
+    : new Date(`${addDaysISO(dateStr, 1)}T09:00:00`);
+  return end.getTime() > created;
+}
+
 /* Строка на неделю с учётом разовых правок этой недели:
    { member, schedule, timeWindows, work } */
 function getRowForWeek(row, weekStart, line) {
@@ -119,6 +131,8 @@ function getRowForWeek(row, weekStart, line) {
   let member = t.inSchedule;
   if ((ov.removed || []).includes(row.id)) member = false;
   if ((ov.added || []).includes(row.id)) member = true;
+  // Неделя целиком закончилась до создания строки — её в этой неделе не было
+  if (!rowExistedByShiftEnd(row, addDaysISO(weekStart, 6), 'night')) member = false;
   const snap = ov.rows && ov.rows[row.id];
   return {
     member,
