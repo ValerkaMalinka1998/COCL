@@ -242,7 +242,7 @@ function getLineMachines() {
 function lineHasParts(line) {
   return !!line && getWorkshopIdForLine(line) === 'smd';
 }
-/* Фильтр по части для линии: у PMD / FMD всегда «все» */
+/* Фильтр по части для линии: у PMD / FMD всегда «все»; у SMD — Maker или Packer (проверяют разные операторы) */
 function linePartFilter(line, part) {
-  return lineHasParts(line) ? (part || '') : '';
+  return lineHasParts(line) ? (part === 'Packer' ? 'Packer' : 'Maker') : '';
 }

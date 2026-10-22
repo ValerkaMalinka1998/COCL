@@ -132,7 +132,7 @@ const DEFAULT_WORKSHOPS = [
 const clState = {
   line: null,
   mode: 'mech',
-  part: '',
+  part: 'Maker',
   checkMode: false,
   rows: [],
   todayISO: '',

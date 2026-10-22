@@ -173,7 +173,7 @@ $('#elecLine')?.addEventListener('change', () => {
 
 function openClCheckTab() {
   const savedMode = localStorage.getItem('cl_cl_mode') || 'mech';
-  const savedPart = localStorage.getItem('cl_cl_part') || '';
+  const savedPart = localStorage.getItem('cl_cl_part') === 'Packer' ? 'Packer' : 'Maker';
   const savedLine = localStorage.getItem('cl_cl_line') || null;
 
   clState.mode = savedMode;

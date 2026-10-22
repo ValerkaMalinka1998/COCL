@@ -13,7 +13,7 @@
 const schState = {
   line: null,             // выбранная линия
   mode: 'mech',           // 'mech' | 'elec'
-  part: '',               // '' | 'Maker' | 'Packer'  (только для mech)
+  part: 'Maker',          // 'Maker' | 'Packer'  (только для mech, SMD)
   weekOffset: 0,          // 0 = текущая неделя, +1 = следующая, -1 = предыдущая
   saveScope: 'forward',   // 'forward' — с этой недели и далее, 'week' — только эта неделя
   dirty: false,           // были ли несохранённые изменения
@@ -33,7 +33,7 @@ function openScheduleTab() {
   // Восстанавливаем сохранённые выборы
   const savedMode = localStorage.getItem('cl_schedule_mode') || 'mech';
   const savedLine = localStorage.getItem('cl_schedule_line') || null;
-  const savedPart = localStorage.getItem('cl_schedule_part') || '';
+  const savedPart = localStorage.getItem('cl_schedule_part') === 'Packer' ? 'Packer' : 'Maker';
 
   schState.mode = savedMode;
   schState.part = savedPart;
