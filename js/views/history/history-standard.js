@@ -125,7 +125,7 @@ function renderStandardHistory() {
             <td>${escapeHtml(HIST_KINDS[histKind(e.h)].short)}</td>
             <td>${escapeHtml(e.s.letter || '—')}</td>
             <td><span class="hist-st hist-st-${e.it.status === 'OK' ? 'o' : e.it.status === 'FAIL' ? 'x' : 'u'}">${e.it.status === 'OK' ? CIL_ICONS.check : e.it.status === 'FAIL' ? CIL_ICONS.x : '?'}</span></td>
-            <td>${e.pts ? e.pts.map((p, i) => `<span class="hist-pt ${p.bad ? 'bad' : ''}">${e.pts.length > 1 ? 'т.' + (i + 1) + ' ' : ''}<b>${escapeHtml(p.value || '—')}</b></span>`).join('') : `<span class="hist-pt">${e.it.status === 'OK' ? 'ОК' : e.it.status === 'FAIL' ? 'Не ОК' : 'не проверено'}</span>`}</td>
+            <td>${e.pts ? e.pts.map((p, i) => `<span class="hist-pt ${p.bad ? 'bad' : ''}">${e.pts.length > 1 ? `<i class="hist-pt-n">т.${i + 1}</i>` : ''}<b>${escapeHtml(p.value || '—')}</b></span>`).join('') : `<span class="hist-pt">${e.it.status === 'OK' ? 'ОК' : e.it.status === 'FAIL' ? 'Не ОК' : 'не проверено'}</span>`}</td>
             <td class="hist-sub">${e.it.comment ? cmtLine(e.it.comment) : '—'}</td>
           </tr>`).join('')}</tbody>
       </table>

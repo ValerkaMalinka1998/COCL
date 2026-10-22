@@ -81,6 +81,12 @@ function cilPointsWord(n) {
   return 'точек';
 }
 
+/* Чип значения точки: «т.1 · 92 ± 5». Номер отделён от значения, чтобы
+   не путать номер точки с размером. При одной точке номер не нужен. */
+function cilPointChip(value, i, total) {
+  return `<span class="cil-pt">${total > 1 ? `<i>т.${i + 1}</i>` : ''}<b>${escapeHtml(value)}</b></span>`;
+}
+
 function cilNorm(row, brand, isElec) {
   const visual = {
     visual: true,
@@ -94,7 +100,6 @@ function cilNorm(row, brand, isElec) {
       ? '<span class="cil-norm-miss" title="Значения разные по брендам — задайте бренд линии">бренд не задан</span>'
       : `<span class="cil-norm-miss" title="Для бренда ${escapeAttr(brand)} значений нет — сообщите аналитику">нет нормы для ${escapeHtml(brand)}</span>`
   });
-  let pickTag = '';
 
   if (isElec) {
     const type = row.controlType || 'variable';
@@ -103,7 +108,6 @@ function cilNorm(row, brand, isElec) {
     if (pick.kind === 'missing' || pick.kind === 'nobrand') return noNorm(pick);
     const entry = pick.item;
     if (!entry) return { visual: false, html: '<span class="cil-dim">—</span>' };
-    pickTag = brandPickLabel(pick, brand);
     if (type === 'interval' && typeof getEparamNormRange === 'function') {
       const r = getEparamNormRange(entry);
       values = [r ? `${r.min} … ${r.max}` : '—'];
@@ -115,7 +119,6 @@ function cilNorm(row, brand, isElec) {
     const pick = pickBrandValues(ms.filter(b => (b.points || []).some(p => String(p && p.value != null ? p.value : '').trim())), brand);
     if (pick.kind === 'missing' || pick.kind === 'nobrand') return noNorm(pick);
     const block = pick.item;
-    pickTag = brandPickLabel(pick, brand);
     values = (block && Array.isArray(block.points) ? block.points : [])
       .map(p => String(p && p.value != null ? p.value : '').trim())
       .filter(Boolean);
@@ -131,18 +134,17 @@ function cilNorm(row, brand, isElec) {
     }
   }
 
-  // Чьи значения: «Kent» / «остальные бренды» (если у стандарта нормы по брендам)
-  const tag = pickTag ? `<em class="cil-norm-brand" title="Значения для бренда">${escapeHtml(pickTag)}</em>` : '';
+  // Бренд значений виден в просмотре стандарта — в таблице его не показываем
   if (values.length <= 2) {
     return {
       visual: false,
-      html: `<span class="cil-norm-val">${escapeHtml(values[0])}${values[1] ? `<small>${escapeHtml(values[1])}</small>` : ''}</span>${tag}`
+      html: `<span class="cil-norm-vals">${values.map((v, i) => cilPointChip(v, i, values.length)).join('')}</span>`
     };
   }
   const list = values.map((v, i) => `<div><span>т.${i + 1}</span>${escapeHtml(v)}</div>`).join('');
   return {
     visual: false,
-    html: `<span class="cil-norm-pts" tabindex="0">${values.length} ${cilPointsWord(values.length)}<span class="cil-norm-pop">${list}</span></span>${tag}`
+    html: `<span class="cil-norm-pts" tabindex="0">${values.length} ${cilPointsWord(values.length)}<span class="cil-norm-pop">${list}</span></span>`
   };
 }
 

@@ -282,6 +282,17 @@ button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentCol
   word-break: break-word;
 }
 .cil-norm-val small { display: block; font-weight: 600; color: var(--text-dim); }
+.cil-norm-vals { display: inline-flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+.cil-pt {
+  display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 7px;
+  border: 1px solid var(--border); background: var(--bg-input);
+  font-family: Consolas, 'Courier New', monospace; font-size: 12px;
+}
+.cil-pt i {
+  font-style: normal; font-size: 9.5px; font-weight: 800; letter-spacing: .03em;
+  color: var(--text-dim); text-transform: uppercase;
+}
+.cil-pt b { color: var(--text-main); font-weight: 700; }
 .cil-norm-pts {
   position: relative;
   display: inline-flex;

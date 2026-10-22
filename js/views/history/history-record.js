@@ -238,7 +238,7 @@ function histItemHtml(x, entries, line) {
   } else {
     const pts = histItemPoints(h, it);
     valuesHtml = pts
-      ? pts.map((p, i) => `<span class="hist-pt ${p.bad ? 'bad' : ''}" title="${p.label ? 'Норма: ' + escapeAttr(p.label) : ''}">${pts.length > 1 ? 'т.' + (i + 1) + ' ' : ''}${p.label ? `<i>${escapeHtml(p.label)}:</i> ` : ''}<b>${escapeHtml(p.value || '—')}</b></span>`).join('')
+      ? pts.map((p, i) => `<span class="hist-pt ${p.bad ? 'bad' : ''}" title="${p.label ? 'Норма: ' + escapeAttr(p.label) : ''}">${pts.length > 1 ? `<i class="hist-pt-n">т.${i + 1}</i>` : ''}${p.label ? `<i>${escapeHtml(p.label)}:</i> ` : ''}<b>${escapeHtml(p.value || '—')}</b></span>`).join('')
       : `<span class="hist-pt ${it.status === 'FAIL' ? 'bad' : ''}"><b>${it.status === 'FAIL' ? 'Не ОК' : 'ОК'}</b></span>`;
   }
 

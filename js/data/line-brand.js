@@ -91,9 +91,3 @@ function pickBrandValues(list, brand) {
   return { item: null, kind: brand ? 'missing' : 'nobrand' };
 }
 
-/* Короткая метка, чьи значения проверяются (для таблиц и окна проверки) */
-function brandPickLabel(pick, brand) {
-  if (pick.kind === 'brand') return brand;
-  if (pick.kind === 'rest') return 'остальные бренды';
-  return '';
-}
