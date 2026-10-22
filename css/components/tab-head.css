@@ -11,9 +11,9 @@
 }
 .th-band-coral { --th: var(--tab-coral); }
 
-/* Коралловый цвет TOP Losses: в тёмной теме ярче, иначе плашка тускнеет */
+/* TOP Losses: коралл в светлой теме, в тёмной — тёмно-синий фон с янтарным акцентом */
 :root { --tab-coral: #d85a30; }
-[data-theme="dark"] { --tab-coral: #ff7a59; }
+[data-theme="dark"] { --tab-coral: var(--accent-amber); }
 [data-theme="dark"] .th-band {
   border-color: color-mix(in srgb, var(--th) 70%, transparent);
   background: color-mix(in srgb, var(--th) 20%, var(--bg-card));
@@ -95,3 +95,8 @@
 
 /* Пустая кнопка линии в шапке «CL при переходах» */
 .th-band .cocl-line-pill { background: var(--bg-card); }
+
+[data-theme="dark"] .th-band-coral {
+  background: color-mix(in srgb, var(--th) 2%, var(--bg-card));
+  border-color: color-mix(in srgb, var(--th) 50%, var(--border));
+}
