@@ -1,5 +1,5 @@
 /* ============================================================
-   ВКЛАДКА «Проверка COCL»: сохранение
+   ВКЛАДКА «CL при переходах»: сохранение
    Модуль общего пространства имён: функции и переменные видны
    во всех файлах. Порядок подключения — index.html.
    ============================================================ */
@@ -130,7 +130,7 @@ if (type === 'ChangeOver') {
 
   showToast('Проверка сохранена');
   renderCoclSummary(record);
-  showMachineJournalNotice(items.filter(it => it.status === 'FAIL'), { line, source: 'Проверка COCL' });
+  showMachineJournalNotice(items.filter(it => it.status === 'FAIL'), { line, source: 'CL при переходах' });
 });
 
 $('#resetCheckBtn').addEventListener('click', () => editChecklistConditions());
