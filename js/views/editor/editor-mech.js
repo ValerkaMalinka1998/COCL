@@ -81,7 +81,13 @@ function etAppliesHtml(appliesTo) {
 /* Тип контроля + норма; предупреждение, если точек нет там, где они нужны */
 function etTypeNormHtml(row, isElec) {
   const type = isElec ? (row.controlType || 'variable') : migrateControlType(row.controlType, row.measurements);
-  const norm = cilNorm(row, '', isElec);
+  let norm = cilNorm(row, '', isElec);
+  // В редакторе бренда линии нет: если значения разные по брендам — показываем бренды, а не ошибку
+  if (norm.missing && /бренд не задан/.test(norm.html)) {
+    const src = isElec ? row.valuesByBrand : row.measurements;
+    const names = (Array.isArray(src) ? src : []).filter(b => b && b.brand).map(b => b.brand);
+    norm = { visual: false, html: `<span class="cil-dim" title="Значения разные по брендам">по брендам: ${escapeHtml(names.join(', '))}</span>` };
+  }
   const needsPoints = type === 'variable' || type === 'interval';
   const noValues = norm.visual || /cil-dim/.test(norm.html);
   const normHtml = needsPoints && noValues
