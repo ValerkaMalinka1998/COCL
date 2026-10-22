@@ -23,6 +23,43 @@ function controlTypeLabel(type) {
   }
 }
 
+/* Определения типов контроля (формулировки обучения CL DMS) и как вводить значение */
+const CONTROL_TYPE_HELP = {
+  fixed: {
+    def: 'Чётко определённое значение или положение частей оборудования друг относительно друга. Самый надёжный тип.',
+    enter: 'Точное значение, например 92 (без допуска). Без точек — оператор отвечает «ОК / Не ОК».',
+    placeholder: '92'
+  },
+  variable: {
+    def: 'Изменчивый параметр: компенсирует износ запчастей и расходников и изменение свойств материалов.',
+    enter: 'Норма ± допуск, например 92 ± 5 (или 92+-5).',
+    placeholder: '92 ± 5'
+  },
+  interval: {
+    def: 'Диапазон, в котором должно находиться значение параметра в процессе производства.',
+    enter: 'Границы «от до», например 5 до 8 или 5.5 - 8.5, для минуса: -65 до -55.',
+    placeholder: '5 до 8'
+  }
+};
+
+/* Подсказка под выбором типа: определение + как вводить значение */
+function controlTypeHintHtml(type) {
+  const h = CONTROL_TYPE_HELP[type];
+  if (!h) return '<span class="ct-hint-empty">Выберите тип контроля — здесь появится определение и пример ввода.</span>';
+  return `<b>${escapeHtml(controlTypeLabel(type))}.</b> ${escapeHtml(h.def)}
+    <span class="ct-hint-enter">Как вводить: ${escapeHtml(h.enter)}</span>`;
+}
+
+/* Обновляет подсказку и примеры в полях точек при смене типа */
+document.addEventListener('change', (e) => {
+  const id = e.target && e.target.id;
+  if (id !== 'svf_controlType' && id !== 'epf_controlType') return;
+  const box = document.getElementById(id === 'svf_controlType' ? 'svf_typeHint' : 'epf_typeHint');
+  if (box) box.innerHTML = controlTypeHintHtml(e.target.value);
+  const ph = (CONTROL_TYPE_HELP[e.target.value] || {}).placeholder || '0';
+  document.querySelectorAll('#svf_brandBlocksContainer .bt-point-input').forEach(inp => { inp.placeholder = ph; });
+});
+
 /* Формат даты для отображения */
 function formatDateTime(iso) {
   if (!iso) return '—';

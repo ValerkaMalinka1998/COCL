@@ -105,6 +105,17 @@
   color: var(--text-second);
 }
 
+/* Время на проверку — видно и до, и во время проверки */
+.cocl-row-time {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+
 /* Во время проверки норма видна в полях */
 #checklistContainer:not(.cocl-preview) .cocl-row-norm {
   display: none;

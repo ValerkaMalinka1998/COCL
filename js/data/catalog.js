@@ -44,6 +44,9 @@ function normalizeElectronicParam(p) {
     timeFrom: p.timeFrom || '',
     timeTo: p.timeTo || '',
 
+    // Время на проверку, сек (входит в сумму смены в Чек-листе и Расписании)
+    durationSec: Math.max(0, Number(p.durationSec) || 0),
+
     controlType: migrateControlType(p.controlType, null),
     normText: typeof p.normText === 'string' ? p.normText : '',
 

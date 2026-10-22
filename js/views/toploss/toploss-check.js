@@ -104,7 +104,7 @@ function renderTopLossChecklist() {
         <span class="tl3-num">${st === 'OK' ? '✓' : st === 'FAIL' ? '✕' : i + 1}</span>
         <div class="tl3-main">
           <div class="tl3-nm">${isElec ? '<span class="tl2-kind tl2-kind-el">E-Param</span> ' : ''}${row.oplNumber ? `<span class="tl2-opl">${escapeHtml(row.oplNumber)}</span> · ` : ''}${escapeHtml(title || '—')}</div>
-          <div class="tl2-sub">${escapeHtml([row.machine, row.nodePart, row.node].filter(Boolean).join(' · '))}${lossNames ? ` · <span class="tl3-loss">${escapeHtml(lossNames)}</span>` : ''}</div>
+          <div class="tl2-sub">${escapeHtml([row.machine, row.nodePart, row.node].filter(Boolean).join(' · '))}${lossNames ? ` · <span class="tl3-loss">${escapeHtml(lossNames)}</span>` : ''}${cilDurChip(cilRowDurationSec(row), 'tl3-time')}</div>
           ${body}
           <div class="comment-preview" data-comment-preview style="${a.comment ? '' : 'display:none'}">${a.comment ? cmtLine(a.comment) : ''}</div>
         </div>
@@ -147,12 +147,21 @@ function updateTlCheckProgress() {
     else if (s === 'FAIL') fail++;
   });
   const done = ok + fail;
+  const totalSec = tlCheck.rows.reduce((s, r) => s + cilRowDurationSec(r.row), 0);
+  const leftSec = tlCheck.rows.reduce((s, r) => {
+    const st = tlCheck.answers[r.row.id]?.status;
+    return s + (st === 'OK' || st === 'FAIL' ? 0 : cilRowDurationSec(r.row));
+  }, 0);
+  const timeHtml = totalSec
+    ? `<div class="tl3-timebox"><span>Время проверки</span><b>∑ ${formatCilDuration(totalSec)}</b><span>Осталось</span><b>${formatCilDuration(leftSec) || '00:00'}</b></div>`
+    : '';
   const pOk = total ? ok / total * 100 : 0;
   const pFail = total ? fail / total * 100 : 0;
   side.innerHTML = `
     <div class="tl3-side-label">Прогресс</div>
     <div class="tl3-ring" style="--ok:${pOk}%;--fail:${pOk + pFail}%"><div>${done}/${total}<small>проверено</small></div></div>
     <div class="tl3-leg"><span>✓ ОК</span><b class="ok">${ok}</b><span>✕ Не ОК</span><b class="fail">${fail}</b><span>Осталось</span><b>${total - done}</b></div>
+    ${timeHtml}
     <div class="tl2-sub">Можно сохранить и частично — непроверенные попадут в Историю как «не проверено».</div>
     <button type="button" class="btn btn-success tl3-save" id="tlSaveChecklistBtn" ${done ? '' : 'disabled'}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
