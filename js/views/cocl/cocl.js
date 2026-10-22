@@ -126,6 +126,7 @@ function renderCoclSummary(record) {
   // Прячем чек-лист, показываем резюме
   $('#coclLayout').style.display = 'none';
   $('#coclSummaryView').style.display = 'block';
+  if (typeof renderCoclHead === 'function') renderCoclHead();
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -574,6 +575,7 @@ function updateChecklist() {
   const brandTo = $('#brandTo')?.value || '';
 
   updateCoclStepStates();
+  if (typeof renderCoclHead === 'function') renderCoclHead();
   if (coclState.checking) return;
 
   const info = $('#coclBuildInfo');

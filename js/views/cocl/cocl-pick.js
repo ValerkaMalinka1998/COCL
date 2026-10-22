@@ -95,6 +95,27 @@ function renderCoclLinePick() {
     ${body}`;
 }
 
+/* Шапка: шаги и подпись по текущему состоянию вкладки */
+function renderCoclHead() {
+  const steps = $('#coclSteps');
+  if (!steps) return;
+  const hasLine = !!($('#lineSelect')?.value);
+  const summaryOpen = $('#coclSummaryView')?.style.display === 'block';
+  const step = !hasLine ? 1 : summaryOpen ? 4 : coclState.checking ? 3 : 2;
+  steps.innerHTML = tabStepsHtml(['Линия', 'Тип и бренды', 'Чек-лист'], step);
+
+  const typeName = { ChangeOver: 'Смена сорта', CL_TO: 'CL в ТО', CL_Conversion: 'CL в Конвертацию' };
+  const type = $('#transitionType')?.value || '';
+  const from = $('#brandFrom')?.value || '';
+  const to = $('#brandTo')?.value || '';
+  const sub = $('#coclHeadSub');
+  if (sub) {
+    sub.textContent = !type
+      ? 'Смена сорта · CL в ТО · CL в Конвертацию'
+      : (typeName[type] || type) + (type === 'ChangeOver' && to ? ` · бренд ${from ? from + ' → ' : '→ '}${to}` : '');
+  }
+}
+
 /* Показать экран выбора, пока линии нет (и не идёт проверка / нет резюме) */
 function updateCoclPick() {
   const tab = $('#tab-check');
@@ -107,6 +128,7 @@ function updateCoclPick() {
   if (picking) renderCoclLinePick();
   const back = $('#coclBackToPick');
   if (back) back.hidden = picking || coclState.checking || !($('#lineSelect')?.value);
+  renderCoclHead();
 }
 
 $('#coclPick')?.addEventListener('click', (e) => {

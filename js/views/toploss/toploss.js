@@ -13,6 +13,7 @@ const TL_LINE_KEY = 'cl_tl_line';
 const tlState = {
   line: '',
   lossId: null,               // выбранная потеря
+  pickedLoss: null,           // потеря, которую оператор выбрал сам (шаг 3 в шапке)
   openCats: new Set(),        // раскрытые категории
   showEmpty: new Set(),       // категории, где показаны потери без стандартов
   query: '',
@@ -159,6 +160,7 @@ function fillTopLossTab() {
 function setTopLossLine(line) {
   tlState.line = line || '';
   tlState.lossId = null;
+  tlState.pickedLoss = null;
   tlState.openCats.clear();
   try { localStorage.setItem(TL_LINE_KEY, tlState.line); } catch (e) {}
   backToTopLossSelect();
@@ -177,6 +179,11 @@ function renderTopLossCategories() {
   const side = $('#tlSideList');
   const main = $('#tlDiag');
   if (!side || !main) return;
+
+  // Шаги шапки: 1 — линия, 2 — потеря, 3 — стандарты и проверка
+  const steps = $('#tlSteps');
+  if (steps) steps.innerHTML = tabStepsHtml(['Линия', 'Потеря', 'Стандарты и проверка'],
+    !tlState.line ? 1 : (tlState.pickedLoss && tlState.pickedLoss === tlState.lossId ? 3 : 2));
 
   const split = $('#tlSplit');
   const pick = $('#tlPick');
@@ -473,6 +480,7 @@ $('#tlLinePill')?.addEventListener('click', () => {
 function backToTopLossLinePick() {
   tlState.line = '';
   tlState.lossId = null;
+  tlState.pickedLoss = null;
   tlState.query = '';
   tlState.openCats.clear();
   try { localStorage.removeItem(TL_LINE_KEY); } catch (e) { /* нет доступа */ }
@@ -505,7 +513,7 @@ $('#tlSelectView')?.addEventListener('click', (e) => {
   }
   const lossBtn = e.target.closest('[data-tl-loss]');
   if (lossBtn) {
-    tlState.lossId = lossBtn.dataset.tlLoss;
+    tlState.lossId = tlState.pickedLoss = lossBtn.dataset.tlLoss;
     return renderTopLossCategories();
   }
   const kind = e.target.closest('[data-tl-kind]');
