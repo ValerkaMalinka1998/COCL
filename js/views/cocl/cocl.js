@@ -724,7 +724,12 @@ function bindCoclAccordionEvents() {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const stdId = btn.dataset.stdId;
-      if (stdId && typeof openStandardView === 'function') openStandardView(stdId, { brand: $('#brandTo')?.value || '' });
+      if (!stdId || typeof openStandardView !== 'function') return;
+      const to = $('#brandTo')?.value || '';
+      const isCo = $('#transitionType')?.value === 'ChangeOver' && to;
+      openStandardView(stdId, isCo
+        ? { brand: to, changeOver: { from: $('#brandFrom')?.value || '', to } }
+        : { brand: to });
     });
   });
 

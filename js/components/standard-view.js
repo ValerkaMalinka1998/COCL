@@ -78,7 +78,9 @@ function formatDateTime(iso) {
 }
 
 /* Открыть просмотр стандарта. opts.brand — бренд, строку которого выделить
-   в таблице норм (по умолчанию — бренд дня линии из расписания брендов). */
+   в таблице норм (по умолчанию — бренд дня линии из расписания брендов).
+   opts.changeOver = { from, to } — просмотр из «Смены сорта»: в таблице только два
+   бренда — «сейчас» (с которого переходим) и «new» (на который переходим). */
 window.openStandardView = function(stdId, opts) {
   const st = getStandards().find(s => s.id === stdId);
   if (!st) return showToast('Стандарт не найден', true);
@@ -94,7 +96,7 @@ window.openStandardView = function(stdId, opts) {
 
   $('#standardViewTitle').textContent = st.title || '—';
   $('#standardViewChips').innerHTML = renderStandardViewHeaderChips(st);
-  body.innerHTML = renderStandardViewContent(st, brand);
+  body.innerHTML = renderStandardViewContent(st, brand, opts && opts.changeOver);
 
   bindPhotoSlider(body, st);
 
@@ -122,7 +124,7 @@ function svmText(text) {
 }
 
 /* Содержимое окна просмотра */
-function renderStandardViewContent(st, brand) {
+function renderStandardViewContent(st, brand, co) {
   const ctx = getBlockForLine(st.line);
   const blocks = (Array.isArray(st.measurements) ? st.measurements : [])
     .filter(b => b && Array.isArray(b.points) && b.points.length);
@@ -136,6 +138,27 @@ function renderStandardViewContent(st, brand) {
   let normHtml;
   if (!blocks.length) {
     normHtml = `<div class="svm-visual">${CIL_ICONS.check}<span>Без замеров — проверка <b>ОК / Не ОК</b> по описанию контроля</span></div>`;
+  } else if (co && co.to) {
+    // Смена сорта: только исходный («сейчас») и целевой («new») бренды
+    const head = Array.from({ length: maxPts }, (_, i) => `<th>Т${i + 1}</th>`).join('');
+    const cellsOf = (b) => Array.from({ length: maxPts }, (_, i) => {
+      const p = b.points[i];
+      return `<td>${p ? escapeHtml(p.value || '—') : ''}</td>`;
+    }).join('');
+    const pick = (name) => {
+      const b = name ? getEffectiveBrandBlock(blocks, name) : null;
+      return b ? { name, block: b, rest: !b.brand } : null;
+    };
+    const from = pick(co.from), to = pick(co.to);
+    const same = from && to && from.block === to.block;
+    const rowFor = (r, tags, cls) => `<tr class="${cls}"><th>${escapeHtml(r.name)}${tags}${r.rest ? '<small class="svm-rest">общая норма</small>' : ''}</th>${cellsOf(r.block)}</tr>`;
+    const nowTag = '<span class="svm-now">сейчас</span>';
+    const newTag = '<span class="svm-new">new</span>';
+    let rows = '';
+    if (same) rows = rowFor(to, nowTag + newTag, 'is-new');
+    else rows = (from ? rowFor(from, nowTag, 'is-hl') : '') + (to ? rowFor(to, newTag, 'is-new') : '');
+    if (!to) rows += `<tr><td colspan="${maxPts + 1}" class="svm-empty">Для бренда ${escapeHtml(co.to)} в стандарте нет значений</td></tr>`;
+    normHtml = `<div class="svm-norm-wrap"><table class="svm-norm"><thead><tr><th>Бренд</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>`;
   } else {
     const head = Array.from({ length: maxPts }, (_, i) => `<th>Т${i + 1}</th>`).join('');
     const rows = blocks.map(b => {
