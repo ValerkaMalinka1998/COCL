@@ -115,7 +115,7 @@ function tlRowShiftStatuses(row, shifts, line, hidx) {
     if (st) return st;
     const w = getRowForWeek(row, tlWeekStartOf(date), line);
     const dow = new Date(date + 'T12:00:00').getDay();
-    const planned = isValidationShift(row, date, shift) || (w.member && (w.schedule || []).some(x => x.day === dow && x.shift === shift));
+    const planned = isValidationShift(row, date, shift) || (w.member && (w.schedule || []).some(x => x.day === dow && x.shift === shift) && rowExistedByShiftEnd(row, date, shift));
     return planned ? 'missed' : 'na';
   });
 }
