@@ -520,3 +520,6 @@
     position: static;
   }
 }
+
+/* Выбор линии: пока линия не выбрана, условия и чек-лист скрыты */
+#tab-check.cocl-picking .cocl-layout { display: none; }

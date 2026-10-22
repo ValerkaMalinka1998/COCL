@@ -429,15 +429,10 @@ function updateCoclStepStates() {
   });
 }
 
-/* Вход на вкладку: без линии — сразу окно выбора линии */
+/* Вход на вкладку: без линии — экран выбора линии (cocl-pick.js) */
 function openCoclTab() {
   updateCoclStepStates();
-  if ($('#lineSelect')?.value) return;
-  if (coclState.checking) return;
-  setTimeout(() => {
-    linePickerOnSelect = (line) => setCoclLine(line);
-    openLinePickerModal();
-  }, 150);
+  updateCoclPick();
 }
 
 /* Клик по кнопке типа проверки */
@@ -973,6 +968,7 @@ function setCoclCheckingUi(on) {
   if (act) act.hidden = !on;
   const info = $('#coclBuildInfo');
   if (info) info.hidden = on;
+  if (typeof updateCoclPick === 'function') updateCoclPick();
 }
 
 /** Вернуться к условиям: введённые значения теряются — спросить */

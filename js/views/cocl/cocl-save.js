@@ -171,4 +171,5 @@ function resetCheckForm() {
   renderCoclLineContext('');
   renderCoclPartStep('');
   updateChecklist();
+  updateCoclPick();
 }

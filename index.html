@@ -182,6 +182,9 @@
 <!-- ======================= ВКЛАДКА ПРОВЕРКА ======================= -->
 <div class="tab" id="tab-check">
 
+  <!-- Экран выбора линии (пока линия не выбрана) -->
+  <section class="card tl-pick" id="coclPick" style="display:none"></section>
+
   <div class="cocl-layout" id="coclLayout">
 
   <!-- Условия проверки (слева) -->
@@ -189,6 +192,7 @@
     <div class="cocl-setup-head">
       <h2>CL при переходах</h2>
       <button type="button" class="cocl-edit-link" id="editConditionsBtn" hidden>Изменить</button>
+      <button type="button" class="cocl-edit-link" id="coclBackToPick" hidden>К выбору линии</button>
     </div>
 
     <!-- Линия -->
@@ -2517,6 +2521,7 @@
 <script src="js/views/brand-schedule.js"></script>
 <script src="js/views/cocl/cocl.js"></script>
 <script src="js/views/cocl/cocl-save.js"></script>
+<script src="js/views/cocl/cocl-pick.js"></script>
 <script src="js/views/cl-checklist/cl-checklist.js"></script>
 <script src="js/views/cl-checklist/quick-check.js"></script>
 <script src="js/views/cl-checklist/cl-board.js"></script>
