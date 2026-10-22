@@ -8,7 +8,7 @@
   --cil-head-bg-2: #22386a;
   --cil-head-today: #1d4a7c;
   --cil-head-text: #e0e7ff;
-  --cil-head-dim: #93a2c6;
+  --cil-head-dim: #b3c0e0;
   --cil-zone-w: 76px;
   --cil-std-w: 350px;
   --cil-third-w: 124px;
@@ -100,6 +100,8 @@
   top: 0;
   z-index: 3;
   padding: 8px 6px;
+  text-align: center;
+  vertical-align: middle;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.5px;
@@ -113,6 +115,7 @@
   padding: 6px 4px 7px;
   background: var(--cil-head-bg-2);
 }
+.cil-table thead th.cil-c-std { padding-left: 12px; }
 .cil-table thead th.cil-today { background: var(--cil-head-today); }
 .cil-day { border-left: 1px solid rgba(255, 255, 255, 0.14); }
 .cil-day-name { margin-right: 6px; color: var(--cil-head-dim); }
@@ -128,7 +131,7 @@
   font-size: 11px;
   font-weight: 800;
   color: var(--cil-head-dim);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.38);
   border-radius: 50%;
 }
 .cil-brig.now {
@@ -140,7 +143,8 @@
 .cil-shift-sub {
   display: block;
   margin-top: 4px;
-  font-size: 9px;
+  font-size: 10px;
+  font-weight: 700;
   letter-spacing: 0.3px;
   color: var(--cil-head-dim);
 }
