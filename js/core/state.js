@@ -133,6 +133,7 @@ const clState = {
   line: null,
   mode: 'mech',
   part: 'Maker',
+  onlyShift: false,      // показывать только проверки текущей смены
   checkMode: false,
   rows: [],
   todayISO: '',

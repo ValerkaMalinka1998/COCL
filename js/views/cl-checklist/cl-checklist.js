@@ -174,10 +174,12 @@ $('#elecLine')?.addEventListener('change', () => {
 function openClCheckTab() {
   const savedMode = localStorage.getItem('cl_cl_mode') || 'mech';
   const savedPart = localStorage.getItem('cl_cl_part') === 'Packer' ? 'Packer' : 'Maker';
+  const savedOnly = localStorage.getItem('cl_cl_only_shift') === '1';
   const savedLine = localStorage.getItem('cl_cl_line') || null;
 
   clState.mode = savedMode;
   clState.part = savedPart;
+  clState.onlyShift = savedOnly;
   clState.line = savedLine;
   clState.checkMode = false;
   clState.quickDraft = {};
@@ -379,10 +381,9 @@ function renderClMatrix() {
   const dateByDayIdx = cilDateByDayIdx(weekDays);
   const isElec = clState.mode !== 'mech';
   const hist = clHistoryIndex();
-  const zones = cilZoneMap(rows);
 
   // Ячейки всех строк — заранее, чтобы посчитать прогресс смен для шапки
-  const cellsByRow = rows.map(row => clRowCells(row, dateByDayIdx, hist));
+  let cellsByRow = rows.map(row => clRowCells(row, dateByDayIdx, hist));
   updateClPartCounts(dateByDayIdx, hist, isMember, checkedIds);
   const prog = {};
   cellsByRow.forEach((cells, ri) => cells.forEach(c => {
@@ -393,6 +394,17 @@ function renderClMatrix() {
     prog[k].sec += cilRowDurationSec(rows[ri]);
     if (c.status === 'OK' || c.status === 'FAIL' || c.status === 'UNCHECKED') prog[k].done++;
   }));
+
+  // Фильтр «только эта смена»: в таблице остаются строки, запланированные
+  // на текущую смену (прогресс в шапке считается по всей неделе)
+  const onlyShift = clState.onlyShift && clState.weekOffset === 0;
+  if (onlyShift) {
+    const keep = cellsByRow.map(cells => cells.some(c => c.isNow && c.planned));
+    rows = rows.filter((r, i) => keep[i]);
+    cellsByRow = cellsByRow.filter((c, i) => keep[i]);
+    clState.rows = rows;
+  }
+  const zones = cilZoneMap(rows);
 
   // Панель недели + легенда
   const isCurrentWeek = clState.weekOffset === 0;
@@ -412,6 +424,9 @@ function renderClMatrix() {
         </button>
         ${!isCurrentWeek ? '<button type="button" class="cil-week-today" id="clWeekToday">Сегодня</button>' : ''}
       </div>
+      ${isCurrentWeek ? `<button type="button" class="cil-onlyshift${clState.onlyShift ? ' on' : ''}" id="clOnlyShiftBtn"
+        title="Показать только то, что нужно проверить в текущую смену">
+        <i></i>Только эта смена</button>` : ''}
       ${legendHtml(['ok', 'fail', 'missed', 'due', 'na', 'ruler', 'eye', 'val'])}
     </div>
     <div class="cil-scroll"><table class="cil-table">`;
@@ -429,6 +444,10 @@ function renderClMatrix() {
   });
 
   html += '<tbody>';
+  if (!rows.length) {
+    html += `<tr><td class="cil-empty-row" colspan="17">В текущую смену проверок нет.
+      <button type="button" class="cil-week-today" id="clOnlyShiftOff">Показать всю неделю</button></td></tr>`;
+  }
   const numInZone = {};
   rows.forEach((row, i) => {
     const m = row.machine || '—';
@@ -930,6 +949,18 @@ $('#clPartSwitch')?.addEventListener('click', (e) => {
 
   updateClCheckButtons();
   renderClMatrix();
+});
+
+/* «Только эта смена» — показываем в таблице лишь проверки текущей смены */
+function toggleClOnlyShift(value) {
+  clState.onlyShift = value === undefined ? !clState.onlyShift : !!value;
+  try { localStorage.setItem('cl_cl_only_shift', clState.onlyShift ? '1' : '0'); } catch (err) {}
+  renderClMatrix();
+}
+
+$('#tab-electronic')?.addEventListener('click', (e) => {
+  if (e.target.closest('#clOnlyShiftBtn')) return toggleClOnlyShift();
+  if (e.target.closest('#clOnlyShiftOff')) return toggleClOnlyShift(false);
 });
 
 $('#clStartCheckBtn')?.addEventListener('click', startClCheck);

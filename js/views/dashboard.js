@@ -544,7 +544,7 @@ function renderDashboardLine() {
     </div>
     <div class="dash-g2">
       <div class="card dash-card">
-        <h3 class="dash-h">Машины линии <small>стандартов · отклонений за период</small></h3>
+        <h3 class="dash-h">Части оборудования <small>стандартов · отклонений за период</small></h3>
         ${Object.entries(machines).sort((a, b) => b[1].fail - a[1].fail || a[0].localeCompare(b[0], 'ru', { numeric: true })).map(([k, v]) => `
           <div class="dash-li dash-li-bar"><div><span>${escapeHtml(k)} <span class="hist-sub">— ${v.n} ${pluralRu(v.n, 'стандарт', 'стандарта', 'стандартов')}</span></span>
             <b class="${v.fail ? 'hist-c-fail' : 'hist-c-ok'}">${v.fail ? v.fail + ' откл.' : '0'}</b></div>

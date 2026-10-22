@@ -68,6 +68,21 @@
   border-radius: 999px;
   cursor: pointer;
 }
+.cil-onlyshift {
+  display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px;
+  border: 1px solid var(--border-hi); border-radius: 999px; background: var(--bg-card);
+  font: inherit; font-size: 12px; font-weight: 700; color: var(--text-second); cursor: pointer;
+}
+.cil-onlyshift i {
+  width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid var(--border-hi);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.cil-onlyshift.on { color: var(--accent-cyan); border-color: var(--accent-cyan); background: color-mix(in srgb, var(--accent-cyan) 10%, var(--bg-card)); }
+.cil-onlyshift.on i { background: var(--accent-cyan); border-color: var(--accent-cyan); }
+.cil-onlyshift.on i::after { content: ""; width: 4px; height: 7px; border: solid var(--on-accent); border-width: 0 2px 2px 0; transform: rotate(45deg) translate(-1px, -1px); }
+.cil-empty-row { padding: 28px 16px; text-align: center; color: var(--text-dim); font-size: 13px; }
+.cil-empty-row .cil-week-today { margin-left: 10px; }
+
 .cil-legend {
   display: flex;
   flex-wrap: wrap;
