@@ -301,6 +301,15 @@ button.hist-cc:hover { border-color: var(--k); background: color-mix(in srgb, va
 .hist-ch-line { fill: none; stroke: var(--accent-cyan); stroke-width: 2.5; }
 .hist-ch-pt { fill: var(--bg-card); stroke: var(--accent-cyan); stroke-width: 2; }
 .hist-ch-bad { fill: var(--accent-red); stroke: var(--accent-red); stroke-width: 2; }
+.hist-ch-badband { fill: var(--accent-red); opacity: .08; }
+.hist-ch-edge { stroke: var(--accent-red); stroke-dasharray: 4 4; }
+
+/* Лента результатов — когда числовых замеров нет */
+.hist-tape { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 0 2px; }
+.hist-tape-i { width: 16px; height: 22px; border-radius: 4px; background: var(--border-hi); }
+.hist-tape-o { background: var(--accent-green); }
+.hist-tape-x { background: var(--accent-red); }
+.hist-tape-u { background: var(--accent-amber); opacity: .6; }
 
 /* === Карточка ячейки Чек-листа CL (клик по прошлой смене) === */
 .cl-peek {

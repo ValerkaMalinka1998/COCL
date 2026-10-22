@@ -7,12 +7,13 @@
    во всех файлах. Порядок подключения — index.html.
    ============================================================ */
 
-const histStd = { id: null, line: '', days: 30, point: 0, from: 'history' };
+const histStd = { id: null, line: '', days: 30, from: 'history', pager: { page: 1, size: 20 } };
 
 function openStandardHistory(stdId, line, opts = {}) {
   const row = histFindRow(stdId);
   if (!row) return showToast('Стандарт не найден', true);
-  Object.assign(histStd, { id: stdId, line: line || row.line || '', point: 0 });
+  Object.assign(histStd, { id: stdId, line: line || row.line || '' });
+  histStd.pager.page = 1;
   if (opts.from === 'record') {
     histStd.from = 'record';
     histShowView('histStdView');
@@ -72,36 +73,19 @@ function renderStandardHistory() {
   const { row, isElec, entries, missed } = data;
   const title = row.title || row.paramName || '—';
   const nPoints = Math.max(0, ...entries.map(e => (e.pts || []).length));
-  if (histStd.point >= nPoints) histStd.point = 0;
 
   const fails = entries.filter(e => e.it.status === 'FAIL').length;
   const unchecked = entries.filter(e => e.it.status === 'UNCHECKED').length;
   const checked = entries.length - unchecked;
 
-  // Запас до границы нормы по последнему значению выбранной точки
-  let marginHtml = '<b>—</b><span>запас до границы нормы</span>';
-  const withVal = entries.filter(e => e.pts && e.pts[histStd.point] && histNum(e.pts[histStd.point].value) != null && e.pts[histStd.point].range);
-  const lastV = withVal[withVal.length - 1];
-  if (lastV) {
-    const p = lastV.pts[histStd.point];
-    const v = histNum(p.value), r = p.range, w = r.max - r.min;
-    if (w > 0) {
-      const m = Math.round(Math.min(v - r.min, r.max - v) / w * 100);
-      const cls = m < 0 ? 'hist-kpi-fail' : m < 15 ? 'hist-kpi-warn' : 'hist-kpi-ok';
-      marginHtml = `<b>${m < 0 ? 'вне нормы' : m + '%'}</b><span>${nPoints > 1 ? 'т.' + (histStd.point + 1) + ': ' : ''}запас до границы по последнему замеру</span>`;
-      marginHtml = `<div class="hist-kpi ${cls}">${marginHtml}</div>`;
-    }
-  }
-  if (!marginHtml.startsWith('<div')) marginHtml = `<div class="hist-kpi">${marginHtml}</div>`;
-
   const sub = [histStd.line, row.machine, row.nodePart, row.node,
     controlTypeLabel(isElec ? row.controlType : migrateControlType(row.controlType, row.measurements)),
     nPoints ? nPoints + ' ' + cilPointsWord(nPoints) : ''].filter(Boolean);
 
-  const pointSeg = nPoints > 1 ? `<div class="hist-seg">${Array.from({ length: nPoints }, (_, i) => {
-    const lbl = (entries.find(e => e.pts && e.pts[i] && e.pts[i].label) || {}).pts?.[i]?.label || '';
-    return `<button type="button" class="${i === histStd.point ? 'on' : ''}" data-hist-std-point="${i}">т.${i + 1}${lbl ? ' · ' + escapeHtml(lbl) : ''}</button>`;
-  }).join('')}</div>` : '';
+
+  const allRows = entries.slice().reverse();
+  const { from, to } = pagerRange(histStd.pager, allRows.length);
+  const tableRows = allRows.slice(from, to);
 
   box.innerHTML = `
     <div class="card hist-std-head">
@@ -124,18 +108,18 @@ function renderStandardHistory() {
         <div class="hist-kpi"><b>${checked}</b><span>${pluralRu(checked, 'проверка', 'проверки', 'проверок')} за ${histStd.days} дней</span></div>
         <div class="hist-kpi ${fails ? 'hist-kpi-fail' : ''}"><b>${fails}</b><span>${pluralRu(fails, 'отклонение', 'отклонения', 'отклонений')}${checked ? ' (' + Math.round(fails / checked * 100) + '%)' : ''}</span></div>
         <div class="hist-kpi ${missed + unchecked ? 'hist-kpi-warn' : ''}"><b>${missed + unchecked}</b><span>пропущено / не проверено</span></div>
-        ${marginHtml}
       </div>
     </div>
-    ${nPoints ? `<div class="card hist-chart-card">
-      <div class="hist-chart-h"><h3>Значения по точкам</h3><span class="hist-sp"></span>${pointSeg}</div>
-      ${histStdChart(entries, histStd.point)}
-      <div class="hist-sub">Зелёная полоса — норма. Красные точки — значения вне нормы. Видно, как значение подходит к границе ещё до отклонения.</div>
-    </div>` : ''}
+    <div class="card hist-chart-card">
+      <div class="hist-chart-h"><h3>Отклонения по проверкам</h3></div>
+      ${histStdChart(entries)}
+      <div class="hist-sub">Запас до границы нормы по самой «тяжёлой» точке каждой проверки: 100% — в середине нормы, 0% — на границе.
+      Красная зона — отклонение. Номер точки не важен: стандарт считается в отклонении, если вышла любая из них.</div>
+    </div>
     <div class="card hist-dev-card">
       ${entries.length ? `<table class="hist-dev">
         <thead><tr><th>Когда</th><th>Проверка</th><th>Бр.</th><th>Результат</th><th>Значения</th><th>Комментарий</th></tr></thead>
-        <tbody>${entries.slice().reverse().map(e => `
+        <tbody>${tableRows.map(e => `
           <tr data-hist-std-rec="${escapeAttr(e.h.id)}" title="Открыть проверку">
             <td><b>${histDayName(e.s.date)} ${fmtShortDate(e.s.date)}</b> ${e.s.shift === 'day' ? 'день' : 'ночь'}<div class="hist-sub">${histTime(e.h)}</div></td>
             <td>${escapeHtml(HIST_KINDS[histKind(e.h)].short)}</td>
@@ -144,38 +128,61 @@ function renderStandardHistory() {
             <td>${e.pts ? e.pts.map((p, i) => `<span class="hist-pt ${p.bad ? 'bad' : ''}">${e.pts.length > 1 ? 'т.' + (i + 1) + ' ' : ''}<b>${escapeHtml(p.value || '—')}</b></span>`).join('') : `<span class="hist-pt">${e.it.status === 'OK' ? 'ОК' : e.it.status === 'FAIL' ? 'Не ОК' : 'не проверено'}</span>`}</td>
             <td class="hist-sub">${e.it.comment ? cmtLine(e.it.comment) : '—'}</td>
           </tr>`).join('')}</tbody>
-      </table>` : `<div class="hist-empty">За ${histStd.days} дней проверок этого стандарта нет</div>`}
+      </table>
+      <div class="pagination-bar" id="histStdPagination"></div>` : `<div class="hist-empty">За ${histStd.days} дней проверок этого стандарта нет</div>`}
     </div>`;
+
+  renderPager($('#histStdPagination'), histStd.pager, allRows.length, renderStandardHistory);
 }
 
-/* SVG-график значений одной точки */
-function histStdChart(entries, pi) {
-  const pts = entries.map(e => {
-    const p = e.pts && e.pts[pi];
-    return p ? { v: histNum(p.value), r: p.range, bad: p.bad, e } : null;
-  }).filter(x => x && x.v != null);
-  if (!pts.length) return '<div class="hist-empty">Нет числовых значений для графика</div>';
+/* ------------------------------------------------------------
+   График «запас до границы нормы» по проверкам.
+   Для каждой проверки берём самую «тяжёлую» точку: 100% — значение
+   в середине нормы, 0% — ровно на границе, ниже нуля — отклонение.
+   Номер точки не важен: стандарт в отклонении, если вышла любая.
+   ------------------------------------------------------------ */
+function histStdMargin(e) {
+  const pts = (e.pts || []).filter(p => histNum(p.value) != null && p.range);
+  if (!pts.length) return null;
+  let worst = null;
+  pts.forEach(p => {
+    const v = histNum(p.value), r = p.range, half = (r.max - r.min) / 2;
+    const m = half > 0 ? Math.round((1 - Math.abs(v - (r.min + half)) / half) * 100) : (v >= r.min && v <= r.max ? 100 : -100);
+    if (worst === null || m < worst) worst = m;
+  });
+  return worst;
+}
 
-  const W = 900, H = 220, L = 52, R = 20, T = 14, B = 30;
-  const range = (pts.find(p => p.r) || {}).r || null;
-  let lo = Math.min(...pts.map(p => p.v)), hi = Math.max(...pts.map(p => p.v));
-  if (range) { lo = Math.min(lo, range.min); hi = Math.max(hi, range.max); }
-  const pad = (hi - lo) * 0.15 || Math.abs(hi) * 0.1 || 1;
-  lo -= pad; hi += pad;
+function histStdChart(entries) {
+  const pts = entries.map(e => ({ m: histStdMargin(e), e })).filter(x => x.m !== null);
+  if (pts.length < 2) {
+    // Числовых замеров нет (ОК / Не ОК) — показываем ленту результатов
+    return entries.length ? `<div class="hist-tape">${entries.map(e => {
+      const st = e.it.status;
+      return `<i class="hist-tape-i hist-tape-${st === 'OK' ? 'o' : st === 'FAIL' ? 'x' : 'u'}"
+        title="${escapeAttr(fmtShortDate(e.s.date) + ' ' + (e.s.shift === 'day' ? 'день' : 'ночь') + ': ' + (st === 'OK' ? 'в норме' : st === 'FAIL' ? 'отклонение' : 'не проверено'))}"></i>`;
+    }).join('')}</div>` : '<div class="hist-empty">Проверок за период нет</div>';
+  }
+
+  const W = 900, H = 220, L = 46, R = 20, T = 14, B = 30;
+  const lo = Math.min(-20, ...pts.map(p => p.m)) - 5;
+  const hi = Math.max(100, ...pts.map(p => p.m)) + 5;
   const x = i => pts.length === 1 ? (L + W - R) / 2 : L + i * (W - L - R) / (pts.length - 1);
   const y = v => T + (hi - v) / (hi - lo) * (H - T - B);
 
   let s = '';
-  if (range) {
-    s += `<rect x="${L}" y="${y(range.max)}" width="${W - L - R}" height="${Math.max(1, y(range.min) - y(range.max))}" class="hist-ch-band"/>`;
-    [range.min, range.max].forEach(v => {
-      s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" class="hist-ch-norm"/><text x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${fmtNum(v)}</text>`;
-    });
-  }
-  s += `<polyline class="hist-ch-line" points="${pts.map((p, i) => x(i) + ',' + y(p.v)).join(' ')}"/>`;
+  // Зона отклонения (ниже нуля) и середина нормы
+  s += `<rect x="${L}" y="${y(0)}" width="${W - L - R}" height="${Math.max(1, y(lo) - y(0))}" class="hist-ch-badband"/>`;
+  [[0, 'граница'], [100, 'центр нормы']].forEach(([v, lbl]) => {
+    s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" class="${v ? 'hist-ch-norm' : 'hist-ch-edge'}"/>
+      <text x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${lbl}</text>`;
+  });
+  s += `<polyline class="hist-ch-line" points="${pts.map((p, i) => x(i) + ',' + y(p.m)).join(' ')}"/>`;
   const step = Math.max(1, Math.ceil(pts.length / 10));
   pts.forEach((p, i) => {
-    s += `<circle cx="${x(i)}" cy="${y(p.v)}" r="${p.bad ? 6 : 4.5}" class="${p.bad ? 'hist-ch-bad' : 'hist-ch-pt'}"><title>${fmtShortDate(p.e.s.date)} ${p.e.s.shift === 'day' ? 'день' : 'ночь'}: ${p.v}</title></circle>`;
+    const bad = p.m < 0;
+    s += `<circle cx="${x(i)}" cy="${y(p.m)}" r="${bad ? 6 : 4.5}" class="${bad ? 'hist-ch-bad' : 'hist-ch-pt'}">
+      <title>${fmtShortDate(p.e.s.date)} ${p.e.s.shift === 'day' ? 'день' : 'ночь'}: ${bad ? 'отклонение' : 'запас ' + p.m + '%'}</title></circle>`;
     if (i % step === 0 || i === pts.length - 1) {
       s += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle">${fmtShortDate(p.e.s.date)}${p.e.s.shift === 'night' ? ' н' : ''}</text>`;
     }
@@ -187,9 +194,7 @@ $('#histStdView')?.addEventListener('click', (e) => {
   const t = e.target;
   if (t.closest('[data-hist-std-back]')) return histStdBack();
   const d = t.closest('[data-hist-std-days]');
-  if (d) { histStd.days = parseInt(d.dataset.histStdDays, 10); return renderStandardHistory(); }
-  const p = t.closest('[data-hist-std-point]');
-  if (p) { histStd.point = parseInt(p.dataset.histStdPoint, 10); return renderStandardHistory(); }
+  if (d) { histStd.days = parseInt(d.dataset.histStdDays, 10); histStd.pager.page = 1; return renderStandardHistory(); }
   if (t.closest('[data-hist-std-open]')) {
     if (typeof openStandardView === 'function') openStandardView(histStd.id);
     return;
