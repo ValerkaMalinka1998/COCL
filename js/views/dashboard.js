@@ -355,24 +355,50 @@ function dashNowKpis(all) {
   </div>`;
 }
 
-/* Линии смены: прогресс-полоса, просрочено, отклонения */
+/* Строка линии: прогресс-полоса, просрочено, отклонения */
+function dashNowLineHtml(m) {
+  const pct = m.planned ? Math.round(m.done / m.planned * 100) : 0;
+  const cls = m.late || m.fail ? 'red' : pct === 100 ? 'green' : 'amber';
+  return `<button type="button" class="dash-now-line dash-now-${cls}" data-dash-open-line="${escapeAttr(m.line)}" title="Паспорт линии">
+    <span class="dash-now-name">${escapeHtml(m.line)}</span>
+    <span class="dash-now-bar"><i style="width:${pct}%"></i></span>
+    <span class="dash-now-num">${m.done} / ${m.planned}</span>
+    <span class="dash-now-tags">
+      ${m.late ? `<span class="hist-tag hist-tag-fail">${m.late} просроч.</span>` : ''}
+      ${m.fail ? `<span class="hist-tag hist-tag-fail">${m.fail} откл.</span>` : ''}
+      ${!m.late && !m.fail && pct === 100 ? '<span class="hist-tag hist-tag-ok">всё сделано</span>' : ''}
+    </span>
+  </button>`;
+}
+
+/* Линии смены: в «Общем» — по цехам, внутри цеха самые срочные сверху */
 function dashNowLinesHtml(all) {
   const work = all.filter(m => m.planned);
   if (!work.length) return '<div class="dash-empty">В текущую смену проверок не запланировано</div>';
-  work.sort((a, b) => (b.late - a.late) || (b.fail - a.fail) || (b.planned - b.done) - (a.planned - a.done));
-  return work.map(m => {
-    const pct = m.planned ? Math.round(m.done / m.planned * 100) : 0;
-    const cls = m.late || m.fail ? 'red' : pct === 100 ? 'green' : 'amber';
-    return `<button type="button" class="dash-now-line dash-now-${cls}" data-dash-open-line="${escapeAttr(m.line)}" title="Паспорт линии">
-      <span class="dash-now-name">${escapeHtml(m.line)}</span>
-      <span class="dash-now-bar"><i style="width:${pct}%"></i></span>
-      <span class="dash-now-num">${m.done} / ${m.planned}</span>
-      <span class="dash-now-tags">
-        ${m.late ? `<span class="hist-tag hist-tag-fail">${m.late} просроч.</span>` : ''}
-        ${m.fail ? `<span class="hist-tag hist-tag-fail">${m.fail} откл.</span>` : ''}
-        ${!m.late && !m.fail && pct === 100 ? '<span class="hist-tag hist-tag-ok">всё сделано</span>' : ''}
-      </span>
-    </button>`;
+  const urgent = (a, b) => (b.late - a.late) || (b.fail - a.fail) || (b.planned - b.done) - (a.planned - a.done);
+  work.sort(urgent);
+  if (dashboardWorkshop) return work.map(dashNowLineHtml).join('');
+
+  const groups = {};
+  work.forEach(m => {
+    const id = getWorkshopIdForLine(m.line) || '';
+    (groups[id] = groups[id] || []).push(m);
+  });
+  const order = getWorkshops().map(w => w.id).concat('');
+  return order.filter(id => groups[id]).map(id => {
+    const list = groups[id];
+    const ws = id ? getWorkshop(id) : null;
+    const bad = list.filter(m => m.late || m.fail).length;
+    const done = list.filter(m => m.done === m.planned).length;
+    const tag = bad ? `<span class="hist-tag hist-tag-fail">${bad} из ${list.length} требуют внимания</span>`
+      : done === list.length ? '<span class="hist-tag hist-tag-ok">всё сделано</span>'
+      : `<span class="hist-tag hist-tag-warn">${list.length - done} в работе</span>`;
+    // Цех, где всё сделано, — одной строкой; остальные раскрыты
+    if (!bad && done === list.length) {
+      return `<div class="dash-now-ws"><b>${escapeHtml(ws ? ws.name : 'Вне структуры')}</b><small>${list.length} ${pluralRu(list.length, 'линия', 'линии', 'линий')}</small>${tag}</div>`;
+    }
+    return `<div class="dash-now-ws"><b>${escapeHtml(ws ? ws.name : 'Вне структуры')}</b><small>${list.length} ${pluralRu(list.length, 'линия', 'линии', 'линий')}</small>${tag}</div>`
+      + list.map(dashNowLineHtml).join('');
   }).join('');
 }
 
