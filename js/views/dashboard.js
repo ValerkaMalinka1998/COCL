@@ -14,6 +14,7 @@ const DASH_PERIOD_LABELS = { shift: 'текущая смена', day: 'посл�
 const DASH_PERIOD_BTNS = [['shift', 'Смена'], ['day', 'Сутки'], ['7', '7 дней'], ['30', '30 дней'], ['all', 'Всё'], ['custom', 'Период…']];
 
 const dashState = {
+  view: (() => { try { return localStorage.getItem('cl_dashboard_view') === 'period' ? 'period' : 'now'; } catch (e) { return 'now'; } })(),
   period: (() => { try { return localStorage.getItem('cl_dashboard_period') || '7'; } catch (e) { return '7'; } })(),
   line: null,          // открыт паспорт линии
   week: 0,             // неделя покрытия в паспорте
@@ -214,6 +215,8 @@ function renderDashboard() {
   dashState.line = null;
   renderDashboardHead();
 
+  if (dashState.view === 'now') return renderDashboardNow();
+
   const lines = dashLines();
   const slots = dashSlots(dashState.period);
   const sum = dashSummary(lines, slots);
@@ -284,20 +287,170 @@ function dashTopHtml(sum) {
   return body || '<div class="dash-empty">Отклонений за период нет</div>';
 }
 
+/* ============================================================
+   ВКЛАДКА «СЕЙЧАС»: состояние текущей смены
+   Что осталось проверить до конца смены, где уже отклонения,
+   какие линии отстают. Расчёт — по окнам проверки расписания.
+   ============================================================ */
+
+/* Состояние линии в текущей смене */
+function dashNowLine(line) {
+  const cur = getCurrentShiftPeriod();
+  const letter = getShiftsForDate(cur.date)[cur.shiftType];
+  const idx = histClIndex(line);
+  const m = { line, planned: 0, done: 0, fail: 0, late: 0, rows: [] };
+
+  histClRows(line).forEach(({ row, isElec }) => {
+    const res = idx.get(`${cur.date}|${letter}|${row.id}`);
+    if (!histIsPlanned(row, line, cur.date, cur.shiftType) && !res) return;
+    const status = res ? res.it.status : 'due';
+    m.planned++;
+    if (status === 'OK' || status === 'FAIL') m.done++;
+    if (status === 'FAIL') m.fail++;
+    const late = status === 'due' && dashWindowPassed(row);
+    if (late) m.late++;
+    m.rows.push({ row, isElec, status, late, it: res ? res.it : null });
+  });
+  return m;
+}
+
+/* Окно проверки этой смены уже прошло, а проверки нет */
+function dashWindowPassed(row) {
+  const freq = typeof getClRowFreq === 'function' ? getClRowFreq(row) : (row.frequency || {});
+  const wins = Array.isArray(freq.timeWindows) ? freq.timeWindows : [];
+  if (!wins.length) return false;
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  const cur = getCurrentShiftPeriod();
+  const isDay = cur.shiftType === 'day';
+  return wins.every(w => {
+    const [h, mm] = String(w.to || '').split(':').map(Number);
+    if (isNaN(h)) return false;
+    let end = h * 60 + (mm || 0);
+    // Ночная смена идёт через полночь: окно «03:30» — это уже «завтра»
+    let nowMins = mins;
+    if (!isDay) {
+      if (end < 9 * 60) end += 24 * 60;
+      if (nowMins < 9 * 60) nowMins += 24 * 60;
+    }
+    return nowMins > end;
+  });
+}
+
+function dashNowKpis(all) {
+  const planned = all.reduce((s, m) => s + m.planned, 0);
+  const done = all.reduce((s, m) => s + m.done, 0);
+  const fail = all.reduce((s, m) => s + m.fail, 0);
+  const late = all.reduce((s, m) => s + m.late, 0);
+  const left = planned - done;
+  const cur = getCurrentShiftPeriod();
+  const letter = getShiftsForDate(cur.date)[cur.shiftType];
+  return `<div class="dash-kpis">
+    <div class="dash-kpi dash-kpi-now"><b>${cur.shiftType === 'day' ? 'День' : 'Ночь'} · ${escapeHtml(letter || '—')}</b>
+      <span>${escapeHtml(fmtShortDate(cur.date))} · смена идёт</span></div>
+    <div class="dash-kpi"><b class="${planned && done === planned ? 'hist-c-ok' : ''}">${done} / ${planned}</b><span>проверок сделано</span></div>
+    <div class="dash-kpi"><b class="${left ? 'hist-c-warn' : 'hist-c-ok'}">${left}</b><span>осталось до конца смены</span></div>
+    <div class="dash-kpi"><b class="${late ? 'hist-c-fail' : ''}">${late}</b><span>просрочено (окно прошло)</span></div>
+    <div class="dash-kpi"><b class="${fail ? 'hist-c-fail' : ''}">${fail}</b><span>${pluralRu(fail, 'отклонение', 'отклонения', 'отклонений')} в смене</span></div>
+  </div>`;
+}
+
+/* Линии смены: прогресс-полоса, просрочено, отклонения */
+function dashNowLinesHtml(all) {
+  const work = all.filter(m => m.planned);
+  if (!work.length) return '<div class="dash-empty">В текущую смену проверок не запланировано</div>';
+  work.sort((a, b) => (b.late - a.late) || (b.fail - a.fail) || (b.planned - b.done) - (a.planned - a.done));
+  return work.map(m => {
+    const pct = m.planned ? Math.round(m.done / m.planned * 100) : 0;
+    const cls = m.late || m.fail ? 'red' : pct === 100 ? 'green' : 'amber';
+    return `<button type="button" class="dash-now-line dash-now-${cls}" data-dash-open-line="${escapeAttr(m.line)}" title="Паспорт линии">
+      <span class="dash-now-name">${escapeHtml(m.line)}</span>
+      <span class="dash-now-bar"><i style="width:${pct}%"></i></span>
+      <span class="dash-now-num">${m.done} / ${m.planned}</span>
+      <span class="dash-now-tags">
+        ${m.late ? `<span class="hist-tag hist-tag-fail">${m.late} просроч.</span>` : ''}
+        ${m.fail ? `<span class="hist-tag hist-tag-fail">${m.fail} откл.</span>` : ''}
+        ${!m.late && !m.fail && pct === 100 ? '<span class="hist-tag hist-tag-ok">всё сделано</span>' : ''}
+      </span>
+    </button>`;
+  }).join('');
+}
+
+/* Что проверить прямо сейчас и что уже не в норме */
+function dashNowListHtml(all) {
+  const late = [];
+  const fails = [];
+  const due = [];
+  all.forEach(m => m.rows.forEach(r => {
+    const item = {
+      line: m.line, row: r.row, isElec: r.isElec, it: r.it,
+      title: r.row.title || r.row.paramName || '—',
+      sub: [r.row.machine, r.row.nodePart, r.row.node].filter(Boolean).join(' · ')
+    };
+    if (r.status === 'FAIL') fails.push(item);
+    else if (r.late) late.push(item);
+    else if (r.status === 'due') due.push(item);
+  }));
+
+  const block = (title, list, tag, cls) => list.length ? `
+    <div class="dash-top">
+      <div class="dash-top-h">${title} · ${list.length}</div>
+      ${list.slice(0, 8).map(x => `
+        <button type="button" class="dash-li" data-dash-std="${escapeAttr(x.row.id)}" data-dash-line="${escapeAttr(x.line)}">
+          <span><span class="hist-opl">${escapeHtml(x.line)}</span> ${escapeHtml(x.title)}
+            <div class="hist-sub">${escapeHtml(x.sub)}</div></span>
+          <span class="hist-tag hist-tag-${cls}">${tag}</span>
+        </button>`).join('')}
+      ${list.length > 8 ? `<div class="hist-sub">…ещё ${list.length - 8}</div>` : ''}
+    </div>` : '';
+
+  const html = block('Отклонения в этой смене', fails, 'не ОК', 'fail')
+    + block('Просрочено — окно проверки прошло', late, 'просроч.', 'warn')
+    + block('Ещё предстоит в эту смену', due, 'ждёт', 'ok');
+  return html || '<div class="dash-empty">В текущую смену проверок не запланировано</div>';
+}
+
+function renderDashboardNow() {
+  const box = $('#dashboardContent');
+  if (!box) return;
+  const all = dashLines().map(x => dashNowLine(x.line));
+  box.innerHTML = `
+    ${dashNowKpis(all)}
+    <div class="dash-g3">
+      <div class="card dash-card">
+        <h3 class="dash-h">Линии в этой смене <small>сделано из запланированного · клик — паспорт линии</small></h3>
+        ${dashNowLinesHtml(all)}
+      </div>
+      <div class="card dash-card">
+        <h3 class="dash-h">Что требует действия <small>клик — история стандарта</small></h3>
+        ${dashNowListHtml(all)}
+      </div>
+    </div>`;
+}
+
 function renderDashboardHead() {
   const bar = $('#dashboardWorkshopBar');
   if (!bar) return;
   const tabs = [{ id: '', name: 'Общий' }].concat(getWorkshops().map(w => ({ id: w.id, name: w.name })));
+  const periodText = dashState.line || dashState.view === 'period'
+    ? (dashState.period === 'custom' && (dashState.from || dashState.to)
+      ? `${dashState.from ? fmtShortDate(dashState.from) : '…'} – ${dashState.to ? fmtShortDate(dashState.to) : 'сегодня'}`
+        : DASH_PERIOD_LABELS[dashState.period])
+    : 'текущая смена';
   const scope = dashState.line ? dashState.line
     : (dashboardWorkshop ? (getWorkshop(dashboardWorkshop)?.name || '') : 'весь завод');
   bar.innerHTML = `
-    <div class="dash-title">Дашборд <small>${escapeHtml(scope)} · ${dashState.period === 'custom' && (dashState.from || dashState.to) ? (dashState.from ? fmtShortDate(dashState.from) : '…') + ' – ' + (dashState.to ? fmtShortDate(dashState.to) : 'сегодня') : DASH_PERIOD_LABELS[dashState.period]}</small></div>
+    <div class="dash-title">Дашборд <small>${escapeHtml(scope)} · ${escapeHtml(periodText)}</small></div>
     <span class="hist-sp"></span>
+    ${dashState.line ? '' : `<div class="hist-seg dash-view-seg">
+      <button type="button" class="${dashState.view === 'now' ? 'on' : ''}" data-dash-view="now">Сейчас</button>
+      <button type="button" class="${dashState.view === 'period' ? 'on' : ''}" data-dash-view="period">Период</button>
+    </div>`}
     ${dashState.line ? '' : `<div class="hist-seg">${tabs.map(t =>
       `<button type="button" class="${t.id === dashboardWorkshop ? 'on' : ''}" data-dash-ws="${escapeAttr(t.id)}">${escapeHtml(t.name)}</button>`).join('')}</div>`}
-    <div class="hist-seg">${DASH_PERIOD_BTNS.map(([p, t]) =>
-      `<button type="button" class="${p === dashState.period ? 'on' : ''}" data-dash-period="${p}">${t}</button>`).join('')}</div>
-    ${dashState.period === 'custom' ? `<div class="hist-custom dash-custom">
+    ${dashState.view === 'period' || dashState.line ? `<div class="hist-seg">${DASH_PERIOD_BTNS.map(([p, t]) =>
+      `<button type="button" class="${p === dashState.period ? 'on' : ''}" data-dash-period="${p}">${t}</button>`).join('')}</div>` : ''}
+    ${(dashState.view === 'period' || dashState.line) && dashState.period === 'custom' ? `<div class="hist-custom dash-custom">
       <label>С <input type="date" data-dash-date="from" value="${escapeAttr(dashState.from)}" max="${getCurrentShiftPeriod().date}"></label>
       <label>По <input type="date" data-dash-date="to" value="${escapeAttr(dashState.to)}" max="${getCurrentShiftPeriod().date}"></label>
     </div>` : ''}`;
@@ -517,6 +670,12 @@ function renderDashboardLine() {
    ============================================================ */
 $('#tab-dashboard')?.addEventListener('click', (e) => {
   const t = e.target;
+  const vw = t.closest('[data-dash-view]');
+  if (vw) {
+    dashState.view = vw.dataset.dashView === 'period' ? 'period' : 'now';
+    try { localStorage.setItem('cl_dashboard_view', dashState.view); } catch (err) { /* нет доступа */ }
+    return renderDashboard();
+  }
   const ws = t.closest('[data-dash-ws]');
   if (ws) {
     dashboardWorkshop = ws.dataset.dashWs;

@@ -112,3 +112,25 @@ button.dash-li:hover { background: var(--bg-hover); }
   color: var(--text-dim); margin-bottom: 6px;
 }
 .dash-li-bar[role="button"] { cursor: pointer; }
+
+/* === ВКЛАДКА «СЕЙЧАС»: текущая смена === */
+.dash-kpi-now b { color: var(--accent-cyan); font-size: 17px; }
+.dash-now-line {
+  display: grid; grid-template-columns: 76px 1fr 64px auto; align-items: center; gap: 12px;
+  width: 100%; padding: 10px 12px; margin-bottom: 6px; text-align: left;
+  border: 1px solid var(--border); border-left: 3px solid var(--border-hi);
+  border-radius: 10px; background: var(--bg-card); font: inherit; cursor: pointer;
+}
+.dash-now-line:hover { background: var(--bg-hover); }
+.dash-now-name { font-weight: 800; color: var(--text-main); }
+.dash-now-bar { height: 8px; border-radius: 999px; background: var(--bg-input); overflow: hidden; }
+.dash-now-bar i { display: block; height: 100%; background: var(--accent-cyan); }
+.dash-now-num { font-family: Consolas, 'Courier New', monospace; font-size: 12px; color: var(--text-second); text-align: right; }
+.dash-now-tags { display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.dash-now-green { border-left-color: var(--accent-green); }
+.dash-now-green .dash-now-bar i { background: var(--accent-green); }
+.dash-now-amber { border-left-color: var(--accent-amber); }
+.dash-now-amber .dash-now-bar i { background: var(--accent-amber); }
+.dash-now-red { border-left-color: var(--accent-red); }
+.dash-now-red .dash-now-bar i { background: var(--accent-red); }
+.dash-view-seg button.on { background: var(--accent-cyan); color: var(--on-accent); }
