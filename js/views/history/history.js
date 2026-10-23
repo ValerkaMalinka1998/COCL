@@ -192,6 +192,14 @@ function pluralRu(n, one, few, many) {
   return many;
 }
 
+/* Номер недели ISO 8601 для даты 'YYYY-MM-DD' */
+function histIsoWeek(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const jan4 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d - jan4) / 864e5 - 3 + ((jan4.getDay() + 6) % 7)) / 7);
+}
+
 function histCoverageHtml(line, weekOffset, weekAttr) {
   const week = histCoverage(line, weekOffset);
   const today = getCurrentShiftPeriod().date;
