@@ -1,6 +1,6 @@
 /* ============================================================
    СТАНДАРТЫ CL: панель массовых действий над выбранными строками
-   (в расписание, «применять к», экспорт). Модуль общего
+   (в расписание, «CL относится к», экспорт). Модуль общего
    пространства имён; подключается после editor-elec.js.
    ============================================================ */
 
@@ -59,7 +59,7 @@ function bulkAddToSchedule(kind) {
   bulkRefresh(kind);
 }
 
-/* «Применять к»: добавить или убрать один тип у всех выбранных */
+/* «CL относится к»: добавить или убрать один тип у всех выбранных */
 function bulkSetApplies(kind, type, on) {
   const info = bulkKindInfo(kind);
   const all = info.get();
@@ -94,7 +94,7 @@ function bulkBarHtml() {
     <div class="et-bulk-actions">
       <button type="button" class="btn btn-secondary btn-sm btn-icon-text" data-bulk="schedule">${ic('<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>')}В расписание</button>
       <div class="et-bulk-pop">
-        <button type="button" class="btn btn-secondary btn-sm btn-icon-text" data-bulk="applies">${ic('<polyline points="20 6 9 17 4 12"/>')}Применять к…</button>
+        <button type="button" class="btn btn-secondary btn-sm btn-icon-text" data-bulk="applies">${ic('<polyline points="20 6 9 17 4 12"/>')}CL относится к…</button>
         <div class="et-bulk-menu" hidden>
           ${BULK_APPLIES.map(([k, label]) => `
             <div class="et-bulk-menu-row">

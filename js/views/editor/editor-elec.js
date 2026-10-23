@@ -85,7 +85,7 @@ function refreshEditorElecTable() {
         <th>Параметр</th>
         <th class="et-c-part">Часть</th>
         <th class="et-c-type">Тип / норма</th>
-        <th class="et-c-ap">Применять к</th>
+        <th class="et-c-ap">CL относится к</th>
         <th class="et-c-sch">Расписание</th>
         <th class="et-c-st">Статус</th>
         <th class="et-c-act"></th>

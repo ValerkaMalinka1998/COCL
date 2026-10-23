@@ -192,7 +192,7 @@ function renderStandardViewContent(st, brand, co) {
     ${field('Статус', st.active === false ? 'Неактивен' : 'Активен')}
   </div>`;
 
-  // --- Дополнительная информация: Применять к, триггеры, Top Losses (как на странице) ---
+  // --- Дополнительная информация: CL относится к, триггеры, Top Losses (как на странице) ---
   const APPLY = { ChangeOver: ['Change Over', 'co'], CL_TO: ['CL в ТО', 'to'], CL_Conversion: ['CL в Конвертацию', 'cv'] };
   const applies = (st.appliesTo || []).filter(a => APPLY[a])
     .map(a => `<span class="svm-tag svm-tag-${APPLY[a][1]}">${APPLY[a][0]}</span>`).join('');
@@ -200,7 +200,7 @@ function renderStandardViewContent(st, brand, co) {
   const losses = (st.topLosses || []).map(id => findLossById(id)).filter(Boolean)
     .map(l => `<span class="svm-tag svm-tag-tl">${escapeHtml(l.name)}</span>`).join('');
   const links = (label, tags) => `<div class="svm-links"><span>${label}</span><div>${tags || '<i class="svm-field-empty">не задано</i>'}</div></div>`;
-  const extraHtml = links('Применять к', applies + (st.forceInChangeOver ? '<span class="svm-tag">всегда в Change Over</span>' : ''))
+  const extraHtml = links('CL относится к', applies + (st.forceInChangeOver ? '<span class="svm-tag">всегда в Change Over</span>' : ''))
     + links('Триггеры Change Over', trig)
     + links('Top Losses', losses);
 
