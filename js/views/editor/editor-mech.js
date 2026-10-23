@@ -129,8 +129,6 @@ function etPluralStd(n) {
 function refreshEditorMechTable() {
   const wrap = $('#editorMechTableWrap');
   const paginationEl = $('#editorMechPagination');
-  const lg = $('#editorMechLegend');
-  if (lg) lg.innerHTML = legendHtml(['co', 'to', 'cv', 'sch', 'valEd']);
   if (!wrap) return;
 
   const line = localStorage.getItem('cl_editor_line') || '';

@@ -55,8 +55,6 @@ function etPluralParam(n) {
 function refreshEditorElecTable() {
   const wrap = $('#editorElecTableWrap');
   const paginationEl = $('#editorElecPagination');
-  const lg = $('#editorElecLegend');
-  if (lg) lg.innerHTML = legendHtml(['co', 'to', 'cv', 'sch', 'valEd']);
   if (!wrap) return;
 
   const line = localStorage.getItem('cl_editor_line') || '';

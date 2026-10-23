@@ -2,8 +2,7 @@
 /* === ЛЕГЕНДА ТАБЛИЦ ========================================= */
 /* ============================================================ */
 /*
-   Одна легенда на все таблицы: Чек-лист CL, Расписание CL,
-   Стандарты CL. legendHtml(['ok','fail',...]) — строка «Обозначения».
+   Одна легенда на таблицы Чек-листа CL и Расписания CL. legendHtml(['ok','fail',...]) — строка «Обозначения».
 */
 
 const LEGEND_ITEMS = {
@@ -17,14 +16,7 @@ const LEGEND_ITEMS = {
   day:       () => '<i class="lg-sw lg-sw-day"></i>дневная смена',
   night:     () => '<i class="lg-sw lg-sw-night"></i>ночная смена',
   past:      () => '<i class="lg-sw lg-sw-past"></i>смена прошла, изменить нельзя',
-  val:       () => '<i class="lg-sw lg-sw-val"></i>на валидации',
-  co:        () => '<i class="lg-ap lg-ap-co">CO</i>смена сорта',
-  to:        () => '<i class="lg-ap lg-ap-to">ТО</i>CL в ТО',
-  cv:        () => '<i class="lg-ap lg-ap-cv">КВ</i>CL в Конвертацию',
-  inSch:     () => '<i class="lg-sw lg-sw-sch"></i>в расписании проверок',
-  // Стандарты CL: то, что реально видно в строках таблицы
-  sch:       () => '<span class="et-sch et-sch-in">N / 14 смен</span>в Расписании CL, отмечено смен из 14 — проверяется в Чек-листе',
-  valEd:     () => '<i class="lg-sw lg-sw-val"></i>на валидации — строка подсвечена, срок рядом с названием'
+  val:       () => '<i class="lg-sw lg-sw-val"></i>на валидации'
 };
 
 function legendHtml(keys, label) {
