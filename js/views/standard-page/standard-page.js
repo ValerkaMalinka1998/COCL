@@ -18,14 +18,16 @@ const svFullState = {
   isNew: false             // создаётся новый стандарт (ещё не в хранилище)
 };
 
-/* Открыть полноэкранный просмотр стандарта */
-function openStandardFullView(id, mode) {
+/* Открыть полноэкранный просмотр стандарта.
+   push = false — без новой записи в истории браузера (переход по ссылке / «Назад») */
+function openStandardFullView(id, mode, push = true) {
   const st = getStandards().find(s => s.id === id);
   if (!st) {
     showToast('Стандарт не найден', true);
     return;
   }
 
+  addRecentStandard(id);
   svFullState.standardId = id;
   svFullState.isNew = false;
   svFullState.mode = mode === 'edit' ? 'edit' : 'view';
@@ -41,7 +43,7 @@ function openStandardFullView(id, mode) {
 
   // Открываем таб
   if (typeof switchTab === 'function') {
-    switchTab('standard-view');
+    switchTab('standard-view', push);
   }
 
   // Перерисовываем всё
@@ -51,6 +53,24 @@ function openStandardFullView(id, mode) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 window.openStandardFullView = openStandardFullView;
+
+/* === ССЫЛКА НА СТАНДАРТ: index.html#standard/<id> === */
+function standardLink(id) {
+  return location.href.split('#')[0] + '#standard/' + encodeURIComponent(id);
+}
+
+/* Открыть стандарт по адресу; нет такого — Стандарты CL с сообщением */
+function openStandardFromHash(id, push) {
+  if (getStandards().some(s => s.id === id)) return openStandardFullView(id, 'view', push);
+  switchTab('editor', push);
+  showToast('Стандарт по ссылке не найден — возможно, удалён или ссылка с другого компьютера', true);
+}
+
+$('#svFullLinkBtn')?.addEventListener('click', () => {
+  if (svFullState.standardId && !svFullState.isNew) {
+    histCopyText(standardLink(svFullState.standardId), 'Ссылка на стандарт скопирована');
+  }
+});
 
 /* ============================================================ */
 /* === СОЗДАНИЕ МЕХАНИЧЕСКОГО СТАНДАРТА ======================= */
@@ -146,6 +166,9 @@ function renderStandardFullView() {
   const proposalBtn = $('#svFullProposalBtn');
   const saveBtn = $('#svFullSaveBtn');
   const cancelBtn = $('#svFullCancelBtn');
+  // У нового (несохранённого) стандарта ссылки ещё нет
+  const linkBtn = $('#svFullLinkBtn');
+  if (linkBtn) linkBtn.style.display = svFullState.isNew ? 'none' : 'inline-flex';
 
   if (isEdit) {
     if (viewBtn) viewBtn.style.display = 'none';

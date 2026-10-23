@@ -87,9 +87,12 @@ function switchTab(tabName, pushHistory = true) {
   if (btn) btn.classList.add('active');
   document.getElementById('tab-' + tabName).classList.add('active');
 
-  // Обновляем URL (hash-роутинг)
+  // Обновляем URL (hash-роутинг). Сохранённый стандарт — своим адресом
+  // #standard/<id>: его можно скопировать и открыть по ссылке.
+  const stdId = tabName === 'standard-view' && typeof svFullState !== 'undefined' && !svFullState.isNew
+    ? svFullState.standardId : null;
   if (pushHistory) {
-    history.pushState({ tab: tabName }, '', '#' + tabName);
+    history.pushState({ tab: tabName, std: stdId }, '', '#' + (stdId ? 'standard/' + encodeURIComponent(stdId) : tabName));
   }
   if (tabName === 'standard-view') {
     // Оставляем как есть — данные уже заполнены при openStandardFullView
@@ -109,6 +112,7 @@ if (tabName === 'editor') {
   // Обновить таблицы
   if (typeof refreshEditorMechTable === 'function') refreshEditorMechTable();
   if (typeof refreshEditorElecTable === 'function') refreshEditorElecTable();
+  if (typeof renderEditorRecentStd === 'function') renderEditorRecentStd();
 
   // Авто-открытие модалки, если линия не выбрана
   const savedLine = localStorage.getItem('cl_editor_line');
@@ -208,8 +212,16 @@ function initRouter() {
     });
   });
 
+  // Адрес стандарта: #standard/<id> → id, иначе null
+  const hashStdId = () => {
+    const m = location.hash.match(/^#standard\/(.+)$/);
+    return m ? decodeURIComponent(m[1]) : null;
+  };
+
   // Кнопка «Назад» / «Вперёд» в браузере
   window.addEventListener('popstate', (e) => {
+    const std = (e.state && e.state.std) || hashStdId();
+    if (std) return openStandardFromHash(std, false);
     const tab = (e.state && e.state.tab)
       || location.hash.replace('#', '')
       || localStorage.getItem('cl_active_tab')
@@ -217,11 +229,15 @@ function initRouter() {
     switchTab(tab, false);
   });
 
-  // Восстановление при первой загрузке
-  const hashTab = location.hash.replace('#', '');
-  const savedTab = localStorage.getItem('cl_active_tab');
-  const initialTab = hashTab || savedTab || 'electronic';
-  switchTab(initialTab, false);
+  // Восстановление при первой загрузке (в том числе по ссылке на стандарт)
+  const startStd = hashStdId();
+  if (startStd) {
+    openStandardFromHash(startStd, false);
+  } else {
+    const hashTab = location.hash.replace('#', '');
+    const savedTab = localStorage.getItem('cl_active_tab');
+    switchTab(hashTab || savedTab || 'electronic', false);
+  }
    // Помечаем приложение готовым — снимаем anti-flash защиту
   document.documentElement.setAttribute('data-app-ready', '1');
 

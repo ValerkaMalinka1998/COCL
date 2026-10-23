@@ -42,6 +42,42 @@ function addRecentLine(line) {
   } catch (e) {}
 }
 
+/* --- Недавно открытые стандарты (все линии) --- */
+const RECENT_STD_KEY = 'cl_recent_standards';
+const RECENT_STD_MAX = 8;
+
+/* id недавних стандартов, удалённые отбрасываются */
+function getRecentStandards() {
+  let arr = [];
+  try { arr = JSON.parse(localStorage.getItem(RECENT_STD_KEY) || '[]'); } catch (e) { /* пусто */ }
+  if (!Array.isArray(arr)) return [];
+  const ids = new Set(getStandards().map(s => s.id));
+  return arr.filter(id => ids.has(id)).slice(0, RECENT_STD_MAX);
+}
+
+function addRecentStandard(id) {
+  if (!id) return;
+  const next = [id, ...getRecentStandards().filter(x => x !== id)].slice(0, RECENT_STD_MAX);
+  try { localStorage.setItem(RECENT_STD_KEY, JSON.stringify(next)); } catch (e) { /* нет доступа */ }
+}
+
+/* Строка «Недавно открытые» над таблицей механических стандартов */
+function renderEditorRecentStd() {
+  const box = $('#editorRecentStd');
+  if (!box) return;
+  const all = getStandards();
+  const list = getRecentStandards().map(id => all.find(s => s.id === id)).filter(Boolean);
+  box.hidden = !list.length;
+  box.innerHTML = list.length ? `<span class="editor-recent-std-label">Недавно открытые</span>${list.map(s =>
+    `<button type="button" class="editor-recent-std-chip" data-recent-std="${escapeAttr(s.id)}" title="${escapeAttr((s.line || '') + ' · ' + (s.title || ''))}">
+      ${s.oplNumber ? `<b>${escapeHtml(s.oplNumber)}</b>` : ''}<span>${escapeHtml(s.title || '—')}</span><i>${escapeHtml(s.line || '')}</i></button>`).join('')}` : '';
+}
+
+$('#editorRecentStd')?.addEventListener('click', (e) => {
+  const chip = e.target.closest('[data-recent-std]');
+  if (chip) openStandardFullView(chip.dataset.recentStd);
+});
+
 /* Машины для линий — по умолчанию пустые (заполняются в Настройках) */
 const DEFAULT_LINE_MACHINES = {};
 
