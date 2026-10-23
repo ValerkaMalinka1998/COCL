@@ -45,12 +45,17 @@ function getQcFields() {
     return [{ label: 'Значение', text: entry ? getEparamNormLabel(entry, ct) : '—', norm: getEparamNormRange(entry) }];
   }
   const points = getRowMeasurementBlock(row, quickCheckState.brand)?.points || [];
-  // Точка без числа (метка словами) — ОК / Не ОК; бывает только у фиксированного
-  // типа: вариабельный и интервал текст в точках не принимают (normTypeError)
+  // Точка без числа (метка словами, isNormMark) — ОК / Не ОК; допустима в любом
+  // типе контроля, числовые точки проверяются по норме
   return points.map((p, i) => {
-    const norm = parseNorm(p.value);
-    return { label: 'Т' + (i + 1), text: p.value || '—', norm, mark: !norm };
+    const mark = qcIsMark(p.value);
+    return { label: 'Т' + (i + 1), text: p.value || '—', norm: mark ? null : parseNorm(p.value), mark };
   });
+}
+
+/* Точка проверяется кнопками ОК / Не ОК: метка словами или без числовой нормы */
+function qcIsMark(value) {
+  return isNormMark(value) || !parseNorm(value);
 }
 
 /* Строки смены по порядку матрицы: запланированы на эту дату/смену;
@@ -391,7 +396,7 @@ function saveQuickCheck(goNext) {
       const v = (inp.value || '').trim();
       if (v === '') { allFilled = false; values.push(''); return; }
       // Метка: ответ «ОК» / «Не ОК» как есть
-      if (!parseNorm(points[idx]?.value)) {
+      if (qcIsMark(points[idx]?.value)) {
         values.push(v);
         if (v === 'Не ОК') anyFail = true;
         return;
