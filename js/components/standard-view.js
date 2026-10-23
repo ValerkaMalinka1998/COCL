@@ -192,6 +192,18 @@ function renderStandardViewContent(st, brand, co) {
     ${field('Статус', st.active === false ? 'Неактивен' : 'Активен')}
   </div>`;
 
+  // --- Дополнительная информация: Применять к, триггеры, Top Losses (как на странице) ---
+  const APPLY = { ChangeOver: ['Change Over', 'co'], CL_TO: ['CL в ТО', 'to'], CL_Conversion: ['CL в Конвертацию', 'cv'] };
+  const applies = (st.appliesTo || []).filter(a => APPLY[a])
+    .map(a => `<span class="svm-tag svm-tag-${APPLY[a][1]}">${APPLY[a][0]}</span>`).join('');
+  const trig = (st.triggers || []).map(v => `<span class="svm-tag">${escapeHtml(getTriggerLabel(v))}</span>`).join('');
+  const losses = (st.topLosses || []).map(id => findLossById(id)).filter(Boolean)
+    .map(l => `<span class="svm-tag svm-tag-tl">${escapeHtml(l.name)}</span>`).join('');
+  const links = (label, tags) => `<div class="svm-links"><span>${label}</span><div>${tags || '<i class="svm-field-empty">не задано</i>'}</div></div>`;
+  const extraHtml = links('Применять к', applies + (st.forceInChangeOver ? '<span class="svm-tag">всегда в Change Over</span>' : ''))
+    + links('Триггеры Change Over', trig)
+    + links('Top Losses', losses);
+
   const upd = st.updatedAt || st.createdAt;
   const metaHtml = `<div class="svm-foot">${st.author ? `Автор: ${escapeHtml(st.author)} · ` : ''}${upd ? 'обновлён ' + formatDateTime(upd) : ''}</div>`;
 
@@ -210,6 +222,7 @@ function renderStandardViewContent(st, brand, co) {
       </div>
       <aside class="svm-side">
         ${card(`Фото${photos.length ? ` <small>${photos.length}</small>` : ''}`, photosHtml, 'svm-card-photos')}
+        ${card('Дополнительная информация', extraHtml)}
         ${metaHtml}
       </aside>
     </div>`;

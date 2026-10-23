@@ -88,7 +88,7 @@
   font-weight: 800;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: var(--blue-mid);
 }
 
 .svm-card h4 small {
@@ -257,6 +257,60 @@
   text-align: right;
 }
 
+/* Дополнительная информация: Применять к, триггеры, Top Losses — чипами */
+.svm-links + .svm-links {
+  margin-top: 10px;
+}
+
+.svm-links > span {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.svm-links > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.svm-tag {
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-hover);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-second);
+}
+
+.svm-tag-co {
+  color: var(--accent-cyan);
+  border-color: color-mix(in srgb, var(--accent-cyan) 40%, transparent);
+  background: color-mix(in srgb, var(--accent-cyan) 10%, transparent);
+}
+
+.svm-tag-to {
+  color: var(--accent-purple);
+  border-color: color-mix(in srgb, var(--accent-purple) 40%, transparent);
+  background: color-mix(in srgb, var(--accent-purple) 10%, transparent);
+}
+
+.svm-tag-cv {
+  color: var(--accent-emerald);
+  border-color: color-mix(in srgb, var(--accent-emerald) 40%, transparent);
+  background: color-mix(in srgb, var(--accent-emerald) 10%, transparent);
+}
+
+.svm-tag-tl {
+  color: var(--accent-amber);
+  border-color: color-mix(in srgb, var(--accent-amber) 40%, transparent);
+  background: color-mix(in srgb, var(--accent-amber) 10%, transparent);
+}
+
+.svm-field-empty,
 .svm-field b.svm-field-empty {
   font-weight: 500;
   font-style: italic;
