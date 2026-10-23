@@ -165,11 +165,9 @@ button.hist-cc:hover { border-color: var(--k); background: color-mix(in srgb, va
 .hist-cc-none .hist-cc-n { color: var(--text-dim); }
 
 /* === Лента проверок === */
-.hist-day { font-size: 11px; font-weight: 800; color: var(--text-second); text-transform: uppercase; letter-spacing: .5px; margin: 16px 4px 6px; display: flex; gap: 8px; }
-.hist-day span { color: var(--text-dim); font-weight: 600; text-transform: none; letter-spacing: 0; }
 .hist-feed { padding: 0; overflow: hidden; margin-bottom: 0; }
 .hist-rec {
-  display: grid; grid-template-columns: 56px 40px minmax(0, 1.2fr) minmax(0, 1fr) 170px 140px;
+  display: grid; grid-template-columns: 84px 36px minmax(0, 1fr) minmax(0, 1.4fr) 150px 40px;
   gap: 12px; align-items: center; width: 100%; padding: 10px 14px;
   border: 0; border-bottom: 1px solid var(--border); background: transparent;
   text-align: left; font: inherit; color: inherit; cursor: pointer;
@@ -185,7 +183,6 @@ button.hist-cc:hover { border-color: var(--k); background: color-mix(in srgb, va
 .hist-rec-t b { font-size: 13px; color: var(--text-main); }
 .hist-rec-t div { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
 .hist-rec-ctx { font-size: 12px; color: var(--text-second); min-width: 0; }
-.hist-rec-dev { font-size: 11px; color: var(--accent-red); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hist-res { display: flex; flex-direction: column; gap: 4px; }
 .hist-rbar { display: flex; height: 7px; border-radius: 4px; overflow: hidden; background: var(--bg-input); }
 .hist-rbar .ok { background: var(--accent-green); }
@@ -363,3 +360,34 @@ button.hist-cc:hover { border-color: var(--k); background: color-mix(in srgb, va
   .hist-rp-side { position: static; }
   .hist-it { break-inside: avoid; }
 }
+
+/* === Лента: дни, смены, отклонения чипами (сессия 13) === */
+.hist-day { display: flex; align-items: center; gap: 10px; margin: 18px 4px 6px; font-size: 12px; color: var(--text-second); }
+.hist-day > b { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--text-main); }
+.hist-day > span { color: var(--text-dim); font-weight: 600; }
+.hist-day .hist-day-sum { color: var(--text-second); }
+.hist-day-bar { flex: 0 0 120px; height: 5px; border-radius: 3px; overflow: hidden; background: var(--accent-red); margin-left: auto; }
+.hist-day-bar i { display: block; height: 100%; background: var(--accent-green); }
+.hist-rec { padding: 8px 14px; }
+.hist-rec.is-fail { box-shadow: inset 3px 0 0 var(--accent-red); }
+.hist-rec .hist-ico { width: 30px; height: 30px; border-radius: 8px; }
+.hist-rec-sh b { display: block; font-size: 13.5px; font-weight: 800; color: var(--text-main); }
+.hist-rec-sh small { font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.hist-rec-sh-day b { color: var(--accent-cyan); }
+.hist-rec-sh-night b { color: var(--accent-purple); }
+.hist-rec-ctx { display: flex; flex-wrap: wrap; gap: 4px; }
+.hist-dchip { display: inline-flex; align-items: baseline; gap: 5px; max-width: 100%; padding: 2px 8px; border-radius: 6px; font-size: 11px; color: var(--accent-red); background: color-mix(in srgb, var(--accent-red) 9%, transparent); border: 1px solid color-mix(in srgb, var(--accent-red) 25%, transparent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-dchip b { font-weight: 800; }
+.hist-dchip em { font-style: normal; color: var(--text-second); }
+.hist-dchip-more { color: var(--text-second); background: var(--bg-hover); border-color: var(--border); }
+.hist-tag-mj { color: var(--accent-red); background: color-mix(in srgb, var(--accent-red) 12%, transparent); }
+.hist-rec-fold { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 14px; border: 0; background: color-mix(in srgb, var(--accent-green) 5%, transparent); text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.hist-rec-fold:hover { background: color-mix(in srgb, var(--accent-green) 11%, transparent); }
+.hist-rec-fold b { display: block; font-size: 12.5px; color: var(--accent-green); }
+.hist-rec-fold small { font-size: 11px; color: var(--text-dim); }
+.hist-fold-ic { width: 30px; height: 30px; margin-left: 90px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; color: var(--accent-green); background: color-mix(in srgb, var(--accent-green) 14%, transparent); }
+.hist-fold-act { margin-left: auto; font-size: 11.5px; font-weight: 800; color: var(--accent-cyan); }
+.hist-cov-card { margin-bottom: 4px; }
+button.hist-cc.is-pick { outline: 2px solid var(--accent-cyan); outline-offset: 1px; }
+.hist-pick { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 8px 12px; border-radius: 8px; font-size: 12.5px; background: color-mix(in srgb, var(--accent-cyan) 8%, transparent); border: 1px solid color-mix(in srgb, var(--accent-cyan) 30%, transparent); }
+.hist-pick > span { flex: 1; }

@@ -20,7 +20,7 @@ const histState = Object.assign({
   kinds: ['cl', 'electronic', 'toploss', 'cocl'],
   brigade: '', machine: '', workshop: '',
   onlyDev: false
-}, loadHistFilters(), { q: '', limit: HIST_PAGE, scrollY: 0 });
+}, loadHistFilters(), { q: '', limit: HIST_PAGE, scrollY: 0, week: 0, pick: '', open: [] });
 
 function saveHistFilters() {
   const { view, period, from, to, line, kinds, brigade, machine, workshop, onlyDev } = histState;
@@ -124,14 +124,22 @@ function getFilteredHistory(opts = {}) {
     .filter(h => kinds.has(histKind(h)))
     .filter(h => !histState.line || h.line === histState.line)
     .filter(h => histState.line || !histState.workshop || getWorkshopIdForLine(h.line) === histState.workshop)
-    .filter(histPeriodMatch)
+    .filter(h => (histState.pick && histState.line) || histPeriodMatch(h))
     .filter(h => !histState.brigade || histShift(h).letter === histState.brigade)
     .filter(h => !histState.machine || (h.items || []).some(it => it.machine === histState.machine))
+    .filter(h => !histState.pick || !histState.line || histPickMatch(h))
     .filter(h => opts.ignoreOnlyDev || !histState.onlyDev || (h.items || []).some(it => it.status === 'FAIL'))
     .filter(h => histSearchMatch(h, q))
     .map(h => ({ h, key: histOrderKey(h) }))
     .sort((a, b) => b.key.localeCompare(a.key))
     .map(x => x.h);
+}
+
+/* Выбранная в сетке недели смена: 'YYYY-MM-DD|day' */
+function histPickMatch(h) {
+  const [date, shift] = histState.pick.split('|');
+  const s = histShift(h);
+  return s.date === date && s.shift === shift;
 }
 
 /* ============================================================
@@ -182,7 +190,7 @@ function renderHistTotals(list) {
     <span><b>${ok + fail}</b> ${pluralRu(ok + fail, 'пункт', 'пункта', 'пунктов')}</span>
     <span class="${fail ? 'hist-c-fail' : ''}"><b>${fail}</b> ${pluralRu(fail, 'отклонение', 'отклонения', 'отклонений')}</span>
     <span class="${pct != null && pct < 90 ? 'hist-c-warn' : 'hist-c-ok'}"><b>${pct == null ? '—' : pct + '%'}</b> в норме</span>
-    <span class="hist-sub">Покрытие смен и аналитика — на вкладке «Дашборд»</span>`;
+    <span class="hist-sub">${histState.line ? 'Клик по смене в сетке недели — только её проверки' : 'Выберите линию — появится сетка недели по сменам'}</span>`;
 }
 
 function pluralRu(n, one, few, many) {
@@ -331,48 +339,107 @@ function histResultHtml(c) {
   </div>`;
 }
 
-function histStatusTag(c) {
-  if (c.fail) return `<span class="hist-tag hist-tag-fail" title="Отклонения нужно записать в Machine Journal">${CIL_ICONS.warn}Machine Journal</span>`;
-  if (c.unchecked) return '<span class="hist-tag hist-tag-warn">не всё проверено</span>';
-  return `<span class="hist-tag hist-tag-ok">${CIL_ICONS.check}в норме</span>`;
-}
-
 function renderHistFeed(list) {
   const box = $('#historyList');
+  let html = histState.line ? histWeekCardHtml() : '';
   if (!list.length) {
-    box.innerHTML = '<div class="card hist-empty">Проверок по выбранным фильтрам нет</div>';
+    box.innerHTML = html + '<div class="card hist-empty">Проверок по выбранным фильтрам нет</div>';
+    histMarkPick();
     return;
   }
-  const shown = list.slice(0, histState.limit);
-  let html = '';
-  let curDay = null;
-  shown.forEach(h => {
-    const s = histShift(h);
-    if (s.date !== curDay) {
-      if (curDay !== null) html += '</div>';
-      curDay = s.date;
-      const dt = histDayTitle(s.date);
-      const full = histDayName(s.date) + ' ' + fmtShortDate(s.date);
-      html += `<div class="hist-day">${escapeHtml(dt)}${dt !== full ? `<span>${escapeHtml(full)}</span>` : ''}</div><div class="card hist-feed">`;
-    }
+
+  // Итоги дня — по всем отобранным записям, не только показанным
+  const days = {};
+  list.forEach(h => {
+    const d = histShift(h).date;
+    if (!days[d]) days[d] = { n: 0, pts: 0, fail: 0, shifts: new Set() };
     const c = histCounts(h);
-    const firstFail = (h.items || []).find(it => it.status === 'FAIL');
-    const failNote = firstFail
-      ? `<div class="hist-rec-dev">${c.fail > 1 ? c.fail + ' откл. · ' : ''}${escapeHtml(firstFail.oplNumber || histItemTitle(firstFail))}: ${escapeHtml(histDeviationText(h, firstFail))}</div>` : '';
-    html += `<button type="button" class="hist-rec" data-hist-open="${escapeAttr(h.id)}">
-      <div class="hist-rec-tm">${histTime(h)}<small>${escapeHtml(histShiftLabel(s))}</small></div>
-      ${histIcon(histKind(h))}
-      <div class="hist-rec-t"><b>${escapeHtml(histKindLabel(h))}</b><div>${histRecordSub(h)}</div></div>
-      <div class="hist-rec-ctx">${histRecordContext(h)}${failNote}</div>
-      ${histResultHtml(c)}
-      <div class="hist-rec-tag">${histStatusTag(c)}</div>
-    </button>`;
+    days[d].n++;
+    days[d].pts += c.total;
+    days[d].fail += c.fail;
+    days[d].shifts.add(histShift(h).shift);
   });
-  html += '</div>';
+
+  const shown = list.slice(0, histState.limit);
+  const byDay = [];
+  shown.forEach(h => {
+    const d = histShift(h).date;
+    if (!byDay.length || byDay[byDay.length - 1].date !== d) byDay.push({ date: d, recs: [] });
+    byDay[byDay.length - 1].recs.push(h);
+  });
+
+  byDay.forEach(({ date, recs }) => {
+    const sum = days[date];
+    const dt = histDayTitle(date);
+    const full = histDayName(date) + ' ' + fmtShortDate(date);
+    const okPct = sum.pts ? (sum.pts - sum.fail) / sum.pts * 100 : 0;
+    html += `<div class="hist-day">
+      <b>${escapeHtml(dt)}</b>${dt !== full ? `<span>${escapeHtml(full)}</span>` : ''}
+      <span class="hist-day-sum">${sum.n} ${pluralRu(sum.n, 'проверка', 'проверки', 'проверок')} · ${sum.pts} ${pluralRu(sum.pts, 'пункт', 'пункта', 'пунктов')}${sum.fail ? ` · <b class="hist-c-fail">${sum.fail} откл.</b>` : ' · <b class="hist-c-ok">всё в норме</b>'}</span>
+      <span class="hist-day-bar"><i style="width:${okPct}%"></i></span>
+    </div><div class="card hist-feed">`;
+
+    const open = !!histState.pick || histState.onlyDev || histState.open.includes(date);
+    const clean = recs.filter(h => { const c = histCounts(h); return !c.fail && !c.unchecked; });
+    recs.forEach(h => {
+      if (!open && clean.includes(h) && clean.length > 1) return;
+      html += histRecHtml(h);
+    });
+    if (!open && clean.length > 1) {
+      const labels = clean.map(h => histShiftLabel(histShift(h))).join(', ');
+      html += `<button type="button" class="hist-rec-fold" data-hist-expand="${date}">
+        <span class="hist-fold-ic">${CIL_ICONS.check}</span>
+        <span><b>${clean.length} ${pluralRu(clean.length, 'проверка', 'проверки', 'проверок')} в норме</b><small>${escapeHtml(labels)}</small></span>
+        <span class="hist-fold-act">Показать</span>
+      </button>`;
+    }
+    html += '</div>';
+  });
+
   if (list.length > shown.length) {
     html += `<button type="button" class="btn btn-secondary hist-more" data-hist-more>Показать ещё (${list.length - shown.length})</button>`;
   }
   box.innerHTML = html;
+  histMarkPick();
+}
+
+/* Строка проверки: смена крупно, отклонения — чипами */
+function histRecHtml(h) {
+  const s = histShift(h);
+  const c = histCounts(h);
+  const fails = (h.items || []).filter(it => it.status === 'FAIL');
+  const chips = fails.slice(0, 3).map(it => `<span class="hist-dchip" title="${escapeAttr(histItemTitle(it))}">
+      <b>${escapeHtml(it.oplNumber || histItemTitle(it))}</b>${it.machine ? `<em>${escapeHtml(it.machine)}</em>` : ''}${escapeHtml(histDeviationText(h, it))}</span>`).join('')
+    + (fails.length > 3 ? `<span class="hist-dchip hist-dchip-more">+${fails.length - 3}</span>` : '');
+  const ctx = ['cl', 'electronic'].includes(histKind(h)) ? '' : histRecordContext(h);
+  return `<button type="button" class="hist-rec ${c.fail ? 'is-fail' : ''}" data-hist-open="${escapeAttr(h.id)}">
+      <div class="hist-rec-sh hist-rec-sh-${s.shift}"><b>${s.shift === 'day' ? 'День' : 'Ночь'}${s.letter ? ' · ' + escapeHtml(s.letter) : ''}</b><small>${histTime(h)}</small></div>
+      ${histIcon(histKind(h))}
+      <div class="hist-rec-t"><b>${escapeHtml(histKindLabel(h))}</b><div>${histRecordSub(h)}${ctx ? ' · ' + ctx : ''}</div></div>
+      <div class="hist-rec-ctx">${chips || (c.unchecked ? '<span class="hist-c-warn">не всё проверено</span>' : '<span class="hist-sub">отклонений нет</span>')}</div>
+      ${histResultHtml(c)}
+      <div class="hist-rec-tag">${c.fail ? `<span class="hist-tag hist-tag-mj" title="Отклонения нужно записать в Machine Journal">MJ</span>` : ''}</div>
+    </button>`;
+}
+
+/* Сетка недели выбранной линии + плашка выбранной смены */
+function histWeekCardHtml() {
+  let pickBar = '';
+  if (histState.pick) {
+    const [date, shift] = histState.pick.split('|');
+    const letter = getShiftsForDate(date)[shift];
+    pickBar = `<div class="hist-pick">
+      <span>Показаны проверки смены: <b>${histDayName(date)} ${fmtShortDate(date)} · ${shift === 'day' ? 'день' : 'ночь'}${letter ? ' · ' + escapeHtml(letter) : ''}</b></span>
+      <button type="button" class="btn btn-secondary" data-hist-shiftpage>Страница смены</button>
+      <button type="button" class="btn btn-secondary" data-hist-unpick>Все смены</button>
+    </div>`;
+  }
+  return `<div class="card hist-cov-card">${histCoverageHtml(histState.line, histState.week, 'data-hist-week')}${pickBar}</div>`;
+}
+
+function histMarkPick() {
+  if (!histState.pick) return;
+  $(`#historyList [data-hist-shift="${histState.pick}"]`)?.classList.add('is-pick');
 }
 
 /* --- Журнал отклонений --- */
@@ -482,16 +549,34 @@ $('#tab-history')?.addEventListener('click', (e) => {
   }
   if (t.closest('[data-hist-more]')) { histState.limit += HIST_PAGE; return renderHistory(); }
   const shiftCell = t.closest('[data-hist-shift]');
-  if (shiftCell) {
-    const [date, shift] = shiftCell.dataset.histShift.split('|');
+  if (shiftCell && !t.closest('#histRecordView, #histStdView')) {
+    const v = shiftCell.dataset.histShift;
+    histState.pick = histState.pick === v ? '' : v;
+    histState.limit = HIST_PAGE;
+    return renderHistory();
+  }
+  const wk = t.closest('[data-hist-week]');
+  if (wk) {
+    const d = Number(wk.dataset.histWeek);
+    histState.week = d === 0 ? 0 : Math.min(0, histState.week + d);
+    histState.pick = '';
+    return renderHistory();
+  }
+  if (t.closest('[data-hist-unpick]')) { histState.pick = ''; return renderHistory(); }
+  if (t.closest('[data-hist-shiftpage]')) {
+    const [date, shift] = histState.pick.split('|');
     return openHistoryShift(histState.line, date, shift);
   }
+  const fold = t.closest('[data-hist-expand]');
+  if (fold) { histState.open.push(fold.dataset.histExpand); return renderHistory(); }
   const open = t.closest('[data-hist-open]');
   if (open && !t.closest('#histRecordView, #histStdView')) return openHistoryRecord(open.dataset.histOpen);
 });
 
 $('#filterLine')?.addEventListener('change', (e) => {
   histState.line = e.target.value;
+  histState.pick = '';
+  histState.week = 0;
   histFilterChanged();
 });
 $('#histBrigade')?.addEventListener('change', (e) => { histState.brigade = e.target.value; histFilterChanged(); });
