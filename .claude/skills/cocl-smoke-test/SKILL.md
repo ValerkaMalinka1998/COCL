@@ -18,6 +18,13 @@ description: Смоук-тест приложения COCL в headless-брау�
 python3 .claude/skills/cocl-smoke-test/scripts/smoke_test.py --out <scratchpad>/smoke
 ```
 
+На Windows (локальная машина) `python3` — заглушка Microsoft Store; запускать так:
+
+```powershell
+$env:PYTHONIOENCODING = "utf-8"
+& "$env:LOCALAPPDATA\Programs\Python\Python312\python.exe" .claude/skills/cocl-smoke-test/scripts/smoke_test.py --out <scratchpad>/smoke
+```
+
 Полезные флаги:
 - `--line SD01` — линия для Чек-листа / Редактора / Расписания (по умолчанию `SD12`:
   в тестовом бэкапе стандарты есть только на ней).
