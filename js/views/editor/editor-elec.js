@@ -56,7 +56,7 @@ function refreshEditorElecTable() {
   const wrap = $('#editorElecTableWrap');
   const paginationEl = $('#editorElecPagination');
   const lg = $('#editorElecLegend');
-  if (lg) lg.innerHTML = legendHtml(['co', 'to', 'cv', 'inSch', 'val']);
+  if (lg) lg.innerHTML = legendHtml(['co', 'to', 'cv', 'sch', 'valEd']);
   if (!wrap) return;
 
   const line = localStorage.getItem('cl_editor_line') || '';
@@ -104,7 +104,7 @@ function refreshEditorElecTable() {
     const isSelected = editorTableState.elecSelected.has(p.id);
     const id = escapeAttr(p.id);
     html += `
-      <tr data-param-id="${id}" class="${isSelected ? 'is-selected' : ''} ${isActive ? '' : 'et-row-inactive'}">
+      <tr data-param-id="${id}" class="${isSelected ? 'is-selected' : ''} ${isActive ? '' : 'et-row-inactive'} ${validationStatus(p) === 'active' ? 'et-row-val' : ''}">
         <td class="et-c-check cil-z${zones[m]}"><input type="checkbox" class="et-check-row" data-param-id="${id}" ${isSelected ? 'checked' : ''}></td>
         <td><button type="button" class="et-name" data-view-elec="${id}">${escapeHtml(p.paramName || '—')}</button>${valChipHtml(p)}</td>
         <td class="et-c-part">${p.nodePart ? `<span class="et-part-chip et-part-${p.nodePart.toLowerCase()}">${escapeHtml(p.nodePart)}</span>` : '<span class="et-dim">—</span>'}</td>

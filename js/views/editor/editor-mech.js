@@ -130,7 +130,7 @@ function refreshEditorMechTable() {
   const wrap = $('#editorMechTableWrap');
   const paginationEl = $('#editorMechPagination');
   const lg = $('#editorMechLegend');
-  if (lg) lg.innerHTML = legendHtml(['co', 'to', 'cv', 'inSch', 'val']);
+  if (lg) lg.innerHTML = legendHtml(['co', 'to', 'cv', 'sch', 'valEd']);
   if (!wrap) return;
 
   const line = localStorage.getItem('cl_editor_line') || '';
@@ -182,7 +182,7 @@ function refreshEditorMechTable() {
     const id = escapeAttr(st.id);
     const photos = Array.isArray(st.photos) ? st.photos.length : 0;
     html += `
-      <tr data-std-id="${id}" class="${isSelected ? 'is-selected' : ''} ${isActive ? '' : 'et-row-inactive'}">
+      <tr data-std-id="${id}" class="${isSelected ? 'is-selected' : ''} ${isActive ? '' : 'et-row-inactive'} ${validationStatus(st) === 'active' ? 'et-row-val' : ''}">
         <td class="et-c-check cil-z${zones[m]}"><input type="checkbox" class="et-check-row" data-std-id="${id}" ${isSelected ? 'checked' : ''}></td>
         <td class="et-c-opl"><button type="button" class="et-opl" data-open-view="${id}">${escapeHtml(st.oplNumber || '—')}</button></td>
         <td>

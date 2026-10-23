@@ -21,7 +21,10 @@ const LEGEND_ITEMS = {
   co:        () => '<i class="lg-ap lg-ap-co">CO</i>смена сорта',
   to:        () => '<i class="lg-ap lg-ap-to">ТО</i>CL в ТО',
   cv:        () => '<i class="lg-ap lg-ap-cv">КВ</i>CL в Конвертацию',
-  inSch:     () => '<i class="lg-sw lg-sw-sch"></i>в расписании проверок'
+  inSch:     () => '<i class="lg-sw lg-sw-sch"></i>в расписании проверок',
+  // Стандарты CL: то, что реально видно в строках таблицы
+  sch:       () => '<span class="et-sch et-sch-in">N / 14 смен</span>в Расписании CL, отмечено смен из 14 — проверяется в Чек-листе',
+  valEd:     () => '<i class="lg-sw lg-sw-val"></i>на валидации — строка подсвечена, срок рядом с названием'
 };
 
 function legendHtml(keys, label) {
