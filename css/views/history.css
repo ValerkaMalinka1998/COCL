@@ -43,7 +43,6 @@
 .hist-kpi { padding: 10px 12px; border-radius: 10px; background: var(--bg-input); border: 1px solid var(--border); }
 .hist-kpi b { display: block; font-size: 20px; color: var(--text-main); }
 .hist-kpi span { font-size: 11px; color: var(--text-dim); }
-.hist-kpi-ok b { color: var(--accent-green); }
 .hist-kpi-fail b { color: var(--accent-red); }
 .hist-kpi-warn b { color: var(--accent-amber); }
 
@@ -100,7 +99,6 @@
 .hist-totals .hist-c-ok b { color: var(--accent-green); }
 .hist-totals .hist-c-warn b { color: var(--accent-amber); }
 .hist-totals .hist-sub { margin-left: auto; }
-.hist-cov-empty { font-size: 12px; color: var(--text-dim); }
 .hist-cov-h { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 14px; }
 .hist-cov-week { flex: 1; min-width: 0; }
 .hist-cov-wk { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
@@ -174,8 +172,6 @@ button.hist-cc:hover { border-color: var(--k); background: color-mix(in srgb, va
 }
 .hist-rec:last-child { border-bottom: 0; }
 .hist-rec:hover { background: var(--bg-hover); }
-.hist-rec-tm { font-weight: 800; font-size: 13px; color: var(--text-main); }
-.hist-rec-tm small { display: block; font-size: 10px; color: var(--text-dim); font-weight: 600; }
 .hist-ico {
   width: 36px; height: 36px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; flex: none;
   color: var(--k); background: color-mix(in srgb, var(--k) 14%, transparent);
@@ -310,7 +306,6 @@ button.hist-cc:hover { border-color: var(--k); background: color-mix(in srgb, va
 .hist-chart-h h3 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-second); }
 .hist-chart { display: block; max-height: 260px; }
 .hist-chart text { font-size: 10px; fill: var(--text-dim); }
-.hist-ch-band { fill: var(--accent-green); opacity: .1; }
 .hist-ch-norm { stroke: var(--accent-green); stroke-dasharray: 4 4; }
 .hist-ch-line { fill: none; stroke: var(--accent-cyan); stroke-width: 2.5; }
 .hist-ch-pt { fill: var(--bg-card); stroke: var(--accent-cyan); stroke-width: 2; }

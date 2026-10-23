@@ -38,136 +38,6 @@ function isElectronicParamDue(p, dateStr, shiftType) {
   }
 }
 /* ============================================================
-   CL ELECTRONIC — вкладка оператора
-   ============================================================ */
-
-/* Состояние вкладки */
-const elecState = {
-  operator: '',
-  line: '',
-  date: '',        // 'YYYY-MM-DD'
-  shift: '',       // 'A' | 'B' | 'C' | 'D'
-  brand: '',       // бренд на сегодня (auto или override)
-  brandPlanned: '',// из расписания (может быть пустой)
-  brandReason: '', // причина ручного override
-  items: [],       // собранные параметры
-};
-
-
-/* ============================================================
-   CL ELECTRONIC: под-вкладки (Проверка на сегодня / Неделя)
-   ============================================================ */
-
-const ELEC_SUBTAB_KEY = 'cl_elec_subtab';   // 'today' | 'week'
-
-/* Обработчики кнопок под-вкладок */
-document.querySelectorAll('#elecSubtabs .elec-subtab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    switchElecSubtab(btn.dataset.subtab);
-  });
-});
-
-/* ============================================================
-   Чек-лист CL Electronic на сегодня
-   ============================================================ */
-
-$$('#elecChecklistContainer .elec-acc-item').forEach(item => {
-  const operator = ($('#elecOperator')?.value || '').trim();
-  const line = elecState.line;
-  const date = elecState.date;
-  const shift = elecState.shift;
-  const brand = elecState.brand;
-
-  if (!line)     return showToast('Выберите линию', true);
-  if (!brand)    return showToast('Бренд не определён', true);
-
-  const items = [];
-
-  $$('#elecChecklistContainer .checklist-item').forEach(item => {
-    const it = elecState.items.find(x => x.id === item.dataset.elecId);
-    if (!it) return;
-
-    let answer = '—';
-    let status = 'UNCHECKED';
-    let value = null;
-
-    if (it.controlType === 'fixed') {
-      const r = item.querySelector('input[data-elec-ans]:checked');
-      if (r) {
-        answer = r.value === 'OK' ? 'ОК' : 'Не ОК';
-        status = r.value;
-      }
-    } else {
-      const inp = item.querySelector('input[data-elec-value]');
-      if (inp && inp.value !== '') {
-        value = parseFloat(inp.value);
-        if (!isNaN(value)) {
-          const min = it.target - it.tolerance;
-          const max = it.target + it.tolerance;
-          const inRange = value >= min && value <= max;
-          answer = `${value}`;
-          status = inRange ? 'OK' : 'FAIL';
-        }
-      }
-    }
-
-    items.push({
-      standardId: it.id,
-      machine: it.machine,
-      paramName: it.paramName,
-      work: it.work,
-      timeFrom: it.timeFrom,
-      timeTo: it.timeTo,
-      controlType: it.controlType,
-      target: it.target,
-      tolerance: it.tolerance,
-      normText: it.normText,
-      answer,
-      value,
-      status,
-      comment: item.dataset.comment || ''
-    });
-  });
-
-  const checkedCount = items.filter(it => it.status !== 'UNCHECKED').length;
-
-  const record = {
-    id: uid(),
-    timestamp: new Date().toISOString(),
-    mode: 'electronic',
-    operator,
-    line,
-    shift,
-    date,
-    brandPlanned: elecState.brandPlanned || null,
-    brandActual: brand,
-    brandReason: elecState.brandReason || '',
-    items
-  };
-
-  const hist = getHistory();
-  hist.push(record);
-  setHistory(hist);
-  updateNavHistoryCounter();
-
-  showToast(checkedCount === 0 ? 'Проверка сохранена (все пункты — «Не проверено»)' : 'Проверка сохранена');
-
-  renderElectronicSummary(record);
-});
-
-/* Обновить кнопку «Обновить» */
-$('#elecReloadBtn')?.addEventListener('click', () => {
-  refreshElectronicTab();
-});
-
-/* Реакция на смену оператора/линии */
-$('#elecOperator')?.addEventListener('input', () => {
-  elecState.operator = $('#elecOperator').value.trim();
-});
-$('#elecLine')?.addEventListener('change', () => {
-  refreshElectronicTab();
-});
-/* ============================================================
    ПРОВЕРКА CL — логика
    ============================================================ */
 
@@ -458,6 +328,7 @@ function renderClMatrix() {
   wrap.innerHTML = html;
 
   bindClCells();
+  flashClCell();
   bindClWeekNav();
   updateClCheckButtons();
 }
@@ -776,6 +647,20 @@ document.addEventListener('mousedown', (e) => {
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeClPeek(); });
 window.addEventListener('scroll', closeClPeek, true);
 
+/* Ячейка, которую только что отметили: после перерисовки она коротко подсвечивается */
+let clFlashKey = null;
+
+function flashClCell() {
+  if (!clFlashKey) return;
+  const [rowId, dateStr, shift] = clFlashKey.split('|');
+  clFlashKey = null;
+  const btn = [...document.querySelectorAll('#clMatrixWrap .cl-cell')]
+    .find(b => b.dataset.rowId === rowId && b.dataset.date === dateStr && b.dataset.shift === shift);
+  if (!btn) return;
+  btn.classList.add('cil-cell-flash');
+  btn.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+
 function quickSetClCell(rowId, dateStr, shift, status) {
   const row = clState.rows.find(r => r.id === rowId);
   if (!row) return;
@@ -787,6 +672,7 @@ function quickSetClCell(rowId, dateStr, shift, status) {
     value: null,
     comment: ''
   };
+  clFlashKey = key;
 
   renderClMatrix();
 }

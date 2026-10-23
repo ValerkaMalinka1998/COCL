@@ -141,29 +141,36 @@ function openTopLossPickerFor({ workshopId, selected, onApply }) {
 }
 
 /* ============================================================
-   Модалка выбора потерь
+   Окно выбора потерь: слева категории цеха, справа потери,
+   сверху — выбранные (можно снять крестиком)
    ============================================================ */
 
-// Временный набор (до применения)
+// Временный набор (до применения), категория, фильтр «только выбранные»
 let topLossPickerTemp = new Set();
+let tlpCat = 'all';
+let tlpOnlySel = false;
 
 window.openTopLossPickerModal = function() {
   const modal = $('#topLossPickerModal');
   if (!modal) return;
 
-  // Копируем текущие выбранные во временное хранилище
   topLossPickerTemp = new Set(sfTopLossesSelected);
+  tlpCat = 'all';
+  tlpOnlySel = false;
 
-  // Сбрасываем поиск
   const search = $('#topLossPickerSearch');
   if (search) search.value = '';
 
-  // Рисуем список
-  renderTopLossPickerList('');
-  updateTopLossPickerCounter();
+  // Подзаголовок: откуда открыто (цех и линия)
+  const ws = getTopLossPickerWorkshop();
+  const line = topLossPickerContext === 'callback' ? '' : ((svFullState.editingData || {}).line || '');
+  const parts = [];
+  if (ws) parts.push('Цех ' + ((getWorkshop(ws) || {}).name || ws));
+  if (line) parts.push('линия ' + line);
+  $('#topLossPickerSub').textContent = parts.join(' · ');
 
+  renderTopLossPicker();
   openModal(modal);
-
   setTimeout(() => search?.focus(), 100);
 };
 
@@ -177,7 +184,6 @@ function closeTopLossPickerModal() {
   }
 }
 
-/** Отрисовать список категорий и потерь в модалке */
 /* Цех линии, для которой выбираем потери (форма или полная страница) */
 function getTopLossPickerWorkshop() {
   if (topLossPickerContext === 'callback') return topLossPickerCallback?.workshopId || null;
@@ -185,80 +191,78 @@ function getTopLossPickerWorkshop() {
   return line ? getWorkshopIdForLine(line) : null;
 }
 
-function renderTopLossPickerList(query) {
-  const list = $('#topLossPickerList');
-  if (!list) return;
-
+/* Всё окно: категории, выбранные, список потерь, счётчик */
+function renderTopLossPicker() {
   const pickerWs = getTopLossPickerWorkshop();
   const cats = pickerWs ? getTopLossesForWorkshop(pickerWs) : getTopLosses();
-  const q = (query || '').trim().toLowerCase();
+  const q = ($('#topLossPickerSearch')?.value || '').trim().toLowerCase();
+  const sel = topLossPickerTemp;
+  const catsEl = $('#topLossPickerCats');
+  const list = $('#topLossPickerList');
+  if (!catsEl || !list) return;
 
   if (!cats.length) {
+    catsEl.innerHTML = '';
     list.innerHTML = '<div class="empty-state" style="padding:20px">Справочник Top Losses пуст</div>';
+    updateTopLossPickerCounter();
     return;
   }
+  if (tlpCat !== 'all' && !cats.some(c => c.id === tlpCat)) tlpCat = 'all';
 
+  const match = (cat, it) => (!q || it.name.toLowerCase().includes(q) || cat.name.toLowerCase().includes(q))
+    && (!tlpOnlySel || sel.has(it.id));
+  const itemsOf = (cat) => (Array.isArray(cat.items) ? cat.items : []);
+
+  // Категории слева: выбрано / всего
+  const totalAll = cats.reduce((n, c) => n + itemsOf(c).length, 0);
+  const selAll = cats.reduce((n, c) => n + itemsOf(c).filter(it => sel.has(it.id)).length, 0);
+  const catBtn = (id, name, picked, total) => `
+    <button type="button" class="tlp-cat ${tlpCat === id ? 'active' : ''}" data-tlp-cat="${escapeAttr(id)}">
+      <span class="tlp-cat-name">${escapeHtml(name)}</span>
+      <span class="tlp-cat-n ${picked ? 'has' : ''}">${picked ? picked + ' / ' : ''}${total}</span>
+    </button>`;
+  catsEl.innerHTML = catBtn('all', 'Все', selAll, totalAll) + cats.map(c =>
+    catBtn(c.id, c.name, itemsOf(c).filter(it => sel.has(it.id)).length, itemsOf(c).length)).join('');
+
+  // Выбранные сверху
+  const byId = {};
+  cats.forEach(c => itemsOf(c).forEach(it => { byId[it.id] = it; }));
+  const pickedIds = [...sel].filter(id => byId[id]);
+  $('#topLossPickerPicked').innerHTML = pickedIds.length
+    ? pickedIds.map(id => `<span class="tlp-chip">${escapeHtml(byId[id].name)}<button type="button" data-tlp-drop="${escapeAttr(id)}" title="Убрать">✕</button></span>`).join('')
+    : '<span class="tlp-picked-empty">Ничего не выбрано — отметьте потери ниже</span>';
+  $('#topLossPickerOnly')?.classList.toggle('active', tlpOnlySel);
+
+  // Потери справа
   let html = '';
-
   cats.forEach(cat => {
-    const items = Array.isArray(cat.items) ? cat.items : [];
-
-    // Фильтрация
-    let visible = items;
-    if (q) {
-      visible = items.filter(it =>
-        it.name.toLowerCase().includes(q) ||
-        cat.name.toLowerCase().includes(q)
-      );
-    }
-
-    // Если в категории нет видимых и запрос не совпал с названием — скрываем
+    if (tlpCat !== 'all' && cat.id !== tlpCat) return;
+    const visible = itemsOf(cat).filter(it => match(cat, it));
     if (!visible.length) return;
-
     html += `
-      <div class="toploss-picker-group" data-cat-id="${escapeAttr(cat.id)}">
-        <div class="toploss-picker-group-head">
-          <span class="toploss-picker-group-name">${escapeHtml(cat.name)}</span>
-          <span class="toploss-picker-group-count">${visible.length}</span>
+      <div class="tlp-group">
+        ${tlpCat === 'all' ? `<div class="tlp-group-name">${escapeHtml(cat.name)}</div>` : ''}
+        <div class="tlp-grid">
+          ${visible.map(it => `
+            <button type="button" class="tlp-item ${sel.has(it.id) ? 'checked' : ''}" data-tlp-item="${escapeAttr(it.id)}">
+              <span class="tlp-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+              <span class="tlp-item-name">${escapeHtml(it.name)}</span>
+            </button>`).join('')}
         </div>
-        <div class="toploss-picker-group-body">
-          ${visible.map(it => {
-            const checked = topLossPickerTemp.has(it.id);
-            return `
-              <label class="toploss-picker-item ${checked ? 'checked' : ''}" data-loss-id="${escapeAttr(it.id)}">
-                <input type="checkbox" value="${escapeAttr(it.id)}" ${checked ? 'checked' : ''}>
-                <span>${escapeHtml(it.name)}</span>
-              </label>
-            `;
-          }).join('')}
-        </div>
-      </div>
-    `;
+      </div>`;
   });
-
-  list.innerHTML = html || '<div class="empty-state" style="padding:20px">Ничего не найдено</div>';
-
-  // Обработчики
-  list.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-    cb.addEventListener('change', (e) => {
-      const id = e.target.value;
-      if (e.target.checked) {
-        topLossPickerTemp.add(id);
-      } else {
-        topLossPickerTemp.delete(id);
-      }
-      e.target.closest('.toploss-picker-item').classList.toggle('checked', e.target.checked);
-      updateTopLossPickerCounter();
-    });
-  });
+  list.innerHTML = html || `<div class="empty-state" style="padding:20px">${tlpOnlySel && !sel.size ? 'Пока ничего не выбрано' : 'Ничего не найдено'}</div>`;
+  updateTopLossPickerCounter();
 }
 
 function updateTopLossPickerCounter() {
   const el = $('#topLossPickerCounter');
   if (el) el.textContent = 'Выбрано: ' + topLossPickerTemp.size;
+  const clr = $('#topLossPickerClear');
+  if (clr) clr.disabled = !topLossPickerTemp.size;
 }
 
-/** Применить выбор из модалки */
+/** Применить выбор из окна */
 function applyTopLossPicker() {
   sfTopLossesSelected = [...topLossPickerTemp];
 
@@ -270,13 +274,11 @@ function applyTopLossPicker() {
     return;
   }
 
-  // Контекст: новый полный просмотр
+  // Контекст: полная страница стандарта
   if (topLossPickerContext === 'sv-full') {
-    // Обновляем editingData
     if (svFullState.editingData) {
       svFullState.editingData.topLosses = [...sfTopLossesSelected];
     }
-    // Перерисовываем блок доп. инфо
     const st = svFullState.editingData;
     if (st) renderSvFullExtra(st, true);
   }
@@ -284,15 +286,31 @@ function applyTopLossPicker() {
   closeTopLossPickerModal();
 }
 
-/* --- Обработчики модалки --- */
+/* --- Обработчики окна (делегирование: список перерисовывается) --- */
 $('#topLossPickerClose')?.addEventListener('click', closeTopLossPickerModal);
 $('#topLossPickerCancel')?.addEventListener('click', closeTopLossPickerModal);
 $('#topLossPickerApply')?.addEventListener('click', applyTopLossPicker);
-$('#topLossPickerModal')?.addEventListener('click', (e) => {
-  if (e.target.id === 'topLossPickerModal') closeTopLossPickerModal();
+$('#topLossPickerClear')?.addEventListener('click', () => {
+  topLossPickerTemp.clear();
+  renderTopLossPicker();
 });
-$('#topLossPickerSearch')?.addEventListener('input', (e) => {
-  renderTopLossPickerList(e.target.value);
+$('#topLossPickerOnly')?.addEventListener('click', () => {
+  tlpOnlySel = !tlpOnlySel;
+  renderTopLossPicker();
+});
+$('#topLossPickerSearch')?.addEventListener('input', () => renderTopLossPicker());
+$('#topLossPickerModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'topLossPickerModal') { closeTopLossPickerModal(); return; }
+  const cat = e.target.closest('[data-tlp-cat]');
+  if (cat) { tlpCat = cat.dataset.tlpCat; renderTopLossPicker(); return; }
+  const drop = e.target.closest('[data-tlp-drop]');
+  if (drop) { topLossPickerTemp.delete(drop.dataset.tlpDrop); renderTopLossPicker(); return; }
+  const item = e.target.closest('[data-tlp-item]');
+  if (item) {
+    const id = item.dataset.tlpItem;
+    if (topLossPickerTemp.has(id)) topLossPickerTemp.delete(id); else topLossPickerTemp.add(id);
+    renderTopLossPicker();
+  }
 });
 
 /* ============================================================

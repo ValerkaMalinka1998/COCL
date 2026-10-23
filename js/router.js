@@ -7,8 +7,56 @@
  * @param {string} tabName — 'check' | 'editor' | 'history' | 'settings'
  * @param {boolean} pushHistory — добавить запись в историю браузера
  */
+/* Страницы с несохранёнными данными: новый стандарт и изменённый E-Param.
+   Уход через меню, «назад» браузера или ссылку спрашивает подтверждение. */
+function pageHasUnsaved(tabId) {
+  if (tabId === 'standard-view') {
+    return typeof svFullState !== 'undefined' && svFullState.isNew && svFullState.mode === 'edit';
+  }
+  if (tabId === 'eparam-edit') {
+    return typeof epPageState !== 'undefined' && !!epPageState.data && epPageState.dirty === true;
+  }
+  return false;
+}
+
+/* true — можно уходить (данные страницы при этом сбрасываются) */
+function confirmLeavePage(nextTab) {
+  const cur = document.querySelector('.tab.active');
+  const curId = cur ? cur.id.replace('tab-', '') : '';
+  if (!curId || curId === nextTab || !pageHasUnsaved(curId)) return true;
+  const what = curId === 'standard-view' ? 'Новый стандарт не будет создан.' : 'Изменения не будут сохранены.';
+  if (!confirm('Выйти без сохранения? ' + what)) return false;
+  if (curId === 'standard-view') {
+    svFullState.standardId = null;
+    svFullState.isNew = false;
+    svFullState.mode = 'view';
+    svFullState.originalData = null;
+    svFullState.editingData = null;
+  } else {
+    epPageState.data = null;
+    epPageState.isNew = false;
+    epPageState.dirty = false;
+    epPageState.readOnly = false;
+  }
+  return true;
+}
+
+window.addEventListener('beforeunload', (e) => {
+  if (pageHasUnsaved('standard-view') || pageHasUnsaved('eparam-edit')) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
 function switchTab(tabName, pushHistory = true) {
   if (!tabName) tabName = 'electronic';
+
+  if (!confirmLeavePage(tabName)) {
+    // «Назад» браузера уже сменил адрес — возвращаем его на текущую страницу
+    const cur = document.querySelector('.tab.active');
+    if (!pushHistory && cur) history.pushState({ tab: cur.id.replace('tab-', '') }, '', '#' + cur.id.replace('tab-', ''));
+    return;
+  }
 
   // Проверяем, что вкладка существует
   const tabEl = document.getElementById('tab-' + tabName);

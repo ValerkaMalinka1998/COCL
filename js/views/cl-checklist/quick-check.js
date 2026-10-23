@@ -379,6 +379,7 @@ function saveQuickCheck(goNext) {
 
   const key = `${row.id}|${date}|${shift}`;
   clState.quickDraft[key] = { status, answer, value, comment };
+  clFlashKey = key;
 
   renderClMatrix();
   const next = goNext ? getQcNext() : null;
@@ -442,41 +443,6 @@ document.addEventListener('click', (e) => {
     closeQuickCheckModal();
   }
 });
-
-/* Модалка комментария — переиспользуем существующую, но в неё надо передать dataset.comment */
-function openCommentModalElec(item) {
-  currentCommentItem = item;
-  const it = elecState.items.find(x => x.id === item.dataset.elecId);
-  $('#commentModalPoint').textContent = it
-    ? `${it.machine || ''} · ${it.paramName || ''}`
-    : '';
-  $('#commentText').value = item.dataset.comment || '';
-  openModal('#commentModal');
-  setTimeout(() => $('#commentText').focus(), 100);
-}
-
-/* Модалка override бренда */
-window.openElecBrandOverrideDialog = function() {
-  const brands = getBrandsForLine(elecState.line);
-  if (!brands.length) return showToast('На линии нет брендов', true);
-
-  const brandList = brands.map(b => `${b}`).join(', ');
-  const current = elecState.brand || '';
-  const newBrand = prompt(`Бренд на ${fmtISODate(elecState.date)}\nДоступные: ${brandList}`, current);
-  if (newBrand === null) return;
-  const trimmed = newBrand.trim();
-  if (!trimmed) return;
-  if (!brands.includes(trimmed)) {
-    return showToast('Бренд не найден на линии', true);
-  }
-  if (trimmed === elecState.brand) return; // без изменений
-
-  const reason = prompt('Причина изменения (кратко):', '') || '';
-  elecState.brand = trimmed;
-  elecState.brandReason = reason.trim();
-
-  refreshElectronicTab();
-};
 
 /* Канонические категории Top Losses — у каждого цеха свой набор */
 const TOP_LOSS_CATEGORY_NAMES = ['Увеличенные остановки', 'Дефекты по качеству', 'Повышенные выбросы'];

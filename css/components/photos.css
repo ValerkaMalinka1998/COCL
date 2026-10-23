@@ -98,97 +98,6 @@
     grid-template-columns: 1fr;
   }
 }
-/* ============ Фотографии в форме стандарта ============ */
-.photo-card {
-  position: relative;
-  aspect-ratio: 1 / 1;
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-  cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-.photo-card:hover {
-  border-color: var(--accent-cyan);
-  box-shadow: 0 0 12px rgba(58, 166, 240, 0.3);
-}
-.photo-card img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-.photo-card .photo-name {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 4px 8px;
-  background: linear-gradient(0deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 100%);
-  color: #ffffff;
-  font-size: 11px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-}
-.photo-card .photo-remove {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(230, 36, 79, 0.9);
-  color: #ffffff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  opacity: 0;
-  transition: opacity 0.15s, transform 0.15s;
-  z-index: 2;
-}
-.photo-card:hover .photo-remove {
-  opacity: 1;
-}
-.photo-card .photo-remove:hover {
-  transform: scale(1.1);
-}
-.photo-card .photo-remove svg {
-  width: 14px;
-  height: 14px;
-  display: block;
-  pointer-events: none;
-}
-.photo-card .photo-missing {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 12px;
-  text-align: center;
-  color: var(--accent-amber);
-  font-size: 11px;
-  background: repeating-linear-gradient(
-    45deg,
-    rgba(232, 154, 0, 0.06) 0,
-    rgba(232, 154, 0, 0.06) 8px,
-    transparent 8px,
-    transparent 16px
-  );
-}
-.photo-card .photo-missing svg {
-  width: 24px;
-  height: 24px;
-  opacity: 0.7;
-}
 .photos-empty {
   padding: 16px;
   text-align: center;
@@ -223,9 +132,6 @@
   color: var(--text-second);
 }
 .sv-chip-cyan { background: rgba(58, 166, 240, 0.1); color: var(--accent-cyan); border-color: rgba(58, 166, 240, 0.4); }
-.sv-chip-purple { background: rgba(123, 92, 255, 0.1); color: var(--accent-purple); border-color: rgba(123, 92, 255, 0.4); }
-.sv-chip-amber { background: rgba(232, 154, 0, 0.1); color: var(--accent-amber); border-color: rgba(232, 154, 0, 0.4); }
-.sv-chip-green { background: rgba(0, 196, 122, 0.1); color: var(--accent-green); border-color: rgba(0, 196, 122, 0.4); }
 
 /* ============================================================ */
 /* === ЛАЙТБОКС =============================================== */

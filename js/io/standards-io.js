@@ -196,14 +196,14 @@ async function editorDownloadTemplate() {
    РЕДАКТОР: экспорт стандартов линии в XLSX
    ============================================================ */
 
-async function editorExportLine() {
+async function editorExportLine(onlyIds) {
   if (typeof ExcelJS === 'undefined') {
     return showToast('Библиотека ExcelJS не загружена', true);
   }
   const line = currentEditorLine || localStorage.getItem('cl_editor_line');
   if (!line) return showToast('Сначала выберите линию', true);
 
-  const standards = getStandards().filter(s => s.line === line);
+  const standards = getStandards().filter(s => s.line === line && (!onlyIds || onlyIds.includes(s.id)));
   if (!standards.length) return showToast('На этой линии нет стандартов', true);
 
   const wb = new ExcelJS.Workbook();

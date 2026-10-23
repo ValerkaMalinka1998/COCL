@@ -255,6 +255,7 @@ function updateMechSelectionUI(filtered) {
   document.querySelectorAll('#editorMechTableWrap tr[data-std-id]').forEach(tr => {
     tr.classList.toggle('is-selected', editorTableState.mechSelected.has(tr.dataset.stdId));
   });
+  if (typeof updateEditorBulk === 'function') updateEditorBulk('mech');
 }
 
 /* --- Пагинация --- */
