@@ -192,6 +192,14 @@ function formatCilDuration(sec) {
   return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
+/* Чип «часы + мм:сс» с временем на проверку; пусто, если времени нет */
+function cilDurChip(sec, cls) {
+  const txt = formatCilDuration(sec);
+  return txt
+    ? `<span class="${cls}" title="Время на проверку"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${txt}</span>`
+    : '';
+}
+
 /* Строка «∑ время» под подписью смены; пусто, если времени нет */
 function cilShiftTotalHtml(sec) {
   const txt = formatCilDuration(sec);

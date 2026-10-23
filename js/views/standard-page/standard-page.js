@@ -338,6 +338,7 @@ function renderSvMainFields(st, isEdit) {
           <option value="variable"  ${st.controlType === 'variable' ? 'selected' : ''}>Вариабельный</option>
           <option value="interval"  ${st.controlType === 'interval' ? 'selected' : ''}>Контролируемый интервал</option>
         </select>
+        <div class="ct-hint" id="svf_typeHint">${controlTypeHintHtml(st.controlType)}</div>
       </div>
       <div class="sv-full-field-edit">
         <label>Статус</label>
@@ -605,7 +606,7 @@ function renderSvBrandsTable(measurements) {
         cells += `<td class="bt-td-value">
           <input type="text" class="bt-point-input"
                  data-row="${rowIndex}" data-col="${i}"
-                 value="${escapeAttr(val)}" placeholder="0">
+                 value="${escapeAttr(val)}" placeholder="${escapeAttr((CONTROL_TYPE_HELP[$('#svf_controlType')?.value || svFullState.editingData?.controlType] || {}).placeholder || '0')}">
         </td>`;
       }
 

@@ -56,3 +56,17 @@
 .cl-shift-C { color: var(--accent-amber);  background: rgba(232, 154, 0, 0.12);   border: 1px solid rgba(232, 154, 0, 0.4); }
 .cl-shift-D { color: var(--accent-green);  background: rgba(0, 196, 122, 0.12);   border: 1px solid rgba(0, 196, 122, 0.4); }
 
+
+/* === Итог смены для доски =================================== */
+.clb-modal { max-width: 560px; }
+.clb-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.clb-table th, .clb-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: center; }
+.clb-table th:first-child, .clb-table td:first-child { text-align: left; color: var(--text-second); }
+.clb-table th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-dim); }
+.clb-table b { font-size: 18px; font-variant-numeric: tabular-nums; color: var(--text-main); }
+.clb-table b.clb-bad { color: var(--accent-red); }
+.clb-table b.clb-good { color: var(--accent-green); }
+.clb-dim { color: var(--text-dim); font-size: 12px; }
+.clb-open-title { margin: 16px 0 6px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-dim); }
+.clb-open { margin: 0; padding-left: 18px; font-size: 13px; color: var(--text-second); line-height: 1.6; }
+.clb-open li.clb-bad { color: var(--accent-red); }

@@ -605,8 +605,9 @@ function updateChecklist() {
   const relevant = getCoclRelevant({ type, line, part, brandFrom, brandTo, triggers: getSelectedTriggers() });
 
   if (info) {
+    const totalTxt = formatCilDuration(relevant.reduce((s, st) => s + cilRowDurationSec(st), 0));
     info.textContent = relevant.length
-      ? `${relevant.length} ${pluralizeStandards(relevant.length)} к проверке`
+      ? `${relevant.length} ${pluralizeStandards(relevant.length)} к проверке${totalTxt ? ` · ∑ ${totalTxt}` : ''}`
       : '';
   }
   if (btn) btn.disabled = relevant.length === 0;
@@ -674,6 +675,7 @@ function renderChecklist(items) {
 
     const meta = [st.oplNumber, st.node, block && block.brand ? 'бренд ' + block.brand : ''].filter(Boolean)
       .map(escapeHtml).join(' · ');
+    const timeHtml = cilDurChip(cilRowDurationSec(st), 'cocl-row-time');
 
     return `
       <div class="cocl-acc-item cocl-row" data-std-id="${st.id}" data-status="unchecked">
@@ -684,6 +686,7 @@ function renderChecklist(items) {
             <div class="cocl-acc-meta">${meta}</div>
           </div>
           <span class="cocl-row-norm">${escapeHtml(normText)}</span>
+          ${timeHtml}
           <div class="cocl-row-tools">
             <button type="button" class="cocl-acc-comment-btn" data-comment-btn title="Комментарий">${cmtIcon(16, true)}</button>
             <button type="button" class="cocl-acc-view-btn" data-view-btn data-std-id="${escapeAttr(st.id)}" title="Посмотреть стандарт">

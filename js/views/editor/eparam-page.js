@@ -221,12 +221,19 @@ function renderEparamMainFields(p) {
     </div>
     ${partHtml}
     <div class="sv-full-field-edit">
+      <label>Время на проверку (секунд)</label>
+      <input type="number" id="epf_durationSec" min="0" step="1"
+             value="${escapeAttr(p.durationSec || 0)}" placeholder="30">
+      <p class="sv-field-hint">60 сек = 1 мин. Время входит в сумму смены в Чек-листе.</p>
+    </div>
+    <div class="sv-full-field-edit">
       <label class="required">Тип контроля</label>
       <select id="epf_controlType">
         <option value="fixed"    ${p.controlType === 'fixed'    ? 'selected' : ''}>Фиксированный — ОК / Не ОК</option>
         <option value="variable" ${p.controlType === 'variable' ? 'selected' : ''}>Вариабельный — норма ± допуск</option>
         <option value="interval" ${p.controlType === 'interval' ? 'selected' : ''}>Контролируемый интервал — от … до</option>
       </select>
+      <div class="ct-hint" id="epf_typeHint">${controlTypeHintHtml(p.controlType)}</div>
     </div>
     <div class="sv-full-field-edit">
       <label>Статус</label>
@@ -431,6 +438,7 @@ $('#tab-eparam-edit')?.addEventListener('input', (e) => {
     if (titleEl) titleEl.textContent = t.value || (epPageState.isNew ? 'Новый электронный параметр' : 'Электронный параметр');
   }
   if (t.id === 'epf_normText') p.normText = t.value;
+  if (t.id === 'epf_durationSec') p.durationSec = Math.max(0, parseInt(t.value, 10) || 0);
   // Живой пересчёт диапазона «норма ± допуск»
   const tr = t.closest('tr[data-ep-row]');
   if (tr && tr.querySelector('[data-ep-range]')) {
@@ -636,6 +644,7 @@ $('#epPageSaveBtn')?.addEventListener('click', () => {
     machine,
     nodePart: isSmd ? p.nodePart : '',
     paramName,
+    durationSec: Math.max(0, Number(p.durationSec) || 0),
     controlType: p.controlType,
     normText: p.controlType === 'fixed' ? p.normText.trim() : '',
     valuesByBrand,

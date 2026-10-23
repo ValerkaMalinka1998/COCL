@@ -935,3 +935,7 @@ div.tl-pick-area-h { cursor: default; }
 /* TOP Losses: кнопка «К выбору линии» в шапке */
 .tl2-top-l { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
 .tl2-back { display: inline-flex; align-items: center; gap: 6px; }
+
+/* === TOP LOSSES: время проверки ============================== */
+.tl3-time { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; font-variant-numeric: tabular-nums; color: var(--text-dim); }
+.tl3-timebox { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin: 0 0 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 13px; color: var(--text-second); font-variant-numeric: tabular-nums; }
