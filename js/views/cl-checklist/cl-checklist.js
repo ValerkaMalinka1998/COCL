@@ -460,6 +460,7 @@ function renderClRow(row, num, zone, cells, hist, isElec) {
         ${row.node ? `<span class="cil-node">${CIL_ICONS.gear}${escapeHtml(row.node)}</span>` : ''}
         ${cilWorkTag(normWork(freq.work))}
         ${cilTimeChips(freq.timeWindows, freq.work)}
+        ${cilDurChip(cilRowDurationSec(row), 'cil-tag cil-tag-dur')}
       </div>
     </td>
     <td class="cil-c-norm">${norm.html}</td>`;

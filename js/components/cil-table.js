@@ -184,7 +184,7 @@ function cilHeadHtml(dateByDayIdx, opts) {
   return `<thead>${r1}</tr>${r2}</tr></thead>`;
 }
 
-/* Время на проверку строки, сек (только механические стандарты) */
+/* Время на проверку строки, сек (стандарт или E-Param — поле durationSec) */
 function cilRowDurationSec(row) {
   return Math.max(0, Number(row && row.durationSec) || 0);
 }

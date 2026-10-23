@@ -147,6 +147,7 @@ function openClCheckModal(rowId, dateStr, shift) {
   $('#qcCtx').innerHTML = [
     `<span>${fmtISODate(dateStr)} · ${shift === 'day' ? 'День' : 'Ночь'} · смена ${escapeHtml(shiftLetter)}</span>`,
     tw ? `<span>время ${escapeHtml(tw)}</span>` : '',
+    cilRowDurationSec(row) ? `<span>на проверку ${escapeHtml(formatSvDuration(cilRowDurationSec(row)))}</span>` : '',
     `<span class="${brand ? 'qcx-brand' : 'qcx-nobrand'}">${brand ? 'бренд ' + escapeHtml(brand) : 'бренд не задан'}</span>`,
     (() => {
       const pick = getQcBrandPick();

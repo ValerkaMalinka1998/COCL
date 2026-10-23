@@ -522,6 +522,7 @@ function renderScheduleRow(row, dateByDayIdx, num, zone, isElec) {
         ${row.node ? `<span class="cil-node">${CIL_ICONS.gear}${escapeHtml(row.node)}</span>` : ''}
         <button type="button" class="cil-tag cil-tag-${work.toLowerCase()}" data-work-toggle="${id}" title="Переключить Run → Stop → CIL">${work.toUpperCase()}</button>
         ${cilTimeChips(freq.timeWindows, freq.work)}
+        ${cilDurChip(cilRowDurationSec(row), 'cil-tag cil-tag-dur')}
       </div>
       ${member ? `<button type="button" class="cil-row-del" data-remove-from-schedule="${id}" title="Убрать из расписания">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
