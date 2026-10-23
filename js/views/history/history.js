@@ -20,7 +20,7 @@ const histState = Object.assign({
   kinds: ['cl', 'electronic', 'toploss', 'cocl'],
   brigade: '', machine: '', workshop: '',
   onlyDev: false
-}, loadHistFilters(), { q: '', limit: HIST_PAGE, covWeek: 0, scrollY: 0 });
+}, loadHistFilters(), { q: '', limit: HIST_PAGE, scrollY: 0 });
 
 function saveHistFilters() {
   const { view, period, from, to, line, kinds, brigade, machine, workshop, onlyDev } = histState;
@@ -161,40 +161,28 @@ function renderHistory() {
   $('#histSubtitle').textContent = `${histState.line || (histState.workshop ? 'Цех ' + (getWorkshop(histState.workshop)?.name || '') : 'Все линии')} · ${periodText}`;
 
   const list = getFilteredHistory();
-  renderHistKpis(list);
-  renderHistCoverage();
+  renderHistTotals(list);
 
   if (histState.view === 'dev') renderHistDeviations();
   else renderHistFeed(list);
 }
 
-function renderHistKpis(list) {
+/* Итог по отобранным записям — строкой под фильтрами */
+function renderHistTotals(list) {
+  const box = $('#histTotals');
+  if (!box) return;
   let ok = 0, fail = 0;
-  const failByStd = {};
   list.forEach(h => (h.items || []).forEach(it => {
     if (it.status === 'OK') ok++;
-    if (it.status === 'FAIL') {
-      fail++;
-      const k = h.line + '|' + it.standardId;
-      failByStd[k] = (failByStd[k] || 0) + 1;
-    }
+    if (it.status === 'FAIL') fail++;
   }));
-  const repeats = Object.values(failByStd).filter(n => n >= 2).length;
   const pct = ok + fail ? Math.round(ok / (ok + fail) * 100) : null;
-  let missed = '—';
-  let missedSub = 'выберите линию';
-  if (histState.line) {
-    missed = 0;
-    histCoverage(histState.line, histState.covWeek).forEach(d =>
-      ['day', 'night'].forEach(s => { if (d.shifts[s].state === 'missed') missed++; }));
-    missedSub = 'пропущено смен CL за неделю';
-  }
-  $('#histKpis').innerHTML = `
-    <div class="hist-kpi"><b>${list.length}</b><span>${pluralRu(list.length, 'проверка', 'проверки', 'проверок')}</span></div>
-    <div class="hist-kpi hist-kpi-ok"><b>${pct == null ? '—' : pct + '%'}</b><span>пунктов в норме</span></div>
-    <div class="hist-kpi ${fail ? 'hist-kpi-fail' : ''}"><b>${fail}</b><span>${pluralRu(fail, 'отклонение', 'отклонения', 'отклонений')}</span></div>
-    <div class="hist-kpi ${missed ? 'hist-kpi-warn' : ''}"><b>${missed}</b><span>${missedSub}</span></div>
-    <div class="hist-kpi ${repeats ? 'hist-kpi-fail' : ''}"><b>${repeats}</b><span>повторяются ≥ 2 раз</span></div>`;
+  box.innerHTML = `
+    <span><b>${list.length}</b> ${pluralRu(list.length, 'проверка', 'проверки', 'проверок')}</span>
+    <span><b>${ok + fail}</b> ${pluralRu(ok + fail, 'пункт', 'пункта', 'пунктов')}</span>
+    <span class="${fail ? 'hist-c-fail' : ''}"><b>${fail}</b> ${pluralRu(fail, 'отклонение', 'отклонения', 'отклонений')}</span>
+    <span class="${pct != null && pct < 90 ? 'hist-c-warn' : 'hist-c-ok'}"><b>${pct == null ? '—' : pct + '%'}</b> в норме</span>
+    <span class="hist-sub">Покрытие смен и аналитика — на вкладке «Дашборд»</span>`;
 }
 
 function pluralRu(n, one, few, many) {
@@ -204,26 +192,6 @@ function pluralRu(n, one, few, many) {
   return many;
 }
 
-/* --- Покрытие смен Чек-листа CL --- */
-function renderHistCoverage() {
-  const box = $('#histCoverage');
-  if (!box) return;
-  if (!histState.line) {
-    box.innerHTML = `<div class="hist-cov-empty">Выберите линию — здесь появится покрытие смен Чек-листа CL за неделю.</div>`;
-    return;
-  }
-  box.innerHTML = histCoverageHtml(histState.line, histState.covWeek, 'data-hist-week');
-}
-
-/* Номер недели ISO 8601 для даты 'YYYY-MM-DD' */
-function histIsoWeek(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
-  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
-  const jan4 = new Date(d.getFullYear(), 0, 4);
-  return 1 + Math.round(((d - jan4) / 864e5 - 3 + ((jan4.getDay() + 6) % 7)) / 7);
-}
-
-/* Неделя смен Чек-листа CL (Пн–Вс × день/ночь); weekAttr — атрибут кнопок недели */
 function histCoverageHtml(line, weekOffset, weekAttr) {
   const week = histCoverage(line, weekOffset);
   const today = getCurrentShiftPeriod().date;
@@ -492,7 +460,6 @@ $('#tab-history')?.addEventListener('click', (e) => {
     histState.workshop = ws.dataset.histWs || '';
     // линия другого цеха больше не подходит — сбрасываем на «Все линии»
     if (histState.line && histState.workshop && getWorkshopIdForLine(histState.line) !== histState.workshop) histState.line = '';
-    histState.covWeek = 0;
     fillHistoryFilters();
     return histFilterChanged();
   }
@@ -504,12 +471,6 @@ $('#tab-history')?.addEventListener('click', (e) => {
     if (!set.size) Object.keys(HIST_KINDS).forEach(x => set.add(x));
     histState.kinds = [...set];
     return histFilterChanged();
-  }
-  const week = t.closest('[data-hist-week]');
-  if (week) {
-    const d = parseInt(week.dataset.histWeek, 10);
-    histState.covWeek = d === 0 ? 0 : Math.min(0, histState.covWeek + d);
-    return renderHistory();
   }
   if (t.closest('[data-hist-more]')) { histState.limit += HIST_PAGE; return renderHistory(); }
   const shiftCell = t.closest('[data-hist-shift]');
@@ -523,7 +484,6 @@ $('#tab-history')?.addEventListener('click', (e) => {
 
 $('#filterLine')?.addEventListener('change', (e) => {
   histState.line = e.target.value;
-  histState.covWeek = 0;
   histFilterChanged();
 });
 $('#histBrigade')?.addEventListener('change', (e) => { histState.brigade = e.target.value; histFilterChanged(); });

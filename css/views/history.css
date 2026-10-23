@@ -88,6 +88,18 @@
 
 /* === Покрытие смен === */
 .hist-cov-card { padding: 14px 16px; }
+
+/* Итог по отобранным записям */
+.hist-totals {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px;
+  padding: 12px 16px; border-top: 1px solid var(--border);
+  font-size: 12px; color: var(--text-second);
+}
+.hist-totals b { font-size: 15px; color: var(--text-main); margin-right: 4px; }
+.hist-totals .hist-c-fail b { color: var(--accent-red); }
+.hist-totals .hist-c-ok b { color: var(--accent-green); }
+.hist-totals .hist-c-warn b { color: var(--accent-amber); }
+.hist-totals .hist-sub { margin-left: auto; }
 .hist-cov-empty { font-size: 12px; color: var(--text-dim); }
 .hist-cov-h { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 14px; }
 .hist-cov-week { flex: 1; min-width: 0; }
