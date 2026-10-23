@@ -1,5 +1,5 @@
 /* ============================================================
-   ВКЛАДКА «Проверка COCL»
+   ВКЛАДКА «CL при переходах»
    Панель условий, логика Change Over, аккордеон чек-листа.
    Модуль общего пространства имён: функции и переменные видны
    во всех файлах. Порядок подключения — index.html.
@@ -126,6 +126,7 @@ function renderCoclSummary(record) {
   // Прячем чек-лист, показываем резюме
   $('#coclLayout').style.display = 'none';
   $('#coclSummaryView').style.display = 'block';
+  if (typeof renderCoclHead === 'function') renderCoclHead();
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -419,6 +420,7 @@ function updateCoclStepStates() {
   });
 
   // На кнопках части: с текущим типом (если не выбран — все типы)
+  const partCount = {};
   $$('[data-count-part]').forEach(el => {
     const p = el.dataset.countPart;
     const types = type ? [type] : ['ChangeOver', 'CL_TO', 'CL_Conversion'];
@@ -426,18 +428,30 @@ function updateCoclStepStates() {
     types.forEach(tp => getCoclRelevant({ ...base, type: tp, part: p, loose: true }).forEach(s => ids.add(s.id)));
     el.textContent = fmt(ids.size);
     el.classList.toggle('is-zero', line && ids.size === 0);
+    partCount[p] = ids.size;
   });
+
+  // Пустую часть не выбрать; если стандарты есть только у одной части — выбираем её сами
+  const locked = $('#coclSetupCard')?.classList.contains('is-locked');
+  $$('#coclPartSeg [data-part]').forEach(b => { b.disabled = !!(line && type && partCount[b.dataset.part] === 0); });
+  if (needsPart && type && !locked) {
+    const withStd = ['Maker', 'Packer'].filter(p => partCount[p] > 0);
+    const target = withStd.length === 1 && part !== withStd[0] ? withStd[0]
+      : (part && partCount[part] === 0 && withStd.length ? withStd[0] : '');
+    if (target) {
+      const sel = $('#partSelect');
+      sel.value = target;
+      sel.dispatchEvent(new Event('change'));
+      return true;
+    }
+  }
+  return false;
 }
 
-/* Вход на вкладку: без линии — сразу окно выбора линии */
+/* Вход на вкладку: без линии — экран выбора линии (cocl-pick.js) */
 function openCoclTab() {
   updateCoclStepStates();
-  if ($('#lineSelect')?.value) return;
-  if (coclState.checking) return;
-  setTimeout(() => {
-    linePickerOnSelect = (line) => setCoclLine(line);
-    openLinePickerModal();
-  }, 150);
+  updateCoclPick();
 }
 
 /* Клик по кнопке типа проверки */
@@ -578,7 +592,9 @@ function updateChecklist() {
   const brandFrom = $('#brandFrom')?.value || '';
   const brandTo = $('#brandTo')?.value || '';
 
-  updateCoclStepStates();
+  // Часть выбрана автоматически — список уже перестроен по событию change
+  if (updateCoclStepStates()) return;
+  if (typeof renderCoclHead === 'function') renderCoclHead();
   if (coclState.checking) return;
 
   const info = $('#coclBuildInfo');
@@ -654,17 +670,19 @@ function renderChecklist(items) {
     const blocks = Array.isArray(st.measurements) ? st.measurements : [];
     const block = (type === 'ChangeOver' && brandTo) ? getEffectiveBrandBlock(blocks, brandTo) : (blocks[0] || null);
     const points = block && Array.isArray(block.points) ? block.points : [];
-    const isOkNotOk = st.controlType === 'fixed' && !points.length;
+    const isOkNotOk = migrateControlType(st.controlType, st.measurements) === 'fixed' && pointsAreMarksOnly(points);
 
     // Норма текстом (для списка до начала проверки)
     let normText = '';
-    if (isOkNotOk) normText = 'ОК / Не ОК';
+    if (isOkNotOk) normText = marksText(points) || 'ОК / Не ОК';
     else if (points.length === 1) normText = points[0].value || '—';
     else normText = `${points.length} ${points.length < 5 ? 'точки' : 'точек'}`;
 
     let ans = '';
     if (isOkNotOk) {
+      const marks = marksText(points);
       ans = `
+        ${marks ? `<div class="cocl-marks">Должно совпадать: <b>${escapeHtml(marks)}</b></div>` : ''}
         <div class="cocl-okfail">
           <label><input type="radio" name="ans_${st.id}" value="OK" data-ans><span>ОК</span></label>
           <label><input type="radio" name="ans_${st.id}" value="FAIL" data-ans><span>Не ОК</span></label>
@@ -722,7 +740,12 @@ function bindCoclAccordionEvents() {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const stdId = btn.dataset.stdId;
-      if (stdId && typeof openStandardView === 'function') openStandardView(stdId, { brand: $('#brandTo')?.value || '' });
+      if (!stdId || typeof openStandardView !== 'function') return;
+      const to = $('#brandTo')?.value || '';
+      const isCo = $('#transitionType')?.value === 'ChangeOver' && to;
+      openStandardView(stdId, isCo
+        ? { brand: to, changeOver: { from: $('#brandFrom')?.value || '', to } }
+        : { brand: to });
     });
   });
 
@@ -966,6 +989,7 @@ function setCoclCheckingUi(on) {
   if (act) act.hidden = !on;
   const info = $('#coclBuildInfo');
   if (info) info.hidden = on;
+  if (typeof updateCoclPick === 'function') updateCoclPick();
 }
 
 /** Вернуться к условиям: введённые значения теряются — спросить */

@@ -10,6 +10,7 @@
 
 const clogState = {
   sortNewFirst: true,
+  pager: { page: 1, size: 50 },
   editId: null,       // запись в окне
   mode: 'edit'        // 'reason' (сразу после изменения) | 'edit' | 'new'
 };
@@ -83,6 +84,8 @@ function refreshChangeLogView() {
   if (sortBtn) sortBtn.textContent = clogState.sortNewFirst ? 'Сначала новые' : 'Сначала старые';
 
   if (!rows.length) {
+    const pbar = $('#editorLogPagination');
+    if (pbar) pbar.innerHTML = '';
     wrap.innerHTML = total
       ? '<div class="editor-empty">Ничего не найдено — измените фильтры</div>'
       : `<div class="clog-empty">
@@ -93,7 +96,10 @@ function refreshChangeLogView() {
     return;
   }
 
-  const list = clogState.sortNewFirst ? [...rows].reverse() : rows;
+  const all = clogState.sortNewFirst ? [...rows].reverse() : rows;
+  const { from, to } = pagerRange(clogState.pager, all.length);
+  const list = all.slice(from, to);
+  renderPager($('#editorLogPagination'), clogState.pager, all.length, refreshChangeLogView);
   let html = `<table class="clog-table">
     <thead><tr>
       <th class="clog-c-n">№</th>
@@ -442,7 +448,10 @@ $('#elModeSwitch')?.addEventListener('click', (e) => {
   if (btn) switchEditorModeInline(btn.dataset.mode);
 });
 ['elFilterSearch', 'elFilterKind', 'elFilterAction'].forEach(id => {
-  $('#' + id)?.addEventListener(id === 'elFilterSearch' ? 'input' : 'change', refreshChangeLogView);
+  $('#' + id)?.addEventListener(id === 'elFilterSearch' ? 'input' : 'change', () => {
+    clogState.pager.page = 1;
+    refreshChangeLogView();
+  });
 });
 $('#elFilterResetBtn')?.addEventListener('click', () => {
   ['elFilterSearch', 'elFilterKind', 'elFilterAction'].forEach(id => { const el = $('#' + id); if (el) el.value = ''; });

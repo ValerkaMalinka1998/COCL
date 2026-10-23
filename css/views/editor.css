@@ -20,14 +20,6 @@
   gap: 6px;
 }
 
-.elec-acc-item .cocl-acc-header {
-  padding: 10px 14px;
-}
-
-.elec-acc-item .cocl-acc-body {
-  padding: 10px 14px 14px;
-}
-
 .elec-acc-item[data-status="ok"] {
   border-left-color: var(--accent-green);
 }
@@ -199,14 +191,6 @@
 
 .editor-table tbody tr:hover {
   background: rgba(58, 166, 240, 0.03);
-}
-
-/* Название */
-.et-title {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  min-width: 0;
 }
 
 /* OPL */
@@ -721,6 +705,7 @@
 .et-norm .cil-norm-visual { flex-direction: row; gap: 4px; font-size: 11px; }
 .et-norm .cil-norm-visual svg { width: 12px; height: 12px; }
 .et-norm .cil-norm-pts { padding: 1px 8px; font-size: 10px; }
+.et-norm .cil-norm-vals { justify-content: flex-start; }
 .et-warn { font-size: 11px; font-weight: 800; color: var(--accent-amber); }
 
 .et-applies { display: inline-flex; gap: 4px; }
@@ -775,3 +760,33 @@
 @media (max-width: 1200px) {
   .et-c-ph, .et-table td.et-c-ph { display: none; }
 }
+
+/* === Фильтры в одну строку: поиск уже, списки компактнее === */
+.et-filterbar .et-search { flex: 1 1 180px; min-width: 160px; max-width: 300px; }
+.et-filterbar .et-fsel { max-width: 160px; padding: 7px 8px; }
+
+/* === Панель массовых действий над выбранными строками ======= */
+.et-bulk-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 9px 16px; background: color-mix(in srgb, var(--accent-cyan) 8%, transparent);
+  border-bottom: 1px solid var(--border);
+}
+.et-bulk-bar[hidden] { display: none; }
+.et-bulk-info { font-size: 13px; color: var(--text-second); }
+.et-bulk-info strong { color: var(--accent-cyan); font-weight: 800; font-variant-numeric: tabular-nums; }
+.et-bulk-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.et-bulk-pop { position: relative; }
+.et-bulk-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; min-width: 230px; padding: 6px;
+  background: var(--bg-card, #fff); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .22);
+}
+.et-bulk-menu[hidden] { display: none; }
+.et-bulk-menu-row { display: flex; align-items: center; gap: 6px; padding: 5px 6px; font-size: 13px; color: var(--text-main); }
+.et-bulk-menu-row span { flex: 1; }
+.et-bulk-add, .et-bulk-del {
+  width: 28px; height: 26px; border-radius: 6px; cursor: pointer; font-size: 15px; line-height: 1;
+  border: 1px solid var(--border); background: transparent; color: var(--text-second);
+}
+.et-bulk-add:hover { border-color: var(--accent-green); color: var(--accent-green); }
+.et-bulk-del:hover { border-color: var(--accent-red, #e5484d); color: var(--accent-red, #e5484d); }

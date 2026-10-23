@@ -89,34 +89,6 @@
   margin-right: 2px;
 }
 
-/* ============ Автокомплит ============ */
-.autocomplete-item {
-  padding: 10px 14px;
-  cursor: pointer;
-  font-size: 14px;
-  color: var(--text-main);
-  border-bottom: 1px solid var(--border);
-  transition: background 0.12s;
-}
-.autocomplete-item:last-child {
-  border-bottom: none;
-}
-.autocomplete-item:hover,
-.autocomplete-item.active {
-  background: rgba(58, 166, 240, 0.12);
-  color: var(--accent-cyan);
-}
-.autocomplete-item strong {
-  color: var(--accent-cyan);
-  font-weight: 700;
-}
-.autocomplete-empty {
-  padding: 10px 14px;
-  font-size: 13px;
-  color: var(--text-dim);
-  font-style: italic;
-}
-
 /* ============ Импорт: отчёт по ошибкам ============ */
 .import-report {
   background: var(--bg-input);
@@ -161,23 +133,4 @@
   font-size: 12px;
   color: var(--text-dim);
   white-space: nowrap;
-}
-.scrollable-list {
-  max-height: 260px;
-  overflow-y: auto;
-  padding-right: 6px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px;
-  background: var(--bg-input);
-}
-.scrollable-list::-webkit-scrollbar {
-  width: 8px;
-}
-.scrollable-list::-webkit-scrollbar-thumb {
-  background: var(--scroll-thumb, #c4d2e8);
-  border-radius: 4px;
-}
-.scrollable-list::-webkit-scrollbar-thumb:hover {
-  background: var(--scroll-thumb-hover, #2e5288);
 }

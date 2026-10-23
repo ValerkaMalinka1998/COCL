@@ -7,12 +7,13 @@
    во всех файлах. Порядок подключения — index.html.
    ============================================================ */
 
-const histStd = { id: null, line: '', days: 30, point: 0, from: 'history' };
+const histStd = { id: null, line: '', days: 30, from: 'history', pager: { page: 1, size: 20 } };
 
 function openStandardHistory(stdId, line, opts = {}) {
   const row = histFindRow(stdId);
   if (!row) return showToast('Стандарт не найден', true);
-  Object.assign(histStd, { id: stdId, line: line || row.line || '', point: 0 });
+  Object.assign(histStd, { id: stdId, line: line || row.line || '' });
+  histStd.pager.page = 1;
   if (opts.from === 'record') {
     histStd.from = 'record';
     histShowView('histStdView');
@@ -72,36 +73,19 @@ function renderStandardHistory() {
   const { row, isElec, entries, missed } = data;
   const title = row.title || row.paramName || '—';
   const nPoints = Math.max(0, ...entries.map(e => (e.pts || []).length));
-  if (histStd.point >= nPoints) histStd.point = 0;
 
   const fails = entries.filter(e => e.it.status === 'FAIL').length;
   const unchecked = entries.filter(e => e.it.status === 'UNCHECKED').length;
   const checked = entries.length - unchecked;
 
-  // Запас до границы нормы по последнему значению выбранной точки
-  let marginHtml = '<b>—</b><span>запас до границы нормы</span>';
-  const withVal = entries.filter(e => e.pts && e.pts[histStd.point] && histNum(e.pts[histStd.point].value) != null && e.pts[histStd.point].range);
-  const lastV = withVal[withVal.length - 1];
-  if (lastV) {
-    const p = lastV.pts[histStd.point];
-    const v = histNum(p.value), r = p.range, w = r.max - r.min;
-    if (w > 0) {
-      const m = Math.round(Math.min(v - r.min, r.max - v) / w * 100);
-      const cls = m < 0 ? 'hist-kpi-fail' : m < 15 ? 'hist-kpi-warn' : 'hist-kpi-ok';
-      marginHtml = `<b>${m < 0 ? 'вне нормы' : m + '%'}</b><span>${nPoints > 1 ? 'т.' + (histStd.point + 1) + ': ' : ''}запас до границы по последнему замеру</span>`;
-      marginHtml = `<div class="hist-kpi ${cls}">${marginHtml}</div>`;
-    }
-  }
-  if (!marginHtml.startsWith('<div')) marginHtml = `<div class="hist-kpi">${marginHtml}</div>`;
-
   const sub = [histStd.line, row.machine, row.nodePart, row.node,
     controlTypeLabel(isElec ? row.controlType : migrateControlType(row.controlType, row.measurements)),
     nPoints ? nPoints + ' ' + cilPointsWord(nPoints) : ''].filter(Boolean);
 
-  const pointSeg = nPoints > 1 ? `<div class="hist-seg">${Array.from({ length: nPoints }, (_, i) => {
-    const lbl = (entries.find(e => e.pts && e.pts[i] && e.pts[i].label) || {}).pts?.[i]?.label || '';
-    return `<button type="button" class="${i === histStd.point ? 'on' : ''}" data-hist-std-point="${i}">т.${i + 1}${lbl ? ' · ' + escapeHtml(lbl) : ''}</button>`;
-  }).join('')}</div>` : '';
+
+  const allRows = entries.slice().reverse();
+  const { from, to } = pagerRange(histStd.pager, allRows.length);
+  const tableRows = allRows.slice(from, to);
 
   box.innerHTML = `
     <div class="card hist-std-head">
@@ -124,72 +108,86 @@ function renderStandardHistory() {
         <div class="hist-kpi"><b>${checked}</b><span>${pluralRu(checked, 'проверка', 'проверки', 'проверок')} за ${histStd.days} дней</span></div>
         <div class="hist-kpi ${fails ? 'hist-kpi-fail' : ''}"><b>${fails}</b><span>${pluralRu(fails, 'отклонение', 'отклонения', 'отклонений')}${checked ? ' (' + Math.round(fails / checked * 100) + '%)' : ''}</span></div>
         <div class="hist-kpi ${missed + unchecked ? 'hist-kpi-warn' : ''}"><b>${missed + unchecked}</b><span>пропущено / не проверено</span></div>
-        ${marginHtml}
       </div>
     </div>
-    ${nPoints ? `<div class="card hist-chart-card">
-      <div class="hist-chart-h"><h3>Значения по точкам</h3><span class="hist-sp"></span>${pointSeg}</div>
-      ${histStdChart(entries, histStd.point)}
-      <div class="hist-sub">Зелёная полоса — норма. Красные точки — значения вне нормы. Видно, как значение подходит к границе ещё до отклонения.</div>
-    </div>` : ''}
+    <div class="card hist-chart-card">
+      <div class="hist-chart-h"><h3>Отклонения по проверкам</h3></div>
+      ${histStdChart(entries, data.fromDate, getCurrentShiftPeriod().date, histStd.days <= 7)}
+      <div class="hist-sub">Столбик — число проверок с отклонением за ${histStd.days <= 7 ? 'сутки' : 'неделю'}. Лента ниже — каждая проверка по порядку:
+      зелёная — в норме, красная — отклонение, жёлтая — не проверено. Стандарт в отклонении, если вышла любая из точек.</div>
+    </div>
     <div class="card hist-dev-card">
       ${entries.length ? `<table class="hist-dev">
         <thead><tr><th>Когда</th><th>Проверка</th><th>Бр.</th><th>Результат</th><th>Значения</th><th>Комментарий</th></tr></thead>
-        <tbody>${entries.slice().reverse().map(e => `
+        <tbody>${tableRows.map(e => `
           <tr data-hist-std-rec="${escapeAttr(e.h.id)}" title="Открыть проверку">
             <td><b>${histDayName(e.s.date)} ${fmtShortDate(e.s.date)}</b> ${e.s.shift === 'day' ? 'день' : 'ночь'}<div class="hist-sub">${histTime(e.h)}</div></td>
             <td>${escapeHtml(HIST_KINDS[histKind(e.h)].short)}</td>
             <td>${escapeHtml(e.s.letter || '—')}</td>
             <td><span class="hist-st hist-st-${e.it.status === 'OK' ? 'o' : e.it.status === 'FAIL' ? 'x' : 'u'}">${e.it.status === 'OK' ? CIL_ICONS.check : e.it.status === 'FAIL' ? CIL_ICONS.x : '?'}</span></td>
-            <td>${e.pts ? e.pts.map((p, i) => `<span class="hist-pt ${p.bad ? 'bad' : ''}">${e.pts.length > 1 ? 'т.' + (i + 1) + ' ' : ''}<b>${escapeHtml(p.value || '—')}</b></span>`).join('') : `<span class="hist-pt">${e.it.status === 'OK' ? 'ОК' : e.it.status === 'FAIL' ? 'Не ОК' : 'не проверено'}</span>`}</td>
+            <td>${e.pts ? e.pts.map((p, i) => `<span class="hist-pt ${p.bad ? 'bad' : ''}">${e.pts.length > 1 ? `<i class="hist-pt-n">т.${i + 1}</i>` : ''}<b>${escapeHtml(p.value || '—')}</b></span>`).join('') : `<span class="hist-pt">${e.it.status === 'OK' ? 'ОК' : e.it.status === 'FAIL' ? 'Не ОК' : 'не проверено'}</span>`}</td>
             <td class="hist-sub">${e.it.comment ? cmtLine(e.it.comment) : '—'}</td>
           </tr>`).join('')}</tbody>
-      </table>` : `<div class="hist-empty">За ${histStd.days} дней проверок этого стандарта нет</div>`}
+      </table>
+      <div class="pagination-bar" id="histStdPagination"></div>` : `<div class="hist-empty">За ${histStd.days} дней проверок этого стандарта нет</div>`}
     </div>`;
+
+  renderPager($('#histStdPagination'), histStd.pager, allRows.length, renderStandardHistory);
 }
 
-/* SVG-график значений одной точки */
-function histStdChart(entries, pi) {
-  const pts = entries.map(e => {
-    const p = e.pts && e.pts[pi];
-    return p ? { v: histNum(p.value), r: p.range, bad: p.bad, e } : null;
-  }).filter(x => x && x.v != null);
-  if (!pts.length) return '<div class="hist-empty">Нет числовых значений для графика</div>';
-
-  const W = 900, H = 220, L = 52, R = 20, T = 14, B = 30;
-  const range = (pts.find(p => p.r) || {}).r || null;
-  let lo = Math.min(...pts.map(p => p.v)), hi = Math.max(...pts.map(p => p.v));
-  if (range) { lo = Math.min(lo, range.min); hi = Math.max(hi, range.max); }
-  const pad = (hi - lo) * 0.15 || Math.abs(hi) * 0.1 || 1;
-  lo -= pad; hi += pad;
-  const x = i => pts.length === 1 ? (L + W - R) / 2 : L + i * (W - L - R) / (pts.length - 1);
-  const y = v => T + (hi - v) / (hi - lo) * (H - T - B);
-
-  let s = '';
-  if (range) {
-    s += `<rect x="${L}" y="${y(range.max)}" width="${W - L - R}" height="${Math.max(1, y(range.min) - y(range.max))}" class="hist-ch-band"/>`;
-    [range.min, range.max].forEach(v => {
-      s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" class="hist-ch-norm"/><text x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${fmtNum(v)}</text>`;
-    });
+/* ------------------------------------------------------------
+   Отклонения по периодам: столбик — сколько проверок с отклонением
+   («2 из 14»); для 7 дней период — сутки, для 30 и 90 — неделя.
+   Под столбиками — лента всех проверок: ОК / отклонение / не проверено.
+   ------------------------------------------------------------ */
+function histStdBuckets(entries, fromDate, toDate, byDay) {
+  const monday = (d) => {
+    const dt = new Date(d + 'T12:00:00');
+    return addDaysISO(d, -((dt.getDay() + 6) % 7));
+  };
+  const key = (d) => byDay ? d : monday(d);
+  const map = new Map();
+  for (let d = byDay ? fromDate : monday(fromDate); d <= toDate; d = addDaysISO(d, byDay ? 1 : 7)) {
+    map.set(d, { start: d, total: 0, fails: 0 });
   }
-  s += `<polyline class="hist-ch-line" points="${pts.map((p, i) => x(i) + ',' + y(p.v)).join(' ')}"/>`;
-  const step = Math.max(1, Math.ceil(pts.length / 10));
-  pts.forEach((p, i) => {
-    s += `<circle cx="${x(i)}" cy="${y(p.v)}" r="${p.bad ? 6 : 4.5}" class="${p.bad ? 'hist-ch-bad' : 'hist-ch-pt'}"><title>${fmtShortDate(p.e.s.date)} ${p.e.s.shift === 'day' ? 'день' : 'ночь'}: ${p.v}</title></circle>`;
-    if (i % step === 0 || i === pts.length - 1) {
-      s += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle">${fmtShortDate(p.e.s.date)}${p.e.s.shift === 'night' ? ' н' : ''}</text>`;
-    }
+  entries.forEach(e => {
+    const b = map.get(key(e.s.date));
+    if (!b) return;
+    if (e.it.status === 'UNCHECKED') return;
+    b.total++;
+    if (e.it.status === 'FAIL') b.fails++;
   });
-  return `<svg class="hist-chart" viewBox="0 0 ${W} ${H}" width="100%">${s}</svg>`;
+  return [...map.values()];
+}
+
+function histStdChart(entries, fromDate, toDate, byDay) {
+  if (!entries.length) return '<div class="hist-empty">Проверок за период нет</div>';
+  const buckets = histStdBuckets(entries, fromDate, toDate, byDay);
+  const maxF = Math.max(1, ...buckets.map(b => b.fails));
+  const label = (b) => byDay
+    ? `${histDayName(b.start)} ${fmtShortDate(b.start)}`
+    : `${fmtShortDate(b.start)} – ${fmtShortDate(addDaysISO(b.start, 6))}`;
+
+  const bars = `<div class="hist-bars">${buckets.map(b => `
+    <div class="hist-bar-col" title="${escapeAttr(label(b) + ': ' + (b.total ? b.fails + ' из ' + b.total + ' проверок с отклонением' : 'проверок нет'))}">
+      <div class="hist-bar-num ${b.fails ? 'bad' : ''}">${b.total ? b.fails + '<small> из ' + b.total + '</small>' : '<small>—</small>'}</div>
+      <div class="hist-bar-area"><i class="hist-bar ${b.fails ? 'bad' : (b.total ? 'ok' : 'none')}" style="height:${b.fails ? Math.max(8, Math.round(b.fails / maxF * 100)) : (b.total ? 3 : 0)}%"></i></div>
+      <div class="hist-bar-lbl">${escapeHtml(byDay ? histDayName(b.start) : fmtShortDate(b.start))}</div>
+    </div>`).join('')}</div>`;
+
+  const tape = `<div class="hist-tape">${entries.map(e => {
+    const st = e.it.status;
+    return `<i class="hist-tape-i hist-tape-${st === 'OK' ? 'o' : st === 'FAIL' ? 'x' : 'u'}"
+      title="${escapeAttr(fmtShortDate(e.s.date) + ' ' + (e.s.shift === 'day' ? 'день' : 'ночь') + ': ' + (st === 'OK' ? 'в норме' : st === 'FAIL' ? 'отклонение' : 'не проверено'))}"></i>`;
+  }).join('')}</div>`;
+  return bars + tape;
 }
 
 $('#histStdView')?.addEventListener('click', (e) => {
   const t = e.target;
   if (t.closest('[data-hist-std-back]')) return histStdBack();
   const d = t.closest('[data-hist-std-days]');
-  if (d) { histStd.days = parseInt(d.dataset.histStdDays, 10); return renderStandardHistory(); }
-  const p = t.closest('[data-hist-std-point]');
-  if (p) { histStd.point = parseInt(p.dataset.histStdPoint, 10); return renderStandardHistory(); }
+  if (d) { histStd.days = parseInt(d.dataset.histStdDays, 10); histStd.pager.page = 1; return renderStandardHistory(); }
   if (t.closest('[data-hist-std-open]')) {
     if (typeof openStandardView === 'function') openStandardView(histStd.id);
     return;

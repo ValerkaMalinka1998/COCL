@@ -102,7 +102,7 @@ function refreshEditorElecTable() {
     const isSelected = editorTableState.elecSelected.has(p.id);
     const id = escapeAttr(p.id);
     html += `
-      <tr data-param-id="${id}" class="${isSelected ? 'is-selected' : ''} ${isActive ? '' : 'et-row-inactive'}">
+      <tr data-param-id="${id}" class="${isSelected ? 'is-selected' : ''} ${isActive ? '' : 'et-row-inactive'} ${validationStatus(p) === 'active' ? 'et-row-val' : ''}">
         <td class="et-c-check cil-z${zones[m]}"><input type="checkbox" class="et-check-row" data-param-id="${id}" ${isSelected ? 'checked' : ''}></td>
         <td><button type="button" class="et-name" data-view-elec="${id}">${escapeHtml(p.paramName || '—')}</button>${valChipHtml(p)}</td>
         <td class="et-c-part">${p.nodePart ? `<span class="et-part-chip et-part-${p.nodePart.toLowerCase()}">${escapeHtml(p.nodePart)}</span>` : '<span class="et-dim">—</span>'}</td>
@@ -178,6 +178,7 @@ function updateElecSelectionUI(filtered) {
   document.querySelectorAll('#editorElecTableWrap tr[data-param-id]').forEach(tr => {
     tr.classList.toggle('is-selected', editorTableState.elecSelected.has(tr.dataset.paramId));
   });
+  if (typeof updateEditorBulk === 'function') updateEditorBulk('elec');
 }
 
 function renderEditorElecPagination(total, totalPages, startIdx, endIdx) {
@@ -336,12 +337,12 @@ async function editorElecDownloadTemplate() {
   showToast('Шаблон скачан');
 }
 
-async function editorElecExport() {
+async function editorElecExport(onlyIds) {
   if (typeof ExcelJS === 'undefined') return showToast('Библиотека ExcelJS не загружена', true);
   const line = localStorage.getItem('cl_editor_line');
   if (!line) return showToast('Сначала выберите линию', true);
 
-  const params = getElectronicParams().filter(p => p.line === line);
+  const params = getElectronicParams().filter(p => p.line === line && (!onlyIds || onlyIds.includes(p.id)));
   if (!params.length) return showToast('Нет электронных параметров для экспорта', true);
 
   const wb = new ExcelJS.Workbook();

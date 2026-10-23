@@ -16,7 +16,7 @@
 */
 
 const LINE_BRAND_SOURCES = {
-  cocl: 'смена сорта (COCL)',
+  cocl: 'смена сорта (CL при переходах)',
   analyst: 'задан аналитиком',
   operator: 'изменён оператором',
   plan: 'план брендов'
@@ -91,9 +91,3 @@ function pickBrandValues(list, brand) {
   return { item: null, kind: brand ? 'missing' : 'nobrand' };
 }
 
-/* Короткая метка, чьи значения проверяются (для таблиц и окна проверки) */
-function brandPickLabel(pick, brand) {
-  if (pick.kind === 'brand') return brand;
-  if (pick.kind === 'rest') return 'остальные бренды';
-  return '';
-}

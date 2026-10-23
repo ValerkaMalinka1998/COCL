@@ -174,3 +174,7 @@
 .val-banner-done b {
   color: var(--accent-green);
 }
+
+/* Строка на валидации в таблицах «Стандарты CL» */
+.et-table tbody tr.et-row-val > td { background: color-mix(in srgb, var(--accent-val) 8%, var(--bg-card)); }
+.et-table tbody tr.et-row-val:hover > td { background: color-mix(in srgb, var(--accent-val) 13%, var(--bg-card)); }

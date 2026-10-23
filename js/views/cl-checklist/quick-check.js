@@ -133,7 +133,7 @@ function openClCheckModal(rowId, dateStr, shift) {
     ? `<b>${pos + 1}</b> из ${queue.length}<span>${left ? `осталось ${left}` : 'остальные отмечены'}</span>` : '';
 
   const freq = getClRowFreq(row);
-  const tw = (freq.timeWindows || []).map(w => `${w.from}–${w.to}`).join(', ');
+  const tw = (freq.timeWindows || []).filter(w => getTimeWindowShift(w.from) === shift).map(w => `${w.from}–${w.to}`).join(', ');
   $('#qcCtx').innerHTML = [
     `<span>${fmtISODate(dateStr)} · ${shift === 'day' ? 'День' : 'Ночь'} · смена ${escapeHtml(shiftLetter)}</span>`,
     tw ? `<span>время ${escapeHtml(tw)}</span>` : '',
@@ -154,18 +154,24 @@ function openClCheckModal(rowId, dateStr, shift) {
 
   // --- Ввод ---
   const controlType = migrateControlType(row.controlType, row.measurements);
-  const hasPointsMech = !isElec && Array.isArray(row.measurements) &&
-    row.measurements.some(b => b && Array.isArray(b.points) && b.points.length > 0);
-  const isOkFail = controlType === 'fixed' && (isElec || !hasPointsMech);
+  // Фиксированный без чисел в точках (пусто или метки текстом) — ОК / Не ОК
+  const hasNumericMech = !isElec && Array.isArray(row.measurements) &&
+    row.measurements.some(b => b && !pointsAreMarksOnly(b.points));
+  const isOkFail = controlType === 'fixed' && (isElec || !hasNumericMech);
   quickCheckState.isOkFail = isOkFail;
 
   $('#qcAnswerOkNotOk').style.display = isOkFail ? '' : 'none';
   $('#qcAnswerPoints').style.display = isOkFail ? 'none' : '';
 
   if (isOkFail) {
-    const normText = (row.normText || '').trim();
+    let normText = (row.normText || '').trim();
+    if (!isElec && !normText) {
+      const withMarks = (row.measurements || []).filter(b => b && marksText(b.points));
+      const mb = pickBrandValues(withMarks, brand).item;
+      normText = mb ? marksText(mb.points) : '';
+    }
     $('#qcNormText').innerHTML = normText
-      ? `Норма: <b>${escapeHtml(normText)}</b>`
+      ? `${isElec ? 'Норма' : 'Должно совпадать'}: <b>${escapeHtml(normText)}</b>`
       : 'Проверка визуально — по описанию «Как проверять»';
     const prevOk = getQcPrevious(row);
     $('#qcPrevOk').innerHTML = prevOk
@@ -296,16 +302,16 @@ function saveQuickCheck(goNext) {
   const shift = quickCheckState.shift;
   const brand = quickCheckState.brand || '';
   const controlType = migrateControlType(row.controlType, row.measurements);
-  const hasPointsMech = !isElec &&
+  const hasNumericMech = !isElec &&
     Array.isArray(row.measurements) &&
-    row.measurements.some(b => b && Array.isArray(b.points) && b.points.length > 0);
+    row.measurements.some(b => b && !pointsAreMarksOnly(b.points));
   const comment = ($('#qcComment')?.value || '').trim();
 
   let status = 'UNCHECKED';
   let answer = '';
   let value = null;
 
-  if (controlType === 'fixed' && (isElec || !hasPointsMech)) {
+  if (controlType === 'fixed' && (isElec || !hasNumericMech)) {
     const r = document.querySelector('input[name="qc_answer"]:checked');
     if (!r) {
       showToast('Выберите ОК или Не ОК', true);
@@ -373,6 +379,7 @@ function saveQuickCheck(goNext) {
 
   const key = `${row.id}|${date}|${shift}`;
   clState.quickDraft[key] = { status, answer, value, comment };
+  clFlashKey = key;
 
   renderClMatrix();
   const next = goNext ? getQcNext() : null;
@@ -436,41 +443,6 @@ document.addEventListener('click', (e) => {
     closeQuickCheckModal();
   }
 });
-
-/* Модалка комментария — переиспользуем существующую, но в неё надо передать dataset.comment */
-function openCommentModalElec(item) {
-  currentCommentItem = item;
-  const it = elecState.items.find(x => x.id === item.dataset.elecId);
-  $('#commentModalPoint').textContent = it
-    ? `${it.machine || ''} · ${it.paramName || ''}`
-    : '';
-  $('#commentText').value = item.dataset.comment || '';
-  openModal('#commentModal');
-  setTimeout(() => $('#commentText').focus(), 100);
-}
-
-/* Модалка override бренда */
-window.openElecBrandOverrideDialog = function() {
-  const brands = getBrandsForLine(elecState.line);
-  if (!brands.length) return showToast('На линии нет брендов', true);
-
-  const brandList = brands.map(b => `${b}`).join(', ');
-  const current = elecState.brand || '';
-  const newBrand = prompt(`Бренд на ${fmtISODate(elecState.date)}\nДоступные: ${brandList}`, current);
-  if (newBrand === null) return;
-  const trimmed = newBrand.trim();
-  if (!trimmed) return;
-  if (!brands.includes(trimmed)) {
-    return showToast('Бренд не найден на линии', true);
-  }
-  if (trimmed === elecState.brand) return; // без изменений
-
-  const reason = prompt('Причина изменения (кратко):', '') || '';
-  elecState.brand = trimmed;
-  elecState.brandReason = reason.trim();
-
-  refreshElectronicTab();
-};
 
 /* Канонические категории Top Losses — у каждого цеха свой набор */
 const TOP_LOSS_CATEGORY_NAMES = ['Увеличенные остановки', 'Дефекты по качеству', 'Повышенные выбросы'];

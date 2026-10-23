@@ -317,3 +317,32 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Смена сорта: бренд, на который переходим, — строка залита цветом */
+.svm-norm tr.is-new th,
+.svm-norm tr.is-new td {
+  background: var(--accent-green);
+  color: #fff;
+}
+
+.svm-norm tr.is-new th { border-radius: 8px 0 0 8px; }
+.svm-norm tr.is-new td:last-child { border-radius: 0 8px 8px 0; }
+
+.svm-new {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: #fff;
+  color: var(--accent-green);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.svm-rest {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.75;
+}

@@ -214,7 +214,7 @@ function renderSvFullCrumbs(st) {
   const parts = [];
   // ID
   if (st.oplNumber) {
-    parts.push(`<span class="sv-full-crumb-id">#${escapeHtml(st.oplNumber)}</span>`);
+    parts.push(`<span class="sv-full-crumb-id">${escapeHtml(st.oplNumber)}</span>`);
   }
   // Цех
   parts.push(`<span class="sv-full-crumb">${escapeHtml(ctx.workshop.name)}</span>`);
@@ -610,8 +610,10 @@ function renderSvBrandsTable(measurements) {
         </td>`;
       }
 
-      const brandOptions = ['<option value="">Остальные бренды</option>']
-        .concat(brands.map(b => {
+      // Бренд, уже занятый другой строкой, повторно выбрать нельзя
+      const usedElsewhere = new Set(state.filter((_, i) => i !== rowIndex).map(x => x.brand || ''));
+      const brandOptions = (usedElsewhere.has('') ? [] : ['<option value="">Остальные бренды</option>'])
+        .concat(brands.filter(b => !usedElsewhere.has(b) || b === block.brand).map(b => {
           const selected = (b === block.brand) ? ' selected' : '';
           return `<option value="${escapeHtml(b)}"${selected}>${escapeHtml(b)}</option>`;
         })).join('');
@@ -725,8 +727,17 @@ function bindSvControlEvents(st) {
       const pointsCount = Math.max(maxPoints, 1);
       const newPoints = [];
       for (let i = 0; i < pointsCount; i++) newPoints.push({ value: '' });
-      state.push({ brand: '', points: newPoints });
+      // Новая строка — с первым ещё не занятым брендом («Остальные бренды» — тоже один раз)
+      const used = new Set(state.map(b => b.brand || ''));
+      const free = used.has('') ? getBrands().find(b => !used.has(b)) : '';
+      if (free === undefined) return showToast('Все бренды уже добавлены', true);
+      state.push({ brand: free, points: newPoints });
       renderSvBrandsTableFromState(state);
     });
   }
+
+  // --- Смена бренда в строке: пересобрать списки, чтобы бренд не повторялся ---
+  container.querySelectorAll('.bt-brand-select').forEach(sel => {
+    sel.addEventListener('change', () => renderSvBrandsTableFromState(getSvTableState()));
+  });
 }

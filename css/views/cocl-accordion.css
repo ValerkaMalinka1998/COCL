@@ -257,3 +257,11 @@
 .cocl-preview .cocl-status-dot {
   display: none;
 }
+
+/* Метки фиксированного стандарта: что должно совпадать (ОК / Не ОК) */
+.cocl-marks {
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--text-second);
+}
+.cocl-marks b { color: var(--text-main); }

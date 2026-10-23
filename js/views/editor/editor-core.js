@@ -572,11 +572,9 @@ function renderEditorMachineChips(prefix, rows) {
   const box = document.getElementById(`${prefix}MachineChips`);
   const input = document.getElementById(`${prefix}FilterMachine`);
   if (!box || !input) return;
-  const line = localStorage.getItem('cl_editor_line') || '';
   const counts = {};
   rows.forEach(r => { if (r.machine) counts[r.machine] = (counts[r.machine] || 0) + 1; });
-  // Машины линии из настроек — тоже показываем (с нулём), чтобы список был полным
-  (getLineMachines()[line] || []).forEach(m => { if (!(m in counts)) counts[m] = 0; });
+  // Машины без стандартов не показываем: фильтр по ним всегда пуст
   const machines = Object.keys(counts).sort((a, b) => a.localeCompare(b, 'ru', { numeric: true }));
   if (input.value && !machines.includes(input.value)) input.value = '';
   if (machines.length < 2) {

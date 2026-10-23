@@ -1,5 +1,5 @@
 /* ============================================================
-   ВКЛАДКА «Проверка COCL»: сохранение
+   ВКЛАДКА «CL при переходах»: сохранение
    Модуль общего пространства имён: функции и переменные видны
    во всех файлах. Порядок подключения — index.html.
    ============================================================ */
@@ -42,10 +42,8 @@ if (type === 'ChangeOver') {
     let answer = '—';
     let status = 'UNCHECKED';
 
-    const hasPoints = Array.isArray(st.measurements) &&
-      st.measurements.some(b => b && Array.isArray(b.points) && b.points.length > 0);
-
-    if (st.controlType === 'fixed' && !hasPoints) {
+    // Строка с кнопками ОК / Не ОК (фиксированный без чисел в точках)
+    if (item.querySelector('input[data-ans]')) {
       const r = item.querySelector('input[data-ans]:checked');
       if (!r) { hasEmpty = true; return; }
       answer = r.value === 'OK' ? 'ОК' : 'Не ОК';
@@ -132,7 +130,7 @@ if (type === 'ChangeOver') {
 
   showToast('Проверка сохранена');
   renderCoclSummary(record);
-  showMachineJournalNotice(items.filter(it => it.status === 'FAIL'), { line, source: 'Проверка COCL' });
+  showMachineJournalNotice(items.filter(it => it.status === 'FAIL'), { line, source: 'CL при переходах' });
 });
 
 $('#resetCheckBtn').addEventListener('click', () => editChecklistConditions());
@@ -173,4 +171,5 @@ function resetCheckForm() {
   renderCoclLineContext('');
   renderCoclPartStep('');
   updateChecklist();
+  updateCoclPick();
 }

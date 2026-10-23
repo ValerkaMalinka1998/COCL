@@ -11,15 +11,6 @@
   margin-right: auto;
 }
 
-/* ============ Input error ============ */
-.input-error,
-select.input-error,
-input.input-error {
-  border-color: var(--accent-red) !important;
-  box-shadow: 0 0 0 2px rgba(230, 36, 79, 0.15), 0 0 8px rgba(230, 36, 79, 0.3) !important;
-  background: rgba(230, 36, 79, 0.05) !important;
-}
-
 /* ============ Форма стандарта ============ */
 .form-section-title {
   font-size: 13px;
@@ -61,58 +52,4 @@ input.input-error {
 }
 .field-with-btn .btn:hover svg {
   transform: scale(1.1);
-}
-/* ============ Опция «не в списке» в выпадающем списке машин ============ */
-.measurements-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 6px;
-}
-.measurements-table th {
-  background: var(--bg-hover);
-  color: var(--text-second);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 6px 8px;
-  text-align: left;
-  border: 1px solid var(--border);
-}
-.measurements-table td {
-  padding: 6px;
-  border: 1px solid var(--border);
-}
-.measurements-table input {
-  width: 100%;
-  border: none;
-  background: transparent;
-  color: var(--text-main);
-  font-size: 13px;
-  padding: 4px 6px;
-}
-.measurements-table input:focus {
-  outline: none;
-  background: var(--bg-hover);
-  border-radius: 4px;
-}
-/* ============================================================ */
-/* === Точки замера — динамический список ===================== */
-/* ============================================================ */
-
-
-/* ============================================================ */
-/* === Точки замера: блоки по брендам ========================= */
-/* ============================================================ */
-
-
-@media (max-width: 640px) {
-  .bp-point-row {
-    grid-template-columns: 30px 1fr 32px;
-    gap: 6px;
-    padding: 4px 8px;
-  }
-  .brand-block-select {
-    max-width: none;
-  }
 }
