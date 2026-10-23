@@ -135,7 +135,7 @@ function renderHistRecordPage() {
 
   // --- Шапка ---
   const meta = [`Линия <b>${escapeHtml(line)}</b>`, `<b>${histDayName(s.date)} ${fmtShortDate(s.date)}</b> · ${s.shift === 'day' ? 'день 09–21' : 'ночь 21–09'}`];
-  if (s.letter) meta.push(`Бригада <b>${escapeHtml(s.letter)}</b>`);
+  if (s.letter) meta.push(`Смена <b>${escapeHtml(s.letter)}</b>`);
   if (brand) meta.push(`Бренд <b>${escapeHtml(brand)}</b>${first && first.brandPlanned && first.brandPlanned !== first.brandActual ? ` <span class="hist-c-warn">(план: ${escapeHtml(first.brandPlanned)})</span>` : ''}`);
   if (first && histKind(first) === 'cocl') {
     if (first.part) meta.push(`Часть <b>${escapeHtml(first.part)}</b>`);

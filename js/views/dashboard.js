@@ -157,7 +157,7 @@ function dashAttention(lines, sum) {
     items.push({
       sev: 3, kind: 'red',
       title: `${r.line} · ${r.it.oplNumber ? r.it.oplNumber + ' ' : ''}${histItemTitle(r.it)} — ${streak >= 2 ? streak + ' откл. подряд' : r.n + ' откл. за период'}`,
-      sub: `${[r.it.machine, r.it.nodePart].filter(Boolean).join(' · ')} · последнее ${fmtShortDate(s.date)} ${s.shift === 'day' ? 'день' : 'ночь'}, бр. ${s.letter}`,
+      sub: `${[r.it.machine, r.it.nodePart].filter(Boolean).join(' · ')} · последнее ${fmtShortDate(s.date)} ${s.shift === 'day' ? 'день' : 'ночь'} · ${s.letter}`,
       act: `data-dash-std="${escapeAttr(r.it.standardId)}" data-dash-line="${escapeAttr(r.line)}"`
     });
   });
@@ -558,8 +558,6 @@ function renderDashboardLine() {
   const slots = dashSlots(dashState.period);
   const sum = dashSummary([{ line }], slots);
   const m = sum.perLine[line];
-  const pct = m.planned ? Math.round(m.done / m.planned * 100) : null;
-
   // Состояние стандартов
   const weekStart = getSchWeekStart(0);
   const rows = histClRows(line);
@@ -618,6 +616,8 @@ function renderDashboardLine() {
         Карта
       </button>
       <b class="dash-line-name">${escapeHtml(line)}</b><span class="hist-sub">${escapeHtml(ctxText)}</span>
+      <span class="dash-cfg" title="Стандартов и параметров в Расписании CL на этой неделе">${inMech} мех · ${inElec} E-Param в расписании</span>
+      ${noPoints ? `<button type="button" class="dash-cfg dash-cfg-warn" data-dash-editor="${escapeAttr(line)}" title="Вариабельный / интервал без точек замера — открыть Стандарты CL">${noPoints} без точек замера</button>` : ''}
       <span class="hist-sp"></span>
       ${siblings.length > 1 ? `<div class="hist-seg">${siblings.map(l =>
         `<button type="button" class="${l === line ? 'on' : ''}" data-dash-open-line="${escapeAttr(l)}">${escapeHtml(l)}</button>`).join('')}</div>` : ''}
@@ -626,13 +626,6 @@ function renderDashboardLine() {
     <div class="dash-g3">
       <div class="card dash-card">
         ${histCoverageHtml(line, dashState.week, 'data-dash-week')}
-        <div class="dash-pass">
-          <div class="hist-ring dash-ring" style="--p:${pct || 0}%"><div>${pct == null ? '—' : pct + '%'}<small>выполнено</small></div></div>
-          <div class="dash-pass-list">
-            <div class="dash-li"><span>В расписании</span><b>${inMech} мех · ${inElec} E-Param</b></div>
-            <button type="button" class="dash-li" data-dash-editor="${escapeAttr(line)}"><span>Без точек замера (вариабельный / интервал)</span><b class="${noPoints ? 'hist-c-warn' : ''}">${noPoints}</b></button>
-          </div>
-        </div>
       </div>
       <div class="card dash-card">
         <h3 class="dash-h">Проблемные стандарты <small>клик — история стандарта</small></h3>
@@ -657,7 +650,7 @@ function renderDashboardLine() {
           const c = histCounts(h);
           const s = histShift(h);
           return `<button type="button" class="dash-li" data-dash-rec="${escapeAttr(h.id)}">
-            <span>${fmtShortDate(s.date)} ${histTime(h)} · ${escapeHtml(histKindLabel(h))} <span class="hist-sub">· бр. ${escapeHtml(s.letter || '—')}</span></span>
+            <span>${fmtShortDate(s.date)} ${histTime(h)} · ${escapeHtml(histKindLabel(h))} <span class="hist-sub">· смена ${escapeHtml(s.letter || '—')}</span></span>
             ${c.fail ? `<span class="hist-tag hist-tag-fail">${c.fail} откл.</span>` : c.unchecked ? '<span class="hist-tag hist-tag-warn">не всё</span>' : '<span class="hist-tag hist-tag-ok">в норме</span>'}
           </button>`;
         }).join('') : '<div class="dash-empty">Проверок пока нет</div>'}

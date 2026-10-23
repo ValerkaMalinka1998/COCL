@@ -95,9 +95,6 @@ button.dash-li:hover { background: var(--bg-hover); }
 .dash-line-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .dash-line-head .btn svg { width: 14px; height: 14px; }
 .dash-line-name { font-size: 18px; color: var(--text-main); }
-.dash-pass { display: flex; gap: 18px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
-.dash-ring { margin: 0; flex: none; background: conic-gradient(var(--accent-green) 0 var(--p), var(--bg-input) var(--p) 100%); }
-.dash-pass-list { flex: 1; min-width: 240px; }
 
 @media (max-width: 1100px) {
   .dash-g2, .dash-g3 { grid-template-columns: 1fr; }
@@ -134,3 +131,7 @@ button.dash-li:hover { background: var(--bg-hover); }
 .dash-now-red { border-left-color: var(--accent-red); }
 .dash-now-red .dash-now-bar i { background: var(--accent-red); }
 .dash-view-seg button.on { background: var(--accent-cyan); color: var(--on-accent); }
+
+/* === Паспорт линии: метки настройки в шапке === */
+.dash-cfg { padding: 3px 10px; border-radius: 999px; font: inherit; font-size: 11.5px; font-weight: 700; color: var(--text-second); background: var(--bg-hover); border: 1px solid var(--border); white-space: nowrap; }
+.dash-cfg-warn { color: var(--accent-amber); border-color: color-mix(in srgb, var(--accent-amber) 40%, transparent); background: color-mix(in srgb, var(--accent-amber) 10%, transparent); cursor: pointer; }

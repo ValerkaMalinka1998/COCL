@@ -482,7 +482,7 @@ function renderHistDeviations() {
     e => (e.it.oplNumber ? e.it.oplNumber + ' · ' : '') + histItemTitle(e.it));
   const byMachine = histTop(entries, e => e.h.line + '|' + (e.it.machine || ''),
     e => [histState.line ? '' : e.h.line, e.it.machine || 'без машины', e.it.nodePart].filter(Boolean).join(' · '));
-  const byBrigade = histTop(entries, e => e.s.letter, e => 'Бригада ' + e.s.letter);
+  const byBrigade = histTop(entries, e => e.s.letter, e => 'Смена ' + e.s.letter);
 
   const shown = entries.slice(0, histState.limit);
   box.innerHTML = `

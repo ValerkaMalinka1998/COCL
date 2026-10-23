@@ -739,7 +739,7 @@ function showClPeek(cell) {
   el.className = 'cl-peek';
   el.innerHTML = `
     <div class="cl-peek-h"><span class="hist-st hist-st-${symCls}">${sym}</span>
-      <div><b>${title}</b><div class="hist-sub">${histDayName(dateStr)} ${fmtShortDate(dateStr)} · ${shift === 'day' ? 'день' : 'ночь'} · бр. ${escapeHtml(letter)}${record ? ' · ' + histTime(record) : ''}</div></div>
+      <div><b>${title}</b><div class="hist-sub">${histDayName(dateStr)} ${fmtShortDate(dateStr)} · ${shift === 'day' ? 'день' : 'ночь'} · ${escapeHtml(letter)}${record ? ' · ' + histTime(record) : ''}</div></div>
       <button type="button" class="cl-peek-x" data-peek-close title="Закрыть">✕</button></div>
     <div class="cl-peek-body">${body}</div>
     <div class="cl-peek-btns">
