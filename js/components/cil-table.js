@@ -54,9 +54,9 @@ function cilDateByDayIdx(weekDays) {
   return map;
 }
 
-/* Чипы окон времени */
+/* Чипы окон времени. У CIL окна нет — ничего не показываем */
 function cilTimeChips(timeWindows, work) {
-  if (normWork(work) === 'CIL') return '<span class="cil-tag cil-tag-time-free">по ситуации</span>';
+  if (normWork(work) === 'CIL') return '';
   return (Array.isArray(timeWindows) ? timeWindows : []).map(w => {
     const shift = getTimeWindowShift(w.from);
     return `<span class="cil-tag cil-tag-time ${shift === 'night' ? 'night' : ''}">${escapeHtml(w.from)}–${escapeHtml(w.to)}</span>`;

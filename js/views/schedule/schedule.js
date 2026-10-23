@@ -309,8 +309,8 @@ function renderScheduleMatrix() {
   if (hasScheduleWeekOverride(getSchWeekStart(off), schState.line)) weekSub += ' · есть разовые правки';
 
   const scopeHtml = isPastWeek ? '' : `
-      <div class="sch-scope" role="group" aria-label="Как сохранить изменения">
-        <span class="sch-scope-label">Сохранить</span>
+      <div class="sch-scope" role="group" aria-label="На какие недели действуют правки">
+        <span class="sch-scope-label">Правки действуют</span>
         <button type="button" class="sch-scope-btn ${schState.saveScope !== 'week' ? 'active' : ''}" data-sch-scope="forward"
                 title="Изменения войдут в шаблон и будут повторяться каждую неделю">С этой недели и далее</button>
         <button type="button" class="sch-scope-btn ${schState.saveScope === 'week' ? 'active' : ''}" data-sch-scope="week"

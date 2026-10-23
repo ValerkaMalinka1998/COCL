@@ -45,7 +45,17 @@ function getQcFields() {
     return [{ label: 'Значение', text: entry ? getEparamNormLabel(entry, ct) : '—', norm: getEparamNormRange(entry) }];
   }
   const points = getRowMeasurementBlock(row, quickCheckState.brand)?.points || [];
-  return points.map((p, i) => ({ label: 'Т' + (i + 1), text: p.value || '—', norm: parseNorm(p.value) }));
+  // Точка без числа (метка словами, isNormMark) — ОК / Не ОК; допустима в любом
+  // типе контроля, числовые точки проверяются по норме
+  return points.map((p, i) => {
+    const mark = qcIsMark(p.value);
+    return { label: 'Т' + (i + 1), text: p.value || '—', norm: mark ? null : parseNorm(p.value), mark };
+  });
+}
+
+/* Точка проверяется кнопками ОК / Не ОК: метка словами или без числовой нормы */
+function qcIsMark(value) {
+  return isNormMark(value) || !parseNorm(value);
 }
 
 /* Строки смены по порядку матрицы: запланированы на эту дату/смену;
@@ -188,9 +198,14 @@ function openClCheckModal(rowId, dateStr, shift) {
     const prev = getQcPrevious(row);
     $('#qcPointsTitle').textContent = isElec ? 'Значение' : (fields.length > 1 ? `Точки замера · ${fields.length}` : 'Точка замера');
     $('#qcPointsList').innerHTML = fields.length ? fields.map((f, i) => `
-      <label class="qcx-pt" data-index="${i}">
+      <label class="qcx-pt${f.mark ? ' qcx-pt-mark' : ''}" data-index="${i}">
         <span class="qcx-pt-norm">${fields.length > 1 || !isElec ? `<b>${f.label}</b>` : ''}${escapeHtml(f.text)}<span class="qcx-pt-st" data-qc-status="${i}"></span></span>
-        <input type="text" inputmode="decimal" autocomplete="off" class="qc-point-input" data-qc-point="${i}" value="${escapeAttr(saved[i] || '')}">
+        ${f.mark ? `<input type="hidden" class="qc-point-input" data-qc-point="${i}" value="${escapeAttr(saved[i] === 'ОК' || saved[i] === 'Не ОК' ? saved[i] : '')}">
+        <span class="qcx-mark-btns">
+          <button type="button" class="qcx-mark-btn qcx-mark-ok${saved[i] === 'ОК' ? ' on' : ''}" data-qc-mark="${i}" data-v="ОК">ОК</button>
+          <button type="button" class="qcx-mark-btn qcx-mark-fail${saved[i] === 'Не ОК' ? ' on' : ''}" data-qc-mark="${i}" data-v="Не ОК">Не ОК</button>
+        </span>`
+        : `<input type="text" inputmode="decimal" autocomplete="off" class="qc-point-input" data-qc-point="${i}" value="${escapeAttr(saved[i] || '')}">`}
         ${f.norm ? `<span class="qcx-pt-range">${f.norm.min}…${f.norm.max}</span>` : ''}
         ${prev && prev.values[i] ? (() => {
           const pv = qcNum(prev.values[i]);
@@ -229,8 +244,8 @@ function openClCheckModal(rowId, dateStr, shift) {
   btn.onclick = () => openStandardView(row.id, { brand: quickCheckState.brand || '' });
 
   setTimeout(() => {
-    const first = [...$$('#qcPointsList .qc-point-input')].find(i => !i.value) || $('#qcPointsList .qc-point-input');
-    first?.focus();
+    const inputs = [...$$('#qcPointsList input.qc-point-input[type="text"]')];
+    (inputs.find(i => !i.value) || inputs[0])?.focus();
   }, 60);
 }
 
@@ -246,6 +261,13 @@ function updateQcResult() {
     st.textContent = '';
     if (inp.value.trim() === '') return;
     filled++;
+    if (fields[i] && fields[i].mark) {
+      const ok = inp.value === 'ОК';
+      if (!ok) fails++;
+      cell.classList.add(ok ? 'is-ok' : 'is-fail');
+      st.textContent = ok ? '✓' : '✕';
+      return;
+    }
     const v = qcNum(inp.value);
     const norm = fields[i] && fields[i].norm;
     if (isNaN(v) || !norm) return;
@@ -274,6 +296,18 @@ function updateQcResult() {
   const hint = $('#qcCommentHint');
   if (hint) hint.textContent = isFail ? '— опишите отклонение' : '— по желанию';
 }
+
+/* Точка-метка: кнопки ОК / Не ОК пишут ответ в скрытое поле точки */
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest && e.target.closest('#qcPointsList [data-qc-mark]');
+  if (!btn) return;
+  e.preventDefault();
+  const i = btn.dataset.qcMark;
+  const inp = $(`#qcPointsList input[data-qc-point="${i}"]`);
+  if (inp) inp.value = btn.dataset.v;
+  $$(`#qcPointsList [data-qc-mark="${i}"]`).forEach(b => b.classList.toggle('on', b === btn));
+  updateQcResult();
+});
 
 /* ============================================================
    БЫСТРАЯ ПРОВЕРКА — закрытие
@@ -361,6 +395,12 @@ function saveQuickCheck(goNext) {
       const idx = parseInt(inp.dataset.qcPoint, 10);
       const v = (inp.value || '').trim();
       if (v === '') { allFilled = false; values.push(''); return; }
+      // Метка: ответ «ОК» / «Не ОК» как есть
+      if (qcIsMark(points[idx]?.value)) {
+        values.push(v);
+        if (v === 'Не ОК') anyFail = true;
+        return;
+      }
       const num = qcNum(v);
       values.push(isNaN(num) ? v : String(num));
       const norm = parseNorm(points[idx]?.value);
@@ -368,7 +408,7 @@ function saveQuickCheck(goNext) {
     });
 
     if (!allFilled) {
-      showToast('Заполните все точки', true);
+      showToast('Заполните все точки и отметьте метки ОК / Не ОК', true);
       return;
     }
 
@@ -413,7 +453,8 @@ document.addEventListener('keydown', (e) => {
   const inp = e.target.closest && e.target.closest('#quickCheckModal .qc-point-input');
   if (!inp || e.key !== 'Enter') return;
   e.preventDefault();
-  const all = [...$$('#qcPointsList .qc-point-input')];
+  // Метки (скрытые поля) пропускаем — их отмечают кнопками ОК / Не ОК
+  const all = [...$$('#qcPointsList input.qc-point-input[type="text"]')];
   const next = all[all.indexOf(inp) + 1];
   if (next) next.focus();
   else saveQuickCheck(!!getQcNext());

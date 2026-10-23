@@ -394,7 +394,7 @@ function renderEparamExtra(p) {
   wrap.innerHTML = `
     ${valEditBlockHtml(p, epPageState.isNew)}
     <div class="sv-full-extra-block">
-      <div class="sv-full-extra-label">Применять к</div>
+      <div class="sv-full-extra-label">CL относится к</div>
       <div class="sv-full-extra-chips">
         <div class="sv-edit-chips-group" id="epf_appliesToGroup">
           ${chip('ChangeOver', 'type-checkbox-changeover', 'Change Over')}

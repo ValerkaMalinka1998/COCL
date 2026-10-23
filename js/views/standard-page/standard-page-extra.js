@@ -111,7 +111,7 @@ function renderSvFullRelated(st) {
 }
 
 /* ============================================================
-   Дополнительная информация (Применять к, Триггеры, Top Losses)
+   Дополнительная информация (CL относится к, Триггеры, Top Losses)
    ============================================================ */
 
 function renderSvFullExtra(st, isEdit) {
@@ -157,7 +157,7 @@ function renderSvFullExtra(st, isEdit) {
       ? '<span class="et-type-chip et-type-changeover">Всегда в Change Over</span>'
       : '';
     wrap.innerHTML = `
-      ${block('Применять к', appliesToChips + forceChip)}
+      ${block('CL относится к', appliesToChips + forceChip)}
       ${block('Триггеры Change Over', triggerChips)}
       ${block('Top Losses', lossChips)}
     `;
@@ -214,7 +214,7 @@ function renderSvFullExtra(st, isEdit) {
   wrap.innerHTML = `
     ${valEditBlockHtml(st, svFullState.isNew)}
     <div class="sv-full-extra-block">
-      <div class="sv-full-extra-label">Применять к</div>
+      <div class="sv-full-extra-label">CL относится к</div>
       <div class="sv-full-extra-chips">
         ${appliesToHtml}
       </div>

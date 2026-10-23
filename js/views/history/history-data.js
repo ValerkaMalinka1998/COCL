@@ -155,7 +155,9 @@ function histItemPoints(h, it) {
   return values.map((v, i) => {
     const n = norms[i] || null;
     const num = histNum(v);
-    const bad = !!(n && n.range && num != null && (num < n.range.min || num > n.range.max));
+    // Точка-метка (ОК / Не ОК) — плохая, если отмечена «Не ОК»
+    const bad = String(v).trim() === 'Не ОК' ||
+      !!(n && n.range && num != null && (num < n.range.min || num > n.range.max));
     return { label: n ? n.label : '', value: v, bad, range: n ? n.range : null };
   });
 }

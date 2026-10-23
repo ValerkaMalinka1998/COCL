@@ -88,7 +88,7 @@
   font-weight: 800;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: var(--blue-mid);
 }
 
 .svm-card h4 small {
@@ -210,7 +210,7 @@
   font-size: 15px;
 }
 
-/* Описание, цель, почему — три колонки */
+/* Цель и «Знаю почему» — две колонки */
 .svm-why {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -231,30 +231,33 @@
   color: var(--text-dim);
 }
 
-/* Где / связи */
-.svm-row {
+/* Основная информация — поля в две колонки, как на странице стандарта */
+.svm-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  column-gap: 20px;
+}
+
+.svm-field {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  padding: 5px 0;
+  padding: 6px 0;
   font-size: 13px;
   border-bottom: 1px dashed var(--border);
 }
 
-.svm-row:last-child {
-  border-bottom: 0;
-}
-
-.svm-row span {
+.svm-field span {
   color: var(--text-dim);
 }
 
-.svm-row b {
+.svm-field b {
   font-weight: 700;
   color: var(--text-main);
   text-align: right;
 }
 
+/* Дополнительная информация: Применять к, триггеры, Top Losses — чипами */
 .svm-links + .svm-links {
   margin-top: 10px;
 }
@@ -270,6 +273,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
+  font-size: 12px;
 }
 
 .svm-tag {
@@ -304,6 +308,13 @@
   color: var(--accent-amber);
   border-color: color-mix(in srgb, var(--accent-amber) 40%, transparent);
   background: color-mix(in srgb, var(--accent-amber) 10%, transparent);
+}
+
+.svm-field-empty,
+.svm-field b.svm-field-empty {
+  font-weight: 500;
+  font-style: italic;
+  color: var(--text-dim);
 }
 
 .svm-foot {

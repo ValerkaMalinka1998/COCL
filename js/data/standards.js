@@ -192,12 +192,23 @@ const NORM_TYPE_HINT = {
 };
 const NORM_TYPE_NAME = { fixed: 'Фиксированный', variable: 'Вариабельный', interval: 'Контролируемый интервал' };
 
+/* Точка-метка: начинается со слова («метки совпадают», «по риске 0»).
+   Число с единицами («92 мм», «5 до 8 мм») и опечатки («5 до», «92 ±») — не метки. */
+function isNormMark(raw) {
+  const s = String(raw == null ? '' : raw).trim();
+  if (!s || /^[-+]?[\d.,]/.test(s)) return false;
+  const kind = classifyNormValue(s);
+  if (kind === 'variable' || kind === 'interval') return false;
+  return /^[a-zа-яё]/i.test(s);
+}
+
 /* Текст ошибки, если значение не подходит типу контроля; '' — всё в порядке.
-   Фиксированный: не принимает «92 ± 5» и «5 до 8» (текст допустим — это ОК/Не ОК).
-   Вариабельный и интервал: принимают только свой формат. */
+   Метка словами допустима в любом типе — в проверке это ОК / Не ОК.
+   Фиксированный: не принимает «92 ± 5» и «5 до 8».
+   Вариабельный и интервал: числовые точки — только свой формат. */
 function normTypeError(type, raw) {
   const s = String(raw == null ? '' : raw).trim();
-  if (!s || !NORM_TYPE_HINT[type]) return '';
+  if (!s || !NORM_TYPE_HINT[type] || isNormMark(s)) return '';
   const kind = classifyNormValue(s);
   if (type === 'fixed') {
     if (kind !== 'variable' && kind !== 'interval') return '';
