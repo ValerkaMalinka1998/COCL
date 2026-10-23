@@ -16,7 +16,7 @@
 */
 
 const LINE_BRAND_SOURCES = {
-  cocl: 'смена сорта (COCL)',
+  cocl: 'смена сорта (CL при переходах)',
   analyst: 'задан аналитиком',
   operator: 'изменён оператором',
   plan: 'план брендов'

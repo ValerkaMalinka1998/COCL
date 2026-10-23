@@ -104,10 +104,9 @@ function updateSchPanelCount() {
     return;
   }
 
-  const label = schState.mode === 'mech' ? 'стандартов' : 'параметров';
-  const labelShort = schState.mode === 'mech' ? 'с расписанием' : 'с расписанием';
+  const label = schState.mode === 'mech' ? pluralRu(total, 'стандарт', 'стандарта', 'стандартов') : pluralRu(total, 'параметр', 'параметра', 'параметров');
 
-  el.textContent = `${total} ${label} · ${withSchedule} ${labelShort}`;
+  el.textContent = `${total} ${label} · ${withSchedule} с расписанием`;
 }
 
 /* Входит ли строка в расписание просматриваемой недели
@@ -765,7 +764,7 @@ function renderScheduleRow(row, dateByDayIdx, num, zone, isElec) {
   let html = `<tr class="cil-row${valOn ? ' cil-row-val' : ''}" data-row-id="${id}">
     <td class="cil-c-zone cil-z${zone}">${escapeHtml(machine)}<small>№ ${num}</small></td>
     <td class="cil-c-std"><div class="cil-std-box">
-      <div class="cil-std-title"><span class="cil-std-m">${escapeHtml(machine)} ·</span><span class="cil-std-name">${escapeHtml(title)}</span>${valOn ? valChipHtml(row) : ''}</div>
+      <div class="cil-std-title"><span class="cil-std-name">${escapeHtml(title)}</span>${valOn ? valChipHtml(row) : ''}</div>
       <div class="cil-std-sub">
         ${row.oplNumber ? `<span class="cil-opl">${escapeHtml(row.oplNumber)}</span>` : ''}
         ${row.node ? `<span class="cil-node">${CIL_ICONS.gear}${escapeHtml(row.node)}</span>` : ''}

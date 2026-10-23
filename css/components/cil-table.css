@@ -228,7 +228,6 @@
 .cil-table tbody td.cil-c-std { padding: 7px 12px; }
 .cil-std-title { font-size: 13px; font-weight: 700; line-height: 1.35; color: var(--text-main); }
 .cil-std-title > * { margin-right: 6px; vertical-align: middle; }
-.cil-std-m { font-weight: 800; }
 .cil-std-name { font: inherit; color: inherit; }
 .cil-std-link {
   display: inline;

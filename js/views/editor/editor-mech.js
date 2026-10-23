@@ -86,10 +86,10 @@ function etTypeNormHtml(row, isElec) {
   if (norm.missing && /бренд не задан/.test(norm.html)) {
     const src = isElec ? row.valuesByBrand : row.measurements;
     const names = (Array.isArray(src) ? src : []).filter(b => b && b.brand).map(b => b.brand);
-    norm = { visual: false, html: `<span class="cil-dim" title="Значения разные по брендам">по брендам: ${escapeHtml(names.join(', '))}</span>` };
+    norm = { visual: false, byBrand: true, html: `<span class="cil-dim" title="Значения разные по брендам">по брендам: ${escapeHtml(names.join(', '))}</span>` };
   }
   const needsPoints = type === 'variable' || type === 'interval';
-  const noValues = norm.visual || /cil-dim/.test(norm.html);
+  const noValues = !norm.byBrand && (norm.visual || /cil-dim|нет точек/.test(norm.html));
   const normHtml = needsPoints && noValues
     ? '<span class="et-warn" title="Для этого типа нужны точки замера">⚠ нет точек</span>'
     : norm.html;

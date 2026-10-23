@@ -721,6 +721,7 @@
 .et-norm .cil-norm-visual { flex-direction: row; gap: 4px; font-size: 11px; }
 .et-norm .cil-norm-visual svg { width: 12px; height: 12px; }
 .et-norm .cil-norm-pts { padding: 1px 8px; font-size: 10px; }
+.et-norm .cil-norm-vals { justify-content: flex-start; }
 .et-warn { font-size: 11px; font-weight: 800; color: var(--accent-amber); }
 
 .et-applies { display: inline-flex; gap: 4px; }
@@ -775,3 +776,7 @@
 @media (max-width: 1200px) {
   .et-c-ph, .et-table td.et-c-ph { display: none; }
 }
+
+/* === Фильтры в одну строку: поиск уже, списки компактнее === */
+.et-filterbar .et-search { flex: 1 1 180px; min-width: 160px; max-width: 300px; }
+.et-filterbar .et-fsel { max-width: 160px; padding: 7px 8px; }

@@ -193,10 +193,15 @@
         <div class="th-sub" id="coclHeadSub"></div>
       </div>
       <div class="th-actions">
-        <button type="button" class="cocl-line-pill" id="coclLinePill" title="Выбрать линию">
-        <span class="cocl-line-pill-code" id="coclLinePillCode">Выбрать линию</span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-      </button>
+        <button type="button" class="editor-line-pill" id="coclLinePill" title="Выбрать линию">
+          <span class="editor-line-pill-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          </span>
+          <span class="editor-line-pill-code" id="coclLinePillCode">Выбрать линию</span>
+          <span class="editor-line-pill-caret">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </span>
+        </button>
       </div>
     </div>
     <div class="th-steps" id="coclSteps"></div>
@@ -1686,6 +1691,7 @@
       <div class="card st-card">
     <h2>Структура производства</h2>
     <p class="settings-hint">Цех → участок → блок → линия. Линия добавляется кнопкой «+» прямо в своём блоке. Нажмите на линию — справа откроется её карточка: машины, бренды, место в структуре.</p>
+    <p class="settings-hint st-legend"><span class="st-line st-legend-chip"><span class="st-line-code">SD12</span><span class="st-line-meta">4</span></span> цифра — сколько машин на линии · <span class="st-line st-line-warn st-legend-chip"><span class="st-line-code">SD08</span><span class="st-line-meta">4</span></span> жёлтый пунктир — у линии нет брендов, оператор её не увидит</p>
     <div class="st-layout">
       <div class="st-tree-wrap">
         <div class="st-toolbar">
@@ -1768,7 +1774,7 @@
         <h2>График смен</h2>
         <p class="shf-intro">
           Дневная смена <b>09:00–21:00</b> и ночная <b>21:00–09:00</b>. Буквы A, B, C, D — обозначения смен.
-          По этому графику Чек-лист CL, Расписание CL и COCL показывают, какая смена сейчас работает.
+          По этому графику Чек-лист CL, Расписание CL и CL при переходах показывают, какая смена сейчас работает.
         </p>
 
         <div id="shfNow" class="shf-now"></div>
@@ -1815,7 +1821,7 @@
       <div class="card">
         <h2>Операторы <span class="list-counter" id="operatorsCount"></span></h2>
         <div class="list-toolbar">
-          <input type="text" id="operatorsSearch" placeholder="🔍 Поиск по ФИО...">
+          <div class="settings-search settings-search-wide"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="operatorsSearch" placeholder="Поиск по ФИО..."></div>
         </div>
         <div class="operators-list" id="operatorsList"></div>
         <div class="pagination-bar" id="operatorsPagination"></div>
@@ -2117,7 +2123,7 @@
     </div>
     <div class="modal-body">
       <div class="field" style="margin-bottom:14px">
-        <input type="text" id="topLossPickerSearch" placeholder="🔍 Поиск по потерям..." autocomplete="off">
+        <div class="settings-search settings-search-wide"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="topLossPickerSearch" placeholder="Поиск по потерям..." autocomplete="off"></div>
       </div>
       <div id="topLossPickerList" class="toploss-picker-list"></div>
     </div>
@@ -2139,7 +2145,7 @@
     <div class="modal-body">
       <p class="trigger-picker-hint" id="triggerPickerHint"></p>
       <div class="field" style="margin-bottom:14px">
-        <input type="text" id="triggerPickerSearch" placeholder="🔍 Поиск по триггерам..." autocomplete="off">
+        <div class="settings-search settings-search-wide"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="triggerPickerSearch" placeholder="Поиск по триггерам..." autocomplete="off"></div>
       </div>
       <div id="triggerPickerList" class="toploss-picker-list"></div>
     </div>
@@ -2355,7 +2361,7 @@
       </div>
       <div class="field">
         <label for="lineBrandNote">Комментарий (необязательно)</label>
-        <input type="text" id="lineBrandNote" placeholder="Например: COCL не проведён, переход был в 14:30">
+        <input type="text" id="lineBrandNote" placeholder="Например: проверка при переходе не проведена, переход был в 14:30">
       </div>
       <p class="lb-hint" id="lineBrandModalHint"></p>
     </div>
@@ -2390,7 +2396,7 @@
     <div class="modal-body">
 
       <div class="field" style="margin-bottom:14px">
-        <input type="text" id="schAddStandardsSearch" placeholder="🔍 Поиск по OPL, машине, узлу, названию..." autocomplete="off">
+        <div class="settings-search settings-search-wide"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="schAddStandardsSearch" placeholder="Поиск по OPL, машине, узлу, названию..." autocomplete="off"></div>
       </div>
 
       <div class="sch-add-toolbar">

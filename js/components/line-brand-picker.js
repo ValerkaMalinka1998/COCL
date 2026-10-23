@@ -25,8 +25,8 @@ function openLineBrandPicker(line, source, onDone) {
   const info = getLineBrandNow(line);
   $('#lineBrandModalTitle').textContent = `Бренд на линии ${line}`;
   $('#lineBrandModalHint').textContent = source === 'analyst'
-    ? 'Бренд действует с этого момента и до следующей смены сорта в COCL. Используйте, если оператор не провёл проверку COCL.'
-    : 'Бренд действует с этого момента и до следующей смены сорта в COCL. Изменение будет видно в истории.';
+    ? 'Бренд действует с этого момента и до следующей смены сорта в «CL при переходах». Используйте, если оператор не провёл проверку при переходе.'
+    : 'Бренд действует с этого момента и до следующей смены сорта в «CL при переходах». Изменение будет видно в истории.';
   $('#lineBrandSelect').innerHTML = brands
     .map(b => `<option value="${escapeAttr(b)}"${info && info.brand === b ? ' selected' : ''}>${escapeHtml(b)}</option>`).join('');
   $('#lineBrandNote').value = '';

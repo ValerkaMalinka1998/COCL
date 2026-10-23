@@ -22,7 +22,7 @@ const HIST_KINDS = {
     icon: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>'
   },
   cocl: {
-    label: 'COCL', short: 'COCL', color: 'var(--accent-emerald, var(--accent-green))',
+    label: 'CL при переходах', short: 'Переходы', color: 'var(--accent-emerald, var(--accent-green))',
     icon: '<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>'
   }
 };
@@ -45,7 +45,7 @@ function histKind(h) {
 
 function histKindLabel(h) {
   const k = histKind(h);
-  if (k === 'cocl') return 'COCL · ' + (HIST_COCL_TYPES[h.type] || h.type || 'проверка');
+  if (k === 'cocl') return 'CL при переходах · ' + (HIST_COCL_TYPES[h.type] || h.type || 'проверка');
   return HIST_KINDS[k].label;
 }
 

@@ -116,7 +116,13 @@ function cilNorm(row, brand, isElec) {
     }
   } else {
     const ms = Array.isArray(row.measurements) ? row.measurements : [];
-    const pick = pickBrandValues(ms.filter(b => (b.points || []).some(p => String(p && p.value != null ? p.value : '').trim())), brand);
+    const filled = ms.filter(b => (b.points || []).some(p => String(p && p.value != null ? p.value : '').trim()));
+    // Вариабельный / интервал без единой точки — норма не задана, бренд тут ни при чём
+    const t0 = typeof migrateControlType === 'function' ? migrateControlType(row.controlType, ms) : row.controlType;
+    if (!filled.length && (t0 === 'variable' || t0 === 'interval')) {
+      return { visual: false, missing: true, html: '<span class="cil-norm-miss" title="В стандарте нет точек замера — сообщите аналитику">нет точек</span>' };
+    }
+    const pick = pickBrandValues(filled, brand);
     if (pick.kind === 'missing' || pick.kind === 'nobrand') return noNorm(pick);
     const block = pick.item;
     values = (block && Array.isArray(block.points) ? block.points : [])

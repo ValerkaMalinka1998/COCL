@@ -420,6 +420,7 @@ function updateCoclStepStates() {
   });
 
   // На кнопках части: с текущим типом (если не выбран — все типы)
+  const partCount = {};
   $$('[data-count-part]').forEach(el => {
     const p = el.dataset.countPart;
     const types = type ? [type] : ['ChangeOver', 'CL_TO', 'CL_Conversion'];
@@ -427,7 +428,24 @@ function updateCoclStepStates() {
     types.forEach(tp => getCoclRelevant({ ...base, type: tp, part: p, loose: true }).forEach(s => ids.add(s.id)));
     el.textContent = fmt(ids.size);
     el.classList.toggle('is-zero', line && ids.size === 0);
+    partCount[p] = ids.size;
   });
+
+  // Пустую часть не выбрать; если стандарты есть только у одной части — выбираем её сами
+  const locked = $('#coclSetupCard')?.classList.contains('is-locked');
+  $$('#coclPartSeg [data-part]').forEach(b => { b.disabled = !!(line && type && partCount[b.dataset.part] === 0); });
+  if (needsPart && type && !locked) {
+    const withStd = ['Maker', 'Packer'].filter(p => partCount[p] > 0);
+    const target = withStd.length === 1 && part !== withStd[0] ? withStd[0]
+      : (part && partCount[part] === 0 && withStd.length ? withStd[0] : '');
+    if (target) {
+      const sel = $('#partSelect');
+      sel.value = target;
+      sel.dispatchEvent(new Event('change'));
+      return true;
+    }
+  }
+  return false;
 }
 
 /* Вход на вкладку: без линии — экран выбора линии (cocl-pick.js) */
@@ -574,7 +592,8 @@ function updateChecklist() {
   const brandFrom = $('#brandFrom')?.value || '';
   const brandTo = $('#brandTo')?.value || '';
 
-  updateCoclStepStates();
+  // Часть выбрана автоматически — список уже перестроен по событию change
+  if (updateCoclStepStates()) return;
   if (typeof renderCoclHead === 'function') renderCoclHead();
   if (coclState.checking) return;
 

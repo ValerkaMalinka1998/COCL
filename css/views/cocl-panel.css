@@ -95,26 +95,6 @@
 }
 
 /* Линия */
-.cocl-line-pill {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  height: 44px;
-  padding: 0 14px;
-  border: 1px solid var(--border-hi);
-  border-radius: 10px;
-  background: var(--bg-input);
-  color: var(--text-main);
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.cocl-line-pill:hover {
-  border-color: var(--accent-cyan);
-}
-
 .cocl-line-context {
   flex-wrap: wrap;
   align-items: center;
@@ -523,3 +503,7 @@
 
 /* Выбор линии: пока линия не выбрана, условия и чек-лист скрыты */
 #tab-check.cocl-picking .cocl-layout { display: none; }
+
+/* Экран выбора линии: иконка — цвет переходов (циан), не коралл TOP Losses */
+#coclPick .tl-pick-hero > svg { color: var(--accent-cyan); }
+#coclPartSeg [data-part]:disabled { opacity: .45; cursor: not-allowed; }

@@ -402,7 +402,7 @@ function renderEparamExtra(p) {
           ${chip('CL_Conversion', 'type-checkbox-clconv', 'CL в Конвертацию')}
         </div>
       </div>
-      <p class="ep-hint">Если ничего не выбрано — параметр хранится, но в проверках COCL не показывается.</p>
+      <p class="ep-hint">Если ничего не выбрано — параметр хранится, но в CL при переходах не показывается.</p>
     </div>
     <div class="sv-full-extra-block">
       <div class="sv-full-extra-label">Top Losses</div>

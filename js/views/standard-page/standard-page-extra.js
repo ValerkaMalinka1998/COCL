@@ -89,7 +89,7 @@ function renderSvFullRelated(st) {
     rows.push(['Участок', ctx.area.name + (ctx.block ? ` (${ctx.block.name})` : '')]);
   }
   rows.push(['Линия', st.line]);
-  rows.push(['Рабочий центр', st.nodePart]);
+  rows.push(['Часть линии', st.nodePart]);
   rows.push(['Машина', st.machine]);
   rows.push(['Узел', st.node]);
   rows.push(['OPL №', st.oplNumber]);

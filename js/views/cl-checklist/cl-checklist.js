@@ -310,7 +310,7 @@ function updateClPanelCount() {
     return;
   }
   const n = clState.rows.length;
-  const label = clState.mode === 'mech' ? 'стандартов' : 'параметров';
+  const label = clState.mode === 'mech' ? pluralRu(n, 'стандарт', 'стандарта', 'стандартов') : pluralRu(n, 'параметр', 'параметра', 'параметров');
   el.textContent = `${n} ${label}`;
 }
 
@@ -583,7 +583,7 @@ function renderClRow(row, num, zone, cells, hist, isElec) {
   let html = `<tr class="cil-row${valOn ? ' cil-row-val' : ''}" data-row-id="${escapeAttr(row.id)}">
     <td class="cil-c-zone cil-z${zone}">${escapeHtml(machine)}<small>№ ${num}</small></td>
     <td class="cil-c-std">
-      <div class="cil-std-title"><span class="cil-std-m">${escapeHtml(machine)} ·</span>${nameHtml}${devBadge}${valOn ? valChipHtml(row) : ''}</div>
+      <div class="cil-std-title">${nameHtml}${devBadge}${valOn ? valChipHtml(row) : ''}</div>
       <div class="cil-std-sub">
         ${row.oplNumber ? `<span class="cil-opl">${escapeHtml(row.oplNumber)}</span>` : ''}
         ${row.node ? `<span class="cil-node">${CIL_ICONS.gear}${escapeHtml(row.node)}</span>` : ''}

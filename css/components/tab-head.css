@@ -94,7 +94,6 @@
 }
 
 /* Пустая кнопка линии в шапке «CL при переходах» */
-.th-band .cocl-line-pill { background: var(--bg-card); }
 
 [data-theme="dark"] .th-band-coral {
   background: color-mix(in srgb, var(--th) 2%, var(--bg-card));

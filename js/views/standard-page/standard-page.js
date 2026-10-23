@@ -214,7 +214,7 @@ function renderSvFullCrumbs(st) {
   const parts = [];
   // ID
   if (st.oplNumber) {
-    parts.push(`<span class="sv-full-crumb-id">#${escapeHtml(st.oplNumber)}</span>`);
+    parts.push(`<span class="sv-full-crumb-id">${escapeHtml(st.oplNumber)}</span>`);
   }
   // Цех
   parts.push(`<span class="sv-full-crumb">${escapeHtml(ctx.workshop.name)}</span>`);
