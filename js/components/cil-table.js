@@ -55,9 +55,10 @@ function cilDateByDayIdx(weekDays) {
 }
 
 /* Чипы окон времени */
-function cilTimeChips(timeWindows) {
+function cilTimeChips(timeWindows, work) {
+  if (normWork(work) === 'CIL') return '<span class="cil-tag cil-tag-time-free">по ситуации</span>';
   return (Array.isArray(timeWindows) ? timeWindows : []).map(w => {
-    const shift = typeof getTimeWindowShift === 'function' ? getTimeWindowShift(w.from) : 'day';
+    const shift = getTimeWindowShift(w.from);
     return `<span class="cil-tag cil-tag-time ${shift === 'night' ? 'night' : ''}">${escapeHtml(w.from)}–${escapeHtml(w.to)}</span>`;
   }).join('');
 }

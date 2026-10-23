@@ -408,16 +408,6 @@ function renderScheduleMatrix() {
     });
   });
 
-  // Клик по колонке «Время» — открыть модалку
-  wrap.querySelectorAll('[data-tw-open]').forEach(el => {
-    el.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const rowId = el.dataset.twOpen;
-      if (isSchReadOnly()) return;
-      if (rowId) openTimeWindowsModal(rowId);
-    });
-  });
-
   // Клик по Run/Stop/CIL — переключить прямо в черновике расписания
   wrap.querySelectorAll('[data-work-toggle]').forEach(el => {
     el.addEventListener('click', (e) => {
@@ -433,245 +423,6 @@ function renderScheduleMatrix() {
     });
   });
 }
-/* ============================================================
-   РАСПИСАНИЕ CL — время проверки (timeWindows)
-   ============================================================ */
-
-/* Состояние модалки */
-let twState = {
-  rowId: null,
-  draft: []   // [{from, to}, ...] — рабочая копия
-};
-/* Определить тип окна времени: 'day' или 'night' */
-function getTimeWindowShift(from) {
-  if (!from) return 'day';
-  const hh = String(from).slice(0, 2);   // '09', '13', '21', '03'
-  // Ночные: >= 21:00 или < 09:00
-  if (hh >= '21' || hh < '09') return 'night';
-  return 'day';
-}
-/* Предустановки: проверка стандартов — первый час смены; CIL — середина смены (≈30 мин) */
-const TW_PRESETS = {
-  day: [
-    { from: '09:00', to: '10:00', label: 'Проверка' },
-    { from: '13:00', to: '13:30', label: 'CIL' }
-  ],
-  night: [
-    { from: '21:00', to: '22:00', label: 'Проверка' },
-    { from: '03:00', to: '03:30', label: 'CIL' }
-  ]
-};
-let twDuration = 30;
-
-/* Минуты от начала дневной смены (09:00) — для сортировки и шкалы */
-function twMinutesFromShiftStart(hhmm) {
-  const [h, m] = String(hhmm).split(':').map(Number);
-  return ((h * 60 + m) - 9 * 60 + 1440) % 1440;
-}
-
-/* Время + N минут (через полночь) */
-function twAddMinutes(hhmm, mins) {
-  const [h, m] = String(hhmm).split(':').map(Number);
-  const total = ((h * 60 + m + mins) % 1440 + 1440) % 1440;
-  return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
-}
-
-/* «930», «9:30», «09.30» → «09:30»; иначе '' */
-function twNormalizeTime(raw) {
-  const s = String(raw || '').trim().replace(/[.,\s]/g, ':');
-  let h, m;
-  if (/^\d{1,2}:\d{2}$/.test(s)) [h, m] = s.split(':').map(Number);
-  else if (/^\d{3,4}$/.test(s)) { h = Number(s.slice(0, -2)); m = Number(s.slice(-2)); }
-  else if (/^\d{1,2}$/.test(s)) { h = Number(s); m = 0; }
-  else return '';
-  if (h > 23 || m > 59) return '';
-  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
-}
-
-/* Открыть модалку */
-function openTimeWindowsModal(rowId) {
-  const modal = $('#timeWindowsModal');
-  if (!modal) return;
-
-  const row = schState.rows.find(r => r.id === rowId);
-  if (!row) return;
-
-  // Текущие окна — с учётом черновика и правок недели
-  const freq = getSchRowFreq(row);
-  const current = Array.isArray(freq.timeWindows) ? freq.timeWindows : [];
-
-  twState.rowId = rowId;
-  twState.draft = current.map(w => ({ from: w.from, to: w.to }));
-
-  // Подзаголовок: OPL · машина · название
-  const parts = [row.oplNumber, row.machine, row.title || row.paramName].filter(Boolean);
-  $('#timeWindowsPoint').textContent = parts.join(' · ') || '—';
-
-  renderTimeWindowsList();
-  updateTwCustomPreview();
-  openModal(modal);
-}
-
-/* Закрыть модалку */
-function closeTimeWindowsModal() {
-  closeModal('#timeWindowsModal');
-  twState.rowId = null;
-  twState.draft = [];
-}
-
-/* Отрисовать всё содержимое: шкалу, предустановки, выбранные окна */
-function renderTimeWindowsList() {
-  twState.draft.sort((a, b) => twMinutesFromShiftStart(a.from) - twMinutesFromShiftStart(b.from));
-  const has = (from, to) => twState.draft.some(w => w.from === from && w.to === to);
-
-  // Предустановки — переключатели
-  ['day', 'night'].forEach(shift => {
-    const box = $(shift === 'day' ? '#twPresetsDay' : '#twPresetsNight');
-    if (!box) return;
-    box.innerHTML = TW_PRESETS[shift].map(({ from, to, label }) => {
-      const on = has(from, to);
-      const cls = label === 'CIL' ? ' tw-preset-cil' : '';
-      return `<button type="button" class="tw-preset${cls}${on ? ' active' : ''}" data-from="${from}" data-to="${to}">
-        ${on ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}${from}–${to}<small class="tw-preset-label">${label}</small></button>`;
-    }).join('');
-  });
-
-  // Шкала суток 09:00 → 09:00
-  const tl = $('#twTimeline');
-  if (tl) {
-    const ticks = [];
-    for (let i = 0; i <= 24; i += 3) {
-      ticks.push(`<span class="tw-tl-tick" style="left:${i / 24 * 100}%">${String((9 + i) % 24).padStart(2, '0')}</span>`);
-    }
-    const marks = twState.draft.map(w => {
-      const start = twMinutesFromShiftStart(w.from);
-      let len = (twMinutesFromShiftStart(w.to) - start + 1440) % 1440 || 1440;
-      return `<span class="tw-tl-mark tw-tl-mark-${getTimeWindowShift(w.from)}" style="left:${start / 1440 * 100}%;width:max(4px, ${len / 1440 * 100}%)" title="${w.from}–${w.to}"></span>`;
-    }).join('');
-    tl.innerHTML = `<div class="tw-tl-bar"><span class="tw-tl-day"></span><span class="tw-tl-night"></span>${marks}</div><div class="tw-tl-ticks">${ticks.join('')}</div>`;
-  }
-
-  // Выбранные окна
-  const count = $('#twCount');
-  if (count) count.textContent = twState.draft.length;
-  const clear = $('#twClearAllBtn');
-  if (clear) clear.hidden = !twState.draft.length;
-
-  const list = $('#twList');
-  if (!list) return;
-  if (!twState.draft.length) {
-    list.innerHTML = '<div class="tw-empty">Нет окон — проверка без привязки ко времени. Отметьте время выше.</div>';
-    return;
-  }
-  list.innerHTML = twState.draft.map((w, idx) => `
-    <span class="tw-item tw-item-${getTimeWindowShift(w.from)}">
-      ${escapeHtml(w.from)}–${escapeHtml(w.to)}
-      <button type="button" class="tw-item-remove" data-tw-remove="${idx}" title="Удалить">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </span>
-  `).join('');
-}
-
-/* Подсказка «10:00–10:30» у своего времени */
-function updateTwCustomPreview() {
-  const el = $('#twCustomPreview');
-  if (!el) return;
-  const from = twNormalizeTime($('#twCustomFrom')?.value);
-  el.textContent = from ? `${from}–${twAddMinutes(from, twDuration)}` : '';
-  el.className = 'tw-custom-preview' + (from ? ' tw-custom-preview-' + getTimeWindowShift(from) : '');
-}
-
-/* Добавить окно в draft (с проверкой на дубли) */
-function addTimeWindow(from, to) {
-  if (!from || !to) return;
-  if (twState.draft.some(w => w.from === from && w.to === to)) {
-    showToast('Такое окно уже добавлено', true);
-    return;
-  }
-  twState.draft.push({ from, to });
-  renderTimeWindowsList();
-}
-
-/* Сохранить окна в draft расписания */
-function saveTimeWindows() {
-  if (!twState.rowId) return;
-
-  const rowId = twState.rowId;
-
-  // Инициализируем draft для строки (с учётом правок просматриваемой недели)
-  ensureSchDraft(rowId);
-
-  schState.draft[rowId].timeWindows = twState.draft.map(w => ({ from: w.from, to: w.to }));
-
-  schState.dirty = true;
-  updateSchSaveBtn();
-  renderScheduleMatrix();
-  closeTimeWindowsModal();
-  showToast('Время проверки сохранено');
-}
-
-/* --- Обработчики модалки --- */
-
-$('#timeWindowsClose')?.addEventListener('click', () => closeTimeWindowsModal());
-$('#twCancelBtn')?.addEventListener('click', () => closeTimeWindowsModal());
-$('#timeWindowsModal')?.addEventListener('click', (e) => {
-  if (e.target.id === 'timeWindowsModal') { closeTimeWindowsModal(); return; }
-
-  // Предустановка — включить / выключить
-  const preset = e.target.closest('.tw-preset');
-  if (preset) {
-    const { from, to } = preset.dataset;
-    const idx = twState.draft.findIndex(w => w.from === from && w.to === to);
-    if (idx >= 0) twState.draft.splice(idx, 1);
-    else twState.draft.push({ from, to });
-    renderTimeWindowsList();
-    return;
-  }
-
-  // Удалить выбранное окно
-  const rm = e.target.closest('[data-tw-remove]');
-  if (rm) {
-    twState.draft.splice(parseInt(rm.dataset.twRemove, 10), 1);
-    renderTimeWindowsList();
-    return;
-  }
-
-  // Длительность своего окна
-  const dur = e.target.closest('#twDur [data-dur]');
-  if (dur) {
-    twDuration = parseInt(dur.dataset.dur, 10);
-    $$('#twDur [data-dur]').forEach(b => b.classList.toggle('active', b === dur));
-    updateTwCustomPreview();
-  }
-});
-
-$('#twCustomFrom')?.addEventListener('input', () => updateTwCustomPreview());
-$('#twCustomFrom')?.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') $('#twAddCustomBtn')?.click();
-});
-
-/* Добавить своё окно (может переходить через полночь) */
-$('#twAddCustomBtn')?.addEventListener('click', () => {
-  const from = twNormalizeTime($('#twCustomFrom')?.value);
-  if (!from) {
-    showToast('Укажите время в формате чч:мм, например 10:00', true);
-    return;
-  }
-  $('#twCustomFrom').value = from;
-  addTimeWindow(from, twAddMinutes(from, twDuration));
-});
-
-/* Очистить всё */
-$('#twClearAllBtn')?.addEventListener('click', () => {
-  if (!twState.draft.length) return;
-  twState.draft = [];
-  renderTimeWindowsList();
-});
-
-/* Сохранить */
-$('#twSaveBtn')?.addEventListener('click', saveTimeWindows);
-
 /* --- Одна строка матрицы расписания (с инфо-колонками) --- */
 /* Эффективная периодичность строки для ТЕКУЩЕЙ просматриваемой недели:
    черновик → оверрайд недели → базовый шаблон. */
@@ -680,7 +431,8 @@ function getSchRowFreq(row) {
   if (!row) return base;
 
   // Несохранённые правки главнее всего
-  if (schState.draft[row.id]) return schState.draft[row.id];
+  const dr = schState.draft[row.id];
+  if (dr) return { ...dr, timeWindows: autoTimeWindows(dr.work, dr.schedule) };
 
   // Шаблон недели + разовые правки этой недели
   const w = getRowForWeek(row, getSchWeekStart(schState.weekOffset || 0), schState.line);
@@ -769,8 +521,7 @@ function renderScheduleRow(row, dateByDayIdx, num, zone, isElec) {
         ${row.oplNumber ? `<span class="cil-opl">${escapeHtml(row.oplNumber)}</span>` : ''}
         ${row.node ? `<span class="cil-node">${CIL_ICONS.gear}${escapeHtml(row.node)}</span>` : ''}
         <button type="button" class="cil-tag cil-tag-${work.toLowerCase()}" data-work-toggle="${id}" title="Переключить Run → Stop → CIL">${work.toUpperCase()}</button>
-        ${cilTimeChips(freq.timeWindows)}
-        <button type="button" class="cil-tag cil-tag-add" data-tw-open="${id}" title="Задать время проверки">${freq.timeWindows && freq.timeWindows.length ? 'время' : '+ время'}</button>
+        ${cilTimeChips(freq.timeWindows, freq.work)}
       </div>
       ${member ? `<button type="button" class="cil-row-del" data-remove-from-schedule="${id}" title="Убрать из расписания">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -1029,7 +780,7 @@ function saveSchedule() {
     twChanges.push({
       id,
       before: getRowForWeek(row, getSchWeekStart(weekOffset), schState.line).timeWindows,
-      after: schState.draft[id].timeWindows
+      after: autoTimeWindows(schState.draft[id].work, schState.draft[id].schedule)
     });
   });
 
@@ -1082,7 +833,7 @@ function saveScheduleForward(weekOffset) {
     return {
       inSchedule: added.has(row.id) ? true : (removed.has(row.id) ? false : w.member),
       schedule: d ? d.schedule.concat(d.droppedPast || []) : w.schedule,
-      timeWindows: d ? d.timeWindows : w.timeWindows,
+      timeWindows: d ? autoTimeWindows(d.work != null ? d.work : w.work, d.schedule) : w.timeWindows,
       work: d && d.work != null ? d.work : w.work
     };
   };
@@ -1137,7 +888,7 @@ function saveScheduleWeekOverride(weekOffset) {
   Object.entries(schState.draft).forEach(([id, freq]) => {
     ov.rows[id] = {
       schedule: Array.isArray(freq.schedule) ? freq.schedule.map(x => ({ ...x })) : [],
-      timeWindows: Array.isArray(freq.timeWindows) ? freq.timeWindows.map(w => ({ from: w.from, to: w.to })) : [],
+      timeWindows: autoTimeWindows(freq.work, freq.schedule),
       work: (freq.work != null) ? freq.work : undefined
     };
     // Раз строка снова в черновике — она точно не «убрана»

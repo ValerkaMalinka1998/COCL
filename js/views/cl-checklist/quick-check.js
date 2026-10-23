@@ -133,7 +133,7 @@ function openClCheckModal(rowId, dateStr, shift) {
     ? `<b>${pos + 1}</b> из ${queue.length}<span>${left ? `осталось ${left}` : 'остальные отмечены'}</span>` : '';
 
   const freq = getClRowFreq(row);
-  const tw = (freq.timeWindows || []).map(w => `${w.from}–${w.to}`).join(', ');
+  const tw = (freq.timeWindows || []).filter(w => getTimeWindowShift(w.from) === shift).map(w => `${w.from}–${w.to}`).join(', ');
   $('#qcCtx').innerHTML = [
     `<span>${fmtISODate(dateStr)} · ${shift === 'day' ? 'День' : 'Ночь'} · смена ${escapeHtml(shiftLetter)}</span>`,
     tw ? `<span>время ${escapeHtml(tw)}</span>` : '',

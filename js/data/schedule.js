@@ -87,6 +87,28 @@ function hasScheduleWeekOverride(weekStart, line) {
 const SCH_BASELINE_FROM = '0000-01-01';
 
 /* Шаблон строки на неделю weekStart (без правок конкретной недели) */
+/* Время проверки считается само: Run / Stop — первый час смены (день 09:00–10:00,
+   ночь 21:00–22:00) по тем сменам, что отмечены в расписании; CIL — без окна
+   (на линии он сдвигается, «по ситуации»). Хранимые окна не читаем. */
+const AUTO_TIME_DAY = { from: '09:00', to: '10:00' };
+const AUTO_TIME_NIGHT = { from: '21:00', to: '22:00' };
+
+function autoTimeWindows(work, schedule) {
+  if (normWork(work) === 'CIL') return [];
+  const list = Array.isArray(schedule) ? schedule : [];
+  const out = [];
+  if (list.some(x => x && x.shift === 'day')) out.push({ ...AUTO_TIME_DAY });
+  if (list.some(x => x && x.shift === 'night')) out.push({ ...AUTO_TIME_NIGHT });
+  return out;
+}
+
+/* Окно проверки: 'day' или 'night' (ночь — с 21:00 до 09:00) */
+function getTimeWindowShift(from) {
+  if (!from) return 'day';
+  const hh = String(from).slice(0, 2);
+  return (hh >= '21' || hh < '09') ? 'night' : 'day';
+}
+
 function getRowTemplateForWeek(row, weekStart) {
   const f = (row && row.frequency) || {};
   const list = Array.isArray(f.templates) ? f.templates : [];
@@ -103,10 +125,11 @@ function getRowTemplateForWeek(row, weekStart) {
     };
   }
   if (!t) return { inSchedule: false, schedule: [], timeWindows: [], work: 'Run' };
+  const schedule = Array.isArray(t.schedule) ? t.schedule : [];
   return {
     inSchedule: t.inSchedule === true,
-    schedule: Array.isArray(t.schedule) ? t.schedule : [],
-    timeWindows: Array.isArray(t.timeWindows) ? t.timeWindows : [],
+    schedule,
+    timeWindows: autoTimeWindows(t.work, schedule),
     work: normWork(t.work)
   };
 }
@@ -134,12 +157,9 @@ function getRowForWeek(row, weekStart, line) {
   // Неделя целиком закончилась до создания строки — её в этой неделе не было
   if (!rowExistedByShiftEnd(row, addDaysISO(weekStart, 6), 'night')) member = false;
   const snap = ov.rows && ov.rows[row.id];
-  return {
-    member,
-    schedule: snap && Array.isArray(snap.schedule) ? snap.schedule : t.schedule,
-    timeWindows: snap && Array.isArray(snap.timeWindows) ? snap.timeWindows : t.timeWindows,
-    work: snap && snap.work != null ? normWork(snap.work) : t.work
-  };
+  const schedule = snap && Array.isArray(snap.schedule) ? snap.schedule : t.schedule;
+  const work = snap && snap.work != null ? normWork(snap.work) : t.work;
+  return { member, schedule, timeWindows: autoTimeWindows(work, schedule), work };
 }
 
 /* Записать версию шаблона «с недели from»: более поздние версии заменяются.
@@ -165,7 +185,7 @@ function setRowTemplateFrom(row, from, state) {
     from,
     inSchedule: state.inSchedule === true,
     schedule: (state.schedule || []).map(x => ({ day: x.day, shift: x.shift })),
-    timeWindows: (state.timeWindows || []).map(w => ({ from: w.from, to: w.to })),
+    timeWindows: autoTimeWindows(state.work, state.schedule),
     work: normWork(state.work)
   });
   list.sort((a, b) => a.from.localeCompare(b.from));
