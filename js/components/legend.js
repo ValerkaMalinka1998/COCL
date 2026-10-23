@@ -7,17 +7,17 @@
 */
 
 const LEGEND_ITEMS = {
-  ok:        () => `<i class="cil-cell cil-cell-ok cil-cell-mini">${CIL_ICONS.check}</i>проверено, в норме`,
+  ok:        () => `<i class="cil-cell cil-cell-ok cil-cell-mini">${CIL_ICONS.check}</i>в норме`,
   fail:      () => `<i class="cil-cell cil-cell-fail cil-cell-mini">${CIL_ICONS.x}</i>отклонение`,
-  missed:    () => '<i class="cil-cell cil-cell-missed cil-cell-mini">?</i>смена прошла, не проверено',
-  due:       () => '<i class="cil-cell cil-cell-mini"></i>запланировано на эту смену',
-  na:        () => '<i class="lg-sw lg-sw-na">—</i>в эту смену не проверяется',
+  missed:    () => '<i class="cil-cell cil-cell-missed cil-cell-mini">?</i>смена прошла без проверки',
+  due:       () => '<i class="cil-cell cil-cell-mini"></i>запланировано',
+  na:        () => '<i class="lg-sw lg-sw-na">—</i>не проверяется',
   ruler:     () => `<i class="cil-cell cil-cell-mini">${CIL_ICONS.ruler}</i>замер по точкам`,
-  eye:       () => `<i class="cil-cell cil-cell-mini">${CIL_ICONS.eye}</i>визуально: ОК / Не ОК`,
+  eye:       () => `<i class="cil-cell cil-cell-mini">${CIL_ICONS.eye}</i>визуально ОК / Не ОК`,
   day:       () => '<i class="lg-sw lg-sw-day"></i>дневная смена',
   night:     () => '<i class="lg-sw lg-sw-night"></i>ночная смена',
   past:      () => '<i class="lg-sw lg-sw-past"></i>смена прошла, изменить нельзя',
-  val:       () => '<i class="lg-sw lg-sw-val"></i>стандарт на валидации',
+  val:       () => '<i class="lg-sw lg-sw-val"></i>на валидации',
   co:        () => '<i class="lg-ap lg-ap-co">CO</i>смена сорта',
   to:        () => '<i class="lg-ap lg-ap-to">ТО</i>CL в ТО',
   cv:        () => '<i class="lg-ap lg-ap-cv">КВ</i>CL в Конвертацию',
