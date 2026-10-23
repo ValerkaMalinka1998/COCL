@@ -112,9 +112,9 @@ function renderStandardHistory() {
     </div>
     <div class="card hist-chart-card">
       <div class="hist-chart-h"><h3>Отклонения по проверкам</h3></div>
-      ${histStdChart(entries)}
-      <div class="hist-sub">Запас до границы нормы по самой «тяжёлой» точке каждой проверки: 100% — в середине нормы, 0% — на границе.
-      Красная зона — отклонение. Номер точки не важен: стандарт считается в отклонении, если вышла любая из них.</div>
+      ${histStdChart(entries, data.fromDate, getCurrentShiftPeriod().date, histStd.days <= 7)}
+      <div class="hist-sub">Столбик — число проверок с отклонением за ${histStd.days <= 7 ? 'сутки' : 'неделю'}. Лента ниже — каждая проверка по порядку:
+      зелёная — в норме, красная — отклонение, жёлтая — не проверено. Стандарт в отклонении, если вышла любая из точек.</div>
     </div>
     <div class="card hist-dev-card">
       ${entries.length ? `<table class="hist-dev">
@@ -136,58 +136,51 @@ function renderStandardHistory() {
 }
 
 /* ------------------------------------------------------------
-   График «запас до границы нормы» по проверкам.
-   Для каждой проверки берём самую «тяжёлую» точку: 100% — значение
-   в середине нормы, 0% — ровно на границе, ниже нуля — отклонение.
-   Номер точки не важен: стандарт в отклонении, если вышла любая.
+   Отклонения по периодам: столбик — сколько проверок с отклонением
+   («2 из 14»); для 7 дней период — сутки, для 30 и 90 — неделя.
+   Под столбиками — лента всех проверок: ОК / отклонение / не проверено.
    ------------------------------------------------------------ */
-function histStdMargin(e) {
-  const pts = (e.pts || []).filter(p => histNum(p.value) != null && p.range);
-  if (!pts.length) return null;
-  let worst = null;
-  pts.forEach(p => {
-    const v = histNum(p.value), r = p.range, half = (r.max - r.min) / 2;
-    const m = half > 0 ? Math.round((1 - Math.abs(v - (r.min + half)) / half) * 100) : (v >= r.min && v <= r.max ? 100 : -100);
-    if (worst === null || m < worst) worst = m;
+function histStdBuckets(entries, fromDate, toDate, byDay) {
+  const monday = (d) => {
+    const dt = new Date(d + 'T12:00:00');
+    return addDaysISO(d, -((dt.getDay() + 6) % 7));
+  };
+  const key = (d) => byDay ? d : monday(d);
+  const map = new Map();
+  for (let d = byDay ? fromDate : monday(fromDate); d <= toDate; d = addDaysISO(d, byDay ? 1 : 7)) {
+    map.set(d, { start: d, total: 0, fails: 0 });
+  }
+  entries.forEach(e => {
+    const b = map.get(key(e.s.date));
+    if (!b) return;
+    if (e.it.status === 'UNCHECKED') return;
+    b.total++;
+    if (e.it.status === 'FAIL') b.fails++;
   });
-  return worst;
+  return [...map.values()];
 }
 
-function histStdChart(entries) {
-  const pts = entries.map(e => ({ m: histStdMargin(e), e })).filter(x => x.m !== null);
-  if (pts.length < 2) {
-    // Числовых замеров нет (ОК / Не ОК) — показываем ленту результатов
-    return entries.length ? `<div class="hist-tape">${entries.map(e => {
-      const st = e.it.status;
-      return `<i class="hist-tape-i hist-tape-${st === 'OK' ? 'o' : st === 'FAIL' ? 'x' : 'u'}"
-        title="${escapeAttr(fmtShortDate(e.s.date) + ' ' + (e.s.shift === 'day' ? 'день' : 'ночь') + ': ' + (st === 'OK' ? 'в норме' : st === 'FAIL' ? 'отклонение' : 'не проверено'))}"></i>`;
-    }).join('')}</div>` : '<div class="hist-empty">Проверок за период нет</div>';
-  }
+function histStdChart(entries, fromDate, toDate, byDay) {
+  if (!entries.length) return '<div class="hist-empty">Проверок за период нет</div>';
+  const buckets = histStdBuckets(entries, fromDate, toDate, byDay);
+  const maxF = Math.max(1, ...buckets.map(b => b.fails));
+  const label = (b) => byDay
+    ? `${histDayName(b.start)} ${fmtShortDate(b.start)}`
+    : `${fmtShortDate(b.start)} – ${fmtShortDate(addDaysISO(b.start, 6))}`;
 
-  const W = 900, H = 220, L = 46, R = 20, T = 14, B = 30;
-  const lo = Math.min(-20, ...pts.map(p => p.m)) - 5;
-  const hi = Math.max(100, ...pts.map(p => p.m)) + 5;
-  const x = i => pts.length === 1 ? (L + W - R) / 2 : L + i * (W - L - R) / (pts.length - 1);
-  const y = v => T + (hi - v) / (hi - lo) * (H - T - B);
+  const bars = `<div class="hist-bars">${buckets.map(b => `
+    <div class="hist-bar-col" title="${escapeAttr(label(b) + ': ' + (b.total ? b.fails + ' из ' + b.total + ' проверок с отклонением' : 'проверок нет'))}">
+      <div class="hist-bar-num ${b.fails ? 'bad' : ''}">${b.total ? b.fails + '<small> из ' + b.total + '</small>' : '<small>—</small>'}</div>
+      <div class="hist-bar-area"><i class="hist-bar ${b.fails ? 'bad' : (b.total ? 'ok' : 'none')}" style="height:${b.fails ? Math.max(8, Math.round(b.fails / maxF * 100)) : (b.total ? 3 : 0)}%"></i></div>
+      <div class="hist-bar-lbl">${escapeHtml(byDay ? histDayName(b.start) : fmtShortDate(b.start))}</div>
+    </div>`).join('')}</div>`;
 
-  let s = '';
-  // Зона отклонения (ниже нуля) и середина нормы
-  s += `<rect x="${L}" y="${y(0)}" width="${W - L - R}" height="${Math.max(1, y(lo) - y(0))}" class="hist-ch-badband"/>`;
-  [[0, 'граница'], [100, 'центр нормы']].forEach(([v, lbl]) => {
-    s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" class="${v ? 'hist-ch-norm' : 'hist-ch-edge'}"/>
-      <text x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${lbl}</text>`;
-  });
-  s += `<polyline class="hist-ch-line" points="${pts.map((p, i) => x(i) + ',' + y(p.m)).join(' ')}"/>`;
-  const step = Math.max(1, Math.ceil(pts.length / 10));
-  pts.forEach((p, i) => {
-    const bad = p.m < 0;
-    s += `<circle cx="${x(i)}" cy="${y(p.m)}" r="${bad ? 6 : 4.5}" class="${bad ? 'hist-ch-bad' : 'hist-ch-pt'}">
-      <title>${fmtShortDate(p.e.s.date)} ${p.e.s.shift === 'day' ? 'день' : 'ночь'}: ${bad ? 'отклонение' : 'запас ' + p.m + '%'}</title></circle>`;
-    if (i % step === 0 || i === pts.length - 1) {
-      s += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle">${fmtShortDate(p.e.s.date)}${p.e.s.shift === 'night' ? ' н' : ''}</text>`;
-    }
-  });
-  return `<svg class="hist-chart" viewBox="0 0 ${W} ${H}" width="100%">${s}</svg>`;
+  const tape = `<div class="hist-tape">${entries.map(e => {
+    const st = e.it.status;
+    return `<i class="hist-tape-i hist-tape-${st === 'OK' ? 'o' : st === 'FAIL' ? 'x' : 'u'}"
+      title="${escapeAttr(fmtShortDate(e.s.date) + ' ' + (e.s.shift === 'day' ? 'день' : 'ночь') + ': ' + (st === 'OK' ? 'в норме' : st === 'FAIL' ? 'отклонение' : 'не проверено'))}"></i>`;
+  }).join('')}</div>`;
+  return bars + tape;
 }
 
 $('#histStdView')?.addEventListener('click', (e) => {

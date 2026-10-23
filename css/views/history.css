@@ -304,14 +304,6 @@ button.hist-cc:hover { border-color: var(--k); background: color-mix(in srgb, va
 .hist-chart-card { padding: 14px 16px; }
 .hist-chart-h { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
 .hist-chart-h h3 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-second); }
-.hist-chart { display: block; max-height: 260px; }
-.hist-chart text { font-size: 10px; fill: var(--text-dim); }
-.hist-ch-norm { stroke: var(--accent-green); stroke-dasharray: 4 4; }
-.hist-ch-line { fill: none; stroke: var(--accent-cyan); stroke-width: 2.5; }
-.hist-ch-pt { fill: var(--bg-card); stroke: var(--accent-cyan); stroke-width: 2; }
-.hist-ch-bad { fill: var(--accent-red); stroke: var(--accent-red); stroke-width: 2; }
-.hist-ch-badband { fill: var(--accent-red); opacity: .08; }
-.hist-ch-edge { stroke: var(--accent-red); stroke-dasharray: 4 4; }
 
 /* Лента результатов — когда числовых замеров нет */
 .hist-tape { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 0 2px; }
@@ -386,3 +378,15 @@ button.hist-cc:hover { border-color: var(--k); background: color-mix(in srgb, va
 button.hist-cc.is-pick { outline: 2px solid var(--accent-cyan); outline-offset: 1px; }
 .hist-pick { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 8px 12px; border-radius: 8px; font-size: 12.5px; background: color-mix(in srgb, var(--accent-cyan) 8%, transparent); border: 1px solid color-mix(in srgb, var(--accent-cyan) 30%, transparent); }
 .hist-pick > span { flex: 1; }
+
+/* === График отклонений стандарта: столбики по периодам ======= */
+.hist-bars { display: flex; gap: 6px; align-items: stretch; padding: 4px 0 8px; overflow-x: auto; }
+.hist-bar-col { flex: 1 1 0; min-width: 46px; max-width: 120px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.hist-bar-num { font-size: 13px; font-weight: 700; color: var(--text-second); white-space: nowrap; }
+.hist-bar-num small { font-size: 10px; font-weight: 500; color: var(--text-dim); }
+.hist-bar-num.bad { color: var(--accent-red); }
+.hist-bar-area { height: 90px; width: 100%; display: flex; align-items: flex-end; justify-content: center; border-bottom: 1px solid var(--border); }
+.hist-bar { display: block; width: 60%; max-width: 44px; border-radius: 4px 4px 0 0; }
+.hist-bar.bad { background: var(--accent-red); }
+.hist-bar.ok { background: var(--accent-green); }
+.hist-bar-lbl { font-size: 10px; color: var(--text-dim); }
