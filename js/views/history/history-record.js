@@ -237,9 +237,12 @@ function histItemHtml(x, entries, line) {
     valuesHtml = '<span class="hist-pt">отмечено «не проверено»</span>';
   } else {
     const pts = histItemPoints(h, it);
+    // Старые записи без точек: показываем ответ как ввели («10 — не в допуске»)
+    const ans = String(it.answer ?? '').trim();
+    const ansText = ans && !['ОК', 'Не ОК', '—'].includes(ans) ? ans : (it.status === 'FAIL' ? 'Не ОК' : 'ОК');
     valuesHtml = pts
       ? pts.map((p, i) => `<span class="hist-pt ${p.bad ? 'bad' : ''}" title="${p.label ? 'Норма: ' + escapeAttr(p.label) : ''}">${pts.length > 1 ? `<i class="hist-pt-n">т.${i + 1}</i>` : ''}${p.label ? `<i>${escapeHtml(p.label)}:</i> ` : ''}<b>${escapeHtml(p.value || '—')}</b></span>`).join('')
-      : `<span class="hist-pt ${it.status === 'FAIL' ? 'bad' : ''}"><b>${it.status === 'FAIL' ? 'Не ОК' : 'ОК'}</b></span>`;
+      : `<span class="hist-pt ${it.status === 'FAIL' ? 'bad' : ''}"><b>${escapeHtml(ansText)}</b></span>`;
   }
 
   // Прошлый раз + повтор
