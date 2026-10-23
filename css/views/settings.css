@@ -100,6 +100,7 @@
   color: var(--text-dim);
   pointer-events: none;
 }
+.settings-search-wide { flex: 1 1 auto; max-width: none; width: 100%; }
 .settings-search input {
   width: 100%;
   padding: 8px 12px 8px 34px;
@@ -892,3 +893,8 @@ button.st-chip:hover { border-color: var(--border-hi); color: var(--text-main); 
 @media (max-width: 700px) {
   .shf-calendar { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+/* === Структура: пояснение к меткам линий === */
+.st-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.st-legend-chip { cursor: default; pointer-events: none; margin: 0 2px; }
+.st-legend-chip + .st-legend-chip { margin-left: 10px; }

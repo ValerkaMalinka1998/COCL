@@ -43,65 +43,6 @@
 .row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
 .row > .field { flex: 1; min-width: 180px; }
 
-/* ============ Checkbox chips ============ */
-.checkbox-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 6px;
-}
-.checkbox-group label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  background: var(--bg-input);
-  border: 1px solid var(--border-hi);
-  border-radius: 20px;
-  cursor: pointer;
-  font-weight: 400;
-  margin: 0;
-  font-size: 13px;
-  user-select: none;
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--text-main);
-  transition: all 0.15s;
-}
-.checkbox-group label:hover {
-  background: var(--bg-hover);
-  border-color: var(--accent-cyan);
-}
-.checkbox-group input[type="checkbox"] { margin: 0; cursor: pointer; accent-color: var(--accent-cyan); }
-.checkbox-group label.checked {
-  background: linear-gradient(135deg, var(--blue-mid), var(--blue-light));
-  color: white;
-  border-color: var(--accent-cyan);
-  box-shadow: var(--glow-cyan-sm);
-}
-.checkbox-group label.is-disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-.checkbox-group label.is-disabled:hover {
-  background: inherit;
-}
-
-/* Модалка блока/участка: где сейчас чужая линия + поле новой линии */
-.block-modal-line-where {
-  font-size: 10px;
-  color: var(--text-dim);
-  margin-left: 4px;
-}
-.block-modal-newline {
-  display: flex;
-  gap: 8px;
-}
-.block-modal-newline input {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
 /* ============ Кнопки ============ */
 button.btn {
   padding: 10px 18px;
@@ -205,56 +146,6 @@ button.btn {
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px dashed var(--border);
-}
-.checklist-item.answered-ok {
-  border-left-color: var(--accent-green);
-  background: rgba(0, 196, 122, 0.08);
-}
-.checklist-item.answered-fail {
-  border-left-color: var(--accent-red);
-  background: rgba(230, 36, 79, 0.08);
-}
-
-/* ============ Компактная строка ответа ============ */
-.answer-content {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.answer-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  padding-top: 2px;
-}
-
-/* --- Первая строка: поле + норма --- */
-.answer-field {
-  flex: 0 0 140px;
-  min-width: 120px;
-}
-.answer-field input {
-  width: 100%;
-  padding: 8px 12px;
-  font-size: 14px;
-  text-align: center;
-  font-weight: 600;
-}
-.checklist-item .answer .radio-group {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-.answer-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-  flex-shrink: 0;
 }
 /* ============ Иконка комментария ============ */
 .comment-btn {
@@ -527,40 +418,6 @@ tr:hover td { background: var(--bg-hover); }
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4), 0 0 24px rgba(255, 45, 111, 0.5);
 }
 
-/* ============ Редактор ============ */
-.editor-item {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 10px;
-  background: var(--bg-input);
-  transition: border-color 0.15s,
-              background 0.35s ease,
-              color 0.35s ease,
-              box-shadow 0.35s ease;
-}
-.editor-item:hover {
-  border-color: var(--accent-cyan);
-}
-.editor-item .head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 10px;
-  margin-bottom: 6px;
-}
-.editor-item .head .title {
-  font-weight: 600;
-  color: var(--text-main);
-}
-.editor-item .info {
-  font-size: 12px;
-  color: var(--text-second);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 14px;
-}
-
 .filters {
   display: flex;
   gap: 12px;
@@ -677,47 +534,6 @@ tr:hover td { background: var(--bg-hover); }
 .modal-footer .modal-add-btn-left {
   margin-right: auto;
 }
-
-/* ============ Просмотр записи ============ */
-.record-info {
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin-bottom: 16px;
-  font-size: 13px;
-}
-.record-info div { display: flex; gap: 8px; margin-bottom: 4px; }
-.record-info strong { min-width: 120px; color: var(--text-second); }
-
-.record-items { width: 100%; border-collapse: collapse; font-size: 13px; }
-.record-items th, .record-items td {
-  padding: 8px 10px;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-  vertical-align: top;
-}
-.record-items th {
-  background: var(--bg-hover);
-  color: var(--blue-mid);
-  font-weight: 700;
-  text-transform: uppercase;
-  font-size: 12px;
-  letter-spacing: 0.5px;
-}
-.record-items tr.fail td {
-  background: rgba(255, 77, 109, 0.08);
-}
-.record-items tr.ok td {
-  background: rgba(0, 200, 120, 0.08);
-}
-.record-items .status-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 11px;
-  font-weight: 700;
-}
 .status-ok {
   background: rgba(0, 255, 157, 0.15);
   color: var(--accent-green);
@@ -727,26 +543,6 @@ tr:hover td { background: var(--bg-hover); }
   background: rgba(255, 45, 111, 0.15);
   color: var(--accent-red);
   border: 1px solid var(--accent-red);
-}
-
-/* ============ Типы переходов — цветовые чипы ============ */
-.type-chip-changeover {
-  background: rgba(58, 166, 240, 0.10);
-  color: var(--bft-sky);
-  border: 1px solid rgba(58, 166, 240, 0.5);
-  box-shadow: 0 0 10px rgba(58, 166, 240, 0.25), inset 0 0 6px rgba(58, 166, 240, 0.08);
-}
-.type-chip-clto {
-  background: rgba(123, 92, 255, 0.10);
-  color: #7b5cff;
-  border: 1px solid rgba(123, 92, 255, 0.5);
-  box-shadow: 0 0 10px rgba(123, 92, 255, 0.25), inset 0 0 6px rgba(123, 92, 255, 0.08);
-}
-.type-chip-clconv {
-  background: rgba(16, 185, 129, 0.10);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.5);
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.25), inset 0 0 6px rgba(16, 185, 129, 0.08);
 }
 .type-chip {
   display: inline-block;

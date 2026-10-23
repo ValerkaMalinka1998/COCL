@@ -81,9 +81,15 @@ function etAppliesHtml(appliesTo) {
 /* Тип контроля + норма; предупреждение, если точек нет там, где они нужны */
 function etTypeNormHtml(row, isElec) {
   const type = isElec ? (row.controlType || 'variable') : migrateControlType(row.controlType, row.measurements);
-  const norm = cilNorm(row, '', isElec);
+  let norm = cilNorm(row, '', isElec);
+  // В редакторе бренда линии нет: если значения разные по брендам — показываем бренды, а не ошибку
+  if (norm.missing && /бренд не задан/.test(norm.html)) {
+    const src = isElec ? row.valuesByBrand : row.measurements;
+    const names = (Array.isArray(src) ? src : []).filter(b => b && b.brand).map(b => b.brand);
+    norm = { visual: false, byBrand: true, html: `<span class="cil-dim" title="Значения разные по брендам">по брендам: ${escapeHtml(names.join(', '))}</span>` };
+  }
   const needsPoints = type === 'variable' || type === 'interval';
-  const noValues = norm.visual || /cil-dim/.test(norm.html);
+  const noValues = !norm.byBrand && (norm.visual || /cil-dim|нет точек/.test(norm.html));
   const normHtml = needsPoints && noValues
     ? '<span class="et-warn" title="Для этого типа нужны точки замера">⚠ нет точек</span>'
     : norm.html;
@@ -174,7 +180,7 @@ function refreshEditorMechTable() {
     const id = escapeAttr(st.id);
     const photos = Array.isArray(st.photos) ? st.photos.length : 0;
     html += `
-      <tr data-std-id="${id}" class="${isSelected ? 'is-selected' : ''} ${isActive ? '' : 'et-row-inactive'}">
+      <tr data-std-id="${id}" class="${isSelected ? 'is-selected' : ''} ${isActive ? '' : 'et-row-inactive'} ${validationStatus(st) === 'active' ? 'et-row-val' : ''}">
         <td class="et-c-check cil-z${zones[m]}"><input type="checkbox" class="et-check-row" data-std-id="${id}" ${isSelected ? 'checked' : ''}></td>
         <td class="et-c-opl"><button type="button" class="et-opl" data-open-view="${id}">${escapeHtml(st.oplNumber || '—')}</button></td>
         <td>
@@ -247,6 +253,7 @@ function updateMechSelectionUI(filtered) {
   document.querySelectorAll('#editorMechTableWrap tr[data-std-id]').forEach(tr => {
     tr.classList.toggle('is-selected', editorTableState.mechSelected.has(tr.dataset.stdId));
   });
+  if (typeof updateEditorBulk === 'function') updateEditorBulk('mech');
 }
 
 /* --- Пагинация --- */

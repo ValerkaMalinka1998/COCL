@@ -199,15 +199,6 @@
   align-items: center;
   gap: 6px;
 }
-.sch-matrix-legend-swatch {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border-radius: 3px;
-  border: 1px solid var(--border);
-}
-.sch-matrix-legend-day   { background: linear-gradient(135deg, rgba(58, 166, 240, 0.25), rgba(58, 166, 240, 0.12)); border-color: var(--accent-cyan); }
-.sch-matrix-legend-night { background: linear-gradient(135deg, rgba(123, 92, 255, 0.25), rgba(123, 92, 255, 0.12)); border-color: var(--accent-purple); }
 
 /* Инфо-ячейка в теле */
 
@@ -456,6 +447,3 @@
   line-height: 1.5;
   margin-bottom: 8px;
 }
-
-/* Даты в шапке */
-.sch-matrix-legend-past { background: repeating-linear-gradient(45deg, transparent 0 3px, var(--border-hi) 3px 4px); border-color: var(--border-hi); }

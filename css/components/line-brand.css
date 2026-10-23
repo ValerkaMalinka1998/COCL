@@ -48,18 +48,7 @@
 .lb-now b { color: var(--text-main); }
 .lb-hint { margin: 0; font-size: 12px; color: var(--text-dim); }
 
-/* Колонка «Норма»: чьи значения и нет нормы для бренда */
-.cil-norm-brand {
-  display: block;
-  margin-top: 2px;
-  font-size: 10px;
-  font-style: normal;
-  font-weight: 700;
-  color: var(--accent-cyan);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+/* Колонка «Норма»: нет нормы для бренда */
 .cil-norm-miss {
   display: inline-block;
   padding: 2px 8px;

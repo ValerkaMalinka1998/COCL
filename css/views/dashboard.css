@@ -95,12 +95,49 @@ button.dash-li:hover { background: var(--bg-hover); }
 .dash-line-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .dash-line-head .btn svg { width: 14px; height: 14px; }
 .dash-line-name { font-size: 18px; color: var(--text-main); }
-.dash-pass { display: flex; gap: 18px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
-.dash-ring { margin: 0; flex: none; background: conic-gradient(var(--accent-green) 0 var(--p), var(--bg-input) var(--p) 100%); }
-.dash-pass-list { flex: 1; min-width: 240px; }
 
 @media (max-width: 1100px) {
   .dash-g2, .dash-g3 { grid-template-columns: 1fr; }
   .dash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .dash-custom { padding: 0; flex-basis: 100%; }
+
+/* Топ по отклонениям: машины и линии */
+.dash-top + .dash-top { margin-top: 14px; }
+.dash-top-h {
+  font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--text-dim); margin-bottom: 6px;
+}
+.dash-li-bar[role="button"] { cursor: pointer; }
+
+/* === ВКЛАДКА «СЕЙЧАС»: текущая смена === */
+.dash-kpi-now b { color: var(--accent-cyan); font-size: 17px; }
+.dash-now-line {
+  display: grid; grid-template-columns: 76px 1fr 64px auto; align-items: center; gap: 12px;
+  width: 100%; padding: 10px 12px; margin-bottom: 6px; text-align: left;
+  border: 1px solid var(--border); border-left: 3px solid var(--border-hi);
+  border-radius: 10px; background: var(--bg-card); font: inherit; cursor: pointer;
+}
+.dash-now-line:hover { background: var(--bg-hover); }
+.dash-now-name { font-weight: 800; color: var(--text-main); }
+.dash-now-bar { height: 8px; border-radius: 999px; background: var(--bg-input); overflow: hidden; }
+.dash-now-bar i { display: block; height: 100%; background: var(--accent-cyan); }
+.dash-now-num { font-family: Consolas, 'Courier New', monospace; font-size: 12px; color: var(--text-second); text-align: right; }
+.dash-now-tags { display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.dash-now-green { border-left-color: var(--accent-green); }
+.dash-now-green .dash-now-bar i { background: var(--accent-green); }
+.dash-now-amber { border-left-color: var(--accent-amber); }
+.dash-now-amber .dash-now-bar i { background: var(--accent-amber); }
+.dash-now-red { border-left-color: var(--accent-red); }
+.dash-now-red .dash-now-bar i { background: var(--accent-red); }
+.dash-view-seg button.on { background: var(--accent-cyan); color: var(--on-accent); }
+
+/* === Паспорт линии: метки настройки в шапке === */
+.dash-cfg { padding: 3px 10px; border-radius: 999px; font: inherit; font-size: 11.5px; font-weight: 700; color: var(--text-second); background: var(--bg-hover); border: 1px solid var(--border); white-space: nowrap; }
+.dash-cfg-warn { color: var(--accent-amber); border-color: color-mix(in srgb, var(--accent-amber) 40%, transparent); background: color-mix(in srgb, var(--accent-amber) 10%, transparent); cursor: pointer; }
+
+/* === «Сейчас»: заголовки цехов === */
+.dash-now-ws { display: flex; align-items: center; gap: 8px; margin: 14px 0 4px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+.dash-now-ws:first-child { margin-top: 0; }
+.dash-now-ws b { font-size: 12px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--text-main); }
+.dash-now-ws small { font-size: 11.5px; color: var(--text-dim); margin-right: auto; }

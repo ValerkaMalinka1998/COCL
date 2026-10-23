@@ -38,146 +38,18 @@ function isElectronicParamDue(p, dateStr, shiftType) {
   }
 }
 /* ============================================================
-   CL ELECTRONIC — вкладка оператора
-   ============================================================ */
-
-/* Состояние вкладки */
-const elecState = {
-  operator: '',
-  line: '',
-  date: '',        // 'YYYY-MM-DD'
-  shift: '',       // 'A' | 'B' | 'C' | 'D'
-  brand: '',       // бренд на сегодня (auto или override)
-  brandPlanned: '',// из расписания (может быть пустой)
-  brandReason: '', // причина ручного override
-  items: [],       // собранные параметры
-};
-
-
-/* ============================================================
-   CL ELECTRONIC: под-вкладки (Проверка на сегодня / Неделя)
-   ============================================================ */
-
-const ELEC_SUBTAB_KEY = 'cl_elec_subtab';   // 'today' | 'week'
-
-/* Обработчики кнопок под-вкладок */
-document.querySelectorAll('#elecSubtabs .elec-subtab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    switchElecSubtab(btn.dataset.subtab);
-  });
-});
-
-/* ============================================================
-   Чек-лист CL Electronic на сегодня
-   ============================================================ */
-
-$$('#elecChecklistContainer .elec-acc-item').forEach(item => {
-  const operator = ($('#elecOperator')?.value || '').trim();
-  const line = elecState.line;
-  const date = elecState.date;
-  const shift = elecState.shift;
-  const brand = elecState.brand;
-
-  if (!line)     return showToast('Выберите линию', true);
-  if (!brand)    return showToast('Бренд не определён', true);
-
-  const items = [];
-
-  $$('#elecChecklistContainer .checklist-item').forEach(item => {
-    const it = elecState.items.find(x => x.id === item.dataset.elecId);
-    if (!it) return;
-
-    let answer = '—';
-    let status = 'UNCHECKED';
-    let value = null;
-
-    if (it.controlType === 'fixed') {
-      const r = item.querySelector('input[data-elec-ans]:checked');
-      if (r) {
-        answer = r.value === 'OK' ? 'ОК' : 'Не ОК';
-        status = r.value;
-      }
-    } else {
-      const inp = item.querySelector('input[data-elec-value]');
-      if (inp && inp.value !== '') {
-        value = parseFloat(inp.value);
-        if (!isNaN(value)) {
-          const min = it.target - it.tolerance;
-          const max = it.target + it.tolerance;
-          const inRange = value >= min && value <= max;
-          answer = `${value}`;
-          status = inRange ? 'OK' : 'FAIL';
-        }
-      }
-    }
-
-    items.push({
-      standardId: it.id,
-      machine: it.machine,
-      paramName: it.paramName,
-      work: it.work,
-      timeFrom: it.timeFrom,
-      timeTo: it.timeTo,
-      controlType: it.controlType,
-      target: it.target,
-      tolerance: it.tolerance,
-      normText: it.normText,
-      answer,
-      value,
-      status,
-      comment: item.dataset.comment || ''
-    });
-  });
-
-  const checkedCount = items.filter(it => it.status !== 'UNCHECKED').length;
-
-  const record = {
-    id: uid(),
-    timestamp: new Date().toISOString(),
-    mode: 'electronic',
-    operator,
-    line,
-    shift,
-    date,
-    brandPlanned: elecState.brandPlanned || null,
-    brandActual: brand,
-    brandReason: elecState.brandReason || '',
-    items
-  };
-
-  const hist = getHistory();
-  hist.push(record);
-  setHistory(hist);
-  updateNavHistoryCounter();
-
-  showToast(checkedCount === 0 ? 'Проверка сохранена (все пункты — «Не проверено»)' : 'Проверка сохранена');
-
-  renderElectronicSummary(record);
-});
-
-/* Обновить кнопку «Обновить» */
-$('#elecReloadBtn')?.addEventListener('click', () => {
-  refreshElectronicTab();
-});
-
-/* Реакция на смену оператора/линии */
-$('#elecOperator')?.addEventListener('input', () => {
-  elecState.operator = $('#elecOperator').value.trim();
-});
-$('#elecLine')?.addEventListener('change', () => {
-  refreshElectronicTab();
-});
-/* ============================================================
    ПРОВЕРКА CL — логика
    ============================================================ */
 
 function openClCheckTab() {
   const savedMode = localStorage.getItem('cl_cl_mode') || 'mech';
-  const savedPart = localStorage.getItem('cl_cl_part') || '';
+  const savedPart = localStorage.getItem('cl_cl_part') === 'Packer' ? 'Packer' : 'Maker';
+  const savedOnly = localStorage.getItem('cl_cl_only_shift') === '1';
   const savedLine = localStorage.getItem('cl_cl_line') || null;
 
   clState.mode = savedMode;
   clState.part = savedPart;
+  clState.onlyShift = savedOnly;
   clState.line = savedLine;
   clState.checkMode = false;
   clState.quickDraft = {};
@@ -227,8 +99,12 @@ function updateClCheckButtons() {
   const stopBtn = $('#clStopCheckBtn');
   if (!startBtn || !stopBtn) return;
 
-  const canStart = clState.line && !clState.checkMode;
+  // Без проверок в текущей смене начинать нечего
+  const needNow = clState.line ? clShiftPlannedCount() : 0;
+  const canStart = clState.line && !clState.checkMode && needNow > 0;
   startBtn.disabled = !canStart;
+  startBtn.title = clState.line && !clState.checkMode && !needNow
+    ? 'В текущую смену нет запланированных проверок' : '';
 
   if (clState.checkMode) {
     startBtn.style.display = 'none';
@@ -304,7 +180,7 @@ function updateClPanelCount() {
     return;
   }
   const n = clState.rows.length;
-  const label = clState.mode === 'mech' ? 'стандартов' : 'параметров';
+  const label = clState.mode === 'mech' ? pluralRu(n, 'стандарт', 'стандарта', 'стандартов') : pluralRu(n, 'параметр', 'параметра', 'параметров');
   el.textContent = `${n} ${label}`;
 }
 
@@ -364,9 +240,10 @@ function renderClMatrix() {
           <line x1="3" y1="10" x2="21" y2="10"/>
         </svg>
         <div class="sch-empty-title">На линии нет стандартов в расписании</div>
-        <div class="sch-empty-sub">Обратитесь к техническому специалисту — он должен добавить стандарты в «Расписание CL».</div>
+        <div class="sch-empty-sub">Обратитесь к аналитику — он должен добавить стандарты в «Расписание CL».</div>
       </div>
     `;
+    updateClCheckButtons();
     return;
   }
 
@@ -374,10 +251,9 @@ function renderClMatrix() {
   const dateByDayIdx = cilDateByDayIdx(weekDays);
   const isElec = clState.mode !== 'mech';
   const hist = clHistoryIndex();
-  const zones = cilZoneMap(rows);
 
   // Ячейки всех строк — заранее, чтобы посчитать прогресс смен для шапки
-  const cellsByRow = rows.map(row => clRowCells(row, dateByDayIdx, hist));
+  let cellsByRow = rows.map(row => clRowCells(row, dateByDayIdx, hist));
   updateClPartCounts(dateByDayIdx, hist, isMember, checkedIds);
   const prog = {};
   cellsByRow.forEach((cells, ri) => cells.forEach(c => {
@@ -388,6 +264,17 @@ function renderClMatrix() {
     prog[k].sec += cilRowDurationSec(rows[ri]);
     if (c.status === 'OK' || c.status === 'FAIL' || c.status === 'UNCHECKED') prog[k].done++;
   }));
+
+  // Фильтр «только эта смена»: в таблице остаются строки, запланированные
+  // на текущую смену (прогресс в шапке считается по всей неделе)
+  const onlyShift = clState.onlyShift && clState.weekOffset === 0;
+  if (onlyShift) {
+    const keep = cellsByRow.map(cells => cells.some(c => c.isNow && c.planned));
+    rows = rows.filter((r, i) => keep[i]);
+    cellsByRow = cellsByRow.filter((c, i) => keep[i]);
+    clState.rows = rows;
+  }
+  const zones = cilZoneMap(rows);
 
   // Панель недели + легенда
   const isCurrentWeek = clState.weekOffset === 0;
@@ -407,13 +294,10 @@ function renderClMatrix() {
         </button>
         ${!isCurrentWeek ? '<button type="button" class="cil-week-today" id="clWeekToday">Сегодня</button>' : ''}
       </div>
-      <div class="cil-legend">
-        <span><i class="cil-cell cil-cell-ok cil-cell-mini">${CIL_ICONS.check}</i>ОК</span>
-        <span><i class="cil-cell cil-cell-fail cil-cell-mini">${CIL_ICONS.x}</i>Отклонение</span>
-        <span><i class="cil-cell cil-cell-missed cil-cell-mini">?</i>Пропущено</span>
-        <span><i class="cil-cell cil-cell-mini">${CIL_ICONS.ruler}</i>Замер</span>
-        <span><i class="cil-cell cil-cell-mini">${CIL_ICONS.eye}</i>Визуально</span>
-      </div>
+      ${isCurrentWeek ? `<button type="button" class="cil-onlyshift${clState.onlyShift ? ' on' : ''}" id="clOnlyShiftBtn"
+        title="Показать только то, что нужно проверить в текущую смену">
+        <i></i>Только эта смена</button>` : ''}
+      ${legendHtml(['ok', 'fail', 'missed', 'due', 'na', 'ruler', 'eye', 'val'])}
     </div>
     <div class="cil-scroll"><table class="cil-table">`;
 
@@ -430,6 +314,10 @@ function renderClMatrix() {
   });
 
   html += '<tbody>';
+  if (!rows.length) {
+    html += `<tr><td class="cil-empty-row" colspan="17">В текущую смену проверок нет.
+      <button type="button" class="cil-week-today" id="clOnlyShiftOff">Показать всю неделю</button></td></tr>`;
+  }
   const numInZone = {};
   rows.forEach((row, i) => {
     const m = row.machine || '—';
@@ -440,7 +328,9 @@ function renderClMatrix() {
   wrap.innerHTML = html;
 
   bindClCells();
+  flashClCell();
   bindClWeekNav();
+  updateClCheckButtons();
 }
 
 /* Счётчики «сделано / надо» текущей смены на кнопках Maker / Packer */
@@ -564,12 +454,12 @@ function renderClRow(row, num, zone, cells, hist, isElec) {
   let html = `<tr class="cil-row${valOn ? ' cil-row-val' : ''}" data-row-id="${escapeAttr(row.id)}">
     <td class="cil-c-zone cil-z${zone}">${escapeHtml(machine)}<small>№ ${num}</small></td>
     <td class="cil-c-std">
-      <div class="cil-std-title"><span class="cil-std-m">${escapeHtml(machine)} ·</span>${nameHtml}${devBadge}${valOn ? valChipHtml(row) : ''}</div>
+      <div class="cil-std-title">${nameHtml}${devBadge}${valOn ? valChipHtml(row) : ''}</div>
       <div class="cil-std-sub">
         ${row.oplNumber ? `<span class="cil-opl">${escapeHtml(row.oplNumber)}</span>` : ''}
         ${row.node ? `<span class="cil-node">${CIL_ICONS.gear}${escapeHtml(row.node)}</span>` : ''}
         ${cilWorkTag(normWork(freq.work))}
-        ${cilTimeChips(freq.timeWindows)}
+        ${cilTimeChips(freq.timeWindows, freq.work)}
       </div>
     </td>
     <td class="cil-c-norm">${norm.html}</td>`;
@@ -720,7 +610,7 @@ function showClPeek(cell) {
   el.className = 'cl-peek';
   el.innerHTML = `
     <div class="cl-peek-h"><span class="hist-st hist-st-${symCls}">${sym}</span>
-      <div><b>${title}</b><div class="hist-sub">${histDayName(dateStr)} ${fmtShortDate(dateStr)} · ${shift === 'day' ? 'день' : 'ночь'} · бр. ${escapeHtml(letter)}${record ? ' · ' + histTime(record) : ''}</div></div>
+      <div><b>${title}</b><div class="hist-sub">${histDayName(dateStr)} ${fmtShortDate(dateStr)} · ${shift === 'day' ? 'день' : 'ночь'} · ${escapeHtml(letter)}${record ? ' · ' + histTime(record) : ''}</div></div>
       <button type="button" class="cl-peek-x" data-peek-close title="Закрыть">✕</button></div>
     <div class="cl-peek-body">${body}</div>
     <div class="cl-peek-btns">
@@ -757,6 +647,20 @@ document.addEventListener('mousedown', (e) => {
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeClPeek(); });
 window.addEventListener('scroll', closeClPeek, true);
 
+/* Ячейка, которую только что отметили: после перерисовки она коротко подсвечивается */
+let clFlashKey = null;
+
+function flashClCell() {
+  if (!clFlashKey) return;
+  const [rowId, dateStr, shift] = clFlashKey.split('|');
+  clFlashKey = null;
+  const btn = [...document.querySelectorAll('#clMatrixWrap .cl-cell')]
+    .find(b => b.dataset.rowId === rowId && b.dataset.date === dateStr && b.dataset.shift === shift);
+  if (!btn) return;
+  btn.classList.add('cil-cell-flash');
+  btn.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+
 function quickSetClCell(rowId, dateStr, shift, status) {
   const row = clState.rows.find(r => r.id === rowId);
   if (!row) return;
@@ -768,12 +672,20 @@ function quickSetClCell(rowId, dateStr, shift, status) {
     value: null,
     comment: ''
   };
+  clFlashKey = key;
 
   renderClMatrix();
 }
 
+/* Сколько проверок запланировано на текущую смену в выбранном режиме (и части линии) */
+function clShiftPlannedCount() {
+  return clBoardSummary(clState.mode === 'mech' ? 'mech' : 'elec')
+    .filter(g => clState.mode !== 'mech' || !linePartFilter(clState.line, clState.part) || g.part === clState.part)
+    .reduce((s, g) => s + g.planned, 0);
+}
+
 function startClCheck() {
-  if (!clState.line) return;
+  if (!clState.line || !clShiftPlannedCount()) return;
   clState.checkMode = true;
   clState.quickDraft = {};
   updateClCheckButtons();
@@ -923,6 +835,18 @@ $('#clPartSwitch')?.addEventListener('click', (e) => {
 
   updateClCheckButtons();
   renderClMatrix();
+});
+
+/* «Только эта смена» — показываем в таблице лишь проверки текущей смены */
+function toggleClOnlyShift(value) {
+  clState.onlyShift = value === undefined ? !clState.onlyShift : !!value;
+  try { localStorage.setItem('cl_cl_only_shift', clState.onlyShift ? '1' : '0'); } catch (err) {}
+  renderClMatrix();
+}
+
+$('#tab-electronic')?.addEventListener('click', (e) => {
+  if (e.target.closest('#clOnlyShiftBtn')) return toggleClOnlyShift();
+  if (e.target.closest('#clOnlyShiftOff')) return toggleClOnlyShift(false);
 });
 
 $('#clStartCheckBtn')?.addEventListener('click', startClCheck);

@@ -1,0 +1,25 @@
+/* ============================================================ */
+/* === ЛЕГЕНДА ТАБЛИЦ ========================================= */
+/* ============================================================ */
+
+.lg {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px;
+  font-size: 12px; color: var(--text-second);
+}
+.lg > span { display: inline-flex; align-items: center; gap: 6px; }
+.lg-lbl {
+  font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--text-dim);
+}
+.lg-sw {
+  width: 20px; height: 20px; flex: none; border-radius: 5px;
+  border: 1px solid var(--border-hi); background: var(--bg-card);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: var(--text-dim); font-style: normal;
+}
+.lg-sw-day   { background: linear-gradient(135deg, color-mix(in srgb, var(--accent-cyan) 25%, transparent), color-mix(in srgb, var(--accent-cyan) 12%, transparent)); border-color: var(--accent-cyan); }
+.lg-sw-night { background: linear-gradient(135deg, color-mix(in srgb, var(--accent-purple) 25%, transparent), color-mix(in srgb, var(--accent-purple) 12%, transparent)); border-color: var(--accent-purple); }
+.lg-sw-past  { background: repeating-linear-gradient(45deg, transparent 0 3px, var(--border-hi) 3px 4px); }
+.lg-sw-val   { background: color-mix(in srgb, var(--accent-val) 22%, transparent); border-color: var(--accent-val); }
+
+/* Легенда под таблицей «Стандарты CL» */

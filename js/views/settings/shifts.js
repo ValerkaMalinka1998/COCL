@@ -199,7 +199,7 @@ $('#elecShiftStart')?.addEventListener('change', (e) => {
 
 $('#elecShiftSaveBtn')?.addEventListener('click', () => {
   if (!shfIsDirty()) return showToast('Изменений нет');
-  if (!confirm('Сохранить график? Буквы смен в Чек-листе, Расписании и COCL пересчитаются по новому циклу.')) return;
+  if (!confirm('Сохранить график? Буквы смен в Чек-листе, Расписании и CL при переходах пересчитаются по новому циклу.')) return;
   setElectronicShiftConfig(shfDraft);
   shfDraft = getElectronicShiftConfig();
   renderElectronicShiftPreview();

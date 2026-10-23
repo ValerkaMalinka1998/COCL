@@ -89,7 +89,7 @@ function renderSvFullRelated(st) {
     rows.push(['Участок', ctx.area.name + (ctx.block ? ` (${ctx.block.name})` : '')]);
   }
   rows.push(['Линия', st.line]);
-  rows.push(['Рабочий центр', st.nodePart]);
+  rows.push(['Часть линии', st.nodePart]);
   rows.push(['Машина', st.machine]);
   rows.push(['Узел', st.node]);
   rows.push(['OPL №', st.oplNumber]);
@@ -525,6 +525,12 @@ $('#svFullSaveBtn')?.addEventListener('click', () => {
 
   const controlType = controlEl ? controlEl.value : st.controlType;
   if (!controlType) return showToast('Выберите тип контроля', true);
+  // Один бренд — одна строка точек
+  const brandKeys = measurements.map(m => m.brand || '');
+  const dupBrand = brandKeys.find((b, i) => brandKeys.indexOf(b) !== i);
+  if (dupBrand !== undefined) {
+    return showToast(`Бренд «${dupBrand || 'Остальные бренды'}» добавлен дважды — оставьте одну строку`, true);
+  }
   // Вариабельный и интервал без точек проверить нечем
   const hasPoints = measurements.some(m =>
     (m.points || []).some(pt => String(pt.value || '').trim()));

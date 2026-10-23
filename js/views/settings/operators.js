@@ -8,7 +8,7 @@
    ОПЕРАТОРЫ — строки + inline + пагинация
    ============================================================ */
 
-const OPERATORS_PAGE_SIZE = 7;
+const OPERATORS_PAGE_SIZE = 20;
 let operatorsCurrentPage = 1;
 
 function renderOperatorsSettings() {

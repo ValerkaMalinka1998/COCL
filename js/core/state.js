@@ -132,7 +132,8 @@ const DEFAULT_WORKSHOPS = [
 const clState = {
   line: null,
   mode: 'mech',
-  part: '',
+  part: 'Maker',
+  onlyShift: false,      // показывать только проверки текущей смены
   checkMode: false,
   rows: [],
   todayISO: '',

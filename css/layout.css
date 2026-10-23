@@ -27,22 +27,6 @@ header {
   text-shadow: var(--glow-cyan-sm);
 }
 
-.header-center {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 40px;
-  font-weight: 800;
-  letter-spacing: 4px;
-  color: #ffffff;
-  text-shadow:
-    0 0 8px rgba(58, 166, 240, 0.8),
-    0 0 24px rgba(58, 166, 240, 0.5),
-    0 0 48px rgba(58, 166, 240, 0.3);
-  white-space: nowrap;
-  pointer-events: none;
-}
-
 .header-right {
   font-size: 20px;
   font-weight: 600;
@@ -372,33 +356,6 @@ main {
   transform: scale(0.95);
 }
 
-.theme-icon-light,
-.theme-icon-dark {
-  position: absolute;
-  transition: transform 0.4s ease, opacity 0.4s ease;
-  line-height: 1;
-}
-
-/* Светлая тема — видна «луна» (переключение на ночь) */
-[data-theme="light"] .theme-icon-light {
-  opacity: 0;
-  transform: rotate(180deg) scale(0.5);
-}
-[data-theme="light"] .theme-icon-dark {
-  opacity: 1;
-  transform: rotate(0deg) scale(1);
-}
-
-/* Тёмная тема — видно «солнце» (переключение на день) */
-[data-theme="dark"] .theme-icon-light {
-  opacity: 1;
-  transform: rotate(0deg) scale(1);
-}
-[data-theme="dark"] .theme-icon-dark {
-  opacity: 0;
-  transform: rotate(-180deg) scale(0.5);
-}
-
 /* ============ Footer ============ */
 .site-footer {
   position: fixed;
@@ -428,17 +385,6 @@ main {
   .header-left {
     font-size: 18px;
     color: var(--accent-cyan);
-  }
-  .header-center {
-    position: static;
-    transform: none;
-    font-size: 22px;
-    letter-spacing: 1px;
-    flex-basis: 100%;
-    text-align: center;
-    order: 3;
-    margin-top: 6px;
-    color: #ffffff;
   }
   .header-right {
     font-size: 14px;

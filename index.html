@@ -97,14 +97,14 @@
       <span class="nav-label">TOP Losses</span>
     </a>
 
-    <a href="#check" data-tab="check" title="Проверка COCL">
+    <a href="#check" data-tab="check" title="CL при переходах">
       <span class="nav-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
           <polyline points="22 4 12 14.01 9 11.01"/>
         </svg>
       </span>
-      <span class="nav-label">Проверка COCL</span>
+      <span class="nav-label">CL при переходах</span>
     </a>
 
     <div class="sidebar-divider"></div>
@@ -182,22 +182,47 @@
 <!-- ======================= ВКЛАДКА ПРОВЕРКА ======================= -->
 <div class="tab" id="tab-check">
 
+  <!-- Шапка: плашка с шагами -->
+  <div class="th-band th-band-cyan" id="coclHead">
+    <div class="th-top">
+      <span class="th-ic">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+      </span>
+      <div class="th-text">
+        <h2 class="th-title">CL при переходах</h2>
+        <div class="th-sub" id="coclHeadSub"></div>
+      </div>
+      <div class="th-actions">
+        <button type="button" class="editor-line-pill" id="coclLinePill" title="Выбрать линию">
+          <span class="editor-line-pill-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          </span>
+          <span class="editor-line-pill-code" id="coclLinePillCode">Выбрать линию</span>
+          <span class="editor-line-pill-caret">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </span>
+        </button>
+      </div>
+    </div>
+    <div class="th-steps" id="coclSteps"></div>
+  </div>
+
+  <!-- Экран выбора линии (пока линия не выбрана) -->
+  <section class="card tl-pick" id="coclPick" style="display:none"></section>
+
   <div class="cocl-layout" id="coclLayout">
 
   <!-- Условия проверки (слева) -->
   <aside class="card cocl-setup" id="coclSetupCard">
     <div class="cocl-setup-head">
-      <h2>Проверка COCL</h2>
+      <h2>Условия проверки</h2>
       <button type="button" class="cocl-edit-link" id="editConditionsBtn" hidden>Изменить</button>
+      <button type="button" class="cocl-edit-link" id="coclBackToPick" hidden>К выбору линии</button>
     </div>
 
     <!-- Линия -->
     <div class="cocl-sec" id="coclStepLine">
       <select id="lineSelect" style="display:none"><option value="">— выберите —</option></select>
-      <button type="button" class="cocl-line-pill" id="coclLinePill" title="Выбрать линию">
-        <span class="cocl-line-pill-code" id="coclLinePillCode">Выбрать линию</span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-      </button>
       <div class="cocl-line-context" id="coclLineContext" style="display:none"></div>
     </div>
 
@@ -315,27 +340,32 @@
 
   <!-- ЭКРАН 1: РАЗБОР ПОТЕРЬ ЛИНИИ -->
   <div id="tlSelectView">
-    <div class="card tl2-top">
-      <div class="tl2-top-l">
-        <button type="button" class="btn btn-secondary tl2-back" id="tlBackToLinePick" style="display:none" title="Вернуться к выбору линии">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-          К выбору линии
-        </button>
-        <h2 class="tl2-h">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-          TOP Losses
-          <small>разбор потерь линии · проверка по желанию</small>
-        </h2>
+    <div class="th-band th-band-coral">
+      <div class="th-top">
+        <span class="th-ic">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        </span>
+        <div class="th-text">
+          <h2 class="th-title">TOP Losses</h2>
+          <div class="th-sub">Разбор потерь линии · проверка по желанию</div>
+        </div>
+        <div class="th-actions">
+          <button type="button" class="btn btn-secondary tl2-back" id="tlBackToLinePick" style="display:none" title="Вернуться к выбору линии">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            К выбору линии
+          </button>
+          <button type="button" class="editor-line-pill" id="tlLinePill" title="Сменить линию">
+            <span class="editor-line-pill-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            </span>
+            <span class="editor-line-pill-code" id="tlLinePillCode">Выбрать линию</span>
+            <span class="editor-line-pill-caret">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </span>
+          </button>
+        </div>
       </div>
-      <button type="button" class="editor-line-pill" id="tlLinePill" title="Сменить линию">
-        <span class="editor-line-pill-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-        </span>
-        <span class="editor-line-pill-code" id="tlLinePillCode">Выбрать линию</span>
-        <span class="editor-line-pill-caret">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </span>
-      </button>
+      <div class="th-steps" id="tlSteps"></div>
     </div>
     <section class="card tl-pick" id="tlPick" style="display:none"></section>
     <div class="tl2-split" id="tlSplit">
@@ -438,10 +468,7 @@
       </div>
 
       <div class="editor-part-switch" id="clPartSwitch">
-        <button type="button" class="editor-part-switch-btn active" data-part="">
-          <span>Все</span>
-        </button>
-        <button type="button" class="editor-part-switch-btn" data-part="Maker">
+        <button type="button" class="editor-part-switch-btn active" data-part="Maker">
           <span>Maker</span>
         </button>
         <button type="button" class="editor-part-switch-btn" data-part="Packer">
@@ -600,6 +627,7 @@
 
       <div class="editor-panel-divider"></div>
 
+      <div class="et-bulk-bar" id="editorMechBulk" hidden></div>
       <!-- Фильтры одной строкой -->
       <div class="et-filterbar">
         <label class="et-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="emFilterSearch" placeholder="Поиск: OPL, название, узел…" autocomplete="off"></label>
@@ -762,6 +790,7 @@
 
       <div class="editor-panel-divider"></div>
 
+      <div class="et-bulk-bar" id="editorElecBulk" hidden></div>
       <!-- Фильтры одной строкой -->
       <div class="et-filterbar">
         <label class="et-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="eeFilterSearch" placeholder="Поиск: параметр, машина…" autocomplete="off"></label>
@@ -914,6 +943,7 @@
 
     <div class="card editor-table-card">
       <div class="editor-table-wrap" id="editorLogTableWrap"></div>
+      <div class="pagination-bar" id="editorLogPagination"></div>
     </div>
   </div>
 
@@ -1242,10 +1272,7 @@
       </div>
 
       <div class="editor-part-switch" id="schPartSwitch">
-        <button type="button" class="editor-part-switch-btn active" data-part="">
-          <span>Все</span>
-        </button>
-        <button type="button" class="editor-part-switch-btn" data-part="Maker">
+        <button type="button" class="editor-part-switch-btn active" data-part="Maker">
           <span>Maker</span>
         </button>
         <button type="button" class="editor-part-switch-btn" data-part="Packer">
@@ -1293,11 +1320,7 @@
       <!-- Правая часть: счётчики + легенда -->
       <div class="sch-matrix-info">
         <div class="sch-matrix-counters" id="schMatrixCounters"></div>
-        <div class="sch-matrix-legend" id="schMatrixLegend">
-          <span><span class="sch-matrix-legend-swatch sch-matrix-legend-day"></span> День</span>
-          <span><span class="sch-matrix-legend-swatch sch-matrix-legend-night"></span> Ночь</span>
-          <span><span class="sch-matrix-legend-swatch sch-matrix-legend-past"></span> Прошло</span>
-        </div>
+        <div class="sch-matrix-legend" id="schMatrixLegend"></div>
       </div>
 
     </div>
@@ -1356,23 +1379,46 @@
         <label>С <input type="date" id="dateFrom"></label>
         <label>По <input type="date" id="dateTo"></label>
       </div>
-      <div class="hist-kpis" id="histKpis"></div>
       <div class="hist-fbar">
-        <label class="hist-search">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="histSearch" placeholder="Поиск: стандарт, машина, часть линии, узел, бренд…">
-        </label>
-        <select id="filterLine" class="hist-select" title="Линия"></select>
-        <div class="hist-kind-chips" id="histKindChips"></div>
-        <select id="histBrigade" class="hist-select" title="Бригада"></select>
-        <select id="histMachine" class="hist-select" title="Машина"></select>
-        <label class="hist-toggle" title="Показать только проверки с отклонениями">
-          <input type="checkbox" id="histOnlyDev"><span class="hist-toggle-sw"></span>только с отклонениями
-        </label>
+        <div class="hist-frow">
+          <div class="hist-f">
+            <span class="hist-f-lbl">Цех</span>
+            <div class="hist-kind-chips hist-ws-chips" id="histWsChips"></div>
+          </div>
+          <label class="hist-f hist-f-line">
+            <span class="hist-f-lbl">Линия</span>
+            <select id="filterLine" class="hist-select" title="Линия"></select>
+          </label>
+          <label class="hist-f">
+            <span class="hist-f-lbl">Машина</span>
+            <select id="histMachine" class="hist-select" title="Машина"></select>
+          </label>
+          <label class="hist-f">
+            <span class="hist-f-lbl">Смена</span>
+            <select id="histBrigade" class="hist-select" title="Смена"></select>
+          </label>
+          <label class="hist-f hist-f-search">
+            <span class="hist-f-lbl">Поиск</span>
+            <span class="hist-search">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="histSearch" placeholder="Стандарт, узел, часть линии, бренд…">
+            </span>
+          </label>
+        </div>
+        <div class="hist-frow hist-frow-2">
+          <div class="hist-f">
+            <span class="hist-f-lbl">Тип проверки</span>
+            <div class="hist-kind-chips" id="histKindChips"></div>
+          </div>
+          <span class="hist-sp"></span>
+          <label class="hist-toggle" title="Показать только проверки с отклонениями">
+            <input type="checkbox" id="histOnlyDev"><span class="hist-toggle-sw"></span>только с отклонениями
+          </label>
+        </div>
       </div>
+      <div class="hist-totals" id="histTotals"></div>
     </div>
 
-    <div class="card hist-cov-card" id="histCoverage"></div>
     <div id="historyList"></div>
   </div>
 
@@ -1645,6 +1691,7 @@
       <div class="card st-card">
     <h2>Структура производства</h2>
     <p class="settings-hint">Цех → участок → блок → линия. Линия добавляется кнопкой «+» прямо в своём блоке. Нажмите на линию — справа откроется её карточка: машины, бренды, место в структуре.</p>
+    <p class="settings-hint st-legend"><span class="st-line st-legend-chip"><span class="st-line-code">SD12</span><span class="st-line-meta">4</span></span> цифра — сколько машин на линии · <span class="st-line st-line-warn st-legend-chip"><span class="st-line-code">SD08</span><span class="st-line-meta">4</span></span> жёлтый пунктир — у линии нет брендов, оператор её не увидит</p>
     <div class="st-layout">
       <div class="st-tree-wrap">
         <div class="st-toolbar">
@@ -1727,7 +1774,7 @@
         <h2>График смен</h2>
         <p class="shf-intro">
           Дневная смена <b>09:00–21:00</b> и ночная <b>21:00–09:00</b>. Буквы A, B, C, D — обозначения смен.
-          По этому графику Чек-лист CL, Расписание CL и COCL показывают, какая смена сейчас работает.
+          По этому графику Чек-лист CL, Расписание CL и CL при переходах показывают, какая смена сейчас работает.
         </p>
 
         <div id="shfNow" class="shf-now"></div>
@@ -1774,7 +1821,7 @@
       <div class="card">
         <h2>Операторы <span class="list-counter" id="operatorsCount"></span></h2>
         <div class="list-toolbar">
-          <input type="text" id="operatorsSearch" placeholder="🔍 Поиск по ФИО...">
+          <div class="settings-search settings-search-wide"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="operatorsSearch" placeholder="Поиск по ФИО..."></div>
         </div>
         <div class="operators-list" id="operatorsList"></div>
         <div class="pagination-bar" id="operatorsPagination"></div>
@@ -2069,19 +2116,28 @@
 
 <!-- ======================= МОДАЛЬНОЕ ОКНО: ВЫБОР ПОТЕРЬ ДЛЯ СТАНДАРТА ======================= -->
 <div class="modal-overlay" id="topLossPickerModal">
-  <div class="modal modal-wide">
+  <div class="modal tlp-modal">
     <div class="modal-header">
-      <h3>Выбор потерь для стандарта</h3>
+      <div class="tlp-head">
+        <h3>Top Losses стандарта</h3>
+        <div class="tlp-sub" id="topLossPickerSub"></div>
+      </div>
       <button class="modal-close" id="topLossPickerClose">✕</button>
     </div>
-    <div class="modal-body">
-      <div class="field" style="margin-bottom:14px">
-        <input type="text" id="topLossPickerSearch" placeholder="🔍 Поиск по потерям..." autocomplete="off">
+    <div class="modal-body tlp-body">
+      <div class="tlp-toolbar">
+        <div class="settings-search settings-search-wide"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="topLossPickerSearch" placeholder="Поиск по потерям..." autocomplete="off"></div>
+        <button type="button" class="tlp-only" id="topLossPickerOnly">Только выбранные</button>
       </div>
-      <div id="topLossPickerList" class="toploss-picker-list"></div>
+      <div class="tlp-picked" id="topLossPickerPicked"></div>
+      <div class="tlp-main">
+        <div class="tlp-cats" id="topLossPickerCats"></div>
+        <div class="tlp-items" id="topLossPickerList"></div>
+      </div>
     </div>
     <div class="modal-footer">
       <div class="toploss-picker-counter" id="topLossPickerCounter">Выбрано: 0</div>
+      <button class="btn btn-secondary" id="topLossPickerClear">Сбросить</button>
       <button class="btn btn-secondary" id="topLossPickerCancel">Отмена</button>
       <button class="btn btn-primary" id="topLossPickerApply">Применить</button>
     </div>
@@ -2098,7 +2154,7 @@
     <div class="modal-body">
       <p class="trigger-picker-hint" id="triggerPickerHint"></p>
       <div class="field" style="margin-bottom:14px">
-        <input type="text" id="triggerPickerSearch" placeholder="🔍 Поиск по триггерам..." autocomplete="off">
+        <div class="settings-search settings-search-wide"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="triggerPickerSearch" placeholder="Поиск по триггерам..." autocomplete="off"></div>
       </div>
       <div id="triggerPickerList" class="toploss-picker-list"></div>
     </div>
@@ -2314,7 +2370,7 @@
       </div>
       <div class="field">
         <label for="lineBrandNote">Комментарий (необязательно)</label>
-        <input type="text" id="lineBrandNote" placeholder="Например: COCL не проведён, переход был в 14:30">
+        <input type="text" id="lineBrandNote" placeholder="Например: проверка при переходе не проведена, переход был в 14:30">
       </div>
       <p class="lb-hint" id="lineBrandModalHint"></p>
     </div>
@@ -2349,7 +2405,7 @@
     <div class="modal-body">
 
       <div class="field" style="margin-bottom:14px">
-        <input type="text" id="schAddStandardsSearch" placeholder="🔍 Поиск по OPL, машине, узлу, названию..." autocomplete="off">
+        <div class="settings-search settings-search-wide"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="schAddStandardsSearch" placeholder="Поиск по OPL, машине, узлу, названию..." autocomplete="off"></div>
       </div>
 
       <div class="sch-add-toolbar">
@@ -2366,70 +2422,6 @@
     <div class="modal-footer">
       <button class="btn btn-secondary" id="schAddStandardsCancel">Отмена</button>
       <button class="btn btn-primary" id="schAddStandardsConfirm" disabled>Добавить 0</button>
-    </div>
-  </div>
-</div>
-<!-- ======================= МОДАЛЬНОЕ ОКНО: ВРЕМЯ ПРОВЕРКИ ======================= -->
-<div class="modal-overlay" id="timeWindowsModal">
-  <div class="modal tw-modal">
-    <div class="modal-header">
-      <div class="tw-head">
-        <h3>Время проверки</h3>
-        <div class="tw-head-sub" id="timeWindowsPoint"></div>
-      </div>
-      <button class="modal-close" id="timeWindowsClose">✕</button>
-    </div>
-    <div class="modal-body">
-
-      <div class="tw-timeline" id="twTimeline"></div>
-
-      <div class="tw-shifts">
-        <div class="tw-shift tw-shift-day">
-          <div class="tw-shift-head">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.9" y1="4.9" x2="6.3" y2="6.3"/><line x1="17.7" y1="17.7" x2="19.1" y2="19.1"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.9" y1="19.1" x2="6.3" y2="17.7"/><line x1="17.7" y1="6.3" x2="19.1" y2="4.9"/></svg>
-            <span>День</span><span class="tw-shift-range">09:00–21:00</span>
-          </div>
-          <div class="tw-presets" id="twPresetsDay"></div>
-        </div>
-        <div class="tw-shift tw-shift-night">
-          <div class="tw-shift-head">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
-            <span>Ночь</span><span class="tw-shift-range">21:00–09:00</span>
-          </div>
-          <div class="tw-presets" id="twPresetsNight"></div>
-        </div>
-      </div>
-
-      <div class="tw-custom">
-        <div class="tw-custom-label">Своё время</div>
-        <div class="tw-custom-row">
-          <div class="tw-custom-field">
-            <span>С</span>
-            <input type="text" id="twCustomFrom" inputmode="numeric" maxlength="5" placeholder="чч:мм" value="10:00" autocomplete="off">
-          </div>
-          <div class="tw-dur" id="twDur">
-            <button type="button" data-dur="15">15 мин</button>
-            <button type="button" data-dur="30" class="active">30 мин</button>
-            <button type="button" data-dur="60">1 ч</button>
-            <button type="button" data-dur="120">2 ч</button>
-          </div>
-          <span class="tw-custom-preview" id="twCustomPreview"></span>
-          <button type="button" class="btn btn-secondary btn-sm" id="twAddCustomBtn">Добавить</button>
-        </div>
-      </div>
-
-      <div class="tw-selected">
-        <div class="tw-selected-head">
-          <span>Выбрано <b id="twCount">0</b></span>
-          <button type="button" class="tw-clear" id="twClearAllBtn">Очистить</button>
-        </div>
-        <div class="tw-list" id="twList"></div>
-      </div>
-
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" id="twCancelBtn">Отмена</button>
-      <button class="btn btn-primary" id="twSaveBtn">Сохранить</button>
     </div>
   </div>
 </div>
@@ -2510,6 +2502,9 @@
 <script src="js/components/standard-view.js"></script>
 <script src="js/components/quick-add-machine.js"></script>
 <script src="js/components/cil-table.js"></script>
+<script src="js/components/legend.js"></script>
+<script src="js/components/pager.js"></script>
+<script src="js/components/tab-head.js"></script>
 <script src="js/components/mj-notice.js"></script>
 <script src="js/components/line-brand-picker.js"></script>
 <script src="js/io/excel-common.js"></script>
@@ -2517,6 +2512,7 @@
 <script src="js/views/brand-schedule.js"></script>
 <script src="js/views/cocl/cocl.js"></script>
 <script src="js/views/cocl/cocl-save.js"></script>
+<script src="js/views/cocl/cocl-pick.js"></script>
 <script src="js/views/cl-checklist/cl-checklist.js"></script>
 <script src="js/views/cl-checklist/quick-check.js"></script>
 <script src="js/views/cl-checklist/cl-board.js"></script>
@@ -2531,6 +2527,7 @@
 <script src="js/views/editor/editor-core.js"></script>
 <script src="js/views/editor/editor-mech.js"></script>
 <script src="js/views/editor/editor-elec.js"></script>
+<script src="js/views/editor/editor-bulk.js"></script>
 <script src="js/views/editor/eparam-page.js"></script>
 <script src="js/views/editor/changelog-view.js"></script>
 <script src="js/views/standard-page/standard-page.js"></script>
@@ -2545,6 +2542,7 @@
 <script src="js/views/settings/operators.js"></script>
 <script src="js/views/settings/triggers.js"></script>
 <script src="js/views/settings/photos.js"></script>
+<script src="js/components/hotkeys.js"></script>
 <script src="js/app.js"></script>
 
 </body>

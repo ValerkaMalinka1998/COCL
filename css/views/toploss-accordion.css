@@ -90,3 +90,55 @@
   color: var(--text-second);
   font-weight: 600;
 }
+
+/* === ОКНО ВЫБОРА TOP LOSSES СТАНДАРТА ======================== */
+.tlp-modal { width: min(880px, 94vw); max-width: none; }
+.tlp-head h3 { margin: 0; }
+.tlp-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.tlp-sub:empty { display: none; }
+.tlp-body { display: flex; flex-direction: column; gap: 12px; padding-bottom: 8px; }
+.tlp-toolbar { display: flex; gap: 10px; align-items: center; }
+.tlp-toolbar .settings-search { flex: 1; }
+.tlp-only {
+  height: 36px; padding: 0 14px; border-radius: 8px; font-size: 13px; cursor: pointer;
+  border: 1px solid var(--border); background: transparent; color: var(--text-second); white-space: nowrap;
+}
+.tlp-only:hover { border-color: var(--accent-cyan); color: var(--text-main); }
+.tlp-only.active { border-color: var(--accent-cyan); color: var(--accent-cyan); background: color-mix(in srgb, var(--accent-cyan) 12%, transparent); }
+.tlp-picked { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; align-items: center; }
+.tlp-picked-empty { font-size: 12px; color: var(--text-dim); }
+.tlp-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; border-radius: 999px;
+  font-size: 12px; color: var(--accent-cyan); background: color-mix(in srgb, var(--accent-cyan) 12%, transparent);
+}
+.tlp-chip button { border: 0; background: transparent; color: inherit; cursor: pointer; width: 18px; height: 18px; border-radius: 50%; font-size: 10px; line-height: 18px; padding: 0; }
+.tlp-chip button:hover { background: color-mix(in srgb, var(--accent-cyan) 25%, transparent); }
+.tlp-main { display: grid; grid-template-columns: 210px 1fr; gap: 14px; min-height: 300px; max-height: 52vh; }
+.tlp-cats { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; padding-right: 4px; border-right: 1px solid var(--border); }
+.tlp-cat {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: left;
+  padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text-second); cursor: pointer; font-size: 13px;
+}
+.tlp-cat:hover { background: var(--bg-hover, rgba(128,128,128,.1)); }
+.tlp-cat.active { background: color-mix(in srgb, var(--accent-cyan) 12%, transparent); color: var(--text-main); font-weight: 600; }
+.tlp-cat-n { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+.tlp-cat-n.has { color: var(--accent-cyan); font-weight: 600; }
+.tlp-items { overflow-y: auto; padding-right: 4px; }
+.tlp-group + .tlp-group { margin-top: 14px; }
+.tlp-group-name { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--text-dim); margin-bottom: 6px; }
+.tlp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; }
+.tlp-item {
+  display: flex; align-items: center; gap: 10px; text-align: left; padding: 9px 10px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--border); background: transparent; color: var(--text-main); font-size: 13px;
+}
+.tlp-item:hover { border-color: var(--accent-cyan); }
+.tlp-item.checked { border-color: var(--accent-cyan); background: color-mix(in srgb, var(--accent-cyan) 10%, transparent); }
+.tlp-check {
+  flex: none; width: 18px; height: 18px; border-radius: 5px; display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--border); color: transparent;
+}
+.tlp-item.checked .tlp-check { background: var(--accent-cyan); border-color: var(--accent-cyan); color: #fff; }
+@media (max-width: 720px) {
+  .tlp-main { grid-template-columns: 1fr; max-height: none; }
+  .tlp-cats { flex-direction: row; flex-wrap: wrap; border-right: 0; }
+}

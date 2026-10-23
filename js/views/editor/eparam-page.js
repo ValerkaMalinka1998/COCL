@@ -265,13 +265,16 @@ function renderEparamNorm(p) {
   const lineBrands = getBrandsForLine(p.line);
   const rows = p.valuesByBrand.length ? p.valuesByBrand : [];
 
+  // Бренд, уже выбранный в другой строке, повторно выбрать нельзя
+  const usedBrands = (value) => new Set(rows.map(r => r.brand).filter(b => b && b !== value));
   const brandSelect = (value) => {
-    const opts = ['<option value="">— бренд —</option>',
-      `<option value="*"${value === '*' ? ' selected' : ''}>${REST_BRANDS_LABEL}</option>`]
+    const used = usedBrands(value);
+    const opts = ['<option value="">— бренд —</option>']
+      .concat(used.has('*') ? [] : [`<option value="*"${value === '*' ? ' selected' : ''}>${REST_BRANDS_LABEL}</option>`])
       .concat(value && value !== '*' && !lineBrands.includes(value)
         ? [`<option value="${escapeAttr(value)}" selected>${escapeHtml(value)}</option>`]
         : [])
-      .concat(lineBrands.map(b =>
+      .concat(lineBrands.filter(b => !used.has(b)).map(b =>
         `<option value="${escapeAttr(b)}"${b === value ? ' selected' : ''}>${escapeHtml(b)}</option>`));
     return `<select data-ep-brand>${opts.join('')}</select>`;
   };
@@ -399,7 +402,7 @@ function renderEparamExtra(p) {
           ${chip('CL_Conversion', 'type-checkbox-clconv', 'CL в Конвертацию')}
         </div>
       </div>
-      <p class="ep-hint">Если ничего не выбрано — параметр хранится, но в проверках COCL не показывается.</p>
+      <p class="ep-hint">Если ничего не выбрано — параметр хранится, но в CL при переходах не показывается.</p>
     </div>
     <div class="sv-full-extra-block">
       <div class="sv-full-extra-label">Top Losses</div>
@@ -455,6 +458,7 @@ $('#tab-eparam-edit')?.addEventListener('change', (e) => {
   if (!p) return;
   epPageState.dirty = true;
   const t = e.target;
+  if (t.matches && t.matches('[data-ep-brand]')) { syncEparamRowsFromDom(); renderEparamNorm(p); return; }
   if (t.id === 'epf_machine') p.machine = t.value;
   if (t.id === 'epf_nodePart') p.nodePart = t.value;
   if (t.id === 'epf_active') p.active = t.checked;

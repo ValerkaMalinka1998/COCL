@@ -510,7 +510,7 @@ function renderStructureLineCard() {
 
     <div class="st-lc-section">
       <div class="st-lc-label">Бренды линии <span class="st-lc-count">${lineBrands.length}</span></div>
-      ${lineBrands.length ? '' : '<div class="st-warn">Без брендов линия не появится у оператора в COCL и TOP Losses.</div>'}
+      ${lineBrands.length ? '' : '<div class="st-warn">Без брендов линия не появится у оператора в CL при переходах и TOP Losses.</div>'}
       ${offer.length > 12 ? `<input type="search" class="st-brand-filter" id="stBrandFilter" placeholder="Найти бренд среди ${offer.length}…" autocomplete="off">` : ''}
       <div class="st-chip-set ${offer.length > 12 ? 'st-chip-scroll' : ''}">
         ${offer.slice().sort((a, b) => lineBrands.includes(b) - lineBrands.includes(a))

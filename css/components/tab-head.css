@@ -1,0 +1,101 @@
+/* ============================================================ */
+/* === ШАПКА ВКЛАДКИ: цветная плашка с шагами ================= */
+/* ============================================================ */
+.th-band {
+  --th: var(--accent-cyan);
+  margin-bottom: 16px;
+  padding: 16px 18px 14px;
+  border: 1px solid color-mix(in srgb, var(--th) 45%, var(--border));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--th) 13%, var(--bg-card));
+}
+.th-band-coral { --th: var(--tab-coral); }
+
+/* TOP Losses: коралл в светлой теме, в тёмной — тёмно-синий фон с янтарным акцентом */
+:root { --tab-coral: #d85a30; }
+[data-theme="dark"] { --tab-coral: var(--accent-amber); }
+[data-theme="dark"] .th-band {
+  border-color: color-mix(in srgb, var(--th) 70%, transparent);
+  background: color-mix(in srgb, var(--th) 20%, var(--bg-card));
+}
+[data-theme="dark"] .th-ic { background: color-mix(in srgb, var(--th) 22%, var(--bg-card)); }
+.th-band-cyan { --th: var(--accent-cyan); }
+
+.th-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.th-ic {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-card);
+  color: var(--th);
+}
+.th-text { flex: 1; min-width: 0; }
+.th-title {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 22px;
+  font-style: italic;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--text-main);
+}
+.th-sub {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--text-second);
+}
+.th-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Шаги */
+.th-steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--th) 30%, transparent);
+  font-size: 13px;
+}
+.th-s { display: inline-flex; align-items: center; gap: 7px; color: var(--text-second); }
+.th-d {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-card);
+  font-size: 12px;
+  font-weight: 700;
+}
+.th-s-ok .th-d { color: var(--accent-green); }
+.th-s-on { font-weight: 700; color: var(--text-main); }
+.th-s-on .th-d { background: var(--text-main); color: var(--bg-card); }
+.th-s-next { opacity: 0.7; }
+.th-ln {
+  flex: 0 0 26px;
+  height: 1px;
+  background: color-mix(in srgb, var(--th) 55%, transparent);
+}
+
+/* Пустая кнопка линии в шапке «CL при переходах» */
+
+[data-theme="dark"] .th-band-coral {
+  background: color-mix(in srgb, var(--th) 2%, var(--bg-card));
+  border-color: color-mix(in srgb, var(--th) 50%, var(--border));
+}

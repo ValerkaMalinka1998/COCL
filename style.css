@@ -25,7 +25,6 @@
 @import url('css/views/editor-part-switch.css');
 @import url('css/views/schedule.css');
 @import url('css/views/cl-checklist.css');
-@import url('css/views/schedule-time.css');
 @import url('css/views/standard-page.css');
 @import url('css/views/eparam-page.css');
 @import url('css/views/changelog.css');
@@ -33,6 +32,8 @@
 @import url('css/views/settings.css');
 @import url('css/views/history.css');
 @import url('css/components/cil-table.css');
+@import url('css/components/legend.css');
+@import url('css/components/tab-head.css');
 @import url('css/components/photo-slider.css');
 @import url('css/components/standard-view.css');
 @import url('css/views/quick-check.css');
