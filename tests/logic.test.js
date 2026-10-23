@@ -87,7 +87,7 @@ test('classifyNormValue: тип значения', () => {
 test('isNormMark: метка словами, а не число с единицами или опечатка', () => {
   const m = fn('isNormMark');
   ['метки совпадают', 'по риске 0', 'В одну линию'].forEach(v => assert.equal(m(v), true, v));
-  ['92', '92 мм', '5 до 8 мм', '92 ± 5', '5 до', '92 ± ', '', '-65 до -55'].forEach(v => assert.equal(m(v), false, v));
+  ['92', '92 мм', '5 до 8 мм', '92 ± 5', '5 до', '92 ± ', '', '-65 до -55', '—', '± 5'].forEach(v => assert.equal(m(v), false, v));
 });
 
 test('normTypeError: тип контроля ↔ значение', () => {
