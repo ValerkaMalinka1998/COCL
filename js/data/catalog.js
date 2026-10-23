@@ -352,18 +352,6 @@ function getMachinesForLine(line) {
   return Array.isArray(lm[line]) ? lm[line] : [];
 }
 
-function getNodes() { return load(STORAGE_KEYS.nodes, [...DEFAULT_NODES]); }
-function setNodes(v) { save(STORAGE_KEYS.nodes, v); }
-
-/* Смены — фиксированные A, B, C, D. Редактирование через UI запрещено. */
-function getShifts() {
-  return ['A', 'B', 'C', 'D'];
-}
-function setShifts(v) {
-  // Заглушка — смены фиксированные, ничего не сохраняем
-  // (оставлено для совместимости с существующим кодом бэкапа)
-}
-
 function getBrands() { return load(STORAGE_KEYS.brands, [...DEFAULT_BRANDS]); }
 function setBrands(v) { save(STORAGE_KEYS.brands, v); }
 

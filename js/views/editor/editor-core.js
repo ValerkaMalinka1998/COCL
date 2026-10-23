@@ -102,18 +102,6 @@ const MINOR_CHANGES_BY_PART = {
   ]
 };
 
-const DEFAULT_NODES = [
-  { name: 'Табачный блок', part: 'Maker' },
-  { name: 'Форматный блок', part: 'Maker' },
-  { name: 'Блок фильтра', part: 'Maker' },
-  { name: 'Блок обертки', part: 'Packer' },
-  { name: 'Блок пачки', part: 'Packer' },
-  { name: 'Блок целлофана', part: 'Packer' },
-  { name: 'Блок блока', part: 'Packer' },
-  { name: 'Привод главный', part: 'Both' },
-  { name: 'Пневматика', part: 'Both' }
-];
-
 /* Top Losses — категории и потери по умолчанию */
 const DEFAULT_TOP_LOSSES = [
   {
