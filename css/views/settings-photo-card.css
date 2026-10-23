@@ -25,7 +25,7 @@
   background: var(--bg-hover);
   border: 1px dashed var(--border-hi);
   border-radius: 6px;
-  font-family: 'Courier New', Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
   color: var(--accent-cyan);
   word-break: break-all;
@@ -41,7 +41,7 @@
   padding: 1px 6px;
   border-radius: 3px;
   color: var(--text-second);
-  font-family: 'Courier New', Consolas, monospace;
+  font-family: var(--font-mono);
 }
 
 .photo-stats-grid {

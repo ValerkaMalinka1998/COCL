@@ -237,7 +237,7 @@
   font-size: 11px;
   color: var(--text-dim);
 }
-.cil-opl { font-family: Consolas, 'Courier New', monospace; font-weight: 700; color: var(--accent-cyan); }
+.cil-opl { font-family: var(--font-mono); font-weight: 700; color: var(--accent-cyan); }
 .cil-node { display: inline-flex; align-items: center; gap: 4px; }
 
 .cil-tag {
@@ -264,7 +264,7 @@ button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentCol
 
 /* Норма / точки */
 .cil-norm-val {
-  font-family: Consolas, 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 700;
   line-height: 1.35;
@@ -276,7 +276,7 @@ button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentCol
 .cil-pt {
   display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 7px;
   border: 1px solid var(--border); background: var(--bg-input);
-  font-family: Consolas, 'Courier New', monospace; font-size: 12px;
+  font-family: var(--font-mono); font-size: 12px;
 }
 .cil-pt i {
   font-style: normal; font-size: 9.5px; font-weight: 800; letter-spacing: .03em;
@@ -303,7 +303,7 @@ button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentCol
   display: none;
   min-width: 150px;
   padding: 8px 10px;
-  font-family: Consolas, 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 600;
   text-align: left;

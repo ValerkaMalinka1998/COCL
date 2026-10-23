@@ -443,11 +443,12 @@ function histMarkPick() {
 }
 
 /* --- Журнал отклонений --- */
-function histDeviationEntries() {
+/* Проверенные пункты (ОК и Не ОК) по фильтрам; onlyFail — только отклонения */
+function histDeviationEntries(onlyFail = true) {
   const out = [];
   getFilteredHistory({ ignoreOnlyDev: true }).forEach(h => {
     (h.items || []).forEach(it => {
-      if (it.status !== 'FAIL') return;
+      if (it.status !== 'FAIL' && (onlyFail || it.status !== 'OK')) return;
       if (histState.machine && it.machine !== histState.machine) return;
       out.push({ h, it, s: histShift(h) });
     });
@@ -455,15 +456,29 @@ function histDeviationEntries() {
   return out;
 }
 
-function histTop(entries, keyFn, labelFn) {
+/* Топ по доле отклонений: n — «Не ОК», total — всего проверок.
+   Меньше minChecks проверок — «мало проверок», такие строки ниже остальных. */
+function histTop(entries, keyFn, labelFn, minChecks) {
   const map = {};
   entries.forEach(e => {
     const k = keyFn(e);
     if (!k) return;
-    if (!map[k]) map[k] = { label: labelFn(e), n: 0 };
-    map[k].n++;
+    if (!map[k]) map[k] = { label: labelFn(e), n: 0, total: 0 };
+    map[k].total++;
+    if (e.it.status === 'FAIL') map[k].n++;
   });
-  return Object.values(map).sort((a, b) => b.n - a.n).slice(0, 4);
+  return Object.values(map).filter(x => x.n)
+    .map(x => ({ ...x, pct: Math.round(x.n / x.total * 100), few: x.total < minChecks }))
+    .sort((a, b) => (a.few - b.few) || (b.pct - a.pct) || (b.n - a.n))
+    .slice(0, 4);
+}
+
+/* Значение пункта: точки чипами (вне нормы — красные, с нормой), иначе текст */
+function histValueHtml(h, it) {
+  const pts = it.deviation ? null : histItemPoints(h, it);
+  if (!pts) return `<span class="hist-dev-txt">${escapeHtml(histDeviationText(h, it))}</span>`;
+  return pts.map((p, i) => `<span class="cil-pt${p.bad ? ' hist-pt-bad' : ''}"${p.label ? ` title="Норма: ${escapeAttr(p.label)}"` : ''}>
+    ${pts.length > 1 ? `<i>т.${i + 1}</i>` : ''}<b>${escapeHtml(p.value)}</b>${p.bad && p.label ? `<small>норма ${escapeHtml(p.label)}</small>` : ''}</span>`).join(' ');
 }
 
 function renderHistDeviations() {
@@ -477,12 +492,14 @@ function renderHistDeviations() {
   entries.forEach(e => { const k = e.h.line + '|' + e.it.standardId; rep[k] = (rep[k] || 0) + 1; });
 
   const topBlock = (title, list) => `<div class="hist-t5"><h4>${title}</h4>${list.map(x =>
-    `<div><span>${escapeHtml(x.label)}</span><b>${x.n}</b></div>`).join('')}</div>`;
-  const byStd = histTop(entries, e => e.h.line + '|' + e.it.standardId,
-    e => (e.it.oplNumber ? e.it.oplNumber + ' · ' : '') + histItemTitle(e.it));
-  const byMachine = histTop(entries, e => e.h.line + '|' + (e.it.machine || ''),
-    e => [histState.line ? '' : e.h.line, e.it.machine || 'без машины', e.it.nodePart].filter(Boolean).join(' · '));
-  const byBrigade = histTop(entries, e => e.s.letter, e => 'Смена ' + e.s.letter);
+    `<div${x.few ? ' class="hist-t5-few" title="Мало проверок для вывода"' : ''}><span>${escapeHtml(x.label)}</span>
+      <b>${x.n} из ${x.total}${x.few ? ' · мало проверок' : ` · ${x.pct}%`}</b></div>`).join('')}</div>`;
+  const checked = histDeviationEntries(false);
+  const byStd = histTop(checked, e => e.h.line + '|' + e.it.standardId,
+    e => (e.it.oplNumber ? e.it.oplNumber + ' · ' : '') + histItemTitle(e.it), 5);
+  const byMachine = histTop(checked, e => e.h.line + '|' + (e.it.machine || ''),
+    e => [histState.line ? '' : e.h.line, e.it.machine || 'без машины', e.it.nodePart].filter(Boolean).join(' · '), 10);
+  const byBrigade = histTop(checked, e => e.s.letter, e => 'Смена ' + e.s.letter, 10);
 
   const shown = entries.slice(0, histState.limit);
   box.innerHTML = `
@@ -504,7 +521,7 @@ function renderHistDeviations() {
               <td>${it.oplNumber ? `<span class="hist-opl">${escapeHtml(it.oplNumber)}</span> · ` : ''}<b>${escapeHtml(histItemTitle(it))}</b>
                 ${isElec ? '<span class="hist-tag hist-tag-elec">E-Param</span>' : ''}
                 ${n >= 2 ? `<span class="hist-tag hist-tag-fail">повтор ×${n}</span>` : ''}</td>
-              <td class="hist-dev-val">${escapeHtml(histDeviationText(h, it))}</td>
+              <td class="hist-dev-val">${histValueHtml(h, it)}</td>
               <td class="hist-sub">${it.comment ? cmtLine(it.comment) : '—'}</td>
               <td><span class="hist-tag hist-tag-kind" style="--k:${HIST_KINDS[histKind(h)].color}">${escapeHtml(HIST_KINDS[histKind(h)].short)}</span></td>
             </tr>`;

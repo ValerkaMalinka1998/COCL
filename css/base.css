@@ -74,6 +74,9 @@
   --scroll-thumb-hover: #1238b8;
 
   --modal-z-base: 2000;
+
+  /* Моноширинный шрифт: номера OPL, значения точек, линии (один на всё приложение) */
+  --font-mono: Consolas, "Cascadia Mono", Menlo, monospace;
 }
 
 /* ============ ТЕМА: Ночная (dark) — «Pit Wall» ============ */

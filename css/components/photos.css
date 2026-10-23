@@ -68,7 +68,7 @@
 }
 .cp-item-meta strong { color: var(--text-main); font-weight: 600; }
 .cp-item-file {
-  font-family: 'Courier New', Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   color: var(--accent-red);
   word-break: break-all;

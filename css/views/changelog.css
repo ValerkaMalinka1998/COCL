@@ -40,7 +40,7 @@
 .clog-c-title { width: 26%; }
 .clog-c-date { width: 96px; white-space: nowrap; color: var(--text-second) !important; font-variant-numeric: tabular-nums; }
 
-.clog-opl { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 600; font-size: 12px; }
+.clog-opl { font-family: var(--font-mono); font-weight: 600; font-size: 12px; }
 .clog-ep {
   display: inline-block;
   padding: 2px 8px;
@@ -122,7 +122,7 @@
 }
 .clog-sum-top { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--text-second); }
 .clog-sum-top .clog-act { margin-right: 0; }
-.clog-sum-num { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 700; color: var(--text-main); }
+.clog-sum-num { font-family: var(--font-mono); font-weight: 700; color: var(--text-main); }
 .clog-sum-title { margin-top: 6px; font-size: 15px; font-weight: 700; color: var(--text-main); }
 .clog-hint { margin-top: 6px; font-size: 12px; color: var(--text-dim); }
 

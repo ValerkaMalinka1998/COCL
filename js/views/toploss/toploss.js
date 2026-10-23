@@ -232,33 +232,9 @@ function renderTopLossCategories() {
 const tlPick = { ws: null, q: '', closed: new Set() };
 
 /* Сводка TOP Losses по линии за 7 дней: отклонения и последняя проверка */
-function tlLinePickStats() {
-  const border = Date.now() - 7 * 86400000;
-  const out = {};
-  getHistory().forEach(h => {
-    if (h.mode !== 'toploss') return;
-    const o = out[h.line] || (out[h.line] = { fails: 0, last: null });
-    if (!o.last || h.timestamp > o.last) o.last = h.timestamp;
-    if (new Date(h.timestamp).getTime() >= border) {
-      o.fails += (h.items || []).filter(it => it.status === 'FAIL').length;
-    }
-  });
-  return out;
-}
+function tlLinePickStats() { return pickLineStats('toploss'); }
 
-function tlPickTile(line, st) {
-  const days = st && st.last ? Math.floor((Date.now() - new Date(st.last).getTime()) / 86400000) : null;
-  let cls = 'none', sub = 'проверок не было', sub2 = '';
-  if (st && st.last) {
-    sub2 = 'посл. проверка ' + fmtShortDate(todayISO(new Date(st.last)));
-    if (st.fails) { cls = 'red'; sub = `${st.fails} откл. за 7 дн.`; }
-    else if (days > 30) { cls = 'amber'; sub = `нет проверок ${days} дн.`; sub2 = ''; }
-    else { cls = 'green'; sub = 'без откл.'; }
-  }
-  return `<button type="button" class="tl-pick-ln tl-pick-ln-${cls}" data-tl-pick-set="${escapeAttr(line)}">
-    <b>${escapeHtml(line)}</b><span class="${cls === 'red' ? 'tl-pick-bad' : ''}">${escapeHtml(sub)}</span>${sub2 ? `<span>${escapeHtml(sub2)}</span>` : ''}
-  </button>`;
-}
+function tlPickTile(line, st) { return pickTileHtml(line, st, 'data-tl-pick-set'); }
 
 function renderTopLossLinePick() {
   const box = $('#tlPick');

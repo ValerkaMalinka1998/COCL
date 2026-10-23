@@ -95,14 +95,14 @@
 }
 .ebs-preview-row:last-child { border-bottom: none; }
 .ebs-preview-date {
-  font-family: 'Courier New', Consolas, monospace;
+  font-family: var(--font-mono);
   color: var(--text-second);
   font-variant-numeric: tabular-nums;
 }
 .ebs-preview-shift {
   font-weight: 700;
   text-align: center;
-  font-family: 'Courier New', Consolas, monospace;
+  font-family: var(--font-mono);
   padding: 1px 8px;
   border-radius: 8px;
   font-size: 11px;
