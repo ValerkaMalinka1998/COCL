@@ -265,71 +265,108 @@ function fallbackCopy(text) {
     showToast('Не удалось скопировать. Скопируйте вручную: ' + text, true);
   }
 }
-/* Бэкап */
+/* ============================================================
+   БЭКАП: JSON (данные) и ZIP (данные + фото)
+   Данные — все ключи STORAGE_KEYS как есть (имя ключа → значение),
+   чтобы новый ключ не выпадал из бэкапа. Формат совместим со старыми
+   бэкапами (version 4): те же имена полей.
+   ============================================================ */
+const BACKUP_VERSION = 5;
+const BACKUP_SKIP = ['blocks'];   // устаревший ключ, удаляется миграцией
+
+function collectBackup() {
+  const backup = { version: BACKUP_VERSION, exportedAt: new Date().toISOString() };
+  Object.entries(STORAGE_KEYS).forEach(([name, key]) => {
+    if (BACKUP_SKIP.includes(name)) return;
+    const v = load(key, null);
+    if (v != null) backup[name] = v;
+  });
+  return backup;
+}
+
+/* Заменить данные приложения данными бэкапа (только известные ключи) */
+function applyBackup(data) {
+  if (!data || typeof data !== 'object' || (!Array.isArray(data.standards) && !Array.isArray(data.history))) {
+    throw new Error('не бэкап');
+  }
+  Object.entries(STORAGE_KEYS).forEach(([name, key]) => {
+    if (BACKUP_SKIP.includes(name) || data[name] === undefined || data[name] === null) return;
+    save(key, data[name]);
+  });
+  init();
+}
+
+function backupStamp() {
+  return new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+}
+
 $('#backupDownloadBtn').addEventListener('click', () => {
-const backup = {
-  version: 4,
-  exportedAt: new Date().toISOString(),
-  standards: getStandards(),
-  history: getHistory(),
-  nodes: getNodes(),
-  workshops: getWorkshops(),   // ← НОВОЕ
-  shifts: getShifts(),
-  brands: getBrands(),
-  brandWorkshops: getBrandWorkshops(),
-  lineBrands: getLineBrands(),
-  operators: getOperators(),
-  lineMachines: getLineMachines(),
-  topLosses: getTopLosses(),
-  electronicParams: getElectronicParams(),
-  electronicShiftCfg: getElectronicShiftConfig(),
-  electronicBrandSchedule: getElectronicBrandSchedule(),
-  changeLog: getChangeLog(),
-  lineBrandEvents: getLineBrandEvents()
-};
-  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8' });
-  const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
-  downloadBlob(blob, 'checklist_backup_' + ts + '.json');
+  const blob = new Blob([JSON.stringify(collectBackup(), null, 2)], { type: 'application/json;charset=utf-8' });
+  downloadBlob(blob, 'checklist_backup_' + backupStamp() + '.json');
   showToast('Бэкап скачан');
+});
+
+/* --- ZIP: пользователь выбирает папку photos, в архив — data.json + photos/… --- */
+$('#backupZipBtn')?.addEventListener('click', () => {
+  if (typeof JSZip === 'undefined') return showToast('Библиотека JSZip не загружена', true);
+  showToast('Выберите папку photos рядом с index.html');
+  $('#backupPhotosDirInput').click();
+});
+
+$('#backupPhotosDirInput')?.addEventListener('change', async (e) => {
+  const files = [...(e.target.files || [])].filter(f => /\.(jpe?g|png|gif|webp|bmp)$/i.test(f.name));
+  e.target.value = '';
+  try {
+    const zip = new JSZip();
+    zip.file('data.json', JSON.stringify(collectBackup(), null, 2));
+    // Путь внутри архива: photos/<линия>/<Maker|Packer>/<файл>, как на диске
+    files.forEach(f => {
+      const rel = (f.webkitRelativePath || f.name).split('/');
+      const inner = rel.length > 1 ? rel.slice(1).join('/') : rel[0];
+      zip.file('photos/' + inner, f);
+    });
+    // Фото, на которые ссылаются стандарты, но которых нет в выбранной папке
+    const have = new Set(files.map(f => f.name));
+    const missing = [...new Set(getStandards().flatMap(s => Array.isArray(s.photos) ? s.photos : []))].filter(n => !have.has(n));
+    if (missing.length) zip.file('photos-missing.txt', missing.join('\r\n'));
+
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+    downloadBlob(blob, 'checklist_backup_' + backupStamp() + '.zip');
+    showToast(`Бэкап с фото скачан: фото ${files.length}` + (missing.length ? `, не найдено ${missing.length} (список в архиве)` : ''));
+  } catch (err) {
+    showToast('Не удалось собрать архив: ' + err.message, true);
+  }
 });
 
 $('#backupUploadBtn').addEventListener('click', () => {
   $('#backupFileInput').click();
 });
 
-$('#backupFileInput').addEventListener('change', (e) => {
+/* Загрузка бэкапа: JSON или ZIP (из ZIP берутся данные; фото распаковать вручную) */
+$('#backupFileInput').addEventListener('change', async (e) => {
   const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    try {
-      const data = JSON.parse(ev.target.result);
-      if (!confirm('Загрузить бэкап? Текущие данные будут ЗАМЕНЕНЫ.')) return;
-
-      if (Array.isArray(data.standards)) setStandards(data.standards);
-      if (Array.isArray(data.history)) setHistory(data.history);
-      if (Array.isArray(data.nodes)) setNodes(data.nodes);
-      if (Array.isArray(data.lines)) setLines(data.lines);
-      if (Array.isArray(data.brands)) setBrands(data.brands);
-      if (data.brandWorkshops && typeof data.brandWorkshops === 'object') setBrandWorkshops(data.brandWorkshops);
-      if (data.lineBrands && typeof data.lineBrands === 'object') setLineBrands(data.lineBrands);
-      if (Array.isArray(data.operators)) setOperators(data.operators);
-      if (Array.isArray(data.workshops)) setWorkshops(data.workshops);
-      if (data.lineMachines && typeof data.lineMachines === 'object') setLineMachines(data.lineMachines);
-      if (Array.isArray(data.topLosses)) setTopLosses(data.topLosses);
-      if (Array.isArray(data.electronicParams)) setElectronicParams(data.electronicParams);
-      if (data.electronicShiftCfg && typeof data.electronicShiftCfg === 'object') setElectronicShiftConfig(data.electronicShiftCfg);
-      if (data.electronicBrandSchedule && typeof data.electronicBrandSchedule === 'object') setElectronicBrandSchedule(data.electronicBrandSchedule);
-      if (Array.isArray(data.changeLog)) setChangeLog(data.changeLog);
-      if (Array.isArray(data.lineBrandEvents)) setLineBrandEvents(data.lineBrandEvents);
-      init();
-      showToast('Бэкап загружен');
-    } catch (err) {
-      showToast('Ошибка: файл повреждён или не является бэкапом', true);
-    }
-  };
-  reader.readAsText(file);
   e.target.value = '';
+  if (!file) return;
+  try {
+    let data, photoCount = 0;
+    if (/\.zip$/i.test(file.name)) {
+      if (typeof JSZip === 'undefined') return showToast('Библиотека JSZip не загружена', true);
+      const zip = await JSZip.loadAsync(file);
+      const entry = zip.file('data.json');
+      if (!entry) throw new Error('в архиве нет data.json');
+      data = JSON.parse(await entry.async('string'));
+      photoCount = Object.keys(zip.files).filter(n => n.startsWith('photos/') && !zip.files[n].dir).length;
+    } else {
+      data = JSON.parse(await file.text());
+    }
+    if (!confirm('Загрузить бэкап? Текущие данные будут ЗАМЕНЕНЫ.')) return;
+    applyBackup(data);
+    showToast(photoCount
+      ? `Бэкап загружен. Фото в архиве: ${photoCount} — распакуйте папку photos из архива рядом с index.html`
+      : 'Бэкап загружен');
+  } catch (err) {
+    showToast('Ошибка: файл повреждён или не является бэкапом', true);
+  }
 });
 
 $('#resetAllBtn').addEventListener('click', () => {

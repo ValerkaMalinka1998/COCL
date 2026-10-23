@@ -566,6 +566,9 @@
       <!-- Крошки (хлебные крошки от цеха до линии) -->
       <div class="editor-crumbs" id="emEditorCrumbs" style="display:none"></div>
 
+      <!-- Недавно открытые стандарты (все линии) -->
+      <div class="editor-recent-std" id="editorRecentStd" hidden></div>
+
       <div class="editor-panel-divider"></div>
 
       <!-- Строка: чип линии + переключатель + счётчики -->
@@ -970,6 +973,14 @@
     </div>
 
     <div class="sv-full-header-actions">
+      <button type="button" class="sv-full-action-btn sv-full-action-view" id="svFullLinkBtn" title="Скопировать ссылку на этот стандарт">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+        </svg>
+        <span>Ссылка</span>
+      </button>
+
       <button type="button" class="sv-full-action-btn sv-full-action-view" id="svFullViewToggleBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
@@ -1917,8 +1928,9 @@
       <div class="card">
         <h2>Бэкап данных</h2>
         <p style="color:var(--text-second);margin-bottom:14px;font-size:13px">
-          Скачайте бэкап — файл JSON со всеми стандартами, историей, узлами и настройками.
-          Сохраните его в надёжном месте. При необходимости — загрузите обратно.
+          <b>Скачать бэкап</b> — файл JSON со всеми данными: стандарты, история, расписание, настройки.
+          <b>Бэкап с фото (ZIP)</b> — те же данные и все фото: выберите папку <code>photos</code> рядом с index.html.
+          Загрузить можно и JSON, и ZIP.
         </p>
         <div style="display:flex; gap:10px; flex-wrap:wrap">
           <button class="btn btn-primary btn-icon-text" id="backupDownloadBtn">
@@ -1929,13 +1941,22 @@
             </svg>
             <span>Скачать бэкап</span>
           </button>
+          <button class="btn btn-primary btn-icon-text" id="backupZipBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            <span>Бэкап с фото (ZIP)</span>
+          </button>
+          <input type="file" id="backupPhotosDirInput" webkitdirectory multiple style="display:none">
           <button class="btn btn-secondary btn-icon-text" id="backupUploadBtn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
             </svg>
             <span>Загрузить бэкап</span>
           </button>
-          <input type="file" id="backupFileInput" accept=".json" style="display:none">
+          <input type="file" id="backupFileInput" accept=".json,.zip" style="display:none">
         </div>
       </div>
 
@@ -2482,6 +2503,7 @@
 </footer>-->
 
 <script src="js/exceljs.min.js"></script>
+<script src="js/jszip.min.js"></script>
 <script src="js/router.js"></script>
 <!-- Модули приложения. Порядок важен: ядро → данные → окна → вкладки → запуск.
      Карта модулей — PROJECT_MAP.md. -->

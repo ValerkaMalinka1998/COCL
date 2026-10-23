@@ -62,6 +62,13 @@ if (type === 'ChangeOver') {
         const val = inp?.value.trim() || '';
         if (val === '') { allFilled = false; return; }
 
+        // Точка-метка: ответ «ОК» / «Не ОК» как есть
+        if (cell.dataset.mark) {
+          if (val !== 'ОК') anyFail = true;
+          pointsData.push({ value: val, norm: null, inRange: val === 'ОК' });
+          return;
+        }
+
         const num = parseFloat(val.replace(',', '.'));
         const normStr = cell.dataset.norm;
         let inRange = null;

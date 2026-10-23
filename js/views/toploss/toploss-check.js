@@ -30,20 +30,32 @@ function tlCheckPoints(row, isElec, brand) {
   const block = ms.find(b => brand && b.brand === brand) || ms.find(b => !b.brand) || ms[0];
   const pts = (block && Array.isArray(block.points) ? block.points : [])
     .map(p => String(p && p.value != null ? p.value : '').trim()).filter(Boolean);
-  const parsed = pts.map(v => ({ v, r: parseNorm(v) }));
-  if (!parsed.length || parsed.every(x => !x.r)) return null;
-  return parsed.map((x, i) => ({ label: `т.${i + 1} · ${x.v}`, range: x.r }));
+  // Точка-метка (словами или без числовой нормы) — ОК / Не ОК, как в быстрой проверке
+  const parsed = pts.map(v => {
+    const mark = isNormMark(v) || !parseNorm(v);
+    return { v, r: mark ? null : parseNorm(v), mark };
+  });
+  if (!parsed.length || parsed.every(x => x.mark)) return null;
+  return parsed.map((x, i) => ({ label: `т.${i + 1} · ${x.v}`, range: x.r, mark: x.mark }));
+}
+
+/* Состояние точки по ответу: '' — пусто, 'ok' / 'bad' */
+function tlPointState(p, value) {
+  const raw = String(value ?? '').trim();
+  if (raw === '') return '';
+  if (p.mark) return raw === 'ОК' ? 'ok' : 'bad';
+  const n = Number(raw.replace(',', '.'));
+  return Number.isFinite(n) && p.range && n >= p.range.min && n <= p.range.max ? 'ok' : 'bad';
 }
 
 /* Статус строки по введённым значениям */
 function tlCheckStatusFromValues(points, values) {
   let filled = 0, bad = false;
   points.forEach((p, i) => {
-    const raw = String(values[i] ?? '').trim().replace(',', '.');
-    if (raw === '') return;
+    const s = tlPointState(p, values[i]);
+    if (!s) return;
     filled++;
-    const n = Number(raw);
-    if (!Number.isFinite(n) || !p.range || n < p.range.min || n > p.range.max) bad = true;
+    if (s === 'bad') bad = true;
   });
   if (bad) return 'FAIL';
   return filled === points.length ? 'OK' : null;
@@ -88,8 +100,11 @@ function renderTopLossChecklist() {
     const body = points
       ? `<div class="tl3-pts">${points.map((p, pi) => {
           const v = (a.values || [])[pi] ?? '';
-          const raw = String(v).trim().replace(',', '.');
-          const cls = raw === '' ? '' : (Number.isFinite(Number(raw)) && Number(raw) >= p.range.min && Number(raw) <= p.range.max ? 'ok' : 'bad');
+          const cls = tlPointState(p, v);
+          if (p.mark) {
+            return `<div class="tl3-pt tl3-pt-mark ${cls}"><small>${escapeHtml(p.label)}</small>
+              <span class="tl3-mark">${['ОК', 'Не ОК'].map(m => `<button type="button" class="${m === 'ОК' ? 'tl3-ok' : 'tl3-no'} ${v === m ? 'on' : ''}" data-tl-mark="${escapeAttr(row.id)}" data-pi="${pi}" data-v="${m}">${m}</button>`).join('')}</span></div>`;
+          }
           return `<label class="tl3-pt ${cls}"><small>${escapeHtml(p.label)}</small>
             <input type="text" inputmode="decimal" data-tl-val="${escapeAttr(row.id)}" data-pi="${pi}" value="${escapeAttr(v)}" placeholder="значение" autocomplete="off"></label>`;
         }).join('')}</div>`
@@ -182,10 +197,11 @@ function tlCheckRefreshItem(id) {
   item.querySelectorAll('[data-tl-ans]').forEach(b => b.classList.toggle('on', b.dataset.v === st));
   if (r.points) {
     item.querySelectorAll('.tl3-pt').forEach((lab, pi) => {
-      const raw = String((tlCheck.answers[id]?.values || [])[pi] ?? '').trim().replace(',', '.');
-      const p = r.points[pi];
-      lab.classList.toggle('ok', raw !== '' && Number.isFinite(Number(raw)) && Number(raw) >= p.range.min && Number(raw) <= p.range.max);
-      lab.classList.toggle('bad', raw !== '' && !lab.classList.contains('ok'));
+      const v = (tlCheck.answers[id]?.values || [])[pi];
+      const s = tlPointState(r.points[pi], v);
+      lab.classList.toggle('ok', s === 'ok');
+      lab.classList.toggle('bad', s === 'bad');
+      lab.querySelectorAll('[data-tl-mark]').forEach(b => b.classList.toggle('on', b.dataset.v === v));
     });
   }
   updateTlCheckProgress();
@@ -215,10 +231,9 @@ function saveTopLossCheck() {
     // Что именно вне нормы — для уведомления о Machine Journal
     const deviation = status !== 'FAIL' ? ''
       : points ? points.map((p, i) => {
-          const raw = String(values[i] || '').replace(',', '.');
-          const n = Number(raw);
-          if (raw === '' || (Number.isFinite(n) && n >= p.range.min && n <= p.range.max)) return '';
+          if (tlPointState(p, values[i]) !== 'bad') return '';
           const [pt, norm] = p.label.split(' · ');
+          if (p.mark) return `${pt}: Не ОК (${norm})`;
           return points.length > 1 ? `${pt}: ${values[i]} при норме ${norm}` : `${values[i]} при ${p.label}`;
         }).filter(Boolean).join('; ')
       : 'Не ОК';
@@ -364,6 +379,19 @@ $('#tlChecklistView')?.addEventListener('click', (e) => {
     const id = ans.dataset.tlAns;
     const a = tlCheck.answers[id] || (tlCheck.answers[id] = {});
     a.status = a.status === ans.dataset.v ? null : ans.dataset.v;
+    return tlCheckRefreshItem(id);
+  }
+  // Точка-метка: ОК / Не ОК пишется в значения точек, повторный клик снимает ответ
+  const mark = e.target.closest('[data-tl-mark]');
+  if (mark) {
+    const id = mark.dataset.tlMark;
+    const r = tlCheck.rows.find(x => x.row.id === id);
+    if (!r || !r.points) return;
+    const a = tlCheck.answers[id] || (tlCheck.answers[id] = {});
+    if (!Array.isArray(a.values)) a.values = [];
+    const pi = Number(mark.dataset.pi);
+    a.values[pi] = a.values[pi] === mark.dataset.v ? '' : mark.dataset.v;
+    a.status = tlCheckStatusFromValues(r.points, a.values);
     return tlCheckRefreshItem(id);
   }
   const com = e.target.closest('[data-tl-comment]');

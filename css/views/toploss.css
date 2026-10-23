@@ -697,6 +697,25 @@
 }
 .tl3-okno .tl3-ok.on { color: var(--on-accent); background: var(--accent-green); border-color: var(--accent-green); }
 .tl3-okno .tl3-no.on { color: var(--on-accent); background: var(--accent-red); border-color: var(--accent-red); }
+/* Точка-метка: ОК / Не ОК вместо поля ввода */
+.tl3-mark { display: flex; gap: 6px; }
+.tl3-mark button {
+  flex: 1;
+  white-space: nowrap;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--text-second);
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-hi);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.tl3-mark .tl3-ok.on { color: var(--on-accent); background: var(--accent-green); border-color: var(--accent-green); }
+.tl3-mark .tl3-no.on { color: var(--on-accent); background: var(--accent-red); border-color: var(--accent-red); }
+.tl3-pt-mark.ok { border-color: var(--accent-green); }
+.tl3-pt-mark.bad { border-color: var(--accent-red); background: color-mix(in srgb, var(--accent-red) 7%, var(--bg-input)); }
 .tl3-how { margin-top: 8px; font-size: 12px; color: var(--text-second); white-space: pre-line; }
 .tl3-acts { display: flex; gap: 6px; }
 .tl3-item .comment-preview { margin-top: 8px; }

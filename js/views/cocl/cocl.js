@@ -657,6 +657,18 @@ function renderChecklist(items) {
   });
 
   const pointCell = (m, i, showNum) => {
+    // Точка-метка (словами или без числовой нормы) — ОК / Не ОК вместо поля
+    if (isNormMark(m.value) || !parseNorm(m.value)) {
+      return `
+      <div class="checklist-point-cell cocl-pt-mark" data-point-index="${i}" data-mark="1">
+        <span class="cocl-pt-norm">${showNum ? `<b>${i + 1}</b>` : ''}${escapeHtml(m.value || '—')}<span class="checklist-point-status" data-point-status="${i}"></span></span>
+        <input type="hidden" class="checklist-point-input" data-point-input="${i}" value="">
+        <span class="cocl-mark-btns">
+          <button type="button" class="cocl-mark-ok" data-cocl-mark="ОК">ОК</button>
+          <button type="button" class="cocl-mark-fail" data-cocl-mark="Не ОК">Не ОК</button>
+        </span>
+      </div>`;
+    }
     const norm = parseNorm(m.value);
     const normData = norm ? JSON.stringify(norm).replace(/"/g, '&quot;') : '';
     return `
@@ -807,12 +819,32 @@ function bindCoclAccordionEvents() {
     });
   });
 
-  // --- Enter — к следующему полю ---
+  // --- Точка-метка: ОК / Не ОК пишется в скрытое поле точки, повторный клик снимает ---
+  c.querySelectorAll('[data-cocl-mark]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const cell = btn.closest('.checklist-point-cell');
+      const inp = cell.querySelector('.checklist-point-input');
+      inp.value = inp.value === btn.dataset.coclMark ? '' : btn.dataset.coclMark;
+      cell.querySelectorAll('[data-cocl-mark]').forEach(b => b.classList.toggle('on', b.dataset.coclMark === inp.value));
+      cell.classList.remove('point-ok', 'point-fail');
+      const statusEl = cell.querySelector('[data-point-status]');
+      if (inp.value) cell.classList.add(inp.value === 'ОК' ? 'point-ok' : 'point-fail');
+      if (statusEl) {
+        statusEl.textContent = inp.value ? (inp.value === 'ОК' ? '✓' : '✕') : '';
+        statusEl.className = 'checklist-point-status' + (inp.value ? (inp.value === 'ОК' ? ' ok' : ' fail') : '');
+      }
+      updateCoclItemStatusFromPoints(cell.closest('.cocl-acc-item'));
+      updateProgress();
+    });
+  });
+
+  // --- Enter — к следующему полю (метки пропускаем: их отмечают кнопками) ---
   c.querySelectorAll('.checklist-point-input').forEach(inp => {
     inp.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter') return;
       e.preventDefault();
-      const all = [...c.querySelectorAll('.checklist-point-input')];
+      const all = [...c.querySelectorAll('input.checklist-point-input[type="text"]')];
       const next = all[all.indexOf(inp) + 1];
       if (next) next.focus();
     });
