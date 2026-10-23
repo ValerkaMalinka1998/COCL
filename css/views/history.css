@@ -9,7 +9,7 @@
 .hist-c-ok { color: var(--accent-green); }
 .hist-c-fail { color: var(--accent-red); }
 .hist-c-warn { color: var(--accent-amber); }
-.hist-opl { font-family: Consolas, 'Courier New', monospace; color: var(--accent-cyan); font-weight: 700; }
+.hist-opl { font-family: var(--font-mono); color: var(--accent-cyan); font-weight: 700; }
 
 /* === Шапка: заголовок, режим, период, Excel === */
 .hist-head-card { padding: 0; }
@@ -217,7 +217,13 @@ button.hist-cc:hover { border-color: var(--k); background: color-mix(in srgb, va
 .hist-dev td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; font-size: 12.5px; color: var(--text-main); }
 .hist-dev tbody tr { cursor: pointer; }
 .hist-dev tbody tr:hover td { background: var(--bg-hover); }
-.hist-dev-val { font-family: Consolas, 'Courier New', monospace; font-size: 12px; color: var(--accent-red); }
+.hist-dev-val { font-size: 12px; line-height: 1.9; }
+.hist-dev-txt { font-family: var(--font-mono); color: var(--accent-red); }
+.hist-dev-val .cil-pt small { font-family: inherit; font-size: 10.5px; color: var(--text-dim); }
+.hist-dev-val .cil-pt.hist-pt-bad { border-color: var(--accent-red); }
+.hist-dev-val .cil-pt.hist-pt-bad b { color: var(--accent-red); }
+.hist-t5 div.hist-t5-few b { color: var(--text-dim); font-weight: 600; }
+.hist-t5 div b { white-space: nowrap; flex-shrink: 0; }
 
 /* === Страница проверки === */
 .hist-rp-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 16px; }
@@ -254,7 +260,7 @@ button.hist-cc:hover { border-color: var(--k); background: color-mix(in srgb, va
 .hist-it-title { font-weight: 700; color: var(--text-main); }
 .hist-pts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
 .hist-pt {
-  font-family: Consolas, 'Courier New', monospace; font-size: 11.5px; padding: 3px 8px; border-radius: 6px;
+  font-family: var(--font-mono); font-size: 11.5px; padding: 3px 8px; border-radius: 6px;
   border: 1px solid var(--border); background: var(--bg-input); color: var(--text-second);
 }
 .hist-pt { display: inline-flex; align-items: center; gap: 5px; }

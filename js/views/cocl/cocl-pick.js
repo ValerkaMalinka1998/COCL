@@ -8,34 +8,37 @@
 
 const coclPick = { ws: null, q: '', closed: new Set() };
 
-/* Сводка по линиям: последняя проверка и отклонения за 7 дней (по истории COCL) */
-function coclLinePickStats() {
-  const border = Date.now() - 7 * 86400000;
+/* Сводка по линиям: последняя проверка и её отклонения.
+   Общая для экранов выбора линии COCL и TOP Losses (kind — histKind записи). */
+function pickLineStats(kind) {
   const out = {};
   getHistory().forEach(h => {
-    if (histKind(h) !== 'cocl') return;
-    const o = out[h.line] || (out[h.line] = { fails: 0, last: null });
-    if (!o.last || h.timestamp > o.last) o.last = h.timestamp;
-    if (new Date(h.timestamp).getTime() >= border) {
-      o.fails += (h.items || []).filter(it => it.status === 'FAIL').length;
-    }
+    if (histKind(h) !== kind) return;
+    const o = out[h.line];
+    if (o && o.last >= h.timestamp) return;
+    out[h.line] = { last: h.timestamp, fails: (h.items || []).filter(it => it.status === 'FAIL').length };
   });
   return out;
 }
 
-function coclPickTile(line, st) {
-  const days = st && st.last ? Math.floor((Date.now() - new Date(st.last).getTime()) / 86400000) : null;
+/* Плитка линии: итог последней проверки, без скрытого окна в N дней */
+function pickTileHtml(line, st, attr) {
   let cls = 'none', sub = 'проверок не было', sub2 = '';
   if (st && st.last) {
+    const days = Math.floor((Date.now() - new Date(st.last).getTime()) / 86400000);
     sub2 = 'посл. проверка ' + fmtShortDate(todayISO(new Date(st.last)));
-    if (st.fails) { cls = 'red'; sub = `${st.fails} откл. за 7 дн.`; }
-    else if (days > 30) { cls = 'amber'; sub = `нет проверок ${days} дн.`; sub2 = ''; }
+    if (st.fails) { cls = 'red'; sub = `${st.fails} откл.`; }
     else { cls = 'green'; sub = 'без откл.'; }
+    if (days > 30) { cls = 'amber'; sub2 = `нет проверок ${days} дн.`; }
   }
-  return `<button type="button" class="tl-pick-ln tl-pick-ln-${cls}" data-cocl-pick-set="${escapeAttr(line)}">
-    <b>${escapeHtml(line)}</b><span class="${cls === 'red' ? 'tl-pick-bad' : ''}">${escapeHtml(sub)}</span>${sub2 ? `<span>${escapeHtml(sub2)}</span>` : ''}
+  return `<button type="button" class="tl-pick-ln tl-pick-ln-${cls}" ${attr}="${escapeAttr(line)}">
+    <b>${escapeHtml(line)}</b><span class="${st && st.fails ? 'tl-pick-bad' : ''}">${escapeHtml(sub)}</span>${sub2 ? `<span>${escapeHtml(sub2)}</span>` : ''}
   </button>`;
 }
+
+function coclLinePickStats() { return pickLineStats('cocl'); }
+
+function coclPickTile(line, st) { return pickTileHtml(line, st, 'data-cocl-pick-set'); }
 
 function renderCoclLinePick() {
   const box = $('#coclPick');

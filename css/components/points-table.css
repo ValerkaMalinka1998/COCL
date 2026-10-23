@@ -173,7 +173,7 @@
   min-width: 70px;
   padding: 5px 8px;
   font-size: 13px;
-  font-family: 'Courier New', Consolas, monospace;
+  font-family: var(--font-mono);
   font-weight: 600;
   text-align: center;
   color: var(--text-main);

@@ -46,7 +46,7 @@
   height: 22px;
   padding: 0 8px;
   border-radius: 8px;
-  font-family: 'Courier New', Consolas, monospace;
+  font-family: var(--font-mono);
   font-weight: 800;
   font-size: 13px;
   letter-spacing: 0.4px;

@@ -236,11 +236,11 @@ function renderDashboard() {
     </div>
     <div class="dash-g2">
       <div class="card dash-card">
-        <h3 class="dash-h">Динамика по неделям <small>линия — выполнение расписания CL, столбики — отклонения</small></h3>
+        <h3 class="dash-h">Динамика по неделям <small>у каждой полосы своя шкала</small></h3>
         ${dashTrendHtml(dashWeeks(lines))}
       </div>
       <div class="card dash-card">
-        <h3 class="dash-h">Где чаще отклонения <small>за период</small></h3>
+        <h3 class="dash-h">Где чаще отклонения <small>доля «Не ОК» от проверенных пунктов за период</small></h3>
         ${dashTopHtml(sum)}
       </div>
     </div>
@@ -258,29 +258,37 @@ function renderDashboard() {
     </div>`;
 }
 
-/* Топ по отклонениям: машины и линии за период */
+/* Меньше стольких проверок — доля отклонений не показательна */
+const DASH_MIN_CHECKS = 10;
+
+/* Топ по доле отклонений: машины и линии за период.
+   n — «Не ОК», total — проверено пунктов; мало проверок — ниже остальных */
 function dashTop(sum, by) {
   const map = {};
   sum.recs.forEach(h => (h.items || []).forEach(it => {
-    if (it.status !== 'FAIL') return;
-    const key = by === 'line' ? h.line : [it.machine || 'без машины', it.nodePart].filter(Boolean).join(' · ');
+    if (it.status !== 'FAIL' && it.status !== 'OK') return;
+    const key = by === 'line' ? h.line : [h.line, it.machine || 'без машины', it.nodePart].filter(Boolean).join(' · ');
     if (!key) return;
-    map[key] = (map[key] || 0) + 1;
+    const x = map[key] || (map[key] = { name: key, line: h.line, n: 0, total: 0 });
+    x.total++;
+    if (it.status === 'FAIL') x.n++;
   }));
-  return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  return Object.values(map).filter(x => x.n)
+    .map(x => ({ ...x, pct: Math.round(x.n / x.total * 100), few: x.total < DASH_MIN_CHECKS }))
+    .sort((a, b) => (a.few - b.few) || (b.pct - a.pct) || (b.n - a.n))
+    .slice(0, 6);
 }
 
 function dashTopHtml(sum) {
   const groups = [['Машины', dashTop(sum, 'machine'), 'machine'], ['Линии', dashTop(sum, 'line'), 'line']];
   const body = groups.map(([title, list, kind]) => {
     if (!list.length) return '';
-    const max = list[0][1];
     return `<div class="dash-top">
       <div class="dash-top-h">${title}</div>
-      ${list.map(([name, n]) => `
-        <div class="dash-li dash-li-bar"${kind === 'line' ? ` data-dash-open-line="${escapeAttr(name)}" role="button" tabindex="0"` : ''}>
-          <div><span>${escapeHtml(name)}</span><b class="hist-c-fail">${n} ${pluralRu(n, 'откл.', 'откл.', 'откл.')}</b></div>
-          <div class="dash-bar"><i style="width:${Math.round(n / max * 100)}%"></i></div>
+      ${list.map(x => `
+        <div class="dash-li dash-li-bar${x.few ? ' dash-li-few' : ''}"${kind === 'line' ? ` data-dash-open-line="${escapeAttr(x.line)}" role="button" tabindex="0"` : ''}>
+          <div><span>${escapeHtml(x.name)}</span><b class="${x.few ? '' : 'hist-c-fail'}">${x.n} из ${x.total} · ${x.few ? 'мало проверок' : x.pct + '%'}</b></div>
+          <div class="dash-bar"><i style="width:${x.pct}%"></i></div>
         </div>`).join('')}
     </div>`;
   }).join('');
@@ -307,34 +315,32 @@ function dashNowLine(line) {
     m.planned++;
     if (status === 'OK' || status === 'FAIL') m.done++;
     if (status === 'FAIL') m.fail++;
-    const late = status === 'due' && dashWindowPassed(row);
+    const late = status === 'due' && dashWindowPassed(row, line);
     if (late) m.late++;
     m.rows.push({ row, isElec, status, late, it: res ? res.it : null });
   });
   return m;
 }
 
-/* Окно проверки этой смены уже прошло, а проверки нет */
-function dashWindowPassed(row) {
-  const freq = typeof getClRowFreq === 'function' ? getClRowFreq(row) : (row.frequency || {});
-  const wins = Array.isArray(freq.timeWindows) ? freq.timeWindows : [];
-  if (!wins.length) return false;
-  const now = new Date();
-  const mins = now.getHours() * 60 + now.getMinutes();
+/* Окно проверки текущей смены уже прошло, а проверки нет.
+   Окна — autoTimeWindows по строке недели этой линии (хранимые не читаем);
+   смотрим только окно своей смены. CIL окна не имеет — не просрочен. */
+function dashWindowPassed(row, line) {
   const cur = getCurrentShiftPeriod();
-  const isDay = cur.shiftType === 'day';
-  return wins.every(w => {
-    const [h, mm] = String(w.to || '').split(':').map(Number);
-    if (isNaN(h)) return false;
-    let end = h * 60 + (mm || 0);
-    // Ночная смена идёт через полночь: окно «03:30» — это уже «завтра»
-    let nowMins = mins;
-    if (!isDay) {
-      if (end < 9 * 60) end += 24 * 60;
-      if (nowMins < 9 * 60) nowMins += 24 * 60;
-    }
-    return nowMins > end;
-  });
+  const w = getRowForWeek(row, histWeekStartOf(cur.date), line);
+  const win = autoTimeWindows(w.work, w.schedule).find(x => getTimeWindowShift(x.from) === cur.shiftType);
+  if (!win) return false;
+  const [h, mm] = String(win.to || '').split(':').map(Number);
+  if (isNaN(h)) return false;
+  let end = h * 60 + (mm || 0);
+  const now = new Date();
+  let nowMins = now.getHours() * 60 + now.getMinutes();
+  // Ночная смена идёт через полночь: после 00:00 — это ещё та же смена
+  if (cur.shiftType === 'night') {
+    if (end < 9 * 60) end += 24 * 60;
+    if (nowMins < 9 * 60) nowMins += 24 * 60;
+  }
+  return nowMins > end;
 }
 
 function dashNowKpis(all) {
@@ -342,14 +348,15 @@ function dashNowKpis(all) {
   const done = all.reduce((s, m) => s + m.done, 0);
   const fail = all.reduce((s, m) => s + m.fail, 0);
   const late = all.reduce((s, m) => s + m.late, 0);
-  const left = planned - done;
+  // Просроченные не входят в «предстоит»: каждый пункт считается в одной карточке
+  const left = planned - done - late;
   const cur = getCurrentShiftPeriod();
   const letter = getShiftsForDate(cur.date)[cur.shiftType];
   return `<div class="dash-kpis">
     <div class="dash-kpi dash-kpi-now"><b>${cur.shiftType === 'day' ? 'День' : 'Ночь'} · ${escapeHtml(letter || '—')}</b>
       <span>${escapeHtml(fmtShortDate(cur.date))} · смена идёт</span></div>
     <div class="dash-kpi"><b class="${planned && done === planned ? 'hist-c-ok' : ''}">${done} / ${planned}</b><span>проверок сделано</span></div>
-    <div class="dash-kpi"><b class="${left ? 'hist-c-warn' : 'hist-c-ok'}">${left}</b><span>осталось до конца смены</span></div>
+    <div class="dash-kpi"><b class="${left ? 'hist-c-warn' : 'hist-c-ok'}">${left}</b><span>ещё предстоит (окно не прошло)</span></div>
     <div class="dash-kpi"><b class="${late ? 'hist-c-fail' : ''}">${late}</b><span>просрочено (окно прошло)</span></div>
     <div class="dash-kpi"><b class="${fail ? 'hist-c-fail' : ''}">${fail}</b><span>${pluralRu(fail, 'отклонение', 'отклонения', 'отклонений')} в смене</span></div>
   </div>`;
@@ -482,12 +489,14 @@ function renderDashboardHead() {
     </div>` : ''}`;
 }
 
+/* Изменение к прошлому периоду: «▼ 37 п. п. · было 82%» — видно, с чем сравниваем */
 function dashDelta(cur, prev, goodUp, unit = '') {
   if (cur == null || prev == null) return '';
   const d = cur - prev;
-  if (!d) return '<em class="dash-d">= как раньше</em>';
+  if (!d) return '<em class="dash-d">как в прошлом периоде</em>';
   const good = goodUp ? d > 0 : d < 0;
-  return `<em class="dash-d ${good ? 'hist-c-ok' : 'hist-c-fail'}" title="К предыдущему периоду">${d > 0 ? '▲' : '▼'} ${Math.abs(d)}${unit}</em>`;
+  const step = unit === '%' ? ' п. п.' : '';
+  return `<em class="dash-d ${good ? 'hist-c-ok' : 'hist-c-fail'}" title="Изменение к предыдущему такому же периоду">${d > 0 ? '▲' : '▼'} ${Math.abs(d)}${step} · было ${prev}${unit}</em>`;
 }
 
 function dashKpisHtml(sum, prev) {
@@ -543,25 +552,37 @@ function dashAttentionHtml(items) {
     </button>`).join('') + (items.length > 8 ? `<div class="hist-sub">И ещё ${items.length - 8}…</div>` : '');
 }
 
+/* Динамика: две полосы с общей осью недель и своими шкалами —
+   сверху выполнение расписания (0–100%), снизу число отклонений.
+   Разные единицы на одной шкале искажали масштаб. */
 function dashTrendHtml(weeks) {
-  const W = 600, H = 180, L = 40, R = 20, B = 24, T = 12;
-  const x = i => L + 20 + i * (W - L - R - 40) / (weeks.length - 1);
-  const y = v => T + (100 - v) / 100 * (H - T - B);
+  const W = 600, L = 64, R = 20;
+  const T1 = 14, H1 = 110;          // полоса «выполнение, %»
+  const T2 = T1 + H1 + 30, H2 = 56; // полоса «отклонения, шт.»
+  const H = T2 + H2 + 22;
+  const x = i => L + 20 + i * (W - L - R - 40) / Math.max(1, weeks.length - 1);
+  const y = v => T1 + (100 - v) / 100 * H1;
   const maxF = Math.max(1, ...weeks.map(w => w.fail));
-  const bh = f => f / maxF * (H - T - B) * 0.55;
+  const bh = f => f / maxF * H2;
   let s = '';
   [0, 50, 100].forEach(v => {
     s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" class="dash-ch-grid"/><text x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${v}%</text>`;
   });
+  s += `<text x="${L}" y="${T1 - 4}" class="dash-ch-cap">выполнение расписания CL</text>`;
+  s += `<text x="${L}" y="${T2 - 6}" class="dash-ch-cap">отклонений за неделю</text>`;
+  s += `<line x1="${L}" x2="${W - R}" y1="${T2 + H2}" y2="${T2 + H2}" class="dash-ch-grid"/>`;
   weeks.forEach((w, i) => {
     const h = bh(w.fail);
-    if (w.fail) s += `<rect x="${x(i) - 12}" y="${H - B - h}" width="24" height="${h}" rx="3" class="dash-ch-bar"><title>${w.label}: ${w.fail} откл.</title></rect>
-      <text x="${x(i)}" y="${H - B - h - 4}" text-anchor="middle">${w.fail}</text>`;
+    if (w.fail) s += `<rect x="${x(i) - 12}" y="${T2 + H2 - h}" width="24" height="${h}" rx="3" class="dash-ch-bar"><title>${w.label}: ${w.fail} откл.</title></rect>`;
+    s += `<text x="${x(i)}" y="${T2 + H2 - h - 4}" text-anchor="middle" class="dash-ch-num">${w.fail}</text>`;
     s += `<text x="${x(i)}" y="${H - 6}" text-anchor="middle">${w.label}</text>`;
   });
   const pts = weeks.map((w, i) => w.compliance == null ? null : [x(i), y(w.compliance), w]).filter(Boolean);
   if (pts.length > 1) s += `<polyline class="dash-ch-line" points="${pts.map(p => p[0] + ',' + p[1]).join(' ')}"/>`;
-  pts.forEach(p => { s += `<circle cx="${p[0]}" cy="${p[1]}" r="4" class="dash-ch-pt"><title>${p[2].label}: ${p[2].compliance}%</title></circle>`; });
+  pts.forEach(p => {
+    s += `<circle cx="${p[0]}" cy="${p[1]}" r="4" class="dash-ch-pt"><title>${p[2].label}: ${p[2].compliance}%</title></circle>
+      <text x="${p[0]}" y="${p[1] - 8}" text-anchor="middle" class="dash-ch-num">${p[2].compliance}%</text>`;
+  });
   return `<svg class="dash-chart" viewBox="0 0 ${W} ${H}" width="100%">${s}</svg>`;
 }
 

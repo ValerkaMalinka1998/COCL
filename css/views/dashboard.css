@@ -84,7 +84,7 @@ button.dash-li:hover { background: var(--bg-hover); }
 .dash-bar i { display: block; height: 100%; background: var(--accent-red); }
 
 /* === График недель === */
-.dash-chart { display: block; max-height: 220px; }
+.dash-chart { display: block; max-height: 280px; }
 .dash-chart text { font-size: 10px; fill: var(--text-dim); }
 .dash-ch-grid { stroke: var(--border); }
 .dash-ch-bar { fill: var(--accent-red); opacity: .75; }
@@ -122,7 +122,7 @@ button.dash-li:hover { background: var(--bg-hover); }
 .dash-now-name { font-weight: 800; color: var(--text-main); }
 .dash-now-bar { height: 8px; border-radius: 999px; background: var(--bg-input); overflow: hidden; }
 .dash-now-bar i { display: block; height: 100%; background: var(--accent-cyan); }
-.dash-now-num { font-family: Consolas, 'Courier New', monospace; font-size: 12px; color: var(--text-second); text-align: right; }
+.dash-now-num { font-family: var(--font-mono); font-size: 12px; color: var(--text-second); text-align: right; }
 .dash-now-tags { display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .dash-now-green { border-left-color: var(--accent-green); }
 .dash-now-green .dash-now-bar i { background: var(--accent-green); }
@@ -141,3 +141,9 @@ button.dash-li:hover { background: var(--bg-hover); }
 .dash-now-ws:first-child { margin-top: 0; }
 .dash-now-ws b { font-size: 12px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--text-main); }
 .dash-now-ws small { font-size: 11.5px; color: var(--text-dim); margin-right: auto; }
+
+/* === ДАШБОРД: честные цифры (подписи шкал, мало проверок) === */
+.dash-chart text.dash-ch-cap { font-size: 10.5px; font-weight: 700; fill: var(--text-second); }
+.dash-chart text.dash-ch-num { font-size: 10px; fill: var(--text-second); }
+.dash-li-few span, .dash-li-few b { color: var(--text-dim); }
+.dash-li-few .dash-bar i { background: var(--border-hi); }

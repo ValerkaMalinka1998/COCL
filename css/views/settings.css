@@ -409,7 +409,7 @@
   height: 30px;
   padding: 0 6px 0 11px;
   font: inherit;
-  font-family: 'Courier New', Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
   font-weight: 700;
   color: var(--text-main);
@@ -497,7 +497,7 @@
 }
 .st-lc-crumbs { font-size: 12px; color: var(--text-dim); }
 .st-lc-title {
-  font-family: 'Courier New', Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 24px;
   font-weight: 800;
   color: var(--text-main);

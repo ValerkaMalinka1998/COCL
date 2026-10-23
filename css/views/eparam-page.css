@@ -48,7 +48,7 @@
   border-radius: 6px;
 }
 .ep-table input {
-  font-family: 'Courier New', Consolas, monospace;
+  font-family: var(--font-mono);
   font-weight: 600;
   text-align: center;
 }
@@ -59,7 +59,7 @@
   box-shadow: 0 0 0 2px rgba(58, 166, 240, 0.15);
 }
 .ep-range {
-  font-family: 'Courier New', Consolas, monospace;
+  font-family: var(--font-mono);
   font-weight: 600;
   color: var(--text-second);
   white-space: nowrap;

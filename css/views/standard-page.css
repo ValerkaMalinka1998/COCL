@@ -100,7 +100,7 @@
   background: rgba(58, 166, 240, 0.1);
   border: 1px solid rgba(58, 166, 240, 0.4);
   color: var(--accent-cyan);
-  font-family: 'Courier New', Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 800;
   margin-right: 4px;
@@ -784,7 +784,7 @@
   width: 100%;
   padding: 8px 10px;
   font-size: 12px;
-  font-family: 'Courier New', Consolas, monospace;
+  font-family: var(--font-mono);
   color: var(--text-main);
   background: var(--bg-input);
   border: 1px solid var(--border-hi);

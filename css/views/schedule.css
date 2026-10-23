@@ -390,7 +390,7 @@
 .sch-add-item-sub {
   font-size: 11px;
   color: var(--text-dim);
-  font-family: 'Courier New', Consolas, monospace;
+  font-family: var(--font-mono);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

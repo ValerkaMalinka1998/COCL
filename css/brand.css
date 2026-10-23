@@ -178,11 +178,14 @@ header.bft-header .header-right {
 .card > h2,
 .dash-title,
 .hist-title,
-.hist-rp-tt h2 {
+.hist-rp-tt h2,
+.editor-panel-title {
   font-style: italic;
   font-weight: 800;
   letter-spacing: 0.2px;
 }
+/* Заголовки вкладок — один вид: Чек-лист, Стандарты, Расписание как Дашборд и История */
+.editor-panel-title { color: var(--text-main); }
 .dash-title small,
 .hist-title small { font-style: normal; }
 

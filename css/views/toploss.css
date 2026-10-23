@@ -219,7 +219,7 @@
   border-radius: 12px;
   font-size: 11px;
   font-weight: 600;
-  font-family: 'Courier New', Consolas, monospace;
+  font-family: var(--font-mono);
   background: var(--bg-input);
   border: 1px solid var(--border-hi);
   color: var(--text-second);
@@ -311,7 +311,7 @@
   border-radius: 5px;
 }
 .tl-loss-tile-fail-opl {
-  font-family: 'Courier New', Consolas, monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   color: var(--accent-red);
   flex-shrink: 0;
@@ -600,7 +600,7 @@
   background: color-mix(in srgb, var(--accent-cyan) 10%, transparent);
   border-color: color-mix(in srgb, var(--accent-cyan) 35%, transparent);
 }
-.tl2-opl { font-family: Consolas, 'Courier New', monospace; font-weight: 700; color: var(--accent-cyan); white-space: nowrap; }
+.tl2-opl { font-family: var(--font-mono); font-weight: 700; color: var(--accent-cyan); white-space: nowrap; }
 .tl2-nm { font-weight: 700; color: var(--text-main); }
 .tl2-sub { margin-top: 2px; font-size: 11px; color: var(--text-dim); }
 .tl2-last { display: inline-flex; gap: 4px; }
@@ -679,8 +679,8 @@
   border: 1px solid var(--border);
   border-radius: 9px;
 }
-.tl3-pt small { font-family: Consolas, 'Courier New', monospace; font-size: 10.5px; color: var(--text-dim); }
-.tl3-pt input { width: 100%; padding: 6px 8px; font-family: Consolas, 'Courier New', monospace; font-size: 13px; }
+.tl3-pt small { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-dim); }
+.tl3-pt input { width: 100%; padding: 6px 8px; font-family: var(--font-mono); font-size: 13px; }
 .tl3-pt.ok input { border-color: var(--accent-green); }
 .tl3-pt.bad input { border-color: var(--accent-red); background: color-mix(in srgb, var(--accent-red) 7%, var(--bg-input)); }
 .tl3-okno { display: flex; gap: 8px; margin-top: 10px; }
@@ -773,7 +773,7 @@
   border-radius: 9px;
 }
 .mj-item-title { font-size: 13px; font-weight: 700; color: var(--text-main); }
-.mj-opl { font-family: Consolas, 'Courier New', monospace; color: var(--accent-cyan); }
+.mj-opl { font-family: var(--font-mono); color: var(--accent-cyan); }
 .mj-kind {
   padding: 0 6px;
   font-size: 10px;
@@ -782,7 +782,7 @@
   border: 1px solid color-mix(in srgb, var(--accent-cyan) 40%, transparent);
   border-radius: 999px;
 }
-.mj-item-val { margin-top: 3px; font-family: Consolas, 'Courier New', monospace; font-size: 12px; color: var(--accent-red); }
+.mj-item-val { margin-top: 3px; font-family: var(--font-mono); font-size: 12px; color: var(--accent-red); }
 .mj-item-com { margin-top: 3px; font-size: 12px; color: var(--text-second); }
 
 /* ============================================================
