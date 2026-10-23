@@ -543,11 +543,15 @@ $('#editorElecUploadInput')?.addEventListener('change', async (e) => {
   const line = localStorage.getItem('cl_editor_line');
   if (!line) return;
   try {
-    const count = await parseElectronicParamsExcel(file, line);
-    if (count > 0) {
+    const result = await parseElectronicParamsExcel(file, line);
+    showImportReport(result, 'editorElecTableWrap');
+    if (result.added > 0) {
       refreshEditorElecTable();
       if (typeof updatePartCounters === 'function') updatePartCounters();
-      showToast(`Импортировано ${count} параметр(ов)`);
+      if (typeof fillEditorFilters === 'function') fillEditorFilters();
+      showToast(`Добавлено параметров: ${result.added}`);
+    } else {
+      showToast('Новых параметров не найдено', true);
     }
   } catch (err) {
     showToast('Ошибка импорта: ' + (err.message || 'неизвестная'), true);

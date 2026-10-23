@@ -50,8 +50,11 @@ function normalizeElectronicParam(p) {
     controlType: migrateControlType(p.controlType, null),
     normText: typeof p.normText === 'string' ? p.normText : '',
 
+    // Пустой бренд — «Остальные бренды»: оставляем, если у нормы есть значения
+    // (раньше такие нормы отбрасывались и стирались при сохранении любого E-Param)
     valuesByBrand: Array.isArray(p.valuesByBrand)
-      ? p.valuesByBrand.filter(v => v && v.brand)
+      ? p.valuesByBrand.filter(v => v && typeof v === 'object' &&
+          (v.brand || [v.target, v.tolerance, v.min, v.max].some(x => x !== '' && x != null)))
       : [],
 
     // --- Применяемость ---

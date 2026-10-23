@@ -126,19 +126,21 @@ function stdRowFromStandard(st, line) {
   ];
 }
 
-/* Лист «Списки» (скрыт): A — ключи стандартов (формулы), B — бренды,
-   C — машины, D — типы контроля, E — Да / Нет, F — части линии */
-function buildListsSheet(wb, standards, line) {
+/* Лист «Списки» (скрыт): A — ключи строк главного листа (формулы «D · C»),
+   B — бренды, C — машины, D — типы контроля, E — Да / Нет, F — части линии,
+   G — Run / Stop / CIL. Общий для стандартов и E-Param: у обоих ключ в D, машина в C.
+   mainSheet — имя главного листа, keyOf — ключ строки для посчитанного значения. */
+function buildListsSheet(wb, items, line, mainSheet = XL_SHEET.std, keyOf = xlStdKey) {
   const ws = wb.addWorksheet(XL_SHEET.lists);
-  ws.addRow(['Стандарт', 'Бренд', 'Машина', 'Тип контроля', 'Активен', 'Часть линии']);
+  ws.addRow(['Ключ', 'Бренд', 'Машина', 'Тип контроля', 'Активен', 'Часть линии', 'Работа']);
   const brands = [REST_BRANDS_LABEL, ...getBrandsForLine(line).filter(b => b && b !== REST_BRANDS_LABEL)];
   const machines = getMachinesForLine(line);
-  const cols = [brands, machines, Object.values(XL_TYPES), ['Да', 'Нет'], ['Maker', 'Packer']];
+  const cols = [brands, machines, Object.values(XL_TYPES), ['Да', 'Нет'], ['Maker', 'Packer'], WORK_CYCLE];
   for (let r = 2; r <= xlLastStdRow; r++) {
-    const st = standards[r - 2];
+    const it = items[r - 2];
     ws.getCell(r, 1).value = {
-      formula: `IF(${xlRef(XL_SHEET.std, 'D' + r)}="","",${xlRef(XL_SHEET.std, 'D' + r)}&" · "&${xlRef(XL_SHEET.std, 'C' + r)})`,
-      result: st ? xlStdKey(st) : ''
+      formula: `IF(${xlRef(mainSheet, 'D' + r)}="","",${xlRef(mainSheet, 'D' + r)}&" · "&${xlRef(mainSheet, 'C' + r)})`,
+      result: it ? keyOf(it) : ''
     };
     cols.forEach((list, ci) => { if (list[r - 2] != null) ws.getCell(r, ci + 2).value = list[r - 2]; });
   }

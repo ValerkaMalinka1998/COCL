@@ -22,6 +22,7 @@ const MODULES = [
   'js/data/workshops.js',
   'js/data/catalog.js',
   'js/data/schedule.js',
+  'js/data/line-brand.js',
   'js/views/settings/shifts.js'
 ];
 
@@ -117,6 +118,17 @@ test('migrateControlType: старые типы → 3 канонических',
   assert.equal(mig('tolerance'), 'variable');
   assert.equal(mig('variable'), 'variable');
   assert.equal(mig(''), 'fixed');
+});
+
+test('E-Param: норма «Остальные бренды» (пустой бренд) не теряется при нормализации', () => {
+  const p = plain(fn('normalizeElectronicParam')({
+    paramName: 'Давление', controlType: 'variable',
+    valuesByBrand: [{ brand: '', target: 90, tolerance: 3 }, { brand: 'Kent', target: 92, tolerance: 5 }, { brand: '', target: '', tolerance: '' }]
+  }));
+  assert.deepEqual(p.valuesByBrand.map(v => v.brand), ['', 'Kent'], 'пустая строка без значений отбрасывается, общая норма остаётся');
+  const pick = plain(fn('pickBrandValues')(p.valuesByBrand, 'Winston'));
+  assert.equal(pick.kind, 'rest');
+  assert.equal(pick.item.target, 90);
 });
 
 /* === СМЕНЫ И НЕДЕЛИ === */
