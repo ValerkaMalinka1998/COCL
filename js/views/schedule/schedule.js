@@ -309,8 +309,8 @@ function renderScheduleMatrix() {
   if (hasScheduleWeekOverride(getSchWeekStart(off), schState.line)) weekSub += ' · есть разовые правки';
 
   const scopeHtml = isPastWeek ? '' : `
-      <div class="sch-scope" role="group" aria-label="Как сохранить изменения">
-        <span class="sch-scope-label">Сохранить</span>
+      <div class="sch-scope" role="group" aria-label="На какие недели действуют правки">
+        <span class="sch-scope-label">Правки действуют</span>
         <button type="button" class="sch-scope-btn ${schState.saveScope !== 'week' ? 'active' : ''}" data-sch-scope="forward"
                 title="Изменения войдут в шаблон и будут повторяться каждую неделю">С этой недели и далее</button>
         <button type="button" class="sch-scope-btn ${schState.saveScope === 'week' ? 'active' : ''}" data-sch-scope="week"
@@ -521,7 +521,7 @@ function renderScheduleRow(row, dateByDayIdx, num, zone, isElec) {
         ${row.oplNumber ? `<span class="cil-opl">${escapeHtml(row.oplNumber)}</span>` : ''}
         ${row.node ? `<span class="cil-node">${CIL_ICONS.gear}${escapeHtml(row.node)}</span>` : ''}
         <button type="button" class="cil-tag cil-tag-${work.toLowerCase()}" data-work-toggle="${id}" title="Переключить Run → Stop → CIL">${work.toUpperCase()}</button>
-        ${cilTimeChips(freq.timeWindows, freq.work)}
+        ${normWork(freq.work) === 'CIL' ? '' : cilTimeChips(freq.timeWindows, freq.work)}
       </div>
       ${member ? `<button type="button" class="cil-row-del" data-remove-from-schedule="${id}" title="Убрать из расписания">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>

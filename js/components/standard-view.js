@@ -125,7 +125,6 @@ function svmText(text) {
 
 /* Содержимое окна просмотра */
 function renderStandardViewContent(st, brand, co) {
-  const ctx = getBlockForLine(st.line);
   const blocks = (Array.isArray(st.measurements) ? st.measurements : [])
     .filter(b => b && Array.isArray(b.points) && b.points.length);
   const maxPts = blocks.reduce((m, b) => Math.max(m, b.points.length), 0);
@@ -179,48 +178,38 @@ function renderStandardViewContent(st, brand, co) {
   const photos = Array.isArray(st.photos) ? st.photos : [];
   const photosHtml = photos.length ? photoSliderHtml(st) : '<div class="svm-empty">Фото не добавлены</div>';
 
-  // --- Где и связи ---
-  const row = (label, value) => value ? `<div class="svm-row"><span>${label}</span><b>${escapeHtml(value)}</b></div>` : '';
-  const whereHtml = [
-    row('Цех', ctx && ctx.workshop.name),
-    row('Участок', ctx && (ctx.area.name + (ctx.block ? ' · ' + ctx.block.name : ''))),
-    row('Линия', st.line),
-    row('Часть', st.nodePart),
-    row('Машина', st.machine),
-    row('Узел', st.node),
-    row('OPL №', st.oplNumber)
-  ].join('');
-
-  const APPLY = { ChangeOver: ['Change Over', 'co'], CL_TO: ['CL в ТО', 'to'], CL_Conversion: ['CL в Конвертацию', 'cv'] };
-  const applies = (st.appliesTo || []).filter(a => APPLY[a])
-    .map(a => `<span class="svm-tag svm-tag-${APPLY[a][1]}">${APPLY[a][0]}</span>`).join('');
-  const trig = (st.triggers || []).map(v => `<span class="svm-tag">${escapeHtml(getTriggerLabel(v))}</span>`).join('');
-  const losses = (st.topLosses || []).map(id => findLossById(id)).filter(Boolean)
-    .map(l => `<span class="svm-tag svm-tag-tl">${escapeHtml(l.name)}</span>`).join('');
-  const linksHtml = [
-    applies ? `<div class="svm-links"><span>Применять к</span><div>${applies}${st.forceInChangeOver ? '<span class="svm-tag">всегда в Change Over</span>' : ''}</div></div>` : '',
-    trig ? `<div class="svm-links"><span>Триггеры</span><div>${trig}</div></div>` : '',
-    losses ? `<div class="svm-links"><span>Top Losses</span><div>${losses}</div></div>` : ''
-  ].join('');
+  // --- Основная информация: как на странице стандарта (название — в шапке окна) ---
+  const field = (label, value) => `<div class="svm-field"><span>${label}</span>${value
+    ? `<b>${escapeHtml(value)}</b>` : '<b class="svm-field-empty">Не указано</b>'}</div>`;
+  const mainHtml = `<div class="svm-fields">
+    ${field('№ OPL', st.oplNumber)}
+    ${field('Машина', st.machine)}
+    ${lineHasParts(st.line) ? field('Часть линии', st.nodePart) : ''}
+    ${field('Узел', st.node)}
+    ${field('Инструмент', st.tool)}
+    ${field('Время на проверку', formatSvDuration(st.durationSec))}
+    ${field('Тип контроля', controlTypeLabel(st.controlType))}
+    ${field('Статус', st.active === false ? 'Неактивен' : 'Активен')}
+  </div>`;
 
   const upd = st.updatedAt || st.createdAt;
   const metaHtml = `<div class="svm-foot">${st.author ? `Автор: ${escapeHtml(st.author)} · ` : ''}${upd ? 'обновлён ' + formatDateTime(upd) : ''}</div>`;
 
+  // Порядок блоков — как на странице стандарта (buildSvContentBlocksHtml)
   return `
     <div class="svm-grid">
       <div class="svm-main">
-        ${card('Норма' + (blocks.length > 1 ? ` <small>${blocks.length} ${blocks.length < 5 ? 'бренда' : 'брендов'}</small>` : ''), normHtml, 'svm-card-norm')}
-        ${card('Как проверять', svmText(st.controlDescription), 'svm-card-how')}
+        ${card('Основная информация', mainHtml)}
+        ${card('Описание', svmText(st.problemDescription))}
+        ${card('Контроль правильности' + (blocks.length > 1 ? ` <small>${blocks.length} ${blocks.length < 5 ? 'бренда' : 'брендов'}</small>` : ''), normHtml, 'svm-card-norm')}
+        ${card('Описание контроля', svmText(st.controlDescription), 'svm-card-how')}
         <div class="svm-why">
-          ${card('Описание проблемы', svmText(st.problemDescription))}
-          ${card('Цель', svmText(st.purpose))}
-          ${card('Знаю почему', svmText(st.whyCreated))}
+          ${card('Цель (зачем мы это делаем?)', svmText(st.purpose))}
+          ${card('Знаю почему (почему создан стандарт?)', svmText(st.whyCreated))}
         </div>
       </div>
       <aside class="svm-side">
         ${card(`Фото${photos.length ? ` <small>${photos.length}</small>` : ''}`, photosHtml, 'svm-card-photos')}
-        ${card('Где', whereHtml)}
-        ${card('Связи', linksHtml)}
         ${metaHtml}
       </aside>
     </div>`;
