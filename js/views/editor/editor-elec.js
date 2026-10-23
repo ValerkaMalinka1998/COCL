@@ -251,89 +251,172 @@ function renderEditorElecPagination(total, totalPages, startIdx, endIdx) {
 }
 
 /* ============================================================
-   ЭЛЕКТРОННЫЕ ПАРАМЕТРЫ: экспорт / импорт / шаблон
+   ЭЛЕКТРОННЫЕ ПАРАМЕТРЫ: шаблон / экспорт / импорт Excel
+   Тот же подход, что у стандартов (js/io/standards-io.js):
+   «Параметры» — строка на параметр, выпадающие списки;
+   «Значения»  — сверху строки сами повторяют «Параметры» (Параметр · Машина,
+                 «Остальные бренды», тип), ниже — дополнительные бренды;
+   «Списки»    — скрытый лист-источник списков; «Инструкция».
+   Норма: вариабельный — Номинал и Допуск, интервал — От и До,
+   фиксированный — текст «Норма ОК» на листе «Параметры».
+   Импорт понимает и старый формат (колонка «Значения по брендам»).
    ============================================================ */
 
-function serializeValuesByBrand(arr) {
-  if (!Array.isArray(arr) || !arr.length) return '';
-  return arr
-    .filter(v => v && (v.brand || v.target != null || v.tolerance != null))
-    .map(v => [(v.brand || ''), (v.target != null ? v.target : ''), (v.tolerance != null ? v.tolerance : '')].join('|'))
-    .join('; ');
+const EP_SHEET = { main: 'Параметры', vals: 'Значения' };
+const EP_COLS = [
+  { key: 'line',     title: 'Линия',                     width: 10, hint: 'код линии, например SD12' },
+  { key: 'nodePart', title: 'Часть линии',               width: 13, hint: 'Maker или Packer — из списка (только SMD)' },
+  { key: 'machine',  title: 'Машина',                    width: 11, hint: 'из списка машин линии; новую можно вписать' },
+  { key: 'name',     title: 'Параметр',                  width: 32, hint: 'название, уникально на машине' },
+  { key: 'type',     title: 'Тип контроля',              width: 22, hint: 'из списка: Фиксированный / Вариабельный / Контролируемый интервал' },
+  { key: 'normText', title: 'Норма «ОК» (фиксированный)', width: 28, hint: 'только для фиксированного: что считается «ОК»' },
+  { key: 'work',     title: 'Работа',                    width: 9,  hint: 'Run / Stop / CIL — из списка' },
+  { key: 'duration', title: 'Время на проверку, сек',    width: 12, hint: 'целое число секунд' },
+  { key: 'applies',  title: 'CL относится к',            width: 20, hint: 'ChangeOver, CL_TO, CL_Conversion — через запятую' },
+  { key: 'active',   title: 'Активен',                   width: 10, hint: 'Да / Нет — из списка' },
+  { key: 'losses',   title: 'Top Losses',                width: 32, hint: 'названия потерь цеха через запятую (как в Настройках)' }
+];
+const EP_COL = {};
+EP_COLS.forEach((c, i) => { EP_COL[c.key] = i + 1; });
+const EP_VAL_HEAD = ['Параметр (Параметр · Машина)', 'Бренд', 'Тип контроля', 'Номинал', 'Допуск', 'От', 'До'];
+
+function epKey(p) { return `${p.paramName || ''} · ${p.machine || ''}`; }
+
+/* Строка листа «Параметры» */
+function epRowFromParam(p, line) {
+  const type = migrateControlType(p.controlType, null);
+  return [
+    p.line || line, p.nodePart || '', p.machine || '', p.paramName || '',
+    XL_TYPES[type] || '', type === 'fixed' ? (p.normText || '') : '',
+    normWork(p.work), Number(p.durationSec) || '',
+    Array.isArray(p.appliesTo) ? p.appliesTo.join(', ') : '',
+    p.active !== false ? 'Да' : 'Нет',
+    (Array.isArray(p.topLosses) ? p.topLosses : []).map(id => findLossById(id)?.name).filter(Boolean).join(', ')
+  ];
 }
 
-function parseValuesByBrand(str) {
-  if (!str || !str.trim()) return [];
-  const out = [];
-  str.split(';').forEach(part => {
-    const p = part.trim();
-    if (!p) return;
-    const seg = p.split('|').map(x => x.trim());
-    const brand = seg[0] || '';
-    const target = seg[1] !== undefined ? seg[1] : '';
-    const tolerance = seg[2] !== undefined ? seg[2] : '';
-    if (!brand && target === '' && tolerance === '') return;
-    out.push({ brand, target: target === '' ? '' : target, tolerance: tolerance === '' ? '' : tolerance });
-  });
-  return out;
+/* Значения нормы бренда в колонки Номинал | Допуск | От | До */
+function epValueCells(v, type) {
+  if (!v) return [];
+  if (type === 'interval') {
+    const r = getEparamNormRange(v);
+    return ['', '', r ? r.min : '', r ? r.max : ''];
+  }
+  return [v.target ?? '', v.tolerance ?? '', '', ''];
+}
+
+function buildEparamWorkbook(params, line, title, extraInfo) {
+  const wb = new ExcelJS.Workbook();
+  wb.calcProperties.fullCalcOnLoad = true;
+  const lists = xlListRanges(line);
+  const parts = lineHasParts(line);
+
+  // --- «Параметры» ---
+  const ws = wb.addWorksheet(EP_SHEET.main);
+  ws.addRow(EP_COLS.map(c => c.title));
+  params.forEach(p => ws.addRow(epRowFromParam(p, line)));
+  ws.columns.forEach((col, i) => { col.width = (EP_COLS[i] || {}).width || 14; });
+  xlsxHeadStyle(ws, 1, 34);
+  xlsxBodyStyle(ws, 2, xlLastStdRow, EP_COLS.length);
+  for (let r = 2; r <= xlLastStdRow; r++) {
+    if (parts) xlList(ws.getCell(r, EP_COL.nodePart), '$F$2:$F$3', true);
+    xlList(ws.getCell(r, EP_COL.machine), lists.machinesRange, false);
+    xlList(ws.getCell(r, EP_COL.type), '$D$2:$D$4', true);
+    xlList(ws.getCell(r, EP_COL.work), '$G$2:$G$4', true);
+    xlList(ws.getCell(r, EP_COL.active), '$E$2:$E$3', true);
+  }
+  ws.views = [{ state: 'frozen', xSplit: 4, ySplit: 1 }];
+
+  // --- «Значения» ---
+  const wv = wb.addWorksheet(EP_SHEET.vals);
+  wv.addRow(EP_VAL_HEAD);
+  wv.columns.forEach((col, i) => { col.width = [30, 22, 22, 12, 12, 12, 12][i] || 12; });
+  const extra = [];
+  const typeOf = (p) => migrateControlType(p.controlType, null);
+  for (let r = 2; r <= xlLastStdRow; r++) {
+    const p = params[r - 2];
+    const list = p && typeOf(p) !== 'fixed' ? (p.valuesByBrand || []) : [];
+    const main = list.find(v => !v.brand) || list[0] || null;
+    list.filter(v => v !== main).forEach(v => extra.push({ p, v }));
+    const nameRef = xlRef(EP_SHEET.main, 'D' + r), machRef = xlRef(EP_SHEET.main, 'C' + r);
+    wv.getCell(r, 1).value = { formula: `IF(${nameRef}="","",${nameRef}&" · "&${machRef})`, result: p ? epKey(p) : '' };
+    wv.getCell(r, 2).value = main && main.brand
+      ? main.brand
+      : { formula: `IF(A${r}="","","${REST_BRANDS_LABEL}")`, result: p ? REST_BRANDS_LABEL : '' };
+    wv.getCell(r, 3).value = { formula: `IF(A${r}="","",${xlRef(EP_SHEET.main, 'E' + r)})`, result: p ? XL_TYPES[typeOf(p)] || '' : '' };
+    epValueCells(main, p && typeOf(p)).forEach((x, i) => { wv.getCell(r, 4 + i).value = x === '' ? null : x; });
+  }
+  xlsxHeadStyle(wv, 1, 30);
+  xlsxBodyStyle(wv, 2, xlLastStdRow, EP_VAL_HEAD.length);
+  for (let r = 2; r <= xlLastStdRow; r++) { xlAutoCell(wv.getCell(r, 1)); xlAutoCell(wv.getCell(r, 3)); }
+  const sep = xlLastStdRow + 1;
+  wv.getCell(sep, 1).value = XL_EXTRA_HEAD.replace('впишите точки', 'впишите норму');
+  wv.mergeCells(sep, 1, sep, EP_VAL_HEAD.length);
+  wv.getRow(sep).height = 26;
+  wv.getCell(sep, 1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  wv.getCell(sep, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4B5E8A' } };
+  const first = sep + 1, last = sep + XL_EXTRA;
+  for (let r = first; r <= last; r++) {
+    const x = extra[r - first];
+    wv.getCell(r, 1).value = x ? epKey(x.p) : null;
+    wv.getCell(r, 2).value = x ? (x.v.brand || REST_BRANDS_LABEL) : null;
+    wv.getCell(r, 3).value = {
+      formula: `IF(A${r}="","",IFERROR(INDEX(${xlRef(EP_SHEET.main, `$E$2:$E$${xlLastStdRow}`)},MATCH(A${r},${xlRef(XL_SHEET.lists, `$A$2:$A$${xlLastStdRow}`)},0)),""))`,
+      result: x ? XL_TYPES[typeOf(x.p)] || '' : ''
+    };
+    if (x) epValueCells(x.v, typeOf(x.p)).forEach((c, i) => { wv.getCell(r, 4 + i).value = c === '' ? null : c; });
+    xlList(wv.getCell(r, 1), `$A$2:$A$${xlLastStdRow}`, true);
+    xlList(wv.getCell(r, 2), lists.brandsRange, false);
+  }
+  xlsxBodyStyle(wv, first, last, EP_VAL_HEAD.length);
+  for (let r = first; r <= last; r++) xlAutoCell(wv.getCell(r, 3));
+  wv.views = [{ state: 'frozen', xSplit: 3, ySplit: 1 }];
+
+  // --- «Инструкция» ---
+  const wi = wb.addWorksheet('Инструкция');
+  wi.columns = [{ width: 110 }];
+  const info = [
+    [title], [''],
+    ['ЛИСТ «ПАРАМЕТРЫ» — по одной строке на параметр.'],
+    ['Обязательные колонки: Линия, Машина, Параметр, Тип контроля. Часть линии — только для SMD.'],
+    ['Машину, часть линии, тип, работу и «Активен» выбирайте из выпадающего списка.'],
+    ['']
+  ];
+  EP_COLS.forEach(c => { if (c.hint) info.push([`  • ${c.title} — ${c.hint}`]); });
+  info.push(
+    [''],
+    ['ЛИСТ «ЗНАЧЕНИЯ» — нормы по брендам (для вариабельного и интервала).'],
+    ['  • Верхние строки заполняются САМИ: добавили параметр на лист «Параметры» — здесь в той же строке'],
+    [`    появились «Параметр · Машина», бренд «${REST_BRANDS_LABEL}» и тип (серые ячейки). Впишите норму.`],
+    ['  • Вариабельный — Номинал и Допуск (92 и 5 → 87…97). Интервал — От и До (5 и 8).'],
+    ['  • Отдельная норма для бренда — ниже, в блоке «ДОПОЛНИТЕЛЬНЫЕ БРЕНДЫ»: выберите параметр и бренд из списка.'],
+    ['  • Фиксированный тип норм по брендам не имеет — заполните «Норма «ОК»» на листе «Параметры».'],
+    ['  • Неверная норма (не числа, «От» больше «До») при импорте не пропустится — параметр попадёт в отчёт.'],
+    ...(extraInfo || []).map(l => [l])
+  );
+  info.forEach(([t]) => wi.addRow([t]));
+  wi.getRow(1).font = { bold: true, size: 16, color: { argb: 'FF0A4FA8' } };
+
+  buildListsSheet(wb, params, line, EP_SHEET.main, epKey);
+  return wb;
 }
 
 async function editorElecDownloadTemplate() {
   if (typeof ExcelJS === 'undefined') return showToast('Библиотека ExcelJS не загружена', true);
   const line = localStorage.getItem('cl_editor_line');
   if (!line) return showToast('Сначала выберите линию', true);
-
-  const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet('Параметры');
-
-  const headers = ['Параметр', 'Линия', 'Узел/часть', 'Машина', 'Тип контроля', 'Норма',
-    'Работа', 'Время с', 'Время по', 'Применять к', 'Значения по брендам', 'Активен', 'Top Losses'];
-  ws.addRow(headers);
-
-  // Пример
-  ws.addRow([
-    'Давление в камере', line, 'Maker', 'SE',
-    'variable', '92 ± 5',
-    'Run', '09:10', '10:00',
-    'ChangeOver, CL_TO',
-    'Kent|92|5; |90|3',
-    'Да',
-    ''
+  const example = {
+    line, nodePart: lineHasParts(line) ? 'Maker' : '', machine: getMachinesForLine(line)[0] || 'SE',
+    paramName: 'Давление в камере', controlType: 'variable', work: 'Run', durationSec: 30,
+    appliesTo: ['ChangeOver'], active: true, topLosses: [],
+    valuesByBrand: [{ brand: '', target: 90, tolerance: 3 }, { brand: getBrandsForLine(line)[0] || 'A', target: 92, tolerance: 5 }]
+  };
+  const wb = buildEparamWorkbook([example], line, `Шаблон импорта электронных параметров — линия ${line}`, [
+    '', 'В шаблоне одна строка-пример: замените её своими данными.',
+    'Готовый файл загрузите: Стандарты CL → Электронные → Excel → Импорт.'
   ]);
-
-  const widths = [30, 10, 18, 10, 14, 16, 8, 10, 10, 22, 40, 8, 36];
-  ws.columns.forEach((col, i) => { col.width = widths[i] || 14; });
-
-  const headerRow = ws.getRow(1);
-  headerRow.height = 30;
-  headerRow.eachCell(cell => {
-    cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4FA8' } };
-    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-    cell.border = { top: {style:'thin'}, bottom: {style:'thin'}, left: {style:'thin'}, right: {style:'thin'} };
-  });
-
-  // Инструкция
-  const wsInfo = wb.addWorksheet('Инструкция');
-  wsInfo.columns = [{ width: 100 }];
-  const info = [
-    ['📋 Шаблон импорта электронных параметров — ' + line],
-    [''],
-    ['1. Заполните лист «Параметры» — по одной строке на параметр.'],
-    ['2. В колонке «Значения по брендам» укажите: Бренд|Номинал|Допуск; Бренд|Номинал|Допуск'],
-    ['   Пустой бренд (||допуск) — применяется ко всем брендам.'],
-    ['3. Тип контроля: fixed (Фиксированный), variable (Вариабельный), interval (Интервал).'],
-    ['4. «Применять к» — через запятую: ChangeOver, CL_TO, CL_Conversion.'],
-    ['5. «Top Losses» — названия потерь цеха линии через запятую (как в Настройках).'],
-    [''],
-    ['ОБЯЗАТЕЛЬНЫЕ ПОЛЯ: Параметр, Линия, Машина, Тип контроля.']
-  ];
-  info.forEach(([text]) => wsInfo.addRow([text]));
-  wsInfo.getRow(1).font = { bold: true, size: 16, color: { argb: 'FF0A4FA8' } };
-
   const buf = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  downloadBlob(blob, `template_electronic_${line}.xlsx`);
+  downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `template_electronic_${line}.xlsx`);
   showToast('Шаблон скачан');
 }
 
@@ -341,131 +424,145 @@ async function editorElecExport(onlyIds) {
   if (typeof ExcelJS === 'undefined') return showToast('Библиотека ExcelJS не загружена', true);
   const line = localStorage.getItem('cl_editor_line');
   if (!line) return showToast('Сначала выберите линию', true);
-
-  const params = getElectronicParams().filter(p => p.line === line && (!onlyIds || onlyIds.includes(p.id)));
+  const params = getElectronicParamsForLine(line).filter(p => !onlyIds || onlyIds.includes(p.id));
   if (!params.length) return showToast('Нет электронных параметров для экспорта', true);
-
-  const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet('Параметры');
-
-  const headers = ['Параметр', 'Линия', 'Узел/часть', 'Машина', 'Тип контроля', 'Норма',
-    'Работа', 'Время с', 'Время по', 'Применять к', 'Значения по брендам', 'Активен', 'Top Losses'];
-  ws.addRow(headers);
-
-  const headerRow = ws.getRow(1);
-  headerRow.height = 30;
-  headerRow.eachCell(cell => {
-    cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4FA8' } };
-    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-    cell.border = { top: {style:'thin'}, bottom: {style:'thin'}, left: {style:'thin'}, right: {style:'thin'} };
-  });
-
-  params.forEach(p => {
-    ws.addRow([
-      p.paramName, p.line, p.nodePart, p.machine,
-      (typeof controlTypeLabel === 'function' ? controlTypeLabel(p.controlType) : p.controlType),
-      p.normText || '',
-      p.work || 'Run', p.timeFrom || '', p.timeTo || '',
-      (Array.isArray(p.appliesTo) ? p.appliesTo.join(', ') : ''),
-      serializeValuesByBrand(p.valuesByBrand),
-      p.active !== false ? 'Да' : 'Нет',
-      (Array.isArray(p.topLosses) ? p.topLosses : [])
-        .map(id => findLossById(id)?.name).filter(Boolean).join(', ')
-    ]);
-  });
-
-  const widths = [30, 10, 18, 10, 14, 16, 8, 10, 10, 22, 40, 8, 36];
-  ws.columns.forEach((col, i) => { col.width = widths[i] || 14; });
-
-  // Инструкция
-  const wsInfo = wb.addWorksheet('Инструкция');
-  wsInfo.columns = [{ width: 100 }];
-  wsInfo.addRow(['📋 Экспорт электронных параметров — ' + line]);
-  wsInfo.addRow(['']);
-  wsInfo.addRow(['Колонка «Значения по брендам» — формат: Бренд|Номинал|Допуск; ...']);
-  wsInfo.addRow(['Пустой бренд (||допуск) — для всех брендов.']);
-
+  if (params.length > XL_ROWS) return showToast(`В файл помещается ${XL_ROWS} параметров, выбрано ${params.length}`, true);
+  const wb = buildEparamWorkbook(params, line, `Электронные параметры линии ${line} — выгрузка ${new Date().toLocaleString('ru-RU')}`, [
+    '', `Выгружено параметров: ${params.length}.`,
+    'При импорте добавляются только новые параметры (Параметр + Машина); существующие пропускаются.'
+  ]);
   const buf = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  downloadBlob(blob, `electronic_params_${line}.xlsx`);
+  downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `electronic_params_${line}.xlsx`);
   showToast('Электронные параметры экспортированы');
 }
 
+/* Старый формат колонки «Значения по брендам»: «Бренд|Номинал|Допуск; …» */
+function parseValuesByBrand(str) {
+  if (!str || !str.trim()) return [];
+  const out = [];
+  str.split(';').forEach(part => {
+    const seg = part.trim().split('|').map(x => x.trim());
+    const brand = seg[0] || '', target = seg[1] ?? '', tolerance = seg[2] ?? '';
+    if (!brand && target === '' && tolerance === '') return;
+    out.push({ brand, target: target === '' ? '' : Number(target), tolerance: tolerance === '' ? '' : Number(tolerance) });
+  });
+  return out;
+}
+
+/* Импорт: новый формат (листы «Параметры» + «Значения») и старый (одна колонка значений).
+   Возвращает отчёт как у стандартов (showImportReport). */
 async function parseElectronicParamsExcel(file, targetLine) {
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(await file.arrayBuffer());
-
-  const ws = wb.getWorksheet('Параметры');
+  const ws = wb.getWorksheet(EP_SHEET.main);
   if (!ws) throw new Error('Лист «Параметры» не найден');
 
-  const rows = [];
-  ws.eachRow((row, rowNum) => {
-    if (rowNum < 2) return; // skip header
-    const vals = [];
-    for (let c = 1; c <= 13; c++) vals.push(row.getCell(c).text || '');
-    const name = vals[0].trim();
-    if (!name) return;
-    rows.push(vals);
-  });
-
-  if (!rows.length) throw new Error('Нет данных на листе «Параметры»');
-
+  const result = { added: 0, skipped: 0, duplicates: [], empty: 0, errors: [], addedMachines: [], pointsImported: 0, noun: 'параметров', pointsNoun: 'норм по брендам' };
+  const isOld = xlCellText(ws.getRow(1), 1) === 'Параметр';
   const all = getElectronicParams();
-  let imported = 0;
+  const known = new Set(all.filter(p => p.line === targetLine).map(p => `${(p.paramName || '').toLowerCase()}|${p.machine || ''}`));
+  const lineMachines = getLineMachines();
+  if (!Array.isArray(lineMachines[targetLine])) lineMachines[targetLine] = [];
+  const wsLosses = getTopLossesForWorkshop(getWorkshopIdForLine(targetLine)).flatMap(c => c.items || []);
+  const lossIds = (text) => String(text || '').split(/[,;]/).map(x => x.trim()).filter(Boolean)
+    .map(n => wsLosses.find(l => l.name.toLowerCase() === n.toLowerCase())?.id).filter(Boolean);
+  const applies = (text) => String(text || '').split(',').map(x => x.trim()).filter(x => ['ChangeOver', 'CL_TO', 'CL_Conversion'].includes(x));
 
-  rows.forEach((vals, idx) => {
-    const paramName = vals[0].trim();
-    const line = (vals[1] || targetLine).trim();
-    const nodePart = vals[2].trim();
-    const machine = vals[3].trim();
-    let controlType = (vals[4] || 'variable').trim().toLowerCase();
-    // нормализуем (принимаем как новые, так и legacy-значения)
-    if (!['ok_not_ok', 'value_input', 'range_input', 'fixed', 'variable', 'interval'].includes(controlType)) {
-      controlType = 'variable';
-    }
-    controlType = migrateControlType(controlType, null);
-    const normText = vals[5].trim();
-    const work = (vals[6] || '').trim();
-    const timeFrom = vals[7].trim();
-    const timeTo = vals[8].trim();
-    const appliesToRaw = vals[9].trim();
-    const appliesTo = appliesToRaw
-      ? appliesToRaw.split(',').map(x => x.trim()).filter(x => ['ChangeOver','CL_TO','CL_Conversion'].includes(x))
-      : [];
-    const brandValuesStr = vals[10].trim();
-    const activeText = vals[11].trim();
-    const active = activeText.toLowerCase() !== 'нет';
-
-    const valuesByBrand = parseValuesByBrand(brandValuesStr);
-
-    // Top Losses — по названию среди потерь цеха линии
-    const wsLosses = getTopLossesForWorkshop(getWorkshopIdForLine(line)).flatMap(c => c.items || []);
-    const topLosses = String(vals[12] || '').split(/[,;]/).map(x => x.trim()).filter(Boolean)
-      .map(name => wsLosses.find(l => l.name.toLowerCase() === name.toLowerCase())?.id)
-      .filter(Boolean);
-
-    const id = makeElectronicParamId();
-    const p = {
-      id, active,
-      line, machine, nodePart: lineHasParts(line) ? nodePart : '', paramName,
-      work: normWork(work),
-      timeFrom, timeTo,
-      controlType, normText,
-      valuesByBrand,
-      appliesTo,
-      topLosses,
+  const index = {}, byRow = {}, candidates = [];
+  for (let i = 2; i <= ws.rowCount; i++) {
+    const row = ws.getRow(i);
+    const t = (c) => xlCellText(row, c);
+    // Старый формат: Параметр | Линия | Узел/часть | Машина | Тип | Норма | Работа | Время с | Время по | Применять к | Значения | Активен | Top Losses
+    const f = isOld
+      ? { line: t(2), nodePart: t(3), machine: t(4), name: t(1), type: t(5) || 'variable', normText: t(6), work: t(7), duration: '', applies: t(10), active: t(12), losses: t(13), values: t(11) }
+      : Object.fromEntries(EP_COLS.map(c => [c.key, t(EP_COL[c.key])]));
+    if (!f.name && !f.machine) { result.empty++; continue; }
+    const type = xlTypeFromText(f.type) || (isOld ? 'variable' : null);
+    const errs = [];
+    if (!f.name) errs.push('пустой параметр');
+    if (!f.machine) errs.push('пустая машина');
+    if (!type) errs.push(`тип контроля «${f.type}» — выберите из списка`);
+    if (lineHasParts(targetLine) && !['Maker', 'Packer'].includes(f.nodePart)) errs.push('часть линии — Maker или Packer');
+    if (f.line && f.line !== targetLine) errs.push(`линия «${f.line}» не совпадает с «${targetLine}»`);
+    const key = `${f.name.toLowerCase()}|${f.machine}`;
+    if (f.name && known.has(key)) { result.duplicates.push({ name: f.name, machine: f.machine }); result.skipped++; continue; }
+    if (errs.length) { result.errors.push({ row: i, message: errs.join('; ') }); result.skipped++; continue; }
+    const ct = migrateControlType(type, null);
+    const p = normalizeElectronicParam({
+      id: makeElectronicParamId(), active: f.active.toLowerCase() !== 'нет',
+      line: targetLine, machine: f.machine, nodePart: lineHasParts(targetLine) ? f.nodePart : '', paramName: f.name,
+      work: normWork(f.work), durationSec: Math.max(0, parseInt(f.duration, 10) || 0),
+      controlType: ct, normText: ct === 'fixed' ? f.normText : '',
+      valuesByBrand: isOld ? parseValuesByBrand(f.values) : [],
+      appliesTo: applies(f.applies), topLosses: lossIds(f.losses),
       frequency: { type: 'weekly', schedule: [], shifts: ['day', 'night'], daysOfWeek: [], dates: [] },
-      inSchedule: false,
-      author: '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+      inSchedule: false, author: '', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+    });
+    index[key] = p; byRow[i] = p; known.add(key);
+    candidates.push({ p, row: i });
+  }
+
+  // --- «Значения» (новый формат) ---
+  const wv = isOld ? null : wb.getWorksheet(EP_SHEET.vals);
+  if (wv) {
+    const num = (row, c) => { const s = xlCellText(row, c).replace(',', '.'); return s === '' ? '' : Number(s); };
+    for (let i = 2; i <= wv.rowCount; i++) {
+      const row = wv.getRow(i);
+      const keyText = xlCellText(row, 1);
+      if (keyText && keyText.startsWith('ДОПОЛНИТЕЛЬНЫЕ')) continue;
+      let p = null;
+      if (!keyText && xlIsBareFormula(row, 1)) p = byRow[i] || null;
+      else if (keyText) {
+        const cut = keyText.lastIndexOf(' · ');
+        p = index[`${(cut >= 0 ? keyText.slice(0, cut) : keyText).trim().toLowerCase()}|${cut >= 0 ? keyText.slice(cut + 3).trim() : ''}`] || null;
+      }
+      if (!p || p.controlType === 'fixed') continue;
+      const [target, tolerance, min, max] = [4, 5, 6, 7].map(c => num(row, c));
+      if ([target, tolerance, min, max].every(x => x === '')) continue;
+      const brandText = xlIsBareFormula(row, 2) ? REST_BRANDS_LABEL : xlCellText(row, 2);
+      const brand = !brandText || brandText === REST_BRANDS_LABEL ? '' : brandText;
+      const v = p.controlType === 'interval'
+        ? { brand, min, max, target: (min + max) / 2, tolerance: (max - min) / 2 }
+        : { brand, target, tolerance };
+      p.valuesByBrand = p.valuesByBrand.filter(x => (x.brand || '') !== brand).concat(v);
+      result.pointsImported++;
+    }
+  }
+
+  // --- Проверка норм и сохранение ---
+  const okNum = (x) => x !== '' && Number.isFinite(Number(x));
+  candidates.forEach(({ p, row }) => {
+    const bad = [];
+    if (p.controlType === 'fixed') {
+      if (!p.normText.trim()) bad.push('для фиксированного укажите «Норма «ОК»»');
+      else if (normTypeError('fixed', p.normText)) bad.push(normTypeError('fixed', p.normText));
+    } else {
+      if (isOld) p.valuesByBrand.forEach(v => { if (p.controlType === 'interval' && okNum(v.target) && okNum(v.tolerance)) { v.min = v.target - v.tolerance; v.max = v.target + v.tolerance; } });
+      if (!p.valuesByBrand.length) bad.push('нет нормы ни для одного бренда (лист «Значения»)');
+      p.valuesByBrand.forEach(v => {
+        const b = v.brand || REST_BRANDS_LABEL;
+        if (p.controlType === 'interval') {
+          if (!okNum(v.min) || !okNum(v.max)) bad.push(`${b}: «От» и «До» — числа`);
+          else if (Number(v.min) > Number(v.max)) bad.push(`${b}: «От» больше «До»`);
+        } else if (!okNum(v.target) || !okNum(v.tolerance)) bad.push(`${b}: Номинал и Допуск — числа`);
+        else if (Number(v.tolerance) < 0) bad.push(`${b}: допуск не может быть отрицательным`);
+      });
+    }
+    if (bad.length) {
+      result.errors.push({ row, message: `${p.paramName}: ${bad.slice(0, 3).join('; ')}` });
+      result.skipped++;
+      return;
+    }
+    if (!lineMachines[targetLine].includes(p.machine)) {
+      lineMachines[targetLine].push(p.machine);
+      result.addedMachines.push(p.machine);
+    }
     all.push(p);
     addChangeLogEntry('elec', p, 'added', 'Новый параметр (импорт из Excel)');
-    imported++;
+    result.added++;
   });
 
-  setElectronicParams(all);
-  return imported;
+  if (result.added) setElectronicParams(all);
+  if (result.addedMachines.length) setLineMachines(lineMachines);
+  return result;
 }

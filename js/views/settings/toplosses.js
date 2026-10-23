@@ -431,9 +431,10 @@ function showImportReport(result, containerId) {
   report.className = 'import-report ' + (hasErrors ? 'error' : 'success');
 
   let html = '<h4>📋 Отчёт импорта</h4><ul>';
-  if (result.added > 0)   html += `<li>✅ Добавлено стандартов: <strong>${result.added}</strong></li>`;
-  if (result.pointsImported > 0) html += `<li>✅ Загружено точек: <strong>${result.pointsImported}</strong></li>`;
-  if (result.skipped > 0) html += `<li>⚠️ Пропущено (дубликаты OPL №): <strong>${result.skipped}</strong></li>`;
+  const noun = result.noun || 'стандартов';
+  if (result.added > 0)   html += `<li>✅ Добавлено ${noun}: <strong>${result.added}</strong></li>`;
+  if (result.pointsImported > 0) html += `<li>✅ Загружено ${result.pointsNoun || 'точек'}: <strong>${result.pointsImported}</strong></li>`;
+  if (result.skipped > 0) html += `<li>⚠️ Пропущено (уже есть или ошибки): <strong>${result.skipped}</strong></li>`;
   if (result.empty > 0)   html += `<li>⚪ Пустых строк: ${result.empty}</li>`;
   if (result.errors.length > 0) {
     html += `<li>❌ Ошибок: <strong>${result.errors.length}</strong></li>`;
@@ -450,8 +451,9 @@ function showImportReport(result, containerId) {
   }
 
   if (result.duplicates.length > 0) {
-    html += '<div style="margin-top:8px"><strong>Дубликаты OPL №:</strong> ';
-    html += result.duplicates.slice(0, 10).map(d => `<code>${escapeHtml(d)}</code>`).join(', ');
+    html += `<div style="margin-top:8px"><strong>Уже есть в приложении (пропущены):</strong> `;
+    html += result.duplicates.slice(0, 10).map(d => `<code>${escapeHtml(typeof d === 'string' ? d
+      : `${d.oplNumber || d.name || ''}${d.machine ? ' · ' + d.machine : ''}`)}</code>`).join(', ');
     if (result.duplicates.length > 10) html += ` и ещё ${result.duplicates.length - 10}...`;
     html += '</div>';
   }
