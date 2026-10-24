@@ -247,75 +247,6 @@ button.btn {
   transform: scale(0.95);
 }
 
-.comment-preview {
-  margin-top: 8px;
-  padding: 8px 12px;
-  background: rgba(255, 184, 0, 0.08);
-  border-left: 3px solid var(--accent-amber);
-  border-radius: 3px;
-  font-size: 12px;
-  color: var(--accent-amber);
-  font-style: italic;
-}
-
-/* ============ Прогресс-бар ============ */
-.progress-badge {
-  display: inline-block;
-  margin-left: 10px;
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
-  background: var(--bg-input);
-  color: var(--text-second);
-  border: 1px solid var(--border-hi);
-}
-.progress-badge.complete {
-  background: rgba(0, 255, 157, 0.15);
-  color: var(--accent-green);
-  border-color: var(--accent-green);
-  box-shadow: var(--glow-green);
-}
-.progress-wrap {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 12px 0 18px;
-}
-.progress-bar-outer {
-  flex: 1;
-  height: 16px;
-  background: var(--bg-hover);
-  border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid var(--border-hi);
-}
-.progress-bar-inner {
-  height: 100%;
-  width: 0%;
-  background: var(--accent-red);
-  border-radius: 10px;
-  transition: width 0.35s ease, background 0.35s ease, box-shadow 0.35s ease;
-}
-.progress-bar-inner.low  { background: var(--accent-red);   box-shadow: 0 0 12px rgba(255, 45, 111, 0.5); }
-.progress-bar-inner.mid  { background: var(--accent-amber); box-shadow: 0 0 12px rgba(255, 184, 0, 0.5); }
-.progress-bar-inner.high { background: var(--accent-cyan);  box-shadow: 0 0 12px rgba(58, 166, 240, 0.5); }
-.progress-bar-inner.done { background: var(--accent-green); box-shadow: 0 0 16px rgba(0, 255, 157, 0.7); }
-.progress-percent {
-  min-width: 52px;
-  text-align: right;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--blue-mid);
-  font-variant-numeric: tabular-nums;
-}
-.progress-text {
-  font-size: 13px;
-  color: var(--text-second);
-  white-space: nowrap;
-  margin-bottom: 12px;
-}
-
 /* ============ Таблицы ============ */
 table {
   width: 100%;
@@ -567,12 +498,11 @@ tr:hover td { background: var(--bg-hover); }
 .has-comment .cmt-svg.cmt-outline .cmt-dot { fill: #fff; }
 
 /* ============================================================ */
-/* === Кнопки-иконки: комментарий и просмотр стандарта ======== */
+/* === Кнопка-иконка просмотра стандарта ====================== */
 /* ============================================================ */
 /* Цветные, чтобы их было видно как инструменты:
-   комментарий — циан (амбер, если уже есть), просмотр — фиолетовый */
+   просмотр — фиолетовый */
 
-button[data-comment-btn],
 button[data-view-btn],
 button[data-tl-view],
 button[data-tl-open-ep] {
@@ -585,29 +515,6 @@ button[data-tl-open-ep] {
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s, color 0.12s;
-}
-
-button[data-comment-btn] {
-  color: var(--accent-cyan);
-  background: color-mix(in srgb, var(--accent-cyan) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent-cyan) 35%, transparent);
-}
-
-button[data-comment-btn]:hover {
-  background: color-mix(in srgb, var(--accent-cyan) 20%, transparent);
-  border-color: var(--accent-cyan);
-}
-
-button[data-comment-btn].has-comment {
-  color: var(--accent-amber);
-  background: color-mix(in srgb, var(--accent-amber) 14%, transparent);
-  border-color: var(--accent-amber);
-}
-
-button[data-comment-btn].urgent {
-  color: var(--accent-red);
-  background: color-mix(in srgb, var(--accent-red) 12%, transparent);
-  border-color: var(--accent-red);
 }
 
 button[data-view-btn],

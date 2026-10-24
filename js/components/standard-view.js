@@ -327,32 +327,3 @@ $('#lightboxModal')?.addEventListener('click', (e) => {
   if (e.target.id === 'lightboxModal') closeLightbox();
 });
 
-function closeCommentModal() {
-  closeModal('#commentModal');
-  currentCommentItem = null;
-}
-
-$('#commentModalClose').addEventListener('click', closeCommentModal);
-$('#commentCancelBtn').addEventListener('click', closeCommentModal);
-$('#commentModal').addEventListener('click', (e) => {
-  if (e.target.id === 'commentModal') closeCommentModal();
-});
-
-$('#commentSaveBtn').addEventListener('click', () => {
-  if (!currentCommentItem) return;
-  const text = $('#commentText').value.trim();
-  currentCommentItem.dataset.comment = text;
-  const preview = currentCommentItem.querySelector('[data-comment-preview]');
-  const btn = currentCommentItem.querySelector('[data-comment-btn]');
-
-  if (text) {
-    preview.innerHTML = cmtLine(text);
-    preview.style.display = 'block';
-    btn.classList.add('has-comment');
-  } else {
-    preview.style.display = 'none';
-    btn.classList.remove('has-comment');
-  }
-  updateCommentUrgency(currentCommentItem);
-  closeCommentModal();
-});

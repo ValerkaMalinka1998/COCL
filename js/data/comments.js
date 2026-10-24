@@ -18,10 +18,6 @@ function getStdCommentsFor(kind, refId) {
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));   // новые сверху
 }
 
-function countOpenStdComments(kind, refId) {
-  return getStdCommentsFor(kind, refId).filter(c => c.status !== 'done').length;
-}
-
 function addStdComment(kind, row, text, reason) {
   const period = getCurrentShiftPeriod();
   const letters = getShiftsForDate(period.date) || {};

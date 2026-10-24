@@ -7,7 +7,7 @@
 /* ============================================================
    СОХРАНЕНИЕ ПРОВЕРКИ
    ============================================================ */
-$('#saveCheckBtn').addEventListener('click', () => {
+function saveCoclCheck() {
   const line = $('#lineSelect').value;
   const part = $('#partSelect').value;
   const type = $('#transitionType').value;
@@ -30,6 +30,15 @@ if (type === 'ChangeOver') {
     return showToast(`Бренд должен измениться: нельзя ${brandFrom} → ${brandTo}`, true);
   }
 }
+
+  // Отклонение без комментария — не сохраняем, показываем этот пункт
+  const noComment = [...$$('#checklistContainer .cocl-acc-item')]
+    .find(it => it.dataset.status === 'fail' && !String(it.dataset.comment || '').trim());
+  if (noComment) {
+    coclSelectItem(noComment, false);
+    noComment.querySelector('[data-chk-comment]')?.focus();
+    return showToast('Напишите комментарий к отклонению', true);
+  }
 
   const items = [];
   let hasEmpty = false;
@@ -138,9 +147,7 @@ if (type === 'ChangeOver') {
   showToast('Проверка сохранена');
   renderCoclSummary(record);
   showMachineJournalNotice(items.filter(it => it.status === 'FAIL'), { line, source: 'CL при переходах' });
-});
-
-$('#resetCheckBtn').addEventListener('click', () => editChecklistConditions());
+}
 
 function resetCheckForm() {
   // Сброс полей
@@ -155,13 +162,6 @@ function resetCheckForm() {
   // Сброс внутренностей
   $('#checklistContainer').innerHTML = '';
   $('#changesContainer').innerHTML = '';
-
-  // Сброс прогресса
-  $('#progressBadge').textContent = '';
-  $('#progressWrap').style.display = 'none';
-  $('#progressText').style.display = 'none';
-  $('#progressBarInner').style.width = '0%';
-  $('#progressPercent').textContent = '0%';
 
   // Скрыть экран резюме
   const summary = $('#coclSummaryView');

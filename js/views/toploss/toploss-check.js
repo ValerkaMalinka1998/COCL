@@ -40,6 +40,13 @@ function tlCheckPoints(row, isElec, brand) {
   return parsed.map((x, i) => ({ label: `т.${i + 1} · ${x.v}`, range: x.r, mark: x.mark }));
 }
 
+/* Подпись поля: «Т.1 · норма 5 до 8» (E-Param — «норма 92 ± 5 · бренд») */
+function tlPointLabelHtml(p) {
+  const m = /^т\.(\d+) · (.*)$/.exec(p.label);
+  if (!m) return escapeHtml(p.label);
+  return `Т.${m[1]} · норма <b>${escapeHtml(m[2])}</b>`;
+}
+
 /* Состояние точки по ответу: '' — пусто, 'ok' / 'bad' */
 function tlPointState(p, value) {
   const raw = String(value ?? '').trim();
@@ -99,83 +106,59 @@ function renderTopLossChecklist() {
     const st = a.status;
     const lossNames = losses.map(id => findLossById(id)?.name).filter(Boolean).join(' · ');
     const title = isElec ? row.paramName : row.title;
-    const body = points
+    const inputs = points
       ? `<div class="tl3-pts">${points.map((p, pi) => {
           const v = (a.values || [])[pi] ?? '';
           const cls = tlPointState(p, v);
           if (p.mark) {
-            return `<div class="tl3-pt tl3-pt-mark ${cls}"><small>${escapeHtml(p.label)}</small>
+            return `<div class="tl3-pt tl3-pt-mark ${cls}"><small>${tlPointLabelHtml(p)}</small>
               <span class="tl3-mark">${['ОК', 'Не ОК'].map(m => `<button type="button" class="${m === 'ОК' ? 'tl3-ok' : 'tl3-no'} ${v === m ? 'on' : ''}" data-tl-mark="${escapeAttr(row.id)}" data-pi="${pi}" data-v="${m}">${m}</button>`).join('')}</span></div>`;
           }
-          return `<label class="tl3-pt ${cls}"><small>${escapeHtml(p.label)}</small>
-            <input type="text" inputmode="decimal" data-tl-val="${escapeAttr(row.id)}" data-pi="${pi}" value="${escapeAttr(v)}" placeholder="значение" autocomplete="off"></label>`;
+          return `<label class="tl3-pt ${cls}"><small>${tlPointLabelHtml(p)}</small>
+            <input type="text" inputmode="decimal" data-tl-val="${escapeAttr(row.id)}" data-pi="${pi}" value="${escapeAttr(v)}" autocomplete="off"></label>`;
         }).join('')}</div>`
       : `<div class="tl3-okno">
           <button type="button" class="tl3-ok ${st === 'OK' ? 'on' : ''}" data-tl-ans="${escapeAttr(row.id)}" data-v="OK">✓ ОК</button>
           <button type="button" class="tl3-no ${st === 'FAIL' ? 'on' : ''}" data-tl-ans="${escapeAttr(row.id)}" data-v="FAIL">✕ Не ОК</button>
         </div>`;
-    const howText = isElec ? '' : (row.controlDescription || '');
-    const howHtml = howText
-      ? `<div class="cocl-how"><div class="cocl-how-t">Как проверять</div><div class="cocl-how-b">${escapeHtml(howText)}</div></div>`
-      : (isElec && row.normText ? `<div class="cocl-how"><div class="cocl-how-t">Норма</div><div class="cocl-how-b">${escapeHtml(row.normText)}</div></div>` : '');
-    const photosHtml = !isElec && typeof photoSliderHtml === 'function' ? photoSliderHtml(row) : '';
-    const toolHtml = !isElec && row.tool
-      ? `<span class="cocl-chip-tool" title="Инструмент"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>${escapeHtml(row.tool)}</span>`
-      : '';
-    const detMeta = [row.machine, row.nodePart, row.node, row.oplNumber].filter(Boolean).map(escapeHtml).join(' · ');
-    const arrow = (d) => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="${d ? '9 18 15 12 9 6' : '15 18 9 12 15 6'}"/></svg>`;
+    const kindTag = isElec ? '<span class="tl2-kind tl2-kind-el">E-Param</span> ' : '';
+    const status = st === 'OK' ? 'ok' : st === 'FAIL' ? 'fail' : 'unchecked';
     return `
-      <div class="tl3-item ${st === 'OK' ? 'done-ok' : st === 'FAIL' ? 'done-fail' : ''}${tlCheck.active === row.id ? ' is-active' : ''}" data-std-id="${escapeAttr(row.id)}" data-comment="${escapeAttr(a.comment || '')}">
-        <div class="tl3-entry" data-tl-pick="${escapeAttr(row.id)}">
-          <span class="tl3-num">${st === 'OK' ? '✓' : st === 'FAIL' ? '✕' : i + 1}</span>
-          <div class="tl3-main">
-            <div class="tl3-nm">${isElec ? '<span class="tl2-kind tl2-kind-el">E-Param</span> ' : ''}${row.oplNumber ? `<span class="tl2-opl">${escapeHtml(row.oplNumber)}</span> · ` : ''}${escapeHtml(title || '—')}</div>
-            <div class="tl2-sub">${escapeHtml([row.machine, row.nodePart, row.node].filter(Boolean).join(' · '))}${lossNames ? ` · <span class="tl3-loss">${escapeHtml(lossNames)}</span>` : ''}</div>
-          </div>
-        </div>
-        <div class="tl3-detail">
-          <div class="cocl-detail-head">
-            <div class="cocl-detail-ttl">
-              <div class="cocl-detail-meta">${isElec ? 'E-Param · ' : ''}${detMeta}</div>
-              <div class="cocl-detail-name">${escapeHtml(title || '—')}</div>
-              ${lossNames ? `<div class="tl3-loss">${escapeHtml(lossNames)}</div>` : ''}
-            </div>
-            <div class="cocl-detail-chips">${toolHtml}${cilDurChip(cilRowDurationSec(row), 'tl3-time')}</div>
-            <div class="cocl-row-tools">
-              <button type="button" class="cocl-acc-comment-btn ${a.comment ? 'has-comment' : ''}" data-comment-btn data-tl-comment="${escapeAttr(row.id)}" title="Комментарий">${cmtIcon(16, true)}</button>
-              ${isElec ? '' : `<button type="button" class="cocl-acc-view-btn" data-view-btn data-tl-view="${escapeAttr(row.id)}" title="Посмотреть стандарт целиком">${CIL_ICONS.eye}</button>`}
-            </div>
-          </div>
-          <div class="cocl-detail-body${photosHtml ? ' has-photos' : ''}">
-            <div class="cocl-detail-col">
-              ${body}
-              ${howHtml}
-              <div class="comment-preview" data-comment-preview style="${a.comment ? '' : 'display:none'}">${a.comment ? cmtLine(a.comment) : ''}</div>
-            </div>
-            ${photosHtml ? `<div class="cocl-detail-photos" data-tl-photos="${escapeAttr(row.id)}">${photosHtml}</div>` : ''}
-          </div>
-          <div class="cocl-detail-nav">
-            <button type="button" class="cocl-nav-btn" data-tl-nav="-1">${arrow(0)}Предыдущий</button>
-            <button type="button" class="cocl-nav-btn primary" data-tl-nav="1">Следующий${arrow(1)}</button>
-          </div>
-        </div>
+      <div class="tl3-item chk-item${tlCheck.active === row.id ? ' is-active' : ''}" data-std-id="${escapeAttr(row.id)}" data-comment="${escapeAttr(a.comment || '')}">
+        <div class="chk-entry" data-tl-pick="${escapeAttr(row.id)}">${chkEntryInner({ n: i + 1, status, opl: row.oplNumber, title, tagHtml: kindTag })}</div>
+        ${chkDetailHtml({
+          opl: row.oplNumber,
+          meta: [row.machine, row.node, row.nodePart],
+          title,
+          tagHtml: kindTag,
+          extraHtml: lossNames ? `<div class="tl3-loss">${escapeHtml(lossNames)}</div>` : '',
+          tool: isElec ? '' : row.tool,
+          durationSec: cilRowDurationSec(row),
+          brand: tlCheck.brand,
+          eyeAttrs: isElec ? '' : `data-tl-view="${escapeAttr(row.id)}"`,
+          inputsHtml: inputs,
+          how: isElec ? row.normText : row.controlDescription,
+          howTitle: isElec ? 'Норма' : 'Как проверять',
+          comment: a.comment,
+          photosHtml: !isElec && typeof photoSliderHtml === 'function' ? photoSliderHtml(row) : '',
+          photosAttrs: `data-tl-photos="${escapeAttr(row.id)}"`
+        })}
       </div>`;
   }).join('');
 
   const chips = tlCheck.lossIds.map(id => findLossById(id)).filter(Boolean)
     .map(l => `<span class="tl2-tag tl2-tag-am">${escapeHtml(l.name)}</span>`).join('');
+  const sub = `${escapeHtml(fmtShortDate(period.date))} · ${period.shiftType === 'day' ? 'день' : 'ночь'} · ${escapeHtml(letter || '—')}${tlCheck.brand ? ' · бренд ' + escapeHtml(tlCheck.brand) : ''}`;
 
   container.innerHTML = `
-    <div class="card tl3-head">
-      <button type="button" class="btn btn-secondary" id="tlBackToSelectBtn">← Потери</button>
-      <div class="tl3-title">Проверка TOP Losses
-        <small>${escapeHtml(tlState.line)} · ${escapeHtml(fmtShortDate(period.date))} · ${period.shiftType === 'day' ? 'день' : 'ночь'} · ${escapeHtml(letter || '—')}${tlCheck.brand ? ' · бренд ' + escapeHtml(tlCheck.brand) : ''}</small></div>
-      <span class="tl2-sp"></span>
-      <div class="tl3-chips">${chips}</div>
-    </div>
-    <div class="tl3-grid">
-      <aside class="card tl3-side" id="tlCheckSide"></aside>
-      <div class="tl3-list" id="tlChecklistContainer">${items}</div>
+    <div class="chk-run" id="tlChecklistContainer">
+      ${chkLeftHeadHtml({
+        title: `TOP Losses · ${escapeHtml(tlState.line)}`,
+        backHtml: `<button type="button" class="chk-back" id="tlBackToSelectBtn">← Потери</button>`,
+        subHtml: `${sub}<div class="chk-lhead-chips">${chips}</div>`
+      })}
+      ${items}
+      ${chkLeftFootHtml('id="tlSaveChecklistBtn"')}
     </div>`;
   container.querySelectorAll('[data-tl-photos]').forEach(box => {
     const r = tlCheck.rows.find(x => x.row.id === box.dataset.tlPhotos);
@@ -184,50 +167,28 @@ function renderTopLossChecklist() {
   updateTlCheckProgress();
 }
 
-/* Кольцо прогресса и кнопка сохранения */
+/* Прогресс в шапке и подсветка обязательных комментариев */
 function updateTlCheckProgress() {
-  const side = $('#tlCheckSide');
-  if (!side) return;
-  const total = tlCheck.rows.length;
-  let ok = 0, fail = 0;
+  const root = $('#tlChecklistContainer');
+  if (!root) return;
+  let done = 0, fail = 0;
   tlCheck.rows.forEach(r => {
     const s = tlCheck.answers[r.row.id]?.status;
-    if (s === 'OK') ok++;
-    else if (s === 'FAIL') fail++;
+    if (s === 'OK' || s === 'FAIL') done++;
+    if (s === 'FAIL') fail++;
+    const item = root.querySelector(`.tl3-item[data-std-id="${CSS.escape(r.row.id)}"]`);
+    if (item) chkMarkComment(item, s === 'FAIL');
   });
-  const done = ok + fail;
-  const totalSec = tlCheck.rows.reduce((s, r) => s + cilRowDurationSec(r.row), 0);
-  const leftSec = tlCheck.rows.reduce((s, r) => {
-    const st = tlCheck.answers[r.row.id]?.status;
-    return s + (st === 'OK' || st === 'FAIL' ? 0 : cilRowDurationSec(r.row));
-  }, 0);
-  const timeHtml = totalSec
-    ? `<div class="tl3-timebox"><span>Время проверки</span><b>∑ ${formatCilDuration(totalSec)}</b><span>Осталось</span><b>${formatCilDuration(leftSec) || '00:00'}</b></div>`
-    : '';
-  const pOk = total ? ok / total * 100 : 0;
-  const pFail = total ? fail / total * 100 : 0;
-  side.innerHTML = `
-    <div class="tl3-side-label">Прогресс</div>
-    <div class="tl3-ring" style="--ok:${pOk}%;--fail:${pOk + pFail}%"><div>${done}/${total}<small>проверено</small></div></div>
-    <div class="tl3-leg"><span>✓ ОК</span><b class="ok">${ok}</b><span>✕ Не ОК</span><b class="fail">${fail}</b><span>Осталось</span><b>${total - done}</b></div>
-    ${timeHtml}
-    <div class="tl2-sub">Можно сохранить и частично — непроверенные попадут в Историю как «не проверено».</div>
-    <button type="button" class="btn btn-success tl3-save" id="tlSaveChecklistBtn" ${done ? '' : 'disabled'}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-      <span>Зафиксировать результат</span>
-    </button>`;
+  chkUpdateProgress(root, done, tlCheck.rows.length, fail);
 }
 
-/* Обновить одну карточку без перерисовки всего списка (фокус в полях не теряется) */
+/* Обновить один пункт без перерисовки всего списка (фокус в полях не теряется) */
 function tlCheckRefreshItem(id) {
   const item = document.querySelector(`#tlChecklistContainer .tl3-item[data-std-id="${CSS.escape(id)}"]`);
   const r = tlCheck.rows.find(x => x.row.id === id);
   if (!item || !r) return;
   const st = tlCheck.answers[id]?.status;
-  item.classList.toggle('done-ok', st === 'OK');
-  item.classList.toggle('done-fail', st === 'FAIL');
-  const idx = tlCheck.rows.indexOf(r);
-  item.querySelector('.tl3-num').textContent = st === 'OK' ? '✓' : st === 'FAIL' ? '✕' : idx + 1;
+  item.querySelector('.chk-ic').dataset.accStatus = st === 'OK' ? 'ok' : st === 'FAIL' ? 'fail' : 'unchecked';
   item.querySelectorAll('[data-tl-ans]').forEach(b => b.classList.toggle('on', b.dataset.v === st));
   if (r.points) {
     item.querySelectorAll('.tl3-pt').forEach((lab, pi) => {
@@ -253,6 +214,13 @@ function saveTopLossCheck() {
     if (!tlCheck.answers[id]) tlCheck.answers[id] = {};
     tlCheck.answers[id].comment = el.dataset.comment || '';
   });
+  // Отклонение без комментария — не сохраняем, показываем этот пункт
+  const noComment = tlCheck.rows.find(r => tlCheck.answers[r.row.id]?.status === 'FAIL' && !String(tlCheck.answers[r.row.id].comment || '').trim());
+  if (noComment) {
+    tlSelectItem(noComment.row.id, false);
+    document.querySelector(`#tlChecklistContainer .tl3-item.is-active [data-chk-comment]`)?.focus();
+    return showToast('Напишите комментарий к отклонению', true);
+  }
 
   const items = tlCheck.rows.map(({ row, isElec, losses, points }) => {
     const a = tlCheck.answers[row.id] || {};
@@ -409,8 +377,8 @@ function tlSelectItem(id, focus) {
   tlCheck.active = id;
   cont.querySelectorAll('.tl3-item.is-active').forEach(x => x.classList.remove('is-active'));
   item.classList.add('is-active');
-  item.querySelector('.tl3-entry')?.scrollIntoView({ block: 'nearest' });
-  if (focus) item.querySelector('.tl3-detail input[type="text"], .tl3-detail .tl3-okno button')?.focus({ preventScroll: true });
+  item.querySelector('.chk-entry')?.scrollIntoView({ block: 'nearest' });
+  if (focus) item.querySelector('.chk-detail input[type="text"], .chk-detail .tl3-okno button')?.focus({ preventScroll: true });
 }
 
 function tlStep(id, dir) {
@@ -429,8 +397,8 @@ function tlAdvanceLater(id) {
 $('#tlChecklistView')?.addEventListener('click', (e) => {
   const pick = e.target.closest('[data-tl-pick]');
   if (pick) return tlSelectItem(pick.dataset.tlPick, true);
-  const nav = e.target.closest('[data-tl-nav]');
-  if (nav) return tlStep(nav.closest('.tl3-item').dataset.stdId, +nav.dataset.tlNav);
+  const nav = e.target.closest('[data-chk-nav]');
+  if (nav) return tlStep(nav.closest('.tl3-item').dataset.stdId, +nav.dataset.chkNav);
   if (e.target.closest('#tlBackToSelectBtn')) {
     const any = Object.values(tlCheck.answers).some(a => a.status || (a.values || []).some(Boolean));
     if (any && !confirm('Выйти из проверки? Введённые ответы не сохранятся.')) return;
@@ -461,8 +429,6 @@ $('#tlChecklistView')?.addEventListener('click', (e) => {
     if (a.status === 'OK' && a.values[pi]) tlAdvanceLater(id);
     return;
   }
-  const com = e.target.closest('[data-tl-comment]');
-  if (com) return openCommentModal(com.closest('.tl3-item'));
   const view = e.target.closest('[data-tl-view]');
   if (view && typeof openStandardView === 'function') openStandardView(view.dataset.tlView, { brand: tlCheck.brand || '' });
 });
@@ -480,6 +446,15 @@ $('#tlChecklistView')?.addEventListener('keydown', (e) => {
 });
 
 $('#tlChecklistView')?.addEventListener('input', (e) => {
+  // Комментарий к пункту (обязателен при отклонении)
+  const ta = e.target.closest('[data-chk-comment]');
+  if (ta) {
+    const item = ta.closest('.tl3-item');
+    item.dataset.comment = ta.value.trim();
+    const a = tlCheck.answers[item.dataset.stdId] || (tlCheck.answers[item.dataset.stdId] = {});
+    a.comment = item.dataset.comment;
+    return updateTlCheckProgress();
+  }
   const inp = e.target.closest('[data-tl-val]');
   if (!inp) return;
   const id = inp.dataset.tlVal;

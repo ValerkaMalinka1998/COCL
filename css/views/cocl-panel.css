@@ -76,24 +76,6 @@
   color: var(--text-dim);
 }
 
-/* Заблокированные условия во время проверки */
-.cocl-setup.is-locked .cocl-sec {
-  pointer-events: none;
-}
-
-.cocl-setup.is-locked #changesCard:not(:has(.cocl-change.checked)) {
-  display: none !important;
-}
-
-.cocl-setup.is-locked .cocl-sec-hint,
-.cocl-setup.is-locked .type-option:not(.active),
-.cocl-setup.is-locked .cocl-part-btn:not(.active),
-.cocl-setup.is-locked .cocl-change:not(.checked),
-.cocl-setup.is-locked .cocl-swap,
-.cocl-setup.is-locked .cocl-bsel-btn svg {
-  display: none;
-}
-
 /* Линия */
 .cocl-line-context {
   flex-wrap: wrap;
@@ -451,10 +433,6 @@
   gap: 10px;
   margin: 0;
   font-size: 18px;
-}
-
-.cocl-main-title .progress-badge:empty {
-  display: none;
 }
 
 .cocl-main-info {
