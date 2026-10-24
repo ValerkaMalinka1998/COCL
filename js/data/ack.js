@@ -10,8 +10,8 @@
    who = '—' до автологина: пока «вы» — этот компьютер. */
 
 /* Правки, которые НЕ требуют повторного ознакомления */
-const STD_ACK_MINOR_LABELS = ['применяемость', 'триггеры', 'Top Losses',
-  'всегда показывать в Change Over', 'длительность'];
+const STD_ACK_MINOR_LABELS = ['CL относится к', 'применяемость', 'триггеры', 'Top Losses',
+  'всегда показывать в Change Over'];
 
 function getStdAck() {
   const v = load(STORAGE_KEYS.stdAck, []);

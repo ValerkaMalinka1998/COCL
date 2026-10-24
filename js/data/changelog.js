@@ -91,14 +91,16 @@ function getChangeLogForLine(line, part) {
   return rows.map((e, i) => ({ ...e, n: i + 1 }));
 }
 
-/* В лист линии (бумажный аналог) попадают только существенные правки: основное описание,
-   точки, инструмент и время проверки, создание и удаление. Смена сорта, триггеры,
-   Top Losses, фото, применяемость, деактивация в лист не идут (entry.sheet === false),
-   но остаются в истории самого стандарта (getChangeLogForRef — без фильтра). */
+/* Существенные правки — одно правило для листа линии, истории стандарта, ознакомления,
+   метки «Изм.» и уведомлений: основной блок, описания, инструмент, время на проверку,
+   точки и бренды, фото, время проверки (Расписание), создание, удаление, деактивация
+   и восстановление. Доп. информация (CL относится к, «всегда в Change Over», триггеры,
+   Top Losses) в лист не идёт (entry.sheet === false) — остаётся в истории стандарта
+   серой строкой «доп. информация» и изменением стандарта не считается. */
 const CL_SHEET_KEYS = {
   mech: ['title', 'oplNumber', 'machine', 'node', 'nodePart', 'controlType', 'problemDescription',
-         'controlDescription', 'purpose', 'whyCreated', 'tool'],
-  elec: ['paramName', 'machine', 'nodePart', 'controlType', 'normText']
+         'controlDescription', 'purpose', 'whyCreated', 'tool', 'durationSec', 'photos'],
+  elec: ['paramName', 'machine', 'nodePart', 'controlType', 'normText', 'durationSec']
 };
 
 /* Записи одного стандарта / параметра в хронологическом порядке
@@ -165,15 +167,15 @@ function describeRowChange(kind, oldRow, newRow) {
   const fields = kind === 'elec'
     ? [
         ['paramName', 'описание параметра'], ['machine', 'машина'], ['nodePart', 'часть линии'],
-        ['controlType', 'тип контроля'], ['normText', 'текст нормы'],
-        ['appliesTo', 'применяемость'], ['triggers', 'триггеры'], ['topLosses', 'Top Losses']
+        ['controlType', 'тип контроля'], ['normText', 'текст нормы'], ['durationSec', 'время на проверку'],
+        ['appliesTo', 'CL относится к'], ['triggers', 'триггеры'], ['topLosses', 'Top Losses']
       ]
     : [
         ['title', 'название'], ['oplNumber', 'OPL №'], ['machine', 'машина'], ['node', 'узел'],
         ['nodePart', 'часть линии'], ['controlType', 'тип контроля'],
         ['problemDescription', 'описание проблемы'], ['controlDescription', 'описание контроля'],
-        ['purpose', 'цель'], ['whyCreated', 'почему создан'], ['durationSec', 'длительность'],
-        ['tool', 'инструмент'], ['appliesTo', 'применяемость'], ['triggers', 'триггеры'],
+        ['purpose', 'цель'], ['whyCreated', 'почему создан'], ['durationSec', 'время на проверку'],
+        ['tool', 'инструмент'], ['appliesTo', 'CL относится к'], ['triggers', 'триггеры'],
         ['topLosses', 'Top Losses'], ['photos', 'фото']
       ];
 
@@ -231,10 +233,10 @@ function describeRowChange(kind, oldRow, newRow) {
   const pick = sheet ? sheetParts : parts;
 
   if (wasActive && !isActive) {
-    return { action: 'deactivated', details, sheet: false, text: 'Деактивирован' + tail(pick) };
+    return { action: 'deactivated', details, text: 'Деактивирован' + tail(pick) };
   }
   if (!wasActive && isActive) {
-    return { action: 'activated', details, sheet: false, text: 'Снова в работе' + tail(pick) };
+    return { action: 'activated', details, text: 'Снова в работе' + tail(pick) };
   }
   if (!parts.length) return null;
   const text = 'Изменено: ' + pick.join(', ');
