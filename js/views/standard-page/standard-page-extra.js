@@ -314,17 +314,7 @@ function renderSvFullExtra(st, isEdit) {
    ============================================================ */
 
 function renderSvAckTable(st) {
-  const wrap = $('#svAckTableWrap');
-  if (!wrap) return;
-  wrap.innerHTML = `
-    <div class="sv-full-empty-table">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-        <circle cx="9" cy="7" r="4"/>
-      </svg>
-      <div>Раздел «Ознакомление» в разработке</div>
-    </div>
-  `;
+  renderStdAck('mech', svFullState.isNew ? null : st);
 }
 
 /* История изменений ЭТОГО стандарта: записи листа изменений (cl_change_log_v1)
@@ -447,9 +437,7 @@ $('#svFullTabs')?.addEventListener('click', (e) => {
   switchSvFullTab(btn.dataset.svTab);
 });
 
-$('#svAckMarkBtn')?.addEventListener('click', () => {
-  showToast('Функция «Ознакомление» в разработке', true);
-});
+$('#svAckMarkBtn')?.addEventListener('click', () => markStdAck('mech'));
 
 /* ============================================================
    СОХРАНЕНИЕ СТАНДАРТА ИЗ ПОЛНОЭКРАННОГО ПРОСМОТРА

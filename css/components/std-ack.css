@@ -1,0 +1,56 @@
+/* ============================================================ */
+/* === ОЗНАКОМЛЕНИЕ С ИЗМЕНЕНИЯМИ ============================= */
+/* ============================================================ */
+
+.stda-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+.stda-count {
+  min-width: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--bg-hover);
+  color: var(--text-second);
+  font-size: 12px;
+  text-align: center;
+}
+.stda-change { margin-bottom: 16px; }
+
+.stda-window {
+  margin-bottom: 20px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent-amber) 40%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent-amber) 8%, transparent);
+}
+.stda-window.is-over {
+  border-color: var(--border);
+  background: var(--bg-hover);
+}
+.stda-window-text { margin-bottom: 8px; font-size: 14px; color: var(--text-main); }
+.stda-window-text b { color: var(--accent-amber); }
+.stda-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--accent-amber) 18%, transparent);
+  overflow: hidden;
+}
+.stda-bar span { display: block; height: 100%; background: var(--accent-amber); }
+.stda-window.is-over .stda-bar span { background: var(--text-dim); }
+
+.stda-who { display: block; font-weight: 600; color: var(--text-main); }
+.stda-who-note { display: block; font-size: 12px; color: var(--text-dim); }
+.stda-table td { vertical-align: middle; }
+.stda-empty {
+  padding: 14px;
+  border: 1px dashed var(--border-hi);
+  border-radius: 10px;
+  text-align: center;
+  color: var(--text-dim);
+}

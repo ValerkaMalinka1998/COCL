@@ -122,7 +122,7 @@ function renderEparamPage() {
   renderEparamRelated(p);
   renderEparamExtra(p);
   renderEparamHistory(p);
-  renderEparamStubs();
+  renderStdAck('elec', epPageState.isNew ? null : p);
   renderStdComments('elec', epPageState.isNew ? null : p);
   const tabs = $('#epTabs');
   if (tabs) tabs.style.display = epPageState.isNew ? 'none' : '';
@@ -149,22 +149,6 @@ function renderEparamHistory(p) {
   if (badge) badge.textContent = rows.length;
   const wrap = $('#epHistoryWrap');
   if (wrap) wrap.innerHTML = changeHistoryHtml(rows);
-}
-
-/* Заглушка вкладки «Ознакомление» — как на странице стандарта */
-function renderEparamStubs() {
-  const stub = (id, icon, text) => {
-    const wrap = $(id);
-    if (!wrap) return;
-    wrap.innerHTML = `
-      <div class="sv-full-empty-table">
-        <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>
-        <div>${text}</div>
-      </div>`;
-  };
-  stub('#epAckTableWrap',
-    '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>',
-    'Раздел «Ознакомление» в разработке');
 }
 
 /* Переключение вкладок страницы параметра */
@@ -565,7 +549,7 @@ $('#epTabs')?.addEventListener('click', (e) => {
   const btn = e.target.closest('.sv-full-tab-btn');
   if (btn) switchEparamTab(btn.dataset.epTab);
 });
-$('#epAckMarkBtn')?.addEventListener('click', () => showToast('Функция «Ознакомление» в разработке', true));
+$('#epAckMarkBtn')?.addEventListener('click', () => markStdAck('elec'));
 $('#epPageBackBtn')?.addEventListener('click', () => closeEparamPage(false));
 $('#epPageCancelBtn')?.addEventListener('click', () => closeEparamPage(false));
 $('#epPageEditBtn')?.addEventListener('click', () => {
