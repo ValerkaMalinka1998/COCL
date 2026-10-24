@@ -76,10 +76,14 @@ function histPageData() {
   records.forEach(h => (h.items || []).forEach(it => { items.push({ h, it }); seen.add(it.standardId); }));
   // Пункты расписания, которые не проверили
   const past = isShiftPast(date, shift);
-  histClRows(line).forEach(({ row, isElec }) => {
-    if (seen.has(row.id) || !histIsPlanned(row, line, date, shift)) return;
+  const rows = clLineRows(line);
+  const tally = clTallyIndex(line, date, date, rows);
+  rows.forEach(({ row, isElec }) => {
+    // Пропуск, закрытый позже, остаётся пропуском этой смены — с пометкой; долг текущей смены — к проверке
+    const k = tally.get(`${date}|${shift}|${row.id}`);
+    if (seen.has(row.id) || !k) return;
     items.push({
-      h: null, missed: true, past,
+      h: null, missed: true, past, late: k === 'late',
       it: {
         standardId: row.id, machine: row.machine || '', nodePart: row.nodePart || '',
         oplNumber: row.oplNumber || '', node: row.node || '', title: row.title || row.paramName || '',
@@ -223,7 +227,7 @@ function renderHistRecordPage() {
 }
 
 function histItemHtml(x, entries, line) {
-  const { h, it, missed, past } = x;
+  const { h, it, missed, past, late } = x;
   const isElec = it.kind === 'elec' || (h && histIsElecItem(h, it));
   let st = 'u', sym = '?';
   if (!missed && it.status === 'OK') { st = 'o'; sym = CIL_ICONS.check; }
@@ -232,7 +236,7 @@ function histItemHtml(x, entries, line) {
   // Значения
   let valuesHtml;
   if (missed) {
-    valuesHtml = `<span class="hist-pt">${past ? 'пропущено — проверки нет' : 'ещё не проверено'}</span>`;
+    valuesHtml = `<span class="hist-pt">${late ? 'пропущено — проверено позже' : past ? 'пропущено — проверки нет' : 'ещё не проверено'}</span>`;
   } else if (it.status === 'UNCHECKED') {
     valuesHtml = '<span class="hist-pt">отмечено «не проверено»</span>';
   } else {

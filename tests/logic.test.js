@@ -22,6 +22,8 @@ const MODULES = [
   'js/data/workshops.js',
   'js/data/catalog.js',
   'js/data/schedule.js',
+  'js/data/downtime.js',
+  'js/data/debt.js',
   'js/data/changelog.js',
   'js/data/line-brand.js',
   'js/data/ack.js',
@@ -266,4 +268,106 @@ test('существенные правки: одно правило для ли
   const off = check({ active: false });
   assert.equal(off.action, 'deactivated');
   assert.equal(off.sheet, true, 'деактивация → в лист линии');
+});
+
+/* === ДОЛГ ПРОВЕРОК И ПРОСТОЙ === */
+// Ср 21.10 и Пт 23.10 — день по расписанию; «сейчас» — Пт 23.10, 10:00 (дневная смена)
+const debtRow = { id: 'd1', line: 'SD12', inSchedule: true, work: 'Run',
+  frequency: { schedule: [{ day: 3, shift: 'day' }, { day: 5, shift: 'day' }] } };
+const debtNow = new Date('2026-10-23T10:00:00');
+const debtIdx = (checks) => {
+  const letters = fn('getShiftsForDate');
+  return new Map(checks.map(([date, shift, status]) =>
+    [`${date}|${letters(date)[shift]}|d1`, { h: {}, it: { status } }]));
+};
+const debtCells = (t) => Object.fromEntries([...t.cells].map(([k, c]) => [k, c.s + (c.late ? '+late' : '')]));
+
+test('долг: пропуск в ср день переходит и закрывается проверкой позже', () => {
+  const t = fn('clRowTimeline')(debtRow, 'SD12', '2026-10-21', '2026-10-23', debtIdx([['2026-10-22', 'day', 'OK']]), debtNow);
+  const c = debtCells(t);
+  assert.equal(c['2026-10-21|day'], 'miss', 'пропуск считается в исходной смене');
+  assert.equal(c['2026-10-21|night'], 'carry', 'дальше — перенесено');
+  assert.equal(c['2026-10-22|day'], 'ok+late', 'закрыто позже');
+  assert.equal(c['2026-10-22|night'], '', 'после закрытия долга нет');
+  assert.equal(c['2026-10-23|day'], 'todo');
+  assert.equal(t.debts.length, 1, 'один пропуск, не накопительно');
+  assert.equal(t.debts[0].by, 'check');
+});
+
+test('долг: не проверили — сливается со следующим плановым разом', () => {
+  const t = fn('clRowTimeline')(debtRow, 'SD12', '2026-10-21', '2026-10-23', debtIdx([]), debtNow);
+  const c = debtCells(t);
+  assert.equal(c['2026-10-22|night'], 'carry');
+  assert.equal(c['2026-10-23|day'], 'todo', 'в смене по плану — одна проверка, не долг');
+  assert.equal(t.debts.length, 1);
+  assert.ok(t.open, 'долг висит до проверки');
+  assert.equal(c['2026-10-21|day'], 'miss');
+});
+
+test('простой: смены не планируются, долг снимается', () => {
+  fn('setLineDowntimes')('SD12', [{ id: 'x', from: '2026-10-21', fromShift: 'night', to: '2026-10-22', toShift: 'night' }]);
+  try {
+    assert.equal(fn('isDowntimeShift')('SD12', '2026-10-21', 'day'), false, 'до начала');
+    assert.equal(fn('isDowntimeShift')('SD12', '2026-10-22', 'night'), true, 'последняя смена');
+    const t = fn('clRowTimeline')(debtRow, 'SD12', '2026-10-21', '2026-10-23', debtIdx([]), debtNow);
+    const c = debtCells(t);
+    assert.equal(c['2026-10-21|day'], 'miss');
+    assert.equal(c['2026-10-21|night'], 'down');
+    assert.equal(c['2026-10-22|day'], 'down');
+    assert.equal(t.debts[0].by, 'down', 'долг снят простоем');
+    assert.equal(c['2026-10-23|day'], 'todo', 'после запуска — только плановые');
+    fn('setLineDowntimes')('SD12', [{ id: 'y', from: '2026-10-23', fromShift: 'day', to: '' }]);
+    assert.equal(fn('isRowPlanned')(debtRow, 'SD12', '2026-10-30', 'day'), false, '«до запуска» — открыт');
+  } finally {
+    fn('setLineDowntimes')('SD12', []);
+  }
+});
+
+test('долг: закрыт отклонением — обычное отклонение, без «закрыто позже»', () => {
+  const t = fn('clRowTimeline')(debtRow, 'SD12', '2026-10-21', '2026-10-23', debtIdx([['2026-10-22', 'day', 'FAIL']]), debtNow);
+  assert.equal(debtCells(t)['2026-10-22|day'], 'fail');
+  assert.equal(t.debts[0].by, 'check');
+});
+
+test('долг: стандарт убрали из расписания — долг снимается', () => {
+  fn('setScheduleWeekOverride')('2026-10-26', 'SD12', { removed: ['d1'] });
+  try {
+    const t = fn('clRowTimeline')(debtRow, 'SD12', '2026-10-21', '2026-10-27', debtIdx([]), new Date('2026-10-27T10:00:00'));
+    const c = debtCells(t);
+    assert.equal(c['2026-10-25|night'], 'carry', 'до конца недели переносится');
+    assert.equal(c['2026-10-26|day'], '', 'со следующей недели не в расписании — долга нет');
+    assert.equal(t.debts[t.debts.length - 1].by, 'removed');
+    assert.equal(t.open, null);
+  } finally {
+    fn('setScheduleWeekOverride')('2026-10-26', 'SD12', null);
+  }
+});
+
+test('валидация: срок сдвигается на смены простоя', () => {
+  const row = { id: 'v1', line: 'SD12', validation: { from: '2026-10-20', fromShift: 'day', until: '2026-10-20', untilShift: 'night', decidedAt: '' } };
+  const vs = fn('isValidationShift');
+  assert.equal(vs(row, '2026-10-21', 'day'), false, 'без простоя срок кончился');
+  fn('setLineDowntimes')('SD12', [{ id: 'z', from: '2026-10-20', fromShift: 'night', to: '2026-10-20', toShift: 'night' }]);
+  try {
+    assert.equal(vs(row, '2026-10-20', 'night'), false, 'в простое не проверяется');
+    assert.equal(vs(row, '2026-10-21', 'day'), true, 'срок сдвинут на 1 смену');
+    assert.equal(vs(row, '2026-10-21', 'night'), false);
+  } finally {
+    fn('setLineDowntimes')('SD12', []);
+  }
+});
+
+test('счёт (вариант A): пропуск один раз, закрытый позже — выполнен, смена закрытия не в счёт', () => {
+  const tally = fn('clTallyIndex')('SD12', '2026-10-21', '2026-10-23', [{ row: debtRow }], debtIdx([['2026-10-22', 'day', 'OK']]));
+  const k = (d, s) => tally.get(`${d}|${s}|d1`);
+  assert.equal(k('2026-10-21', 'day'), 'late', 'пропуск в смене пропуска, закрыт позже');
+  assert.equal(k('2026-10-21', 'night'), undefined, '«перенесено» — не в счёт');
+  assert.equal(k('2026-10-22', 'day'), undefined, 'проверка долга вне плана — зачтена в смене пропуска');
+  const fail = fn('clTallyIndex')('SD12', '2026-10-21', '2026-10-23', [{ row: debtRow }], debtIdx([['2026-10-22', 'day', 'FAIL']]));
+  assert.equal(fail.get('2026-10-22|day|d1'), 'FAIL', 'отклонение — в смене, где нашли');
+  const none = fn('clTallyIndex')('SD12', '2026-10-21', '2026-10-23', [{ row: debtRow }], debtIdx([]));
+  assert.equal(none.get('2026-10-21|day|d1'), 'missed', 'не закрыт — пропуск');
+  const one = fn('clTallyIndex')('SD12', '2026-10-21', '2026-10-21', [{ row: debtRow }], debtIdx([['2026-10-22', 'day', 'OK']]));
+  assert.equal(one.get('2026-10-21|day|d1'), 'late', 'период — одна смена, закрыт уже после периода');
+  assert.equal(one.has('2026-10-22|day|d1'), false, 'смены после периода в итог не попадают');
 });

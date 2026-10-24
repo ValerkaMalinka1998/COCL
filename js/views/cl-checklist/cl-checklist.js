@@ -257,7 +257,7 @@ function renderClMatrix() {
   updateClPartCounts(dateByDayIdx, hist, isMember, checkedIds);
   const prog = {};
   cellsByRow.forEach((cells, ri) => cells.forEach(c => {
-    if (c.status === 'na') return;
+    if (!clCellCounts(c)) return;
     const k = `${c.dateStr}|${c.shift}`;
     if (!prog[k]) prog[k] = { done: 0, planned: 0, sec: 0 };
     prog[k].planned++;
@@ -297,8 +297,9 @@ function renderClMatrix() {
       ${isCurrentWeek ? `<button type="button" class="cil-onlyshift${clState.onlyShift ? ' on' : ''}" id="clOnlyShiftBtn"
         title="Показать только то, что нужно проверить в текущую смену">
         <i></i>Только эта смена</button>` : ''}
-      ${legendHtml(['ok', 'fail', 'missed', 'due', 'na', 'ruler', 'eye', 'val', 'chg'])}
+      ${legendHtml(['ok', 'fail', 'missed', 'carry', 'late', 'down', 'due', 'na', 'ruler', 'eye', 'val', 'chg'])}
     </div>
+    ${isCurrentWeek ? clDownBannerHtml() + clDebtBannerHtml(rows, cellsByRow) : ''}
     <div class="cil-scroll cil-scroll-page"><table class="cil-table cil-has-when">`;
 
   html += cilHeadHtml(dateByDayIdx, {
@@ -349,7 +350,7 @@ function updateClPartCounts(dateByDayIdx, hist, isMember, checkedIds) {
     let done = 0, need = 0;
     all.filter(s => !part || s.nodePart === part).forEach(s => {
       const c = clRowCells(s, dateByDayIdx, hist).find(x => x.isNow);
-      if (!c || c.status === 'na') return;
+      if (!clCellCounts(c)) return;
       need++;
       if (c.status === 'OK' || c.status === 'FAIL' || c.status === 'UNCHECKED') done++;
     });
@@ -388,33 +389,46 @@ function clHistoryIndex() {
       }
     });
   });
-  return { cell, last };
+  return { cell, last, idx: clResultIndex(clState.line) };
 }
 
-/* Состояние 14 ячеек строки */
+/* Входит ли ячейка в счёт смены: «перенесено» и простой — нет */
+function clCellCounts(c) {
+  return !!c && !['na', 'carry', 'down'].includes(c.status);
+}
+
+/* Состояние 14 ячеек строки. Долг (js/data/debt.js): пропуск переходит
+   на следующие смены — в текущей смене это проверка «с прошлых смен» */
 function clRowCells(row, dateByDayIdx, hist) {
   const freq = getClRowFreq(row);
   const schedule = Array.isArray(freq.schedule) ? freq.schedule : [];
+  const tl = clRowTimeline(row, clState.line, dateByDayIdx[1], dateByDayIdx[0], hist.idx);
   const cells = [];
   CIL_DAYS.forEach(d => {
     const dateStr = dateByDayIdx[d.idx];
     ['day', 'night'].forEach(shift => {
-      const planned = (schedule.some(x => x.day === d.idx && x.shift === shift) && rowExistedByShiftEnd(row, dateStr, shift))
-        || isValidationShift(row, dateStr, shift);
+      const t = tl.cells.get(`${dateStr}|${shift}`) || {};
+      const down = t.s === 'down';
+      const isNow = clState.weekOffset === 0 && dateStr === clState.activeDate && shift === clState.shiftType;
+      const debt = isNow && t.s === 'carry' ? t.from : null;
+      const planned = !down && ((schedule.some(x => x.day === d.idx && x.shift === shift) && rowExistedByShiftEnd(row, dateStr, shift))
+        || isValidationShift(row, dateStr, shift)) || !!debt || !!t.closed;
       const letter = getShiftsForDate(dateStr)[shift];
       const existing = hist.cell.get(`${dateStr}|${letter}|${row.id}`);
       const draft = clState.quickDraft[`${row.id}|${dateStr}|${shift}`];
       const past = isShiftPast(dateStr, shift);
-      const isNow = clState.weekOffset === 0 && dateStr === clState.activeDate && shift === clState.shiftType;
 
-      // Смена закончилась, а проверки нет — «пропущено»
+      // Смена закончилась, а проверки нет — «пропущено»; дальше долг «перенесено»
       let status = 'na';
       if (draft) status = draft.status;
       else if (existing) status = existing.status;
+      else if (down) status = 'down';
       else if (planned) status = past ? 'missed' : 'due';
+      else if (t.s === 'carry') status = 'carry';
 
       cells.push({
-        dateStr, shift, dayName: d.name, planned, past, isNow, status,
+        dateStr, shift, dayName: d.name, planned, past, isNow, status, debt,
+        carryFrom: t.from || null, late: !!t.late,
         comment: !!((draft && draft.comment) || (existing && existing.comment)),
         clickable: planned && isNow && clState.checkMode,
         isToday: dateStr === clState.activeDate && clState.weekOffset === 0
@@ -473,8 +487,14 @@ function renderClRow(row, num, zone, cells, hist, isElec) {
   cells.forEach(c => {
     const title = `${c.dayName} · ${c.shift === 'day' ? 'день' : 'ночь'}`;
     let inner;
+    let tdExtra = '';
     if (c.status === 'na') {
       inner = '<span class="cil-na">—</span>';
+    } else if (c.status === 'down') {
+      inner = '';
+      tdExtra = 'cil-td-down';
+    } else if (c.status === 'carry') {
+      inner = `<span class="cil-carry" title="${escapeAttr(`${title} — долг с ${clDebtFromText(c.carryFrom)}, эта смена его не закрыла`)}">${CIL_ICONS.carry}</span>`;
     } else {
       let cls = 'cl-cell cil-cell';
       let content = icon;
@@ -483,18 +503,59 @@ function renderClRow(row, num, zone, cells, hist, isElec) {
       else if (c.status === 'FAIL') { cls += ' cil-cell-fail'; content = CIL_ICONS.x; tip += ' — отклонение'; }
       else if (c.status === 'UNCHECKED') { cls += ' cil-cell-unchecked'; content = '?'; tip += ' — отмечено «не проверено»'; }
       else if (c.status === 'missed') { cls += ' cil-cell-missed'; content = '?'; tip += ' — пропущено'; }
+      else if (c.debt) {
+        cls += ' cil-cell-debt' + (clState.checkMode ? ' cil-cell-active' : '');
+        content = CIL_ICONS.carry;
+        tip += ` — с прошлых смен (${clDebtFromText(c.debt)}), проверить в первую очередь`;
+      }
       else if (c.isNow) { cls += clState.checkMode ? ' cil-cell-active' : ' cil-cell-now'; tip += ' — текущая смена'; }
       else if (!c.past) cls += ' cil-cell-future';
+      if (c.late && c.status === 'OK') { cls += ' cil-cell-late'; tip += ', закрыто позже'; }
       if (c.clickable) cls += ' cl-cell-clickable';
       inner = `<button type="button" class="${cls}"
         data-row-id="${escapeAttr(row.id)}" data-date="${escapeAttr(c.dateStr)}" data-shift="${c.shift}"
         data-planned="${c.planned ? '1' : '0'}" data-clickable="${c.clickable ? '1' : '0'}" data-status="${escapeAttr(c.status)}"
         title="${escapeAttr(tip)}">${content}${c.comment ? '<i class="cil-dot"></i>' : ''}</button>`;
     }
-    html += `<td class="${cilTdClass(c.shift, c.isToday)}">${inner}</td>`;
+    if (c.isNow) tdExtra += ' cil-td-now';
+    html += `<td class="${cilTdClass(c.shift, c.isToday, tdExtra.trim())}"${c.status === 'down' ? ' title="Простой линии"' : ''}>${inner}</td>`;
   });
 
   return html + '</tr>';
+}
+
+/* «ср день» — исходная смена долга */
+function clDebtFromText(from) {
+  if (!from) return '';
+  return `${histDayName(from.date).toLowerCase()} ${from.shift === 'night' ? 'ночь' : 'день'}`;
+}
+
+/* Плашка «Линия в простое» — текущая смена в простое */
+function clDownBannerHtml() {
+  const i = valShiftIndex(clState.activeDate, clState.shiftType);
+  const d = getLineDowntimes(clState.line).find(x =>
+    i >= valShiftIndex(x.from, x.fromShift) && (!x.to || i <= valShiftIndex(x.to, x.toShift)));
+  if (!d) return '';
+  return `<div class="cil-down-banner"><b>Линия в простое</b>${escapeHtml(dtPeriodText(d))} · ${escapeHtml(downtimeReasonText(d))}
+    <span>— проверки CL не нужны</span></div>`;
+}
+
+/* Плашка «С прошлых смен (N)» над матрицей: долги текущей смены */
+function clDebtBannerHtml(rows, cellsByRow) {
+  const cur = valShiftIndex(clState.activeDate, clState.shiftType);
+  const list = [];
+  cellsByRow.forEach((cells, i) => {
+    const c = cells.find(x => x.isNow && x.debt);
+    if (c && clCellCounts(c) && !['OK', 'FAIL', 'UNCHECKED'].includes(c.status)) list.push({ row: rows[i], from: c.debt });
+  });
+  if (!list.length) return '';
+  list.sort((a, b) => valShiftIndex(a.from.date, a.from.shift) - valShiftIndex(b.from.date, b.from.shift));
+  const items = list.map(({ row, from }) => {
+    const n = cur - valShiftIndex(from.date, from.shift);
+    return `<span class="cil-debt-item">${row.oplNumber ? `<b>${escapeHtml(row.oplNumber)}</b> ` : ''}${escapeHtml(row.title || row.paramName || '—')}
+      <em>с ${escapeHtml(clDebtFromText(from))}${n > 1 ? ` · ${n} ${pluralRu(n, 'смена', 'смены', 'смен')}` : ''}</em></span>`;
+  }).join('');
+  return `<div class="cil-debt-banner">${CIL_ICONS.carry}<span class="cil-debt-title">С прошлых смен (${list.length}) — проверить в первую очередь</span>${items}</div>`;
 }
 
 /* Формат числа: убирает «.0» и лишние нули */

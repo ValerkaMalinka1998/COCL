@@ -213,7 +213,7 @@ function histCoverageHtml(line, weekOffset, weekAttr) {
   const today = getCurrentShiftPeriod().date;
 
   // Итоги недели: смены и пункты
-  const sum = { planned: 0, past: 0, ok: 0, partial: 0, missed: 0, fail: 0, now: 0, pts: 0, ptsFail: 0 };
+  const sum = { planned: 0, past: 0, ok: 0, partial: 0, missed: 0, fail: 0, now: 0, pts: 0, ptsFail: 0, late: 0 };
   const missedList = [];
   week.forEach(d => ['day', 'night'].forEach(s => {
     const c = d.shifts[s];
@@ -222,6 +222,7 @@ function histCoverageHtml(line, weekOffset, weekAttr) {
     if (c.state === 'future') return;
     sum.pts += c.done;
     sum.ptsFail += c.fail;
+    sum.late += c.late;
     if (c.state === 'now') { sum.now++; return; }
     sum.past++;
     sum[c.state]++;
@@ -258,6 +259,7 @@ function histCoverageHtml(line, weekOffset, weekAttr) {
     else if (c.state === 'missed') text = '? пропущена';
     else if (c.state === 'now') text = 'идёт смена';
     else text = `◐ ${left} не пров.`;
+    if (c.late) text += ` · ${c.late} позже`;
     const pct = Math.round(c.done / c.planned * 100);
     return `<button type="button" class="hist-cc hist-cc-${c.state}" data-hist-shift="${d.date}|${s}" title="Открыть проверку смены">
       <span class="hist-cc-m">${meta}<b>${c.done}/${c.planned}</b></span>
@@ -294,7 +296,7 @@ function histCoverageHtml(line, weekOffset, weekAttr) {
       ${kpi(checked ? 'hist-ck-in' : '', checked, `${pluralRu(checked, 'смена проверена', 'смены проверены', 'смен проверено')}`, `${sum.pts} ${pluralRu(sum.pts, 'пункт', 'пункта', 'пунктов')}`)}
       ${kpi(clean ? 'hist-ck-ok' : '', clean, 'без отклонений', !clean ? (checked ? 'все проверенные — с отклонениями' : 'нет проверенных смен') : sum.partial ? `из них ${sum.partial} частично` : 'всё в норме')}
       ${kpi(sum.fail ? 'hist-ck-fail' : '', sum.fail, 'с отклонениями', `${sum.ptsFail} ${pluralRu(sum.ptsFail, 'пункт', 'пункта', 'пунктов')} не в норме`)}
-      ${kpi(sum.missed ? 'hist-ck-warn' : '', sum.missed, 'пропущено', sum.missed ? 'наведите — какие' : 'пропусков нет', missedList.join('\n'))}
+      ${kpi(sum.missed ? 'hist-ck-warn' : '', sum.missed, 'пропущено', sum.missed ? (sum.late ? `${sum.late} ${pluralRu(sum.late, 'пункт закрыт', 'пункта закрыто', 'пунктов закрыто')} позже · наведите — какие` : 'наведите — какие') : 'пропусков нет', missedList.join('\n'))}
     </div>
     <div class="hist-cw">
       <span></span>

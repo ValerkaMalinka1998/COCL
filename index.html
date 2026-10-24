@@ -1209,6 +1209,15 @@
       </div>
 
       <div class="editor-panel-actions">
+        <button class="btn btn-secondary btn-icon-text" id="schDowntimeBtn" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="10" y1="15" x2="10" y2="9"/>
+            <line x1="14" y1="15" x2="14" y2="9"/>
+          </svg>
+          <span>Простой</span>
+        </button>
+
         <button class="btn btn-primary btn-icon-text" id="schAddStandardsBtn" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"/>
@@ -2396,6 +2405,46 @@
     </div>
   </div>
 </div>
+<!-- ======================= МОДАЛЬНОЕ ОКНО: ПРОСТОЙ ЛИНИИ ======================= -->
+<div class="modal-overlay" id="schDowntimeModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="schDowntimeTitle">Простой линии</h3>
+      <button class="modal-close" id="schDowntimeClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="sch-dt-form">
+        <div class="field">
+          <label class="required">С</label>
+          <div class="sch-dt-when">
+            <input type="date" id="schDtFrom">
+            <select id="schDtFromShift"><option value="day">день</option><option value="night">ночь</option></select>
+          </div>
+        </div>
+        <div class="field">
+          <label>По</label>
+          <div class="sch-dt-when">
+            <input type="date" id="schDtTo">
+            <select id="schDtToShift"><option value="day">день</option><option value="night" selected>ночь</option></select>
+          </div>
+          <label class="sch-dt-open"><input type="checkbox" id="schDtOpen"> до запуска</label>
+        </div>
+        <div class="field">
+          <label>Причина <span class="sch-dt-optional">необязательно</span></label>
+          <select id="schDtReason"></select>
+          <input type="text" id="schDtNote" placeholder="Какая причина" autocomplete="off" hidden>
+        </div>
+        <div class="sch-dt-hint" id="schDtHint"></div>
+      </div>
+      <div class="sch-dt-list-title">Простои линии</div>
+      <div id="schDtList" class="sch-dt-list"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="schDowntimeCancel">Закрыть</button>
+      <button class="btn btn-primary" id="schDowntimeSave">Сохранить простой</button>
+    </div>
+  </div>
+</div>
 <!-- ======================= МОДАЛЬНОЕ ОКНО: ПРОВЕРКА ФОТО ======================= -->
 <div class="modal-overlay" id="checkPhotosModal">
   <div class="modal modal-wide">
@@ -2465,6 +2514,8 @@
 <script src="js/data/workshops.js"></script>
 <script src="js/data/catalog.js"></script>
 <script src="js/data/schedule.js"></script>
+<script src="js/data/downtime.js"></script>
+<script src="js/data/debt.js"></script>
 <script src="js/data/changelog.js"></script>
 <script src="js/data/line-brand.js"></script>
 <script src="js/data/comments.js"></script>
@@ -2512,6 +2563,7 @@
 <script src="js/views/standard-page/standard-page-extra.js"></script>
 <script src="js/views/schedule/schedule.js"></script>
 <script src="js/views/schedule/schedule-add.js"></script>
+<script src="js/views/schedule/schedule-downtime.js"></script>
 <script src="js/views/settings/settings-shell.js"></script>
 <script src="js/views/settings/structure-tree.js"></script>
 <script src="js/views/settings/shifts.js"></script>

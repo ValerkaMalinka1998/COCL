@@ -71,28 +71,33 @@ function dashLines() {
 
 /* Показатели Чек-листа CL линии за смены: выполнение и пропуски */
 function dashClMetrics(line, slots, includeCurrent) {
-  const rows = histClRows(line);
-  const idx = histClIndex(line);
+  const rows = clLineRows(line);
   const cur = getCurrentShiftPeriod();
-  const m = { planned: 0, done: 0, fail: 0, missed: [], hasPlan: false };
+  const m = { planned: 0, done: 0, fail: 0, late: 0, missed: [], hasPlan: false };
+  if (!slots.length) return m;
+  const dates = slots.map(s => s.date).sort();
+  const tally = clTallyIndex(line, dates[0], dates[dates.length - 1], rows);
   slots.forEach(s => {
     const isNow = s.date === cur.date && s.shift === cur.shiftType;
     if (!isNow && !isShiftPast(s.date, s.shift)) return;
     if (isNow && !includeCurrent) return;
     const letter = getShiftsForDate(s.date)[s.shift];
-    let planned = 0, done = 0;
+    let planned = 0, done = 0, late = 0;
     rows.forEach(({ row }) => {
-      const res = idx.get(`${s.date}|${letter}|${row.id}`);
-      if (!histIsPlanned(row, line, s.date, s.shift) && !res) return;
+      const k = tally.get(`${s.date}|${s.shift}|${row.id}`);
+      if (!k) return;
       planned++;
-      if (res && (res.it.status === 'OK' || res.it.status === 'FAIL')) done++;
-      if (res && res.it.status === 'FAIL') m.fail++;
+      if (k === 'OK' || k === 'FAIL' || k === 'late') done++;
+      if (k === 'late') late++;
+      if (k === 'FAIL') m.fail++;
     });
     if (!planned) return;
     m.hasPlan = true;
     m.planned += planned;
     m.done += done;
-    if (!done && !isNow) m.missed.push({ ...s, letter });
+    m.late += late;
+    // Закрытое позже — выполнено, но смена всё равно пропущена (считается один раз — здесь)
+    if (done === late && !isNow) m.missed.push({ ...s, letter });
   });
   return m;
 }
@@ -108,11 +113,11 @@ function dashSummary(lines, slots) {
   const includeCurrent = dashState.period === 'shift';
   const lineSet = new Set(lines.map(x => x.line));
   const perLine = {};
-  let planned = 0, done = 0, missed = 0;
+  let planned = 0, done = 0, missed = 0, late = 0;
   lines.forEach(x => {
     const m = dashClMetrics(x.line, slots, includeCurrent);
     perLine[x.line] = { ...m, fails: 0 };
-    planned += m.planned; done += m.done; missed += m.missed.length;
+    planned += m.planned; done += m.done; missed += m.missed.length; late += m.late;
   });
   const recs = dashRecords(slots, lineSet);
   let ok = 0, fail = 0;
@@ -132,7 +137,7 @@ function dashSummary(lines, slots) {
     perLine, recs,
     compliance: planned ? Math.round(done / planned * 100) : null,
     okPct: ok + fail ? Math.round(ok / (ok + fail) * 100) : null,
-    fail, missed,
+    fail, missed, late,
     repeats: Object.values(rep).filter(r => r.n >= 2).sort((a, b) => b.n - a.n)
   };
 }
@@ -305,12 +310,15 @@ function dashTopHtml(sum) {
 function dashNowLine(line) {
   const cur = getCurrentShiftPeriod();
   const letter = getShiftsForDate(cur.date)[cur.shiftType];
-  const idx = histClIndex(line);
+  const idx = clResultIndex(line);
+  const rows = clLineRows(line);
+  const tally = clTallyIndex(line, cur.date, cur.date, rows, idx);
   const m = { line, planned: 0, done: 0, fail: 0, late: 0, rows: [] };
 
-  histClRows(line).forEach(({ row, isElec }) => {
+  rows.forEach(({ row, isElec }) => {
     const res = idx.get(`${cur.date}|${letter}|${row.id}`);
-    if (!histIsPlanned(row, line, cur.date, cur.shiftType) && !res) return;
+    // Долг с прошлых смен — в работе текущей смены; закрытый в норме долг зачтён в смене пропуска
+    if (!tally.has(`${cur.date}|${cur.shiftType}|${row.id}`)) return;
     const status = res ? res.it.status : 'due';
     m.planned++;
     if (status === 'OK' || status === 'FAIL') m.done++;
@@ -505,7 +513,7 @@ function dashKpisHtml(sum, prev) {
       <span>выполнение расписания CL</span>${dashDelta(sum.compliance, prev.compliance, true, '%')}</div>
     <div class="dash-kpi"><b>${sum.okPct == null ? '—' : sum.okPct + '%'}</b><span>пунктов в норме</span>${dashDelta(sum.okPct, prev.okPct, true, '%')}</div>
     <div class="dash-kpi"><b class="${sum.fail ? 'hist-c-fail' : ''}">${sum.fail}</b><span>${pluralRu(sum.fail, 'отклонение', 'отклонения', 'отклонений')}</span>${dashDelta(sum.fail, prev.fail, false)}</div>
-    <div class="dash-kpi"><b class="${sum.missed ? 'hist-c-warn' : ''}">${sum.missed}</b><span>пропущенных смен</span>${dashDelta(sum.missed, prev.missed, false)}</div>
+    <div class="dash-kpi"><b class="${sum.missed ? 'hist-c-warn' : ''}">${sum.missed}</b><span>пропущенных смен${sum.late ? ` · ${sum.late} ${pluralRu(sum.late, 'пункт закрыт', 'пункта закрыто', 'пунктов закрыто')} позже` : ''}</span>${dashDelta(sum.missed, prev.missed, false)}</div>
     <div class="dash-kpi"><b class="${sum.repeats.length ? 'hist-c-fail' : ''}">${sum.repeats.length}</b><span>повторяющихся отклонений</span></div>
   </div>`;
 }
@@ -607,7 +615,7 @@ function renderDashboardLine() {
   const m = sum.perLine[line];
   // Состояние стандартов
   const weekStart = getSchWeekStart(0);
-  const rows = histClRows(line);
+  const rows = clLineRows(line);
   const entries = histStdEntries(line);
   let inMech = 0, inElec = 0, noPoints = 0;
   rows.forEach(({ row, isElec }) => {
@@ -623,15 +631,16 @@ function renderDashboardLine() {
   // Проблемные стандарты
   const problems = [];
   sum.repeats.forEach(r => problems.push({ id: r.it.standardId, it: r.it, tag: `×${r.n}`, cls: 'fail', why: `${r.n} откл. за период` }));
-  const idx = histClIndex(line);
   const cur = getCurrentShiftPeriod();
+  const dates = slots.map(s => s.date).sort();
+  const tally = dates.length ? clTallyIndex(line, dates[0], dates[dates.length - 1], rows) : new Map();
   rows.forEach(({ row }) => {
     if (problems.some(p => p.id === row.id)) return;
     let miss = 0;
     slots.forEach(s => {
       if (!isShiftPast(s.date, s.shift) || (s.date === cur.date && s.shift === cur.shiftType)) return;
-      const letter = getShiftsForDate(s.date)[s.shift];
-      if (histIsPlanned(row, line, s.date, s.shift) && !idx.has(`${s.date}|${letter}|${row.id}`)) miss++;
+      const k = tally.get(`${s.date}|${s.shift}|${row.id}`);
+      if (k === 'missed' || k === 'late') miss++;
     });
     if (miss >= 2) problems.push({ id: row.id, it: { oplNumber: row.oplNumber, title: row.title || row.paramName }, tag: 'пропуски', cls: 'warn', why: `пропущен ${miss} ${pluralRu(miss, 'смену', 'смены', 'смен')}` });
   });

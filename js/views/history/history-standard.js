@@ -52,16 +52,13 @@ function histStdData() {
     .map(e => ({ ...e, s: histShift(e.h), pts: histItemPoints(e.h, e.it) }));
 
   // Пропуски по расписанию
+  // Пропуск считается один раз — в смене пропуска (и если закрыт позже)
   let missed = 0;
-  const idx = histClIndex(histStd.line);
-  for (let d = fromDate; d <= cur.date; d = addDaysISO(d, 1)) {
-    const letters = getShiftsForDate(d);
-    ['day', 'night'].forEach(shift => {
-      if (!isShiftPast(d, shift)) return;
-      if (!histIsPlanned(row, histStd.line, d, shift)) return;
-      if (!idx.has(`${d}|${letters[shift]}|${row.id}`)) missed++;
-    });
-  }
+  const tally = clTallyIndex(histStd.line, fromDate, cur.date, [{ row, isElec }]);
+  tally.forEach((k, key) => {
+    const [d, shift] = key.split('|');
+    if (isShiftPast(d, shift) && (k === 'missed' || k === 'late')) missed++;
+  });
   return { row, isElec, entries, missed, fromDate };
 }
 
