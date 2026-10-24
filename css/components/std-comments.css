@@ -1,159 +1,160 @@
 /* ============================================================ */
-/* === КОММЕНТАРИИ К СТАНДАРТУ / E-PARAM — вид ленты сообщений  */
+/* === КОММЕНТАРИИ К СТАНДАРТУ / E-PARAM ====================== */
 /* ============================================================ */
+/* Сверху — причина кнопкой + текст; ниже — таблица замечаний. */
 
-/* --- Поле ввода с кнопкой «отправить» внутри --- */
-.stdc-form { margin-bottom: 18px; }
-.stdc-composer {
-  display: flex;
-  align-items: flex-end;
+/* --- Цвета причин --- */
+.tone-red    { --stdc-tone: var(--accent-red); }
+.tone-amber  { --stdc-tone: var(--accent-amber); }
+.tone-purple { --stdc-tone: var(--accent-purple); }
+.tone-cyan   { --stdc-tone: var(--accent-cyan); }
+.tone-grey   { --stdc-tone: var(--text-second); }
+
+/* --- Форма нового замечания --- */
+.stdc-form { margin-bottom: 20px; }
+.stdc-q { margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--text-main); }
+.stdc-reasons {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
-  padding: 8px 8px 8px 14px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--bg-input);
-  transition: border-color .15s, box-shadow .15s;
+  margin-bottom: 10px;
 }
-.stdc-composer:focus-within {
-  border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-cyan) 18%, transparent);
+.stdc-reason-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 6px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
 }
+.stdc-reason-btn svg { color: var(--stdc-tone); }
+.stdc-reason-btn:hover { border-color: var(--border-hi); background: var(--bg-hover); }
+.stdc-reason-btn:focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 2px; }
+.stdc-reason-btn.on {
+  border-color: var(--stdc-tone);
+  background: color-mix(in srgb, var(--stdc-tone) 9%, var(--bg-card));
+}
+.stdc-new { display: flex; gap: 8px; align-items: stretch; }
 .stdc-input,
 .stdc-reply-input {
   flex: 1;
-  min-height: 22px;
-  padding: 6px 0;
-  border: none;
-  background: transparent;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
   color: var(--text-main);
   font: inherit;
   line-height: 1.45;
   resize: vertical;
 }
 .stdc-input:focus,
-.stdc-reply-input:focus { outline: none; }
-.stdc-send {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 10px;
-  background: var(--accent-cyan);
-  color: var(--on-accent);
-  cursor: pointer;
-  transition: filter .15s, transform .1s;
-}
-.stdc-send:hover { filter: brightness(1.1); }
-.stdc-send:active { transform: scale(.94); }
-.stdc-cancel {
-  border: none;
-  background: none;
-  color: var(--text-dim);
+.stdc-reply-input:focus { outline: none; border-color: var(--accent-cyan); }
+
+/* --- Кнопки --- */
+.stdc-btn {
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg-card);
+  color: var(--text-main);
   font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  padding: 0 4px 10px;
-}
-.stdc-cancel:hover { color: var(--text-main); }
-.stdc-hint { margin: 4px 4px 0; font-size: 11px; color: var(--text-dim); text-align: right; }
-
-/* --- Лента --- */
-.stdc-list { display: flex; flex-direction: column; gap: 4px; }
-.stdc-item {
-  padding: 10px 6px 8px;
-  border-bottom: 1px solid var(--border);
-}
-.stdc-item:last-child { border-bottom: none; }
-.stdc-msg,
-.stdc-reply { display: flex; gap: 10px; align-items: flex-start; }
-.stdc-reply { margin: 8px 0 0 44px; }
-
-.stdc-avatar {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--accent-cyan) 16%, transparent);
-  color: var(--accent-cyan);
-  font-weight: 700;
-  font-size: 14px;
-}
-.stdc-avatar-an {
-  width: 28px;
-  height: 28px;
-  font-size: 12px;
-  background: color-mix(in srgb, var(--accent-purple) 16%, transparent);
-  color: var(--accent-purple);
-}
-
-.stdc-bubble {
-  min-width: 0;
-  max-width: 760px;
-  padding: 8px 12px 10px;
-  border-radius: 4px 14px 14px 14px;
-  background: var(--bg-hover);
-}
-.stdc-bubble-an {
-  background: color-mix(in srgb, var(--accent-purple) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent-purple) 20%, transparent);
-}
-.stdc-meta {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 3px;
-  font-size: 12px;
-  color: var(--text-second);
-}
-.stdc-meta b { color: var(--text-main); font-weight: 600; }
-.stdc-bubble-an .stdc-meta b { color: var(--accent-purple); }
-.stdc-when { color: var(--text-dim); }
-.stdc-text { white-space: pre-wrap; word-break: break-word; color: var(--text-main); line-height: 1.5; }
-
-.stdc-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 1px 8px;
-  border-radius: 999px;
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 600;
-}
-.stdc-status.new  { background: color-mix(in srgb, var(--accent-cyan) 15%, transparent); color: var(--accent-cyan); }
-.stdc-status.done { background: color-mix(in srgb, var(--accent-green) 15%, transparent); color: var(--accent-green); }
-.stdc-item.is-done .stdc-bubble:not(.stdc-bubble-an) { opacity: .75; }
-
-/* --- Действия: текстовые кнопки под сообщением --- */
-.stdc-actions { display: flex; gap: 2px; margin: 4px 0 0 44px; }
-.stdc-act {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 8px;
-  border: none;
-  border-radius: 6px;
-  background: none;
-  color: var(--text-second);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
 }
-.stdc-act:hover { background: var(--bg-hover); color: var(--text-main); }
-.stdc-act-done { color: var(--accent-green); }
-.stdc-act-done:hover { color: var(--accent-green); }
-.stdc-act-icon { margin-left: auto; }
-.stdc-act-icon span { display: none; }
-.stdc-act-icon:hover { color: var(--accent-red); }
-.stdc-reply-form { margin: 6px 0 0 44px; }
-.stdc-composer-sm { padding: 4px 4px 4px 12px; border-radius: 12px; }
-.stdc-composer-sm .stdc-send { width: 30px; height: 30px; border-radius: 8px; background: var(--accent-purple); }
+.stdc-btn:hover { background: var(--bg-hover); }
+.stdc-btn-primary { border-color: var(--accent-cyan); background: var(--accent-cyan); color: var(--on-accent); }
+.stdc-btn-primary:hover { background: var(--accent-cyan); filter: brightness(1.08); }
+.stdc-btn-ok { border-color: var(--accent-green); background: var(--accent-green); color: var(--on-accent); }
+.stdc-btn-ok:hover { background: var(--accent-green); filter: brightness(1.08); }
+.stdc-btn-del { padding: 0 7px; color: var(--text-dim); }
+.stdc-btn-del:hover { color: var(--accent-red); }
+.stdc-send { height: auto; padding: 0 18px; font-size: 14px; }
+
+/* --- Таблица замечаний --- */
+.stdc-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.stdc-table th {
+  padding: 6px 10px;
+  border-bottom: 2px solid var(--border);
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.stdc-table td { padding: 12px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.stdc-c-ic { width: 56px; }
+.stdc-c-shift { width: 110px; }
+.stdc-c-status { width: 120px; }
+.stdc-c-act { width: 1%; }
+
+.stdc-ic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--stdc-tone) 13%, transparent);
+  color: var(--stdc-tone);
+}
+.stdc-reason { font-weight: 700; color: var(--text-main); }
+.stdc-text { margin-top: 2px; white-space: pre-wrap; word-break: break-word; line-height: 1.5; color: var(--text-main); max-width: 70ch; }
+.stdc-reply {
+  margin-top: 6px;
+  padding-left: 10px;
+  border-left: 2px solid var(--accent-purple);
+  font-size: 13.5px;
+  color: var(--text-main);
+  white-space: pre-wrap;
+}
+.stdc-reply b { color: var(--accent-purple); }
+.stdc-reply-form { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; max-width: 70ch; }
+.stdc-form-btns { display: flex; justify-content: flex-end; gap: 6px; }
+
+.stdc-sh {
+  display: inline-block;
+  min-width: 22px;
+  margin-bottom: 3px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+.stdc-sh.d { background: color-mix(in srgb, var(--accent-cyan) 15%, transparent); color: var(--accent-cyan); }
+.stdc-sh.n { background: color-mix(in srgb, var(--accent-purple) 15%, transparent); color: var(--accent-purple); }
+.stdc-when { display: block; font-size: 12px; line-height: 1.4; color: var(--text-second); }
+
+.stdc-status { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.stdc-status.new  { background: color-mix(in srgb, var(--accent-cyan) 14%, transparent); color: var(--accent-cyan); }
+.stdc-status.done { background: color-mix(in srgb, var(--accent-green) 14%, transparent); color: var(--accent-green); }
+.stdc-acts { display: flex; gap: 6px; justify-content: flex-end; }
+
+.stdc-row.is-done .stdc-text,
+.stdc-row.is-done .stdc-reason { color: var(--text-second); }
+.stdc-row.is-done .stdc-ic { opacity: .55; }
 
 .stdc-badge-new { background: var(--accent-cyan) !important; color: var(--on-accent) !important; }
+
+/* --- Узкий экран --- */
+@media (max-width: 760px) {
+  .stdc-reasons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stdc-table thead { display: none; }
+  .stdc-table tr { display: grid; grid-template-columns: 56px 1fr; border-bottom: 1px solid var(--border); padding: 8px 0; }
+  .stdc-table td { border: none; padding: 4px 8px; }
+  .stdc-c-ic { grid-row: span 4; }
+  .stdc-c-shift, .stdc-c-status, .stdc-c-act { width: auto; }
+  .stdc-acts { justify-content: flex-start; }
+}

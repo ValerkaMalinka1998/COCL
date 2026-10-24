@@ -2,7 +2,7 @@
 /* === КОММЕНТАРИИ К СТАНДАРТАМ И E-PARAM ===================== */
 /* ============================================================ */
 /* Замечания оператора к стандарту / параметру и ответ аналитика.
-   Запись: { id, kind: 'mech'|'elec', refId, line, text, author,
+   Запись: { id, kind: 'mech'|'elec', refId, line, reason, text, author,
              createdAt, shiftDate, shiftType, shiftLetter,
              status: 'new'|'done', reply, doneAt } */
 
@@ -22,7 +22,7 @@ function countOpenStdComments(kind, refId) {
   return getStdCommentsFor(kind, refId).filter(c => c.status !== 'done').length;
 }
 
-function addStdComment(kind, row, text) {
+function addStdComment(kind, row, text, reason) {
   const period = getCurrentShiftPeriod();
   const letters = getShiftsForDate(period.date) || {};
   const entry = {
@@ -30,6 +30,7 @@ function addStdComment(kind, row, text) {
     kind,
     refId: row.id,
     line: row.line || '',
+    reason: reason || 'other',   // ключ из STD_COMMENT_REASONS
     text: String(text || '').trim(),
     author: '—',                 // до автологина автора не знаем
     createdAt: new Date().toISOString(),
