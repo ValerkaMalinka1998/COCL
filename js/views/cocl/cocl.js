@@ -706,6 +706,24 @@ function renderChecklist(items) {
     const meta = [st.oplNumber, st.node, block && block.brand ? 'бренд ' + block.brand : ''].filter(Boolean)
       .map(escapeHtml).join(' · ');
     const timeHtml = cilDurChip(cilRowDurationSec(st), 'cocl-row-time');
+    const eyeBtn = `<button type="button" class="cocl-acc-view-btn" data-view-btn data-std-id="${escapeAttr(st.id)}" title="Посмотреть стандарт целиком">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>`;
+
+    /* Правая часть (во время проверки): инструмент, время, как проверять, фото */
+    const toolHtml = st.tool
+      ? `<span class="cocl-chip-tool" title="Инструмент"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>${escapeHtml(st.tool)}</span>`
+      : '';
+    const howHtml = st.controlDescription
+      ? `<div class="cocl-how"><div class="cocl-how-t">Как проверять</div><div class="cocl-how-b">${escapeHtml(st.controlDescription)}</div></div>`
+      : '';
+    const photosHtml = typeof photoSliderHtml === 'function' ? photoSliderHtml(st) : '';
+    const coHtml = (type === 'ChangeOver' && $('#brandFrom').value && brandTo)
+      ? `<div class="cocl-detail-co">Смена сорта: <b>${escapeHtml($('#brandFrom').value)}</b> → <b>${escapeHtml(brandTo)}</b></div>`
+      : '';
+    const detMeta = [st.machine, st.oplNumber, st.node, block && block.brand ? 'бренд ' + block.brand : ''].filter(Boolean)
+      .map(escapeHtml).join(' · ');
+    const arrow = (d) => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="${d ? '9 18 15 12 9 6' : '15 18 9 12 15 6'}"/></svg>`;
 
     return `
       <div class="cocl-acc-item cocl-row" data-std-id="${st.id}" data-status="unchecked">
@@ -717,15 +735,34 @@ function renderChecklist(items) {
           </div>
           <span class="cocl-row-norm">${escapeHtml(normText)}</span>
           ${timeHtml}
-          <div class="cocl-row-tools">
-            <button type="button" class="cocl-acc-comment-btn" data-comment-btn title="Комментарий">${cmtIcon(16, true)}</button>
-            <button type="button" class="cocl-acc-view-btn" data-view-btn data-std-id="${escapeAttr(st.id)}" title="Посмотреть стандарт">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
+          <div class="cocl-row-tools">${eyeBtn}</div>
+        </div>
+        <div class="cocl-detail">
+          <div class="cocl-detail-head">
+            <div class="cocl-detail-ttl">
+              <div class="cocl-detail-meta">${detMeta}</div>
+              <div class="cocl-detail-name">${escapeHtml(st.title || '—')}</div>
+            </div>
+            <div class="cocl-detail-chips">${toolHtml}${timeHtml}</div>
+            <div class="cocl-row-tools">
+              <button type="button" class="cocl-acc-comment-btn" data-comment-btn title="Комментарий">${cmtIcon(16, true)}</button>
+              ${eyeBtn}
+            </div>
+          </div>
+          ${coHtml}
+          <div class="cocl-detail-body${photosHtml ? ' has-photos' : ''}">
+            <div class="cocl-detail-col">
+              ${ans ? `<div class="cocl-row-input">${ans}</div>` : ''}
+              ${howHtml}
+              <div class="comment-preview" style="display:none" data-comment-preview></div>
+            </div>
+            ${photosHtml ? `<div class="cocl-detail-photos" data-std-photos="${escapeAttr(st.id)}">${photosHtml}</div>` : ''}
+          </div>
+          <div class="cocl-detail-nav">
+            <button type="button" class="cocl-nav-btn" data-cocl-nav="-1">${arrow(0)}Предыдущий</button>
+            <button type="button" class="cocl-nav-btn primary" data-cocl-nav="1">Следующий${arrow(1)}</button>
           </div>
         </div>
-        ${ans ? `<div class="cocl-row-input">${ans}</div>` : ''}
-        <div class="comment-preview" style="display:none" data-comment-preview></div>
       </div>`;
   };
 
@@ -736,6 +773,11 @@ function renderChecklist(items) {
     </div>`).join('');
 
   bindCoclAccordionEvents();
+  c.querySelectorAll('[data-std-photos]').forEach(box => {
+    const st = items.find(x => x.id === box.dataset.stdPhotos);
+    if (st) bindPhotoSlider(box, st);
+  });
+  if (coclState.checking) coclSelectItem(c.querySelector('.cocl-acc-item'), false);
   updateProgress();
 }
 
@@ -768,6 +810,7 @@ function bindCoclAccordionEvents() {
       const val = e.target.value;
       updateCoclItemStatus(item, val === 'OK' ? 'ok' : 'fail');
       updateProgress();
+      if (val === 'OK') coclAdvanceLater(item);
     });
   });
 
@@ -834,8 +877,10 @@ function bindCoclAccordionEvents() {
         statusEl.textContent = inp.value ? (inp.value === 'ОК' ? '✓' : '✕') : '';
         statusEl.className = 'checklist-point-status' + (inp.value ? (inp.value === 'ОК' ? ' ok' : ' fail') : '');
       }
-      updateCoclItemStatusFromPoints(cell.closest('.cocl-acc-item'));
+      const mItem = cell.closest('.cocl-acc-item');
+      updateCoclItemStatusFromPoints(mItem);
       updateProgress();
+      if (mItem.dataset.status === 'ok' && inp.value) coclAdvanceLater(mItem);
     });
   });
 
@@ -844,9 +889,11 @@ function bindCoclAccordionEvents() {
     inp.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter') return;
       e.preventDefault();
-      const all = [...c.querySelectorAll('input.checklist-point-input[type="text"]')];
+      const item = inp.closest('.cocl-acc-item');
+      const all = [...item.querySelectorAll('input.checklist-point-input[type="text"]')];
       const next = all[all.indexOf(inp) + 1];
       if (next) next.focus();
+      else coclStep(item, 1);
     });
   });
 
@@ -858,6 +905,44 @@ function bindCoclAccordionEvents() {
       openCommentModal(item);
     });
   });
+
+  // --- Список слева: выбор стандарта; кнопки «Предыдущий / Следующий» ---
+  c.querySelectorAll('.cocl-row-main').forEach(main => {
+    main.addEventListener('click', (e) => {
+      if (!coclState.checking || e.target.closest('button')) return;
+      coclSelectItem(main.closest('.cocl-acc-item'), true);
+    });
+  });
+  c.querySelectorAll('[data-cocl-nav]').forEach(btn => {
+    btn.addEventListener('click', () => coclStep(btn.closest('.cocl-acc-item'), +btn.dataset.coclNav));
+  });
+}
+
+/* Показать стандарт справа. focus — перейти к первому полю ввода */
+function coclSelectItem(item, focus) {
+  const c = $('#checklistContainer');
+  if (!c || !item) return;
+  c.querySelectorAll('.cocl-acc-item.is-active').forEach(x => x.classList.remove('is-active'));
+  item.classList.add('is-active');
+  item.querySelector('.cocl-row-main')?.scrollIntoView({ block: 'nearest' });
+  if (focus) {
+    const f = item.querySelector('.cocl-detail input[type="text"].checklist-point-input, .cocl-detail input[data-ans]');
+    if (f) f.focus({ preventScroll: true });
+  }
+}
+
+/* Соседний стандарт списка (dir = 1 / -1) */
+function coclStep(item, dir) {
+  const all = [...$$('#checklistContainer .cocl-acc-item')];
+  const next = all[all.indexOf(item) + dir];
+  if (next) coclSelectItem(next, true);
+}
+
+/* После «ОК» — к следующему, если оператор ещё на этом стандарте */
+function coclAdvanceLater(item) {
+  setTimeout(() => {
+    if (item.classList.contains('is-active') && item.dataset.status === 'ok') coclStep(item, 1);
+  }, 350);
 }
 
 /** Обновить статус свёрнутой строки по явному ответу (radio ОК/Не ОК) */

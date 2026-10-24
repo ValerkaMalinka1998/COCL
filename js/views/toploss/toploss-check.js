@@ -11,6 +11,7 @@ const tlCheck = {
   lossIds: [],
   rows: [],          // [{ row, isElec, losses, points: [{ label, norm, value }] | null }]
   answers: {},       // id → { status, values: [], comment }
+  active: '',        // id выбранной строки (показана справа)
   brand: ''
 };
 
@@ -77,6 +78,7 @@ function buildTopLossChecklist(lossIds) {
   tlCheck.lossIds = lossIds.slice();
   tlCheck.rows = rows.map(r => ({ ...r, points: tlCheckPoints(r.row, r.isElec, tlCheck.brand) }));
   tlCheck.answers = {};
+  tlCheck.active = tlCheck.rows[0].row.id;
 
   renderTopLossChecklist();
   $('#tlSelectView').style.display = 'none';
@@ -111,23 +113,51 @@ function renderTopLossChecklist() {
       : `<div class="tl3-okno">
           <button type="button" class="tl3-ok ${st === 'OK' ? 'on' : ''}" data-tl-ans="${escapeAttr(row.id)}" data-v="OK">✓ ОК</button>
           <button type="button" class="tl3-no ${st === 'FAIL' ? 'on' : ''}" data-tl-ans="${escapeAttr(row.id)}" data-v="FAIL">✕ Не ОК</button>
-        </div>
-        ${!isElec && row.controlDescription ? `<div class="tl3-how">${escapeHtml(row.controlDescription)}</div>` : ''}
-        ${isElec && row.normText ? `<div class="tl3-how">${escapeHtml(row.normText)}</div>` : ''}`;
+        </div>`;
+    const howText = isElec ? '' : (row.controlDescription || '');
+    const howHtml = howText
+      ? `<div class="cocl-how"><div class="cocl-how-t">Как проверять</div><div class="cocl-how-b">${escapeHtml(howText)}</div></div>`
+      : (isElec && row.normText ? `<div class="cocl-how"><div class="cocl-how-t">Норма</div><div class="cocl-how-b">${escapeHtml(row.normText)}</div></div>` : '');
+    const photosHtml = !isElec && typeof photoSliderHtml === 'function' ? photoSliderHtml(row) : '';
+    const toolHtml = !isElec && row.tool
+      ? `<span class="cocl-chip-tool" title="Инструмент"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>${escapeHtml(row.tool)}</span>`
+      : '';
+    const detMeta = [row.machine, row.nodePart, row.node, row.oplNumber].filter(Boolean).map(escapeHtml).join(' · ');
+    const arrow = (d) => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="${d ? '9 18 15 12 9 6' : '15 18 9 12 15 6'}"/></svg>`;
     return `
-      <div class="tl3-item ${st === 'OK' ? 'done-ok' : st === 'FAIL' ? 'done-fail' : ''}" data-std-id="${escapeAttr(row.id)}" data-comment="${escapeAttr(a.comment || '')}">
-        <span class="tl3-num">${st === 'OK' ? '✓' : st === 'FAIL' ? '✕' : i + 1}</span>
-        <div class="tl3-main">
-          <div class="tl3-nm">${isElec ? '<span class="tl2-kind tl2-kind-el">E-Param</span> ' : ''}${row.oplNumber ? `<span class="tl2-opl">${escapeHtml(row.oplNumber)}</span> · ` : ''}${escapeHtml(title || '—')}</div>
-          <div class="tl2-sub">${escapeHtml([row.machine, row.nodePart, row.node].filter(Boolean).join(' · '))}${lossNames ? ` · <span class="tl3-loss">${escapeHtml(lossNames)}</span>` : ''}${cilDurChip(cilRowDurationSec(row), 'tl3-time')}</div>
-          ${body}
-          <div class="comment-preview" data-comment-preview style="${a.comment ? '' : 'display:none'}">${a.comment ? cmtLine(a.comment) : ''}</div>
+      <div class="tl3-item ${st === 'OK' ? 'done-ok' : st === 'FAIL' ? 'done-fail' : ''}${tlCheck.active === row.id ? ' is-active' : ''}" data-std-id="${escapeAttr(row.id)}" data-comment="${escapeAttr(a.comment || '')}">
+        <div class="tl3-entry" data-tl-pick="${escapeAttr(row.id)}">
+          <span class="tl3-num">${st === 'OK' ? '✓' : st === 'FAIL' ? '✕' : i + 1}</span>
+          <div class="tl3-main">
+            <div class="tl3-nm">${isElec ? '<span class="tl2-kind tl2-kind-el">E-Param</span> ' : ''}${row.oplNumber ? `<span class="tl2-opl">${escapeHtml(row.oplNumber)}</span> · ` : ''}${escapeHtml(title || '—')}</div>
+            <div class="tl2-sub">${escapeHtml([row.machine, row.nodePart, row.node].filter(Boolean).join(' · '))}${lossNames ? ` · <span class="tl3-loss">${escapeHtml(lossNames)}</span>` : ''}</div>
+          </div>
         </div>
-        <div class="tl3-acts">
-          <button type="button" class="tl2-ib ${a.comment ? 'has-comment' : ''}" data-comment-btn data-tl-comment="${escapeAttr(row.id)}" title="Комментарий">
-            ${cmtIcon(16, true)}
-          </button>
-          ${isElec ? '' : `<button type="button" class="tl2-ib" data-tl-view="${escapeAttr(row.id)}" title="Открыть стандарт">${CIL_ICONS.eye}</button>`}
+        <div class="tl3-detail">
+          <div class="cocl-detail-head">
+            <div class="cocl-detail-ttl">
+              <div class="cocl-detail-meta">${isElec ? 'E-Param · ' : ''}${detMeta}</div>
+              <div class="cocl-detail-name">${escapeHtml(title || '—')}</div>
+              ${lossNames ? `<div class="tl3-loss">${escapeHtml(lossNames)}</div>` : ''}
+            </div>
+            <div class="cocl-detail-chips">${toolHtml}${cilDurChip(cilRowDurationSec(row), 'tl3-time')}</div>
+            <div class="cocl-row-tools">
+              <button type="button" class="cocl-acc-comment-btn ${a.comment ? 'has-comment' : ''}" data-comment-btn data-tl-comment="${escapeAttr(row.id)}" title="Комментарий">${cmtIcon(16, true)}</button>
+              ${isElec ? '' : `<button type="button" class="cocl-acc-view-btn" data-view-btn data-tl-view="${escapeAttr(row.id)}" title="Посмотреть стандарт целиком">${CIL_ICONS.eye}</button>`}
+            </div>
+          </div>
+          <div class="cocl-detail-body${photosHtml ? ' has-photos' : ''}">
+            <div class="cocl-detail-col">
+              ${body}
+              ${howHtml}
+              <div class="comment-preview" data-comment-preview style="${a.comment ? '' : 'display:none'}">${a.comment ? cmtLine(a.comment) : ''}</div>
+            </div>
+            ${photosHtml ? `<div class="cocl-detail-photos" data-tl-photos="${escapeAttr(row.id)}">${photosHtml}</div>` : ''}
+          </div>
+          <div class="cocl-detail-nav">
+            <button type="button" class="cocl-nav-btn" data-tl-nav="-1">${arrow(0)}Предыдущий</button>
+            <button type="button" class="cocl-nav-btn primary" data-tl-nav="1">Следующий${arrow(1)}</button>
+          </div>
         </div>
       </div>`;
   }).join('');
@@ -144,9 +174,13 @@ function renderTopLossChecklist() {
       <div class="tl3-chips">${chips}</div>
     </div>
     <div class="tl3-grid">
-      <div class="card tl3-list" id="tlChecklistContainer">${items}</div>
       <aside class="card tl3-side" id="tlCheckSide"></aside>
+      <div class="tl3-list" id="tlChecklistContainer">${items}</div>
     </div>`;
+  container.querySelectorAll('[data-tl-photos]').forEach(box => {
+    const r = tlCheck.rows.find(x => x.row.id === box.dataset.tlPhotos);
+    if (r) bindPhotoSlider(box, r.row);
+  });
   updateTlCheckProgress();
 }
 
@@ -367,7 +401,36 @@ function renderTopLossSummary(record) {
    ОБРАБОТЧИКИ
    ============================================================ */
 
+/* Показать стандарт справа. focus — к первому полю ввода */
+function tlSelectItem(id, focus) {
+  const cont = $('#tlChecklistContainer');
+  const item = cont?.querySelector(`.tl3-item[data-std-id="${CSS.escape(id)}"]`);
+  if (!item) return;
+  tlCheck.active = id;
+  cont.querySelectorAll('.tl3-item.is-active').forEach(x => x.classList.remove('is-active'));
+  item.classList.add('is-active');
+  item.querySelector('.tl3-entry')?.scrollIntoView({ block: 'nearest' });
+  if (focus) item.querySelector('.tl3-detail input[type="text"], .tl3-detail .tl3-okno button')?.focus({ preventScroll: true });
+}
+
+function tlStep(id, dir) {
+  const i = tlCheck.rows.findIndex(x => x.row.id === id);
+  const next = tlCheck.rows[i + dir];
+  if (next) tlSelectItem(next.row.id, true);
+}
+
+/* После «ОК» — к следующему, если оператор ещё на этом стандарте */
+function tlAdvanceLater(id) {
+  setTimeout(() => {
+    if (tlCheck.active === id && tlCheck.answers[id]?.status === 'OK') tlStep(id, 1);
+  }, 350);
+}
+
 $('#tlChecklistView')?.addEventListener('click', (e) => {
+  const pick = e.target.closest('[data-tl-pick]');
+  if (pick) return tlSelectItem(pick.dataset.tlPick, true);
+  const nav = e.target.closest('[data-tl-nav]');
+  if (nav) return tlStep(nav.closest('.tl3-item').dataset.stdId, +nav.dataset.tlNav);
   if (e.target.closest('#tlBackToSelectBtn')) {
     const any = Object.values(tlCheck.answers).some(a => a.status || (a.values || []).some(Boolean));
     if (any && !confirm('Выйти из проверки? Введённые ответы не сохранятся.')) return;
@@ -379,7 +442,9 @@ $('#tlChecklistView')?.addEventListener('click', (e) => {
     const id = ans.dataset.tlAns;
     const a = tlCheck.answers[id] || (tlCheck.answers[id] = {});
     a.status = a.status === ans.dataset.v ? null : ans.dataset.v;
-    return tlCheckRefreshItem(id);
+    tlCheckRefreshItem(id);
+    if (a.status === 'OK') tlAdvanceLater(id);
+    return;
   }
   // Точка-метка: ОК / Не ОК пишется в значения точек, повторный клик снимает ответ
   const mark = e.target.closest('[data-tl-mark]');
@@ -392,12 +457,26 @@ $('#tlChecklistView')?.addEventListener('click', (e) => {
     const pi = Number(mark.dataset.pi);
     a.values[pi] = a.values[pi] === mark.dataset.v ? '' : mark.dataset.v;
     a.status = tlCheckStatusFromValues(r.points, a.values);
-    return tlCheckRefreshItem(id);
+    tlCheckRefreshItem(id);
+    if (a.status === 'OK' && a.values[pi]) tlAdvanceLater(id);
+    return;
   }
   const com = e.target.closest('[data-tl-comment]');
   if (com) return openCommentModal(com.closest('.tl3-item'));
   const view = e.target.closest('[data-tl-view]');
-  if (view && typeof openStandardView === 'function') openStandardView(view.dataset.tlView);
+  if (view && typeof openStandardView === 'function') openStandardView(view.dataset.tlView, { brand: tlCheck.brand || '' });
+});
+
+/* Enter — к следующему полю, после последнего — к следующему стандарту */
+$('#tlChecklistView')?.addEventListener('keydown', (e) => {
+  const inp = e.target.closest('[data-tl-val]');
+  if (!inp || e.key !== 'Enter') return;
+  e.preventDefault();
+  const item = inp.closest('.tl3-item');
+  const all = [...item.querySelectorAll('input[data-tl-val]')];
+  const next = all[all.indexOf(inp) + 1];
+  if (next) next.focus();
+  else tlStep(item.dataset.stdId, 1);
 });
 
 $('#tlChecklistView')?.addEventListener('input', (e) => {
