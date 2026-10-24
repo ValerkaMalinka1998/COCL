@@ -1,0 +1,71 @@
+/* ============================================================ */
+/* === КОММЕНТАРИИ К СТАНДАРТУ / E-PARAM ====================== */
+/* ============================================================ */
+
+.stdc-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.stdc-input,
+.stdc-reply-input {
+  width: 100%;
+  resize: vertical;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-main);
+  font: inherit;
+}
+.stdc-input:focus,
+.stdc-reply-input:focus { outline: none; border-color: var(--accent-cyan); }
+.stdc-form-btns { display: flex; justify-content: flex-end; gap: 8px; }
+
+.stdc-list { display: flex; flex-direction: column; gap: 10px; }
+.stdc-item {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-cyan);
+  border-radius: 8px;
+  background: var(--bg-card);
+}
+.stdc-item.is-done { border-left-color: var(--accent-green); opacity: .8; }
+.stdc-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-second);
+}
+.stdc-status {
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+  color: var(--on-accent);
+}
+.stdc-status.new  { background: var(--accent-cyan); }
+.stdc-status.done { background: var(--accent-green); }
+.stdc-author { margin-left: auto; color: var(--text-dim); }
+.stdc-text { margin: 6px 0; white-space: pre-wrap; color: var(--text-main); }
+.stdc-reply {
+  margin: 6px 0;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--bg-hover);
+  white-space: pre-wrap;
+  color: var(--text-main);
+}
+.stdc-reply-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-purple);
+}
+.stdc-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.stdc-del { margin-left: 4px; }
+.stdc-del:hover { color: var(--accent-red); }
+.stdc-reply-form { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.stdc-badge-new { background: var(--accent-cyan) !important; color: var(--on-accent) !important; }

@@ -123,6 +123,7 @@ function renderEparamPage() {
   renderEparamExtra(p);
   renderEparamHistory(p);
   renderEparamStubs();
+  renderStdComments('elec', epPageState.isNew ? null : p);
   const tabs = $('#epTabs');
   if (tabs) tabs.style.display = epPageState.isNew ? 'none' : '';
   applyEparamMode();
@@ -150,7 +151,7 @@ function renderEparamHistory(p) {
   if (wrap) wrap.innerHTML = changeHistoryHtml(rows);
 }
 
-/* Заглушки вкладок «Ознакомление» и «Комментарии» — как на странице стандарта */
+/* Заглушка вкладки «Ознакомление» — как на странице стандарта */
 function renderEparamStubs() {
   const stub = (id, icon, text) => {
     const wrap = $(id);
@@ -164,9 +165,6 @@ function renderEparamStubs() {
   stub('#epAckTableWrap',
     '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>',
     'Раздел «Ознакомление» в разработке');
-  stub('#epCommentsTableWrap',
-    '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
-    'Раздел «Комментарии» в разработке');
 }
 
 /* Переключение вкладок страницы параметра */
@@ -568,7 +566,7 @@ $('#epTabs')?.addEventListener('click', (e) => {
   if (btn) switchEparamTab(btn.dataset.epTab);
 });
 $('#epAckMarkBtn')?.addEventListener('click', () => showToast('Функция «Ознакомление» в разработке', true));
-$('#epAddCommentBtn')?.addEventListener('click', () => showToast('Функция «Комментарии» в разработке', true));
+$('#epAddCommentBtn')?.addEventListener('click', () => focusStdCommentInput('elec'));
 $('#epPageBackBtn')?.addEventListener('click', () => closeEparamPage(false));
 $('#epPageCancelBtn')?.addEventListener('click', () => closeEparamPage(false));
 $('#epPageEditBtn')?.addEventListener('click', () => {

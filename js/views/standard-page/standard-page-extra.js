@@ -348,16 +348,7 @@ function refreshSvHistory() {
 }
 
 function renderSvCommentsTable(st) {
-  const wrap = $('#svCommentsTableWrap');
-  if (!wrap) return;
-  wrap.innerHTML = `
-    <div class="sv-full-empty-table">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
-      <div>Раздел «Комментарии» в разработке</div>
-    </div>
-  `;
+  renderStdComments('mech', svFullState.isNew ? null : st);
 }
 
 /* ============================================================
@@ -460,9 +451,7 @@ $('#svAckMarkBtn')?.addEventListener('click', () => {
   showToast('Функция «Ознакомление» в разработке', true);
 });
 
-$('#svAddCommentBtn')?.addEventListener('click', () => {
-  showToast('Функция «Комментарии» в разработке', true);
-});
+$('#svAddCommentBtn')?.addEventListener('click', () => focusStdCommentInput('mech'));
 /* ============================================================
    СОХРАНЕНИЕ СТАНДАРТА ИЗ ПОЛНОЭКРАННОГО ПРОСМОТРА
    ============================================================ */

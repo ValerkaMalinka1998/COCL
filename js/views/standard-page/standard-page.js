@@ -187,11 +187,8 @@ function renderStandardFullView() {
   // --- Бейджи вкладок ---
   const ackCount = Array.isArray(st.acknowledgements) ? st.acknowledgements.length : 0;
   const versionsCount = Array.isArray(st.versions) ? st.versions.length : 0;
-  const commentsCount = Array.isArray(st.comments) ? st.comments.length : 0;
 
-  // Счётчик вкладки «История изменений» ставит renderSvHistoryTable
-  const commentsBadge = $('#svCommentsCount');
-  if (commentsBadge) commentsBadge.textContent = commentsCount;
+  // Счётчики вкладок «История изменений» и «Комментарии» ставят renderSvHistoryTable / renderStdComments
 
   const ackBadge = $('#svAckBadge');
   if (ackBadge) {
