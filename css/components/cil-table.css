@@ -484,11 +484,10 @@ button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentCol
    ЧЕК-ЛИСТ CL: колонка «Когда» (Run / Stop / CIL + время),
    метка «Изм.», прокрутка всей страницей с закреплённой шапкой
    ============================================================ */
-.cil-table.cil-has-when { --cil-zone-w: 92px; --cil-std-w: 300px; --cil-when-w: 104px; --cil-third-w: 112px; }
+.cil-table.cil-has-when { --cil-zone-w: 76px; --cil-std-w: 330px; --cil-when-w: 104px; --cil-third-w: 112px; }
 .cil-c-when { left: calc(var(--cil-zone-w) + var(--cil-std-w)); width: var(--cil-when-w); min-width: var(--cil-when-w); }
 .cil-table tbody td.cil-c-when { padding: 6px 8px; }
 .cil-table tbody td.cil-c-when .cil-tag { display: flex; justify-content: center; margin: 2px auto; width: max-content; }
-.cil-c-zone small.cil-opl { margin-top: 2px; font-size: 10.5px; color: var(--accent-cyan); }
 .cil-tag-chg { color: var(--accent-amber); background: color-mix(in srgb, var(--accent-amber) 15%, transparent); }
 .lg .cil-tag-chg { font-style: normal; margin-right: 4px; }
 

@@ -304,7 +304,7 @@ function renderClMatrix() {
   html += cilHeadHtml(dateByDayIdx, {
     activeDate: isCurrentWeek ? clState.activeDate : '',
     activeShift: clState.shiftType,
-    infoHeads: `<th class="cil-c-zone" rowspan="2">Машина<br>/ ${isElec ? '№' : 'OPL'}</th>
+    infoHeads: `<th class="cil-c-zone" rowspan="2">Машина<br>/ №</th>
       <th class="cil-c-std" rowspan="2">${isElec ? 'Параметр' : 'Стандарт'}</th>
       <th class="cil-c-when" rowspan="2">Когда</th>
       <th class="cil-c-norm" rowspan="2">Норма / точки</th>`,
@@ -456,18 +456,16 @@ function renderClRow(row, num, zone, cells, hist, isElec) {
   const chgBadge = ack.editions.length && ack.state !== 'ok'
     ? `<span class="cil-tag cil-tag-chg" title="Стандарт изменён — откройте и ознакомьтесь">${CIL_ICONS.warn}Изм.</span>` : '';
   const valOn = isOnValidation(row);
-  const zoneSub = row.oplNumber
-    ? `<small class="cil-opl">${escapeHtml(row.oplNumber)}</small>`
-    : `<small>№ ${num}</small>`;
   const dur = cilDurChip(cilRowDurationSec(row), 'cil-tag cil-tag-dur');
   let html = `<tr class="cil-row${valOn ? ' cil-row-val' : ''}" data-row-id="${escapeAttr(row.id)}">
-    <td class="cil-c-zone cil-z${zone}">${escapeHtml(machine)}${zoneSub}</td>
+    <td class="cil-c-zone cil-z${zone}">${escapeHtml(machine)}<small>№ ${num}</small></td>
     <td class="cil-c-std">
       <div class="cil-std-title">${nameHtml}${devBadge}${chgBadge}${valOn ? valChipHtml(row) : ''}</div>
-      ${row.node || dur ? `<div class="cil-std-sub">
+      <div class="cil-std-sub">
+        ${row.oplNumber ? `<span class="cil-opl">${escapeHtml(row.oplNumber)}</span>` : ''}
         ${row.node ? `<span class="cil-node">${CIL_ICONS.gear}${escapeHtml(row.node)}</span>` : ''}
         ${dur}
-      </div>` : ''}
+      </div>
     </td>
     <td class="cil-c-when">${cilWorkTag(normWork(freq.work))}${cilTimeChips(freq.timeWindows, freq.work)}</td>
     <td class="cil-c-norm">${norm.html}</td>`;
