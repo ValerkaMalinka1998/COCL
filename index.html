@@ -221,7 +221,6 @@
   <aside class="card cocl-setup" id="coclSetupCard">
     <div class="cocl-setup-head">
       <h2>Условия проверки</h2>
-      <button type="button" class="cocl-edit-link" id="editConditionsBtn" hidden>Изменить</button>
       <button type="button" class="cocl-edit-link" id="coclBackToPick" hidden>К выбору линии</button>
     </div>
 
@@ -308,7 +307,7 @@
   <section class="card cocl-main" id="checklistCard">
     <div class="cocl-main-head">
       <div class="cocl-main-title">
-        <h2>Чек-лист <span id="progressBadge" class="progress-badge"></span></h2>
+        <h2>Чек-лист</h2>
         <div class="cocl-main-info" id="coclBuildInfo"></div>
       </div>
       <div class="cocl-main-actions" id="buildChecklistCard">
@@ -317,19 +316,7 @@
           <span>Начать проверку</span>
         </button>
       </div>
-      <div class="cocl-main-actions" id="coclCheckActions" hidden>
-        <button class="btn btn-secondary" id="resetCheckBtn">Отменить</button>
-        <button class="btn btn-success" id="saveCheckBtn">Сохранить проверку</button>
-      </div>
     </div>
-
-    <div class="progress-wrap" id="progressWrap" style="display:none">
-      <div class="progress-bar-outer">
-        <div class="progress-bar-inner" id="progressBarInner"></div>
-      </div>
-      <div class="progress-percent" id="progressPercent">0%</div>
-    </div>
-    <div class="progress-text" id="progressText" style="display:none"></div>
 
     <div id="checklistContainer" class="cocl-preview"></div>
   </section>
@@ -1966,23 +1953,6 @@
 </div>
 <!-- /.app-layout -->
 
-<!-- ======================= МОДАЛЬНОЕ ОКНО: КОММЕНТАРИЙ ======================= -->
-<div class="modal-overlay" id="commentModal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>Комментарий к пункту</h3>
-      <button class="modal-close" id="commentModalClose">✕</button>
-    </div>
-    <div class="modal-body">
-      <p id="commentModalPoint" style="color:var(--text-second);font-size:13px;margin-bottom:12px"></p>
-      <textarea id="commentText" rows="5" placeholder="Введите комментарий..."></textarea>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" id="commentCancelBtn">Отмена</button>
-      <button class="btn btn-primary" id="commentSaveBtn">Сохранить</button>
-    </div>
-  </div>
-</div>
 <!-- ======================= ИТОГ СМЕНЫ ДЛЯ ДОСКИ ======================= -->
 <div class="modal-overlay" id="clBoardModal">
   <div class="modal clb-modal">
@@ -2064,9 +2034,9 @@
         <div class="qcx-prev-label" id="qcPrevLabel"></div>
       </div>
 
-      <!-- Как проверять -->
+      <!-- Описание контроля -->
       <details class="qcx-how" id="qcControlDescBlock">
-        <summary>Как проверять</summary>
+        <summary>Описание контроля</summary>
         <div id="qcControlDescBody"></div>
       </details>
 
@@ -2506,6 +2476,7 @@
 <script src="js/components/notify.js"></script>
 <script src="js/components/line-picker.js"></script>
 <script src="js/components/photo-slider.js"></script>
+<script src="js/components/check-run.js"></script>
 <script src="js/components/standard-view.js"></script>
 <script src="js/components/quick-add-machine.js"></script>
 <script src="js/components/cil-table.js"></script>

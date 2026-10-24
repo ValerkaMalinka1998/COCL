@@ -26,10 +26,10 @@ const STD_COLS = [
   { key: 'type',     title: 'Тип контроля',      width: 22, hint: 'из списка: Фиксированный / Вариабельный / Контролируемый интервал' },
   { key: 'applies',  title: 'CL относится к',    width: 20, hint: 'ChangeOver, CL_TO, CL_Conversion — через запятую' },
   { key: 'active',   title: 'Активен',           width: 10, hint: 'Да / Нет — из списка' },
-  { key: 'problem',  title: 'Описание проблемы', width: 34, hint: 'зачем нужен контроль' },
-  { key: 'control',  title: 'Как проверять',     width: 38, hint: 'описание контроля для оператора' },
-  { key: 'purpose',  title: 'Цель',              width: 28, hint: '' },
-  { key: 'why',      title: 'Почему создан',     width: 28, hint: '' },
+  { key: 'problem',  title: 'Описание',          width: 34, hint: 'зачем нужен контроль' },
+  { key: 'control',  title: 'Описание контроля', width: 38, hint: 'описание контроля для оператора' },
+  { key: 'purpose',  title: 'Цель (зачем мы это делаем?)', width: 28, hint: '' },
+  { key: 'why',      title: 'Знаю почему (почему создан стандарт?)', width: 28, hint: '' },
   { key: 'photos',   title: 'Фото',              width: 26, hint: 'имена файлов через запятую' }
 ];
 const STD_COL = {};

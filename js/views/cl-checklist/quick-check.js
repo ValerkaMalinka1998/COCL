@@ -155,7 +155,7 @@ function openClCheckModal(rowId, dateStr, shift) {
     })()
   ].filter(Boolean).join('');
 
-  // --- Как проверять ---
+  // --- Описание контроля ---
   const how = isElec ? '' : (row.controlDescription || '').trim();
   const howBlock = $('#qcControlDescBlock');
   howBlock.style.display = how ? '' : 'none';
@@ -183,7 +183,7 @@ function openClCheckModal(rowId, dateStr, shift) {
     }
     $('#qcNormText').innerHTML = normText
       ? `${isElec ? 'Норма' : 'Должно совпадать'}: <b>${escapeHtml(normText)}</b>`
-      : 'Проверка визуально — по описанию «Как проверять»';
+      : 'Проверка визуально — по «Описанию контроля»';
     const prevOk = getQcPrevious(row);
     $('#qcPrevOk').innerHTML = prevOk
       ? `Прошлый раз (${escapeHtml(prevOk.label)}): <b class="${prevOk.status === 'OK' ? 'ok' : 'fail'}">${prevOk.status === 'OK' ? 'ОК' : 'Не ОК'}</b>` : '';
