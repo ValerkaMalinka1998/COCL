@@ -27,7 +27,7 @@ function clBoardSummary(mode) {
   rows.forEach(row => {
     const cell = clRowCells(row, dateByDayIdx, hist)
       .find(c => c.dateStr === clState.activeDate && c.shift === clState.shiftType);
-    if (!cell || cell.status === 'na') return;
+    if (!clCellCounts(cell)) return;
     const key = row.nodePart || '';
     const g = groups[key] = groups[key] || { part: key, planned: 0, done: 0, fail: 0, planSec: 0, doneSec: 0, items: [] };
     const sec = cilRowDurationSec(row);

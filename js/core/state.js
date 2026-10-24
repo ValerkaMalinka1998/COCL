@@ -30,7 +30,8 @@ const STORAGE_KEYS = {
   changeLog: 'cl_change_log_v1',         // лист истории изменений стандартов
   stdComments: 'cl_std_comments_v1',     // комментарии к стандартам и E-Param
   stdAck: 'cl_std_ack_v1',               // ознакомление с изменениями стандартов
-  lineBrandEvents: 'cl_line_brand_events_v1' // текущий бренд линии: COCL / аналитик / оператор
+  lineBrandEvents: 'cl_line_brand_events_v1', // текущий бренд линии: COCL / аналитик / оператор
+  lineDowntime: 'cl_line_downtime_v1'         // простои линии: проверки CL не планируются
 };
 
 /* ============================================================

@@ -92,12 +92,6 @@ function tlDayStatus(sts) {
   return 'na';
 }
 
-/* Понедельник недели для даты */
-function tlWeekStartOf(dateStr) {
-  const d = new Date(dateStr + 'T12:00:00');
-  return addDaysISO(dateStr, -((d.getDay() + 6) % 7));
-}
-
 /* Индекс истории Чек-листа CL линии: «дата|смена|id» → статус */
 function tlHistoryIndex(line) {
   const idx = new Map();
@@ -114,10 +108,8 @@ function tlRowShiftStatuses(row, shifts, line, hidx) {
     const letter = getShiftsForDate(date)[shift];
     const st = hidx.get(`${date}|${letter}|${row.id}`);
     if (st) return st;
-    const w = getRowForWeek(row, tlWeekStartOf(date), line);
-    const dow = new Date(date + 'T12:00:00').getDay();
-    const planned = isValidationShift(row, date, shift) || (w.member && (w.schedule || []).some(x => x.day === dow && x.shift === shift) && rowExistedByShiftEnd(row, date, shift));
-    return planned ? 'missed' : 'na';
+    // В простой линии смена не планируется — не «пропуск»
+    return isRowPlanned(row, line, date, shift) ? 'missed' : 'na';
   });
 }
 

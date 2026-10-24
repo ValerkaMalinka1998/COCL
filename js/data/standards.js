@@ -382,8 +382,25 @@ function isValidationShift(row, dateStr, shift) {
   if (!v || !v.from || !dateStr) return false;
   const i = valShiftIndex(dateStr, shift);
   if (i < valShiftIndex(v.from, v.fromShift)) return false;
+  if (row.line && isDowntimeShift(row.line, dateStr, shift)) return false;
   if (v.decidedAt) return i < valShiftIndex(v.decidedAt, v.decidedShift || 'day');
-  return i <= valShiftIndex(v.until, v.untilShift || 'night');
+  return i <= valUntilIndex(row);
+}
+
+/* Конец срока валидации (номер смены): сдвигается на смены простоя линии.
+   Считаем простой только до текущей смены — «до запуска» не тянет срок бесконечно */
+function valUntilIndex(row) {
+  const v = row.validation;
+  let end = valShiftIndex(v.until, v.untilShift || 'night');
+  const downs = row.line ? getLineDowntimes(row.line) : [];
+  if (!downs.length) return end;
+  const cur = getCurrentShiftPeriod();
+  const curI = valShiftIndex(cur.date, cur.shiftType);
+  for (let i = valShiftIndex(v.from, v.fromShift); i <= end && i <= curI; i++) {
+    const at = valShiftFromIndex(i);
+    if (isDowntimeShift(row.line, at.date, at.shift, downs)) end++;
+  }
+  return end;
 }
 
 /* Есть ли в эти сутки хоть одна смена валидации */
@@ -397,7 +414,7 @@ function validationStatus(row) {
   if (!v || !v.from) return 'none';
   if (v.decidedAt) return v.result || 'approved';
   const cur = getCurrentShiftPeriod();
-  return valShiftIndex(cur.date, cur.shiftType) > valShiftIndex(v.until, v.untilShift || 'night') ? 'ended' : 'active';
+  return valShiftIndex(cur.date, cur.shiftType) > valUntilIndex(row) ? 'ended' : 'active';
 }
 
 /* Сколько смен осталось до конца срока (включая текущую) */
@@ -405,5 +422,5 @@ function validationShiftsLeft(row) {
   const v = row && row.validation;
   if (!v) return 0;
   const cur = getCurrentShiftPeriod();
-  return valShiftIndex(v.until, v.untilShift || 'night') - valShiftIndex(cur.date, cur.shiftType) + 1;
+  return valUntilIndex(row) - valShiftIndex(cur.date, cur.shiftType) + 1;
 }

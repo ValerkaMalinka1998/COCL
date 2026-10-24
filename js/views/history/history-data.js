@@ -206,72 +206,46 @@ function histFindRow(id) {
   return getStandards().find(s => s.id === id) || getElectronicParams().find(p => p.id === id) || null;
 }
 
-/* Запланирован ли стандарт/параметр на смену (по «Расписанию CL») */
-function histIsPlanned(row, line, dateStr, shift) {
-  if (isValidationShift(row, dateStr, shift)) return true;
-  if (!rowExistedByShiftEnd(row, dateStr, shift)) return false;
-  const weekStart = histWeekStartOf(dateStr);
-  const w = getRowForWeek(row, weekStart, line);
-  if (!w.member) return false;
-  const dayIdx = new Date(dateStr + 'T12:00:00').getDay();
-  return (w.schedule || []).some(x => x.day === dayIdx && x.shift === shift);
-}
-
 /* Понедельник недели даты */
 function histWeekStartOf(dateStr) {
   const d = new Date(dateStr + 'T12:00:00');
   return addDaysISO(dateStr, -((d.getDay() + 6) % 7));
 }
 
-/* Строки линии, которые могут стоять в расписании CL */
-function histClRows(line) {
-  return [
-    ...getStandards().filter(s => s.line === line && s.active !== false).map(r => ({ row: r, isElec: false })),
-    ...getElectronicParamsForLine(line).filter(p => p.active !== false).map(r => ({ row: r, isElec: true }))
-  ];
-}
-
-/* Индекс результатов CL линии: «дата|смена|id» → { h, it } */
-function histClIndex(line) {
-  const idx = new Map();
-  getHistory().forEach(h => {
-    if (!(h.mode === 'cl' || h.mode === 'electronic') || h.line !== line) return;
-    (h.items || []).forEach(it => idx.set(`${h.date}|${h.shift}|${it.standardId}`, { h, it }));
-  });
-  return idx;
-}
 
 /* Покрытие смен Чек-листа CL за неделю (Пн → Вс):
    [{ date, dayName, isToday, shifts: { day, night } }],
-   смена: { letter, planned, done, fail, unchecked, state } */
+   смена: { letter, planned, done, fail, unchecked, late, state }
+   late — пропущено в этой смене, закрыто позже (входит в done) */
 function histCoverage(line, weekOffset = 0) {
   const days = getClWeekDays(weekOffset);
-  const rows = histClRows(line);
-  const idx = histClIndex(line);
+  const rows = clLineRows(line);
+  const tally = clTallyIndex(line, days[0], days[6], rows);
   const cur = getCurrentShiftPeriod();
   return days.map(dateStr => {
     const letters = getShiftsForDate(dateStr);
     const shifts = {};
     ['day', 'night'].forEach(shift => {
       const letter = letters[shift];
-      const c = { letter, planned: 0, done: 0, fail: 0, unchecked: 0 };
+      const c = { letter, planned: 0, done: 0, fail: 0, unchecked: 0, late: 0 };
       rows.forEach(({ row }) => {
-        const res = idx.get(`${dateStr}|${letter}|${row.id}`);
-        if (!histIsPlanned(row, line, dateStr, shift) && !res) return;
+        const k = tally.get(`${dateStr}|${shift}|${row.id}`);
+        if (!k) return;
         c.planned++;
-        if (!res) return;
-        if (res.it.status === 'OK') c.done++;
-        else if (res.it.status === 'FAIL') { c.done++; c.fail++; }
-        else c.unchecked++;
+        if (k === 'OK') c.done++;
+        else if (k === 'FAIL') { c.done++; c.fail++; }
+        else if (k === 'late') { c.done++; c.late++; }
+        else if (k === 'UNCHECKED') c.unchecked++;
       });
       const isNow = dateStr === cur.date && shift === cur.shiftType;
       const past = isShiftPast(dateStr, shift);
       if (!c.planned) c.state = 'none';
       else if (!past && !isNow) c.state = 'future';
       else if (c.fail) c.state = 'fail';
-      else if (c.done >= c.planned) c.state = 'ok';
+      else if (c.done >= c.planned && !c.late) c.state = 'ok';
       else if (isNow) c.state = 'now';
-      else if (c.done === 0) c.state = 'missed';
+      // Пропуск считается в смене пропуска, даже если его закрыли позже
+      else if (c.done === c.late) c.state = 'missed';
       else c.state = 'partial';
       shifts[shift] = c;
     });

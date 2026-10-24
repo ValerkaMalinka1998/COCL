@@ -66,8 +66,11 @@ function getQcQueue() {
   const rec = getHistory().find(h => h.mode === clRecordMode() && h.line === clState.line &&
     h.date === date && h.shift === shiftLetter);
   const ids = [...new Set([...$$('#clMatrixWrap tr.cil-row[data-row-id]')].map(r => r.dataset.rowId))];
+  // Долги «с прошлых смен» — первыми
+  const debtIds = new Set([...$$(`#clMatrixWrap .cil-cell-debt[data-date="${date}"][data-shift="${shift}"]`)].map(b => b.dataset.rowId));
   return ids.map(id => clState.rows.find(r => r.id === id)).filter(Boolean)
-    .filter(r => (getClRowFreq(r).schedule || []).some(x => x.day === day && x.shift === shift))
+    .filter(r => debtIds.has(r.id) || (getClRowFreq(r).schedule || []).some(x => x.day === day && x.shift === shift))
+    .sort((a, b) => debtIds.has(b.id) - debtIds.has(a.id))
     .map(r => ({
       row: r,
       done: !!clState.quickDraft[`${r.id}|${date}|${shift}`] ||

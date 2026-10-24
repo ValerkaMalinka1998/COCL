@@ -146,6 +146,17 @@ function rowExistedByShiftEnd(row, dateStr, shift) {
   return end.getTime() > created;
 }
 
+/* Запланирован ли стандарт/параметр на смену: валидация или «Расписание CL».
+   В простой линии — нет. downs — простои линии (чтобы не читать в циклах) */
+function isRowPlanned(row, line, dateStr, shift, downs) {
+  if (isDowntimeShift(line, dateStr, shift, downs)) return false;
+  if (isValidationShift(row, dateStr, shift)) return true;
+  if (!rowExistedByShiftEnd(row, dateStr, shift)) return false;
+  const dow = new Date(dateStr + 'T12:00:00').getDay();
+  const w = getRowForWeek(row, addDaysISO(dateStr, -((dow + 6) % 7)), line);
+  return w.member && (w.schedule || []).some(x => x.day === dow && x.shift === shift);
+}
+
 /* Строка на неделю с учётом разовых правок этой недели:
    { member, schedule, timeWindows, work } */
 function getRowForWeek(row, weekStart, line) {

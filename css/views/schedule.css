@@ -447,3 +447,77 @@
   line-height: 1.5;
   margin-bottom: 8px;
 }
+/* === РАСПИСАНИЕ CL: окно «Простой линии» === */
+.sch-dt-form {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.sch-dt-when {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sch-dt-when input { flex: 1 1 150px; }
+.sch-dt-when select { flex: 0 0 110px; }
+.sch-dt-open {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text-second);
+}
+.sch-dt-optional {
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+#schDtNote { margin-top: 6px; }
+.sch-dt-hint {
+  font-size: 13px;
+  color: var(--text-second);
+  background: var(--bg-hover);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.sch-dt-hint.is-error { color: var(--accent-red); }
+.sch-dt-list-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-second);
+  margin-bottom: 8px;
+}
+.sch-dt-list {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.sch-dt-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: center;
+  padding: 10px 12px;
+}
+.sch-dt-item + .sch-dt-item { border-top: 1px solid var(--border); }
+.sch-dt-item.is-open { background: var(--bg-hover); }
+.sch-dt-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 200px;
+}
+.sch-dt-main span { font-size: 13px; color: var(--text-second); }
+.sch-dt-meta { font-size: 12px; color: var(--text-dim); }
+.sch-dt-actions { display: flex; gap: 6px; }
+.sch-dt-empty {
+  padding: 12px;
+  font-size: 13px;
+  color: var(--text-dim);
+}

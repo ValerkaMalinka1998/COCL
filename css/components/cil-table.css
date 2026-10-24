@@ -504,3 +504,92 @@ button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentCol
   .cil-scroll-page .cil-table thead tr:first-child th:last-child { border-top-right-radius: 13px; }
 }
 
+
+/* === ДОЛГ ПРОВЕРОК И ПРОСТОЙ ЛИНИИ === */
+/* Перенесено: долг висел на смене, она его не закрыла (не считается новым пропуском) */
+.cil-carry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1.5px dashed color-mix(in srgb, var(--accent-amber) 60%, transparent);
+  border-radius: 6px;
+  color: var(--accent-amber);
+  background: color-mix(in srgb, var(--accent-amber) 6%, var(--bg-card));
+}
+.cil-carry.cil-cell-mini { width: 20px; height: 20px; }
+/* Долг в текущей смене — проверить в первую очередь */
+.cil-cell-debt {
+  color: var(--accent-amber);
+  border-color: var(--accent-amber);
+  border-style: dashed;
+}
+.cil-cell-debt.cil-cell-active { border-style: solid; }
+/* Проверено позже: долг закрыт вне плана */
+.cil-cell-late::after {
+  content: "";
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent-amber);
+  border: 2px solid var(--bg-card);
+}
+.cil-cell-mini.cil-cell-late::after { width: 7px; height: 7px; right: -3px; bottom: -3px; }
+/* Простой линии — штриховка */
+/* сильнее, чем фон ночи и сегодняшнего дня (td.cil-td-night.cil-today) */
+.cil-table tbody tr td.cil-td.cil-td-down,
+.lg-sw.cil-td-down {
+  background-image: repeating-linear-gradient(45deg, transparent 0 4px,
+    color-mix(in srgb, var(--text-dim) 40%, transparent) 4px 6px);
+}
+.lg-sw.cil-td-down { border: 1px solid var(--border); }
+/* Плашка «С прошлых смен» над матрицей */
+.cil-debt-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent-amber) 45%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent-amber) 10%, var(--bg-card));
+  color: var(--text-main);
+  font-size: 13px;
+}
+.cil-debt-banner > svg { color: var(--accent-amber); flex: 0 0 auto; }
+.cil-debt-title { font-weight: 700; color: var(--accent-amber); }
+.cil-debt-item em {
+  font-style: normal;
+  color: var(--text-second);
+  margin-left: 4px;
+}
+/* Текущая смена — колонка проверки */
+.cil-table thead tr th.cil-shift-now {
+  background: var(--accent-cyan);
+  color: var(--on-accent);
+}
+.cil-table tbody td.cil-td-now {
+  background-color: color-mix(in srgb, var(--accent-cyan) 22%, var(--bg-card));
+  box-shadow: inset 2px 0 0 var(--accent-cyan), inset -2px 0 0 var(--accent-cyan);
+}
+.cil-shift-now .cil-brig.now { background: var(--on-accent); color: var(--blue-deep); border-color: var(--on-accent); }
+/* Плашка «Линия в простое» над матрицей */
+.cil-down-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: center;
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border: 1px dashed var(--text-dim);
+  border-radius: 10px;
+  background: var(--bg-hover);
+  color: var(--text-second);
+  font-size: 13px;
+}
+.cil-down-banner b { color: var(--text-main); }
