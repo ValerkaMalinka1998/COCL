@@ -32,6 +32,7 @@
 }
 .cil-table tbody tr.cil-row-val > td.cil-c-zone small { color: var(--accent-val); opacity: .8; }
 .cil-table tbody tr.cil-row-val > td.cil-c-std,
+.cil-table tbody tr.cil-row-val > td.cil-c-when,
 .cil-table tbody tr.cil-row-val > td.cil-c-norm,
 .cil-table tbody tr.cil-row-val > td.cil-c-cnt {
   background: color-mix(in srgb, var(--accent-val) 11%, var(--bg-card));

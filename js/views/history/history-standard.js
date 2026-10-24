@@ -1,13 +1,17 @@
 /* ============================================================
    ИСТОРИЯ: история одного стандарта / E-Param
    Все проверки стандарта на линии (Чек-лист CL, TOP Losses, COCL)
-   за 7 / 30 / 90 дней: сводка, график значений по точкам на фоне
-   нормы и таблица проверок.
+   за всё время: факты, «где выходит из нормы» (бренды, смены),
+   и таблица всех проверок.
    Модуль общего пространства имён: функции и переменные видны
    во всех файлах. Порядок подключения — index.html.
    ============================================================ */
 
-const histStd = { id: null, line: '', days: 30, from: 'history', pager: { page: 1, size: 20 } };
+const histStd = { id: null, line: '', from: 'history', pager: { page: 1, size: 20 } };
+
+/* Пропуски по расписанию — за столько дней; меньше HIST_STD_FEW проверок — «мало проверок» */
+const HIST_STD_MISS_DAYS = 30;
+const HIST_STD_FEW = 5;
 
 function openStandardHistory(stdId, line, opts = {}) {
   const row = histFindRow(stdId);
@@ -46,20 +50,58 @@ function histStdData() {
   if (!row) return null;
   const isElec = !('measurements' in row) && ('paramName' in row || 'valuesByBrand' in row);
   const cur = getCurrentShiftPeriod();
-  const fromDate = addDaysISO(cur.date, -(histStd.days - 1));
-  const all = histStdEntries(histStd.line).get(histStd.id) || [];
-  const entries = all.filter(e => histShift(e.h).date >= fromDate)
+  const entries = (histStdEntries(histStd.line).get(histStd.id) || [])
     .map(e => ({ ...e, s: histShift(e.h), pts: histItemPoints(e.h, e.it) }));
 
   // Пропуски по расписанию
   // Пропуск считается один раз — в смене пропуска (и если закрыт позже)
   let missed = 0;
-  const tally = clTallyIndex(histStd.line, fromDate, cur.date, [{ row, isElec }]);
+  const missFrom = addDaysISO(cur.date, -(HIST_STD_MISS_DAYS - 1));
+  const tally = clTallyIndex(histStd.line, missFrom, cur.date, [{ row, isElec }]);
   tally.forEach((k, key) => {
     const [d, shift] = key.split('|');
     if (isShiftPast(d, shift) && (k === 'missed' || k === 'late')) missed++;
   });
-  return { row, isElec, entries, missed, fromDate };
+  return { row, isElec, entries, missed, cur };
+}
+
+/* Бренд проверки: в переходе — бренд, на который перешли */
+function histStdBrand(h) {
+  return h.brandActual || h.brandTo || '';
+}
+
+/* «Где выходит из нормы»: доля отклонений по брендам и сменам — только если отклонения есть */
+function histStdWhereHtml(checked) {
+  if (!checked.some(e => e.it.status === 'FAIL')) return '';
+  const group = (keyOf) => {
+    const map = {};
+    checked.forEach(e => {
+      const k = keyOf(e) || '—';
+      const x = map[k] || (map[k] = { k, n: 0, total: 0 });
+      x.total++;
+      if (e.it.status === 'FAIL') x.n++;
+    });
+    return Object.values(map).sort((a, b) => (b.n - a.n) || a.k.localeCompare(b.k, 'ru', { numeric: true }));
+  };
+  const col = (title, list, label) => `<div>
+    <div class="hist-std-wh">${title}</div>
+    ${list.map(x => {
+      const few = x.total < HIST_STD_FEW;
+      return `<div class="hist-std-wr">
+      <span>${escapeHtml(label(x.k))}</span>
+      <span class="hist-std-wb"><i style="width:${Math.round(x.n / x.total * 100)}%"></i></span>
+      <span class="${x.n && !few ? 'hist-std-wbad' : 'hist-std-wdim'}">${x.n} из ${x.total}${few ? ' · мало проверок' : ''}</span>
+    </div>`;
+    }).join('')}
+  </div>`;
+  return `<section class="card hist-std-sec">
+    <h3 class="hist-std-h">Где выходит из нормы: бренды и смены</h3>
+    <p class="hist-std-d">Если отклонения на одном бренде — проблема в норме этого бренда, а не в оборудовании.</p>
+    <div class="hist-std-where">
+      ${col('Бренды', group(e => histStdBrand(e.h)), k => k === '—' ? 'Бренд не указан' : k)}
+      ${col('Смены', group(e => e.s.letter), k => k === '—' ? 'Смена не указана' : 'Смена ' + k)}
+    </div>
+  </section>`;
 }
 
 function renderStandardHistory() {
@@ -67,13 +109,19 @@ function renderStandardHistory() {
   if (!box) return;
   const data = histStdData();
   if (!data) { box.innerHTML = '<div class="card hist-empty">Стандарт не найден</div>'; return; }
-  const { row, isElec, entries, missed } = data;
+  const { row, isElec, entries, missed, cur } = data;
   const title = row.title || row.paramName || '—';
   const nPoints = Math.max(0, ...entries.map(e => (e.pts || []).length));
 
-  const fails = entries.filter(e => e.it.status === 'FAIL').length;
-  const unchecked = entries.filter(e => e.it.status === 'UNCHECKED').length;
-  const checked = entries.length - unchecked;
+  const checked = entries.filter(e => e.it.status === 'OK' || e.it.status === 'FAIL');
+  const fails = checked.filter(e => e.it.status === 'FAIL').length;
+  const last = checked[checked.length - 1];
+  const lastFail = checked.filter(e => e.it.status === 'FAIL').pop();
+  const daysAgo = (d) => Math.round((new Date(cur.date + 'T12:00:00') - new Date(d + 'T12:00:00')) / 864e5);
+  const agoText = (n) => n <= 0 ? 'сегодня' : n === 1 ? 'вчера' : `${n} ${pluralRu(n, 'день', 'дня', 'дней')} назад`;
+  const whenText = (e) => `${histDayName(e.s.date)} ${fmtShortDate(e.s.date)} ${e.s.shift === 'day' ? 'день' : 'ночь'}${e.s.letter ? ' · ' + e.s.letter : ''}`;
+  // Давно не проверяли — объясняем, почему свежих проверок нет
+  const stale = !last || daysAgo(last.s.date) >= HIST_STD_MISS_DAYS;
 
   const sub = [histStd.line, row.machine, row.nodePart, row.node,
     controlTypeLabel(isElec ? row.controlType : migrateControlType(row.controlType, row.measurements)),
@@ -96,95 +144,40 @@ function renderStandardHistory() {
           <div class="hist-sub">${escapeHtml(sub.join(' · '))}</div>
         </div>
         <span class="hist-sp"></span>
-        <div class="hist-seg">
-          ${[7, 30, HIST_STD_MAX_DAYS].map(d => `<button type="button" class="${d === histStd.days ? 'on' : ''}" data-hist-std-days="${d}">${d} дней</button>`).join('')}
-        </div>
         ${!isElec ? `<button type="button" class="btn btn-secondary" data-hist-std-open>${CIL_ICONS.eye} Стандарт</button>` : ''}
       </div>
-      <div class="hist-kpis">
-        <div class="hist-kpi"><b>${checked}</b><span>${pluralRu(checked, 'проверка', 'проверки', 'проверок')} за ${histStd.days} дней</span></div>
-        <div class="hist-kpi ${fails ? 'hist-kpi-fail' : ''}"><b>${fails}</b><span>${pluralRu(fails, 'отклонение', 'отклонения', 'отклонений')}${checked ? ' (' + Math.round(fails / checked * 100) + '%)' : ''}</span></div>
-        <div class="hist-kpi ${missed + unchecked ? 'hist-kpi-warn' : ''}"><b>${missed + unchecked}</b><span>пропущено / не проверено</span></div>
+    </div>
+    <section class="card hist-std-sec">
+      <div class="hist-std-facts">
+        <div class="hist-std-f"><b>${last ? agoText(daysAgo(last.s.date)) : '—'}</b><span>${last ? 'последняя проверка · ' + escapeHtml(whenText(last)) : 'проверок ещё не было'}</span></div>
+        <div class="hist-std-f ${lastFail ? 'is-bad' : ''}"><b>${lastFail ? fmtShortDate(lastFail.s.date) : '—'}</b><span>${lastFail ? 'последнее отклонение · ' + escapeHtml(whenText(lastFail)) : 'отклонений не было'}</span></div>
+        <div class="hist-std-f ${fails ? 'is-bad' : ''}"><b>${fails} из ${checked.length}</b><span>проверок с отклонением · за всё время</span></div>
+        <div class="hist-std-f"><b>${missed}</b><span>пропущено по расписанию · за ${HIST_STD_MISS_DAYS} дней</span></div>
       </div>
-    </div>
-    <div class="card hist-chart-card">
-      <div class="hist-chart-h"><h3>Отклонения по проверкам</h3></div>
-      ${histStdChart(entries, data.fromDate, getCurrentShiftPeriod().date, histStd.days <= 7)}
-      <div class="hist-sub">Столбик — число проверок с отклонением за ${histStd.days <= 7 ? 'сутки' : 'неделю'}. Лента ниже — каждая проверка по порядку:
-      зелёная — в норме, красная — отклонение, жёлтая — не проверено. Стандарт в отклонении, если вышла любая из точек.</div>
-    </div>
-    <div class="card hist-dev-card">
-      ${entries.length ? `<table class="hist-dev">
-        <thead><tr><th>Когда</th><th>Проверка</th><th>Бр.</th><th>Результат</th><th>Значения</th><th>Комментарий</th></tr></thead>
+      ${stale ? `<div class="hist-std-stale"><b>${last ? `За последние ${HIST_STD_MISS_DAYS} дней проверок не было.` : 'Этот стандарт ещё ни разу не проверяли.'}</b>${last ? ` Последняя — ${escapeHtml(whenText(last))}, ${last.it.status === 'FAIL' ? 'с отклонением' : 'в норме'}.` : ''}
+        <span class="hist-sub">${missed ? `По расписанию пропущено ${missed} ${pluralRu(missed, 'смена', 'смены', 'смен')}.` : 'Проверьте, стоит ли он в расписании линии.'}</span></div>` : ''}
+      ${entries.length ? `<div class="hist-std-tbw"><table class="hist-std-tb">
+        <thead><tr><th>Когда</th><th>Проверка</th><th>Смена</th><th>Результат</th><th>Значения</th><th>Комментарий</th></tr></thead>
         <tbody>${tableRows.map(e => `
           <tr data-hist-std-rec="${escapeAttr(e.h.id)}" title="Открыть проверку">
-            <td><b>${histDayName(e.s.date)} ${fmtShortDate(e.s.date)}</b> ${e.s.shift === 'day' ? 'день' : 'ночь'}<div class="hist-sub">${histTime(e.h)}</div></td>
+            <td><b>${histDayName(e.s.date)} ${fmtShortDate(e.s.date)}</b> <span class="hist-std-dim">${e.s.shift === 'day' ? 'день' : 'ночь'} · ${histTime(e.h)}</span></td>
             <td>${escapeHtml(HIST_KINDS[histKind(e.h)].short)}</td>
             <td>${escapeHtml(e.s.letter || '—')}</td>
-            <td><span class="hist-st hist-st-${e.it.status === 'OK' ? 'o' : e.it.status === 'FAIL' ? 'x' : 'u'}">${e.it.status === 'OK' ? CIL_ICONS.check : e.it.status === 'FAIL' ? CIL_ICONS.x : '?'}</span></td>
-            <td>${e.pts ? e.pts.map((p, i) => `<span class="hist-pt ${p.bad ? 'bad' : ''}">${e.pts.length > 1 ? `<i class="hist-pt-n">т.${i + 1}</i>` : ''}<b>${escapeHtml(p.value || '—')}</b></span>`).join('') : `<span class="hist-pt">${e.it.status === 'OK' ? 'ОК' : e.it.status === 'FAIL' ? 'Не ОК' : 'не проверено'}</span>`}</td>
-            <td class="hist-sub">${e.it.comment ? cmtLine(e.it.comment) : '—'}</td>
+            <td><span class="hist-std-st hist-std-st-${e.it.status === 'OK' ? 'o' : e.it.status === 'FAIL' ? 'x' : 'u'}">${e.it.status === 'OK' ? '✓' : e.it.status === 'FAIL' ? '✕' : '?'}</span></td>
+            <td>${e.pts ? e.pts.map((p, i) => `<span class="hist-std-pt${p.bad ? ' bad' : ''}">${e.pts.length > 1 ? `<i>т.${i + 1}</i> ` : ''}${escapeHtml(p.value || '—')}</span>`).join('') : `<span class="hist-std-pt${e.it.status === 'FAIL' ? ' bad' : ''}">${e.it.status === 'OK' ? 'ОК' : e.it.status === 'FAIL' ? 'Не ОК' : 'не проверено'}</span>`}</td>
+            <td class="hist-std-dim">${e.it.comment ? cmtLine(e.it.comment) : '—'}</td>
           </tr>`).join('')}</tbody>
-      </table>
-      <div class="pagination-bar" id="histStdPagination"></div>` : `<div class="hist-empty">За ${histStd.days} дней проверок этого стандарта нет</div>`}
-    </div>`;
+      </table></div>
+      <div class="pagination-bar" id="histStdPagination"></div>` : '<div class="hist-empty">Проверок этого стандарта пока нет</div>'}
+    </section>
+    ${histStdWhereHtml(checked)}`;
 
   renderPager($('#histStdPagination'), histStd.pager, allRows.length, renderStandardHistory);
-}
-
-/* ------------------------------------------------------------
-   Отклонения по периодам: столбик — сколько проверок с отклонением
-   («2 из 14»); для 7 дней период — сутки, для 30 и 90 — неделя.
-   Под столбиками — лента всех проверок: ОК / отклонение / не проверено.
-   ------------------------------------------------------------ */
-function histStdBuckets(entries, fromDate, toDate, byDay) {
-  const monday = (d) => {
-    const dt = new Date(d + 'T12:00:00');
-    return addDaysISO(d, -((dt.getDay() + 6) % 7));
-  };
-  const key = (d) => byDay ? d : monday(d);
-  const map = new Map();
-  for (let d = byDay ? fromDate : monday(fromDate); d <= toDate; d = addDaysISO(d, byDay ? 1 : 7)) {
-    map.set(d, { start: d, total: 0, fails: 0 });
-  }
-  entries.forEach(e => {
-    const b = map.get(key(e.s.date));
-    if (!b) return;
-    if (e.it.status === 'UNCHECKED') return;
-    b.total++;
-    if (e.it.status === 'FAIL') b.fails++;
-  });
-  return [...map.values()];
-}
-
-function histStdChart(entries, fromDate, toDate, byDay) {
-  if (!entries.length) return '<div class="hist-empty">Проверок за период нет</div>';
-  const buckets = histStdBuckets(entries, fromDate, toDate, byDay);
-  const maxF = Math.max(1, ...buckets.map(b => b.fails));
-  const label = (b) => byDay
-    ? `${histDayName(b.start)} ${fmtShortDate(b.start)}`
-    : `${fmtShortDate(b.start)} – ${fmtShortDate(addDaysISO(b.start, 6))}`;
-
-  const bars = `<div class="hist-bars">${buckets.map(b => `
-    <div class="hist-bar-col" title="${escapeAttr(label(b) + ': ' + (b.total ? b.fails + ' из ' + b.total + ' проверок с отклонением' : 'проверок нет'))}">
-      <div class="hist-bar-num ${b.fails ? 'bad' : ''}">${b.total ? b.fails + '<small> из ' + b.total + '</small>' : '<small>—</small>'}</div>
-      <div class="hist-bar-area"><i class="hist-bar ${b.fails ? 'bad' : (b.total ? 'ok' : 'none')}" style="height:${b.fails ? Math.max(8, Math.round(b.fails / maxF * 100)) : (b.total ? 3 : 0)}%"></i></div>
-      <div class="hist-bar-lbl">${escapeHtml(byDay ? histDayName(b.start) : fmtShortDate(b.start))}</div>
-    </div>`).join('')}</div>`;
-
-  const tape = `<div class="hist-tape">${entries.map(e => {
-    const st = e.it.status;
-    return `<i class="hist-tape-i hist-tape-${st === 'OK' ? 'o' : st === 'FAIL' ? 'x' : 'u'}"
-      title="${escapeAttr(fmtShortDate(e.s.date) + ' ' + (e.s.shift === 'day' ? 'день' : 'ночь') + ': ' + (st === 'OK' ? 'в норме' : st === 'FAIL' ? 'отклонение' : 'не проверено'))}"></i>`;
-  }).join('')}</div>`;
-  return bars + tape;
 }
 
 $('#histStdView')?.addEventListener('click', (e) => {
   const t = e.target;
   if (t.closest('[data-hist-std-back]')) return histStdBack();
-  const d = t.closest('[data-hist-std-days]');
-  if (d) { histStd.days = parseInt(d.dataset.histStdDays, 10); histStd.pager.page = 1; return renderStandardHistory(); }
   if (t.closest('[data-hist-std-open]')) {
     if (typeof openStandardView === 'function') openStandardView(histStd.id);
     return;

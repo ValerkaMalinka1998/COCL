@@ -348,13 +348,14 @@ function renderScheduleMatrix() {
       ${scopeHtml}
     </div>
     <div class="sch-cil-hint">${escapeHtml(weekSub)}</div>
-    <div class="cil-scroll cil-scroll-page"><table class="cil-table ${isPastWeek ? 'cil-readonly' : ''}">`;
+    <div class="cil-scroll cil-scroll-page"><table class="cil-table cil-has-when ${isPastWeek ? 'cil-readonly' : ''}">`;
 
   html += cilHeadHtml(dateByDayIdx, {
     activeDate: off === 0 ? cur.date : '',
     activeShift: cur.shiftType,
     infoHeads: `<th class="cil-c-zone" rowspan="2">Машина<br>/ №</th>
       <th class="cil-c-std" rowspan="2">${isElec ? 'Параметр' : 'Стандарт'}</th>
+      <th class="cil-c-when" rowspan="2">Когда</th>
       <th class="cil-c-cnt" rowspan="2">Смен</th>`,
     shiftSub: (dateStr, shift) => {
       const dayIdx = new Date(dateStr + 'T12:00:00').getDay();
@@ -520,14 +521,16 @@ function renderScheduleRow(row, dateByDayIdx, num, zone, isElec) {
       <div class="cil-std-sub">
         ${row.oplNumber ? `<span class="cil-opl">${escapeHtml(row.oplNumber)}</span>` : ''}
         ${row.node ? `<span class="cil-node">${CIL_ICONS.gear}${escapeHtml(row.node)}</span>` : ''}
-        <button type="button" class="cil-tag cil-tag-${work.toLowerCase()}" data-work-toggle="${id}" title="Переключить Run → Stop → CIL">${work.toUpperCase()}</button>
-        ${cilTimeChips(freq.timeWindows, freq.work)}
         ${cilDurChip(cilRowDurationSec(row), 'cil-tag cil-tag-dur')}
       </div>
       ${member ? `<button type="button" class="cil-row-del" data-remove-from-schedule="${id}" title="Убрать из расписания">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>` : ''}
     </div></td>
+    <td class="cil-c-when">
+      <button type="button" class="cil-tag cil-tag-${work.toLowerCase()}" data-work-toggle="${id}" title="Переключить Run → Stop → CIL">${work.toUpperCase()}</button>
+      ${cilTimeChips(freq.timeWindows, freq.work)}
+    </td>
     <td class="cil-c-cnt">
       <span class="cil-cnt-val">${n}<small> / 14</small></span>
       <span class="cil-cnt-bar"><i style="width:${Math.round(n / 14 * 100)}%"></i></span>

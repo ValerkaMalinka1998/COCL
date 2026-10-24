@@ -191,14 +191,12 @@ header.bft-header .header-right {
 
 /* Крупные цифры — жирный курсив, как номера болидов */
 .dash-kpi b,
-.hist-kpi b,
-.dash-ln-p {
+.dash-lt-c b {
   font-style: italic;
   font-weight: 900;
   letter-spacing: -0.5px;
 }
-[data-theme="dark"] .dash-kpi,
-[data-theme="dark"] .hist-kpi { box-shadow: inset 0 -2px 0 rgba(58, 166, 240, 0.35); }
+[data-theme="dark"] .dash-kpi { box-shadow: inset 0 -2px 0 rgba(58, 166, 240, 0.35); }
 
 /* ============ Футер ============ */
 .site-footer {

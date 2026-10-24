@@ -648,7 +648,8 @@ $('#epPageSaveBtn')?.addEventListener('click', () => {
   const logId = logRowChange('elec', existing || null, obj);
 
   const wasNew = epPageState.isNew;
-  closeEparamPage(true);
+  // Как у механических: после сохранения остаёмся на параметре в режиме просмотра
+  openEparamPage(obj.id, 'view');
   if (typeof refreshEditorElecTable === 'function') refreshEditorElecTable();
   showToast(wasNew ? 'Параметр добавлен' : 'Параметр обновлён');
   askChangeReason(logId);

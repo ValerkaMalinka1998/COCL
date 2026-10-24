@@ -198,6 +198,10 @@
         <div class="th-sub" id="coclHeadSub"></div>
       </div>
       <div class="th-actions">
+        <button type="button" class="btn btn-secondary tl2-back" id="coclBackToPick" style="display:none" title="Вернуться к выбору линии">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          К выбору линии
+        </button>
         <button type="button" class="editor-line-pill" id="coclLinePill" title="Выбрать линию">
           <span class="editor-line-pill-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
@@ -221,7 +225,6 @@
   <aside class="card cocl-setup" id="coclSetupCard">
     <div class="cocl-setup-head">
       <h2>Условия проверки</h2>
-      <button type="button" class="cocl-edit-link" id="coclBackToPick" hidden>К выбору линии</button>
     </div>
 
     <!-- Линия -->
@@ -1334,16 +1337,20 @@
 <!-- ======================= ВКЛАДКА ИСТОРИЯ ======================= -->
 <div class="tab" id="tab-history">
 
-  <!-- ===== Лента проверок / журнал отклонений ===== -->
+  <!-- ===== Лента проверок ===== -->
   <div id="histMainView">
     <div class="card hist-head-card">
       <div class="hist-head">
-        <div class="hist-title">История <small id="histSubtitle"></small></div>
-        <span class="hist-sp"></span>
-        <div class="hist-seg" id="histViewSeg">
-          <button type="button" data-hist-view="feed">По проверкам</button>
-          <button type="button" data-hist-view="dev">По отклонениям</button>
-        </div>
+        <div class="hist-title">История</div>
+        <button type="button" class="editor-line-pill" id="histLinePill" title="Выбрать линию">
+          <span class="editor-line-pill-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          </span>
+          <span class="editor-line-pill-code" id="histLinePillCode">Все линии</span>
+          <span class="editor-line-pill-caret">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </span>
+        </button>
         <div class="hist-seg" id="histPeriodSeg">
           <button type="button" data-hist-period="shift">Смена</button>
           <button type="button" data-hist-period="today">Сегодня</button>
@@ -1352,6 +1359,19 @@
           <button type="button" data-hist-period="all">Всё</button>
           <button type="button" data-hist-period="custom">Период…</button>
         </div>
+        <div class="hist-seg" id="histViewSeg">
+          <button type="button" data-hist-dev="0">Все</button>
+          <button type="button" data-hist-dev="1">С отклонениями</button>
+        </div>
+        <label class="hist-search hist-search-head" title="Поиск">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="histSearch" placeholder="Стандарт, узел, бренд…">
+        </label>
+        <span class="hist-sp"></span>
+        <button type="button" class="btn btn-secondary hist-fbtn" id="histFiltersBtn" aria-expanded="false" aria-controls="histFilterPanel">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          Фильтры <b id="histFiltersCount" hidden></b>
+        </button>
         <div class="et-excel" id="historyExcelMenu">
           <button class="btn btn-secondary btn-icon-text et-excel-toggle" type="button" title="Экспорт и очистка истории">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13l3 4M12 13l-3 4"/></svg>
@@ -1378,41 +1398,14 @@
         <label>С <input type="date" id="dateFrom"></label>
         <label>По <input type="date" id="dateTo"></label>
       </div>
-      <div class="hist-fbar">
-        <div class="hist-frow">
-          <div class="hist-f">
-            <span class="hist-f-lbl">Цех</span>
-            <div class="hist-kind-chips hist-ws-chips" id="histWsChips"></div>
-          </div>
-          <label class="hist-f hist-f-line">
-            <span class="hist-f-lbl">Линия</span>
-            <select id="filterLine" class="hist-select" title="Линия"></select>
-          </label>
-          <label class="hist-f">
-            <span class="hist-f-lbl">Машина</span>
-            <select id="histMachine" class="hist-select" title="Машина"></select>
-          </label>
-          <label class="hist-f">
-            <span class="hist-f-lbl">Смена</span>
-            <select id="histBrigade" class="hist-select" title="Смена"></select>
-          </label>
-          <label class="hist-f hist-f-search">
-            <span class="hist-f-lbl">Поиск</span>
-            <span class="hist-search">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input type="text" id="histSearch" placeholder="Стандарт, узел, часть линии, бренд…">
-            </span>
-          </label>
+      <div class="hist-fbar hist-hidden" id="histFilterPanel">
+        <div class="hist-f">
+          <span class="hist-f-lbl">Смена</span>
+          <div class="hist-kind-chips" id="histBrigadeChips"></div>
         </div>
-        <div class="hist-frow hist-frow-2">
-          <div class="hist-f">
-            <span class="hist-f-lbl">Тип проверки</span>
-            <div class="hist-kind-chips" id="histKindChips"></div>
-          </div>
-          <span class="hist-sp"></span>
-          <label class="hist-toggle" title="Показать только проверки с отклонениями">
-            <input type="checkbox" id="histOnlyDev"><span class="hist-toggle-sw"></span>только с отклонениями
-          </label>
+        <div class="hist-f">
+          <span class="hist-f-lbl">Тип проверки</span>
+          <div class="hist-kind-chips" id="histKindChips"></div>
         </div>
       </div>
       <div class="hist-totals" id="histTotals"></div>
