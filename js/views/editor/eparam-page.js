@@ -566,7 +566,6 @@ $('#epTabs')?.addEventListener('click', (e) => {
   if (btn) switchEparamTab(btn.dataset.epTab);
 });
 $('#epAckMarkBtn')?.addEventListener('click', () => showToast('Функция «Ознакомление» в разработке', true));
-$('#epAddCommentBtn')?.addEventListener('click', () => focusStdCommentInput('elec'));
 $('#epPageBackBtn')?.addEventListener('click', () => closeEparamPage(false));
 $('#epPageCancelBtn')?.addEventListener('click', () => closeEparamPage(false));
 $('#epPageEditBtn')?.addEventListener('click', () => {

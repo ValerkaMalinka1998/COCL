@@ -70,7 +70,7 @@ function renderStdComments(kind, row) {
     <div class="stdc-form" data-stdc-kind="${kind}">
       <textarea class="stdc-input" rows="3" placeholder="Что не так со стандартом: неточная норма, непонятное описание, другое…"></textarea>
       <div class="stdc-form-btns">
-        <button type="button" class="btn btn-primary btn-sm" data-stdc-act="add">Отправить</button>
+        <button type="button" class="btn btn-primary btn-sm" data-stdc-act="add">Добавить комментарий</button>
       </div>
     </div>
     <div class="stdc-list" data-stdc-kind="${kind}">
@@ -86,12 +86,6 @@ function renderStdComments(kind, row) {
 function stdCommentsRefresh(kind) {
   const cur = stdCommentsState[kind];
   if (cur) renderStdComments(kind, cur);
-}
-
-/* Кнопка «Добавить комментарий» в шапке карточки — фокус на поле */
-function focusStdCommentInput(kind) {
-  const el = $(`${STD_COMMENTS_TARGETS[kind].wrap} .stdc-input`);
-  if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.focus(); }
 }
 
 document.addEventListener('click', e => {
