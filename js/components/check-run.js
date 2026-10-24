@@ -4,7 +4,7 @@
    CL в Конвертацию) и проверки TOP Losses.
    Слева: заголовок, прогресс, список стандартов, «Сохранить».
    Справа: выбранный стандарт — инструмент, время на проверку,
-   поля точек, «Как проверять», комментарий, фото, ◀ ▶.
+   поля точек, «Описание контроля», комментарий, фото, ◀ ▶.
    Модуль общего пространства имён: функции и переменные видны
    во всех файлах. Порядок подключения — index.html.
    ============================================================ */
@@ -76,7 +76,7 @@ function chkDetailHtml(o) {
       <div class="chk-d-body${o.photosHtml ? ' has-photos' : ''}">
         <div class="chk-d-col">
           ${o.inputsHtml || ''}
-          ${o.how ? `<div class="chk-how"><div class="chk-how-t">${escapeHtml(o.howTitle || 'Как проверять')}</div><div class="chk-how-b">${escapeHtml(o.how)}</div></div>` : ''}
+          ${o.how ? `<div class="chk-how"><div class="chk-how-t">${escapeHtml(o.howTitle || 'Описание контроля')}</div><div class="chk-how-b">${escapeHtml(o.how)}</div></div>` : ''}
           <textarea class="chk-comment" data-chk-comment rows="2" placeholder="Комментарий (обязателен при отклонении)">${escapeHtml(o.comment || '')}</textarea>
         </div>
         ${o.photosHtml ? `<div class="chk-d-photos" ${o.photosAttrs || ''}>${o.photosHtml}</div>` : ''}

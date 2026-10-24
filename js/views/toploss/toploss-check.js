@@ -138,7 +138,7 @@ function renderTopLossChecklist() {
           eyeAttrs: isElec ? '' : `data-tl-view="${escapeAttr(row.id)}"`,
           inputsHtml: inputs,
           how: isElec ? row.normText : row.controlDescription,
-          howTitle: isElec ? 'Норма' : 'Как проверять',
+          howTitle: isElec ? 'Что считается «ОК»' : 'Описание контроля',
           comment: a.comment,
           photosHtml: !isElec && typeof photoSliderHtml === 'function' ? photoSliderHtml(row) : '',
           photosAttrs: `data-tl-photos="${escapeAttr(row.id)}"`
