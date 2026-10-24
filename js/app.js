@@ -124,6 +124,7 @@ function init() {
   /*fillElectronicTab();*/
   initRouter();
   updateNavCounters();
+  updateNotifyBadge();
 
   // ============ Восстановление активной линии редактора ============
   // Читаем сохранённую линию из localStorage и синхронизируем переменную в памяти

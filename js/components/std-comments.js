@@ -127,6 +127,7 @@ function renderStdComments(kind, row) {
 function stdCommentsRefresh(kind) {
   const cur = stdCommentsState[kind];
   if (cur) renderStdComments(kind, cur);
+  if (typeof updateNotifyBadge === 'function') updateNotifyBadge();
 }
 
 document.addEventListener('click', e => {
@@ -173,7 +174,8 @@ document.addEventListener('click', e => {
   } else if (act === 'reply-cancel') {
     form.style.display = 'none';
   } else if (act === 'reply-save') {
-    updateStdComment(id, { reply: form.querySelector('.stdc-reply-input').value.trim() });
+    const reply = form.querySelector('.stdc-reply-input').value.trim();
+    updateStdComment(id, { reply, repliedAt: reply ? new Date().toISOString() : null });
     stdCommentsRefresh(kind);
   } else if (act === 'done') {
     updateStdComment(id, { status: 'done', doneAt: new Date().toISOString() });

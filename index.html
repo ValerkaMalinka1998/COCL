@@ -42,6 +42,11 @@
         <span class="bft-lap-cl" id="headerLapCl"></span>
       </div>
     </div>
+    <button type="button" class="nb-btn" id="notifyBtn" title="Уведомления" aria-label="Уведомления" aria-haspopup="true" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span class="nb-cnt" id="notifyCount" style="display:none">0</span>
+    </button>
+    <div class="nb-pop" id="notifyPanel" role="dialog" aria-label="Уведомления"></div>
     <button type="button" class="theme-toggle" id="themeToggle" title="Ночная тема" aria-label="Ночная тема" aria-pressed="false">
       <svg class="theme-helmet" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
         <path class="helmet-shell" d="M2.6 15.6C2.6 9.6 7.2 5 12.9 5c4.8 0 8.5 3.6 8.5 8.4v3.4a2 2 0 0 1-2 2h-8.6l-2.6-2.5H4.3a1.7 1.7 0 0 1-1.7-1.7z"/>
@@ -2498,6 +2503,7 @@
 <script src="js/components/validation.js"></script>
 <script src="js/components/std-comments.js"></script>
 <script src="js/components/std-ack.js"></script>
+<script src="js/components/notify.js"></script>
 <script src="js/components/line-picker.js"></script>
 <script src="js/components/photo-slider.js"></script>
 <script src="js/components/standard-view.js"></script>
