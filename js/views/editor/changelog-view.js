@@ -175,11 +175,11 @@ function changeHistoryHtml(rows) {
       </tr></thead>
       <tbody>
         ${rows.map(e => `
-          <tr>
+          <tr class="${e.action === 'changed' && e.sheet === false ? 'sv-hist-minor' : ''}">
             <td class="clog-c-n">${e.n}</td>
             <td class="sv-hist-c-date">${escapeHtml(formatDateTime(e.date))}</td>
             <td>
-              ${clogActionChip(e.action)}<span class="clog-cmt">${escapeHtml(e.comment || '')}</span>
+              ${e.action === 'changed' && e.sheet === false ? '<span class="sv-hist-minor-tag" title="Не считается изменением стандарта: не идёт в лист линии и не требует ознакомления">доп. информация</span>' : clogActionChip(e.action)}<span class="clog-cmt">${escapeHtml(e.comment || '')}</span>
               ${detailsHtml(e)}
             </td>
           </tr>`).join('')}
