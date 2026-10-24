@@ -1153,14 +1153,8 @@
               <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
               <path d="M16 3.13a4 4 0 0 0 0 7.75"/>
             </svg>
-            Ознакомление с версиями стандарта
+            Ознакомление со стандартом
           </div>
-          <button type="button" class="btn btn-success btn-icon-text" id="svAckMarkBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-            <span id="svAckMarkBtnLabel">Отметить ознакомление</span>
-          </button>
         </div>
         <div class="sv-full-table-wrap" id="svAckTableWrap"></div>
       </div>
@@ -1192,13 +1186,6 @@
             </svg>
             Комментарии к стандарту
           </div>
-          <button type="button" class="btn btn-secondary btn-icon-text" id="svAddCommentBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            <span>Добавить комментарий</span>
-          </button>
         </div>
         <div class="sv-full-table-wrap" id="svCommentsTableWrap"></div>
       </div>
@@ -1514,6 +1501,7 @@
         <path d="M16 3.13a4 4 0 0 0 0 7.75"/>
       </svg>
       <span>Ознакомление</span>
+      <span class="sv-full-tab-badge sv-full-tab-badge-new" id="epAckBadge" style="display:none">Новое</span>
     </button>
     <button type="button" class="sv-full-tab-btn" data-ep-tab="history">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1598,14 +1586,8 @@
               <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
               <path d="M16 3.13a4 4 0 0 0 0 7.75"/>
             </svg>
-            Ознакомление с версиями параметра
+            Ознакомление с параметром
           </div>
-          <button type="button" class="btn btn-success btn-icon-text" id="epAckMarkBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-            <span>Отметить ознакомление</span>
-          </button>
         </div>
         <div class="sv-full-table-wrap" id="epAckTableWrap"></div>
       </div>
@@ -1637,13 +1619,6 @@
             </svg>
             Комментарии к параметру
           </div>
-          <button type="button" class="btn btn-secondary btn-icon-text" id="epAddCommentBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            <span>Добавить комментарий</span>
-          </button>
         </div>
         <div class="sv-full-table-wrap" id="epCommentsTableWrap"></div>
       </div>
@@ -2517,8 +2492,12 @@
 <script src="js/data/schedule.js"></script>
 <script src="js/data/changelog.js"></script>
 <script src="js/data/line-brand.js"></script>
+<script src="js/data/comments.js"></script>
+<script src="js/data/ack.js"></script>
 <script src="js/components/pickers.js"></script>
 <script src="js/components/validation.js"></script>
+<script src="js/components/std-comments.js"></script>
+<script src="js/components/std-ack.js"></script>
 <script src="js/components/line-picker.js"></script>
 <script src="js/components/photo-slider.js"></script>
 <script src="js/components/standard-view.js"></script>

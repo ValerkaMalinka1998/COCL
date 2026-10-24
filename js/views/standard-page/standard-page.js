@@ -185,22 +185,8 @@ function renderStandardFullView() {
   }
 
   // --- Бейджи вкладок ---
-  const ackCount = Array.isArray(st.acknowledgements) ? st.acknowledgements.length : 0;
-  const versionsCount = Array.isArray(st.versions) ? st.versions.length : 0;
-  const commentsCount = Array.isArray(st.comments) ? st.comments.length : 0;
+  // Счётчики вкладок ставят renderSvHistoryTable / renderStdComments / renderStdAck
 
-  // Счётчик вкладки «История изменений» ставит renderSvHistoryTable
-  const commentsBadge = $('#svCommentsCount');
-  if (commentsBadge) commentsBadge.textContent = commentsCount;
-
-  const ackBadge = $('#svAckBadge');
-  if (ackBadge) {
-    // Показываем «Новое» если есть версии и никто не ознакомлен с последней
-    const lastVersion = st.version || 1;
-    const hasAck = Array.isArray(st.acknowledgements) &&
-      st.acknowledgements.some(a => a.version === lastVersion);
-    ackBadge.style.display = (!hasAck && versionsCount > 0) ? 'inline-flex' : 'none';
-  }
 
   // --- Основная информация ---
   renderSvMainFields(st, isEdit);

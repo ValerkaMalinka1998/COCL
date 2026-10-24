@@ -122,7 +122,8 @@ function renderEparamPage() {
   renderEparamRelated(p);
   renderEparamExtra(p);
   renderEparamHistory(p);
-  renderEparamStubs();
+  renderStdAck('elec', epPageState.isNew ? null : p);
+  renderStdComments('elec', epPageState.isNew ? null : p);
   const tabs = $('#epTabs');
   if (tabs) tabs.style.display = epPageState.isNew ? 'none' : '';
   applyEparamMode();
@@ -148,25 +149,6 @@ function renderEparamHistory(p) {
   if (badge) badge.textContent = rows.length;
   const wrap = $('#epHistoryWrap');
   if (wrap) wrap.innerHTML = changeHistoryHtml(rows);
-}
-
-/* Заглушки вкладок «Ознакомление» и «Комментарии» — как на странице стандарта */
-function renderEparamStubs() {
-  const stub = (id, icon, text) => {
-    const wrap = $(id);
-    if (!wrap) return;
-    wrap.innerHTML = `
-      <div class="sv-full-empty-table">
-        <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>
-        <div>${text}</div>
-      </div>`;
-  };
-  stub('#epAckTableWrap',
-    '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>',
-    'Раздел «Ознакомление» в разработке');
-  stub('#epCommentsTableWrap',
-    '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
-    'Раздел «Комментарии» в разработке');
 }
 
 /* Переключение вкладок страницы параметра */
@@ -567,8 +549,6 @@ $('#epTabs')?.addEventListener('click', (e) => {
   const btn = e.target.closest('.sv-full-tab-btn');
   if (btn) switchEparamTab(btn.dataset.epTab);
 });
-$('#epAckMarkBtn')?.addEventListener('click', () => showToast('Функция «Ознакомление» в разработке', true));
-$('#epAddCommentBtn')?.addEventListener('click', () => showToast('Функция «Комментарии» в разработке', true));
 $('#epPageBackBtn')?.addEventListener('click', () => closeEparamPage(false));
 $('#epPageCancelBtn')?.addEventListener('click', () => closeEparamPage(false));
 $('#epPageEditBtn')?.addEventListener('click', () => {

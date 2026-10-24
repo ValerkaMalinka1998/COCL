@@ -28,6 +28,8 @@ const STORAGE_KEYS = {
   customTriggers: 'cl_custom_triggers_v1',
   scheduleWeeks: 'cl_schedule_weeks_v1',
   changeLog: 'cl_change_log_v1',         // лист истории изменений стандартов
+  stdComments: 'cl_std_comments_v1',     // комментарии к стандартам и E-Param
+  stdAck: 'cl_std_ack_v1',               // ознакомление с изменениями стандартов
   lineBrandEvents: 'cl_line_brand_events_v1' // текущий бренд линии: COCL / аналитик / оператор
 };
 
