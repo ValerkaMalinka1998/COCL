@@ -15,39 +15,61 @@ const stdCommentsState = { mech: null, elec: null };
 function stdCommentWhen(c) {
   const d = c.createdAt ? new Date(c.createdAt) : null;
   const time = d ? `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : '';
-  const shift = c.shiftType === 'night' ? 'Ночь' : 'День';
-  const letter = c.shiftLetter ? ` · ${escapeHtml(c.shiftLetter)}` : '';
-  return `${fmtShortDate(c.shiftDate)} ${time} · ${shift}${letter}`;
+  const shift = c.shiftType === 'night' ? 'ночь' : 'день';   // буква смены — в подписи «Смена X»
+  return `${fmtShortDate(c.shiftDate)} · ${shift} · ${time}`;
+}
+
+/* SVG-иконка 16×16 по имени */
+function stdcIcon(name, size = 16) {
+  const paths = {
+    reply: '<polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>',
+    done: '<polyline points="20 6 9 17 4 12"/>',
+    reopen: '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>',
+    delete: '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>',
+    send: '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>'
+  };
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths[name]}</svg>`;
 }
 
 function stdCommentItemHtml(c) {
   const done = c.status === 'done';
+  const letter = escapeHtml(c.shiftLetter || '?');
   const reply = c.reply
-    ? `<div class="stdc-reply"><span class="stdc-reply-label">Ответ аналитика</span>${escapeHtml(c.reply)}</div>`
+    ? `<div class="stdc-reply">
+         <div class="stdc-avatar stdc-avatar-an">А</div>
+         <div class="stdc-bubble stdc-bubble-an">
+           <div class="stdc-meta"><b>Аналитик</b></div>
+           <div class="stdc-text">${escapeHtml(c.reply)}</div>
+         </div>
+       </div>`
     : '';
+  const act = (name, title, extra = '') =>
+    `<button type="button" class="stdc-act stdc-act-${name}${extra}" data-stdc-act="${name}" title="${title}">${stdcIcon(name, 15)}<span>${title}</span></button>`;
   return `
     <div class="stdc-item${done ? ' is-done' : ''}" data-stdc-id="${escapeAttr(c.id)}">
-      <div class="stdc-head">
-        <span class="stdc-status ${done ? 'done' : 'new'}">${done ? 'Рассмотрено' : 'Новое'}</span>
-        <span class="stdc-when">${stdCommentWhen(c)}</span>
-        <span class="stdc-author">${escapeHtml(c.author || '—')}</span>
+      <div class="stdc-msg">
+        <div class="stdc-avatar">${letter}</div>
+        <div class="stdc-bubble">
+          <div class="stdc-meta">
+            <b>Смена ${letter}</b>
+            <span class="stdc-when">${stdCommentWhen(c)}</span>
+            <span class="stdc-status ${done ? 'done' : 'new'}">${done ? stdcIcon('done', 12) + 'Рассмотрено' : 'Новое'}</span>
+          </div>
+          <div class="stdc-text">${escapeHtml(c.text)}</div>
+        </div>
       </div>
-      <div class="stdc-text">${escapeHtml(c.text)}</div>
       ${reply}
       <div class="stdc-actions">
         ${done
-          ? `<button type="button" class="btn btn-secondary btn-sm" data-stdc-act="reopen">Вернуть в новые</button>`
-          : `<button type="button" class="btn btn-secondary btn-sm" data-stdc-act="reply">${c.reply ? 'Изменить ответ' : 'Ответить'}</button>
-             <button type="button" class="btn btn-primary btn-sm" data-stdc-act="done">Рассмотрено</button>`}
-        <button type="button" class="btn btn-secondary btn-sm stdc-del" data-stdc-act="delete" title="Удалить">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-        </button>
+          ? act('reopen', 'Вернуть в новые')
+          : act('reply', c.reply ? 'Изменить ответ' : 'Ответить') + act('done', 'Рассмотрено')}
+        ${act('delete', 'Удалить', ' stdc-act-icon')}
       </div>
       <div class="stdc-reply-form" style="display:none">
-        <textarea class="stdc-reply-input" rows="2" placeholder="Ответ оператору"></textarea>
-        <div class="stdc-form-btns">
-          <button type="button" class="btn btn-secondary btn-sm" data-stdc-act="reply-cancel">Отмена</button>
-          <button type="button" class="btn btn-primary btn-sm" data-stdc-act="reply-save">Сохранить ответ</button>
+        <div class="stdc-composer stdc-composer-sm">
+          <textarea class="stdc-reply-input" rows="1" placeholder="Ответ оператору…"></textarea>
+          <button type="button" class="stdc-cancel" data-stdc-act="reply-cancel">Отмена</button>
+          <button type="button" class="stdc-send" data-stdc-act="reply-save" title="Сохранить ответ">${stdcIcon('send')}</button>
         </div>
       </div>
     </div>`;
@@ -68,10 +90,11 @@ function renderStdComments(kind, row) {
   if (!wrap) return;
   wrap.innerHTML = `
     <div class="stdc-form" data-stdc-kind="${kind}">
-      <textarea class="stdc-input" rows="3" placeholder="Что не так со стандартом: неточная норма, непонятное описание, другое…"></textarea>
-      <div class="stdc-form-btns">
-        <button type="button" class="btn btn-primary btn-sm" data-stdc-act="add">Добавить комментарий</button>
+      <div class="stdc-composer">
+        <textarea class="stdc-input" rows="2" placeholder="Что не так со стандартом: неточная норма, непонятное описание…"></textarea>
+        <button type="button" class="stdc-send" data-stdc-act="add" title="Добавить комментарий">${stdcIcon('send')}</button>
       </div>
+      <div class="stdc-hint">Ctrl+Enter — отправить</div>
     </div>
     <div class="stdc-list" data-stdc-kind="${kind}">
       ${list.length
@@ -131,4 +154,14 @@ document.addEventListener('click', e => {
     removeStdComment(id);
     stdCommentsRefresh(kind);
   }
+});
+
+/* Ctrl+Enter в поле — отправить комментарий / ответ */
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !(e.ctrlKey || e.metaKey)) return;
+  const field = e.target.closest?.('.stdc-input, .stdc-reply-input');
+  if (!field) return;
+  e.preventDefault();
+  const btn = field.closest('.stdc-composer')?.querySelector('.stdc-send');
+  btn?.click();
 });

@@ -1,71 +1,159 @@
 /* ============================================================ */
-/* === КОММЕНТАРИИ К СТАНДАРТУ / E-PARAM ====================== */
+/* === КОММЕНТАРИИ К СТАНДАРТУ / E-PARAM — вид ленты сообщений  */
 /* ============================================================ */
 
-.stdc-form {
+/* --- Поле ввода с кнопкой «отправить» внутри --- */
+.stdc-form { margin-bottom: 18px; }
+.stdc-composer {
   display: flex;
-  flex-direction: column;
+  align-items: flex-end;
   gap: 8px;
-  margin-bottom: 14px;
+  padding: 8px 8px 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-input);
+  transition: border-color .15s, box-shadow .15s;
+}
+.stdc-composer:focus-within {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-cyan) 18%, transparent);
 }
 .stdc-input,
 .stdc-reply-input {
-  width: 100%;
-  resize: vertical;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-input);
+  flex: 1;
+  min-height: 22px;
+  padding: 6px 0;
+  border: none;
+  background: transparent;
   color: var(--text-main);
   font: inherit;
+  line-height: 1.45;
+  resize: vertical;
 }
 .stdc-input:focus,
-.stdc-reply-input:focus { outline: none; border-color: var(--accent-cyan); }
-.stdc-form-btns { display: flex; justify-content: flex-end; gap: 8px; }
-
-.stdc-list { display: flex; flex-direction: column; gap: 10px; }
-.stdc-item {
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--accent-cyan);
-  border-radius: 8px;
-  background: var(--bg-card);
+.stdc-reply-input:focus { outline: none; }
+.stdc-send {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 10px;
+  background: var(--accent-cyan);
+  color: var(--on-accent);
+  cursor: pointer;
+  transition: filter .15s, transform .1s;
 }
-.stdc-item.is-done { border-left-color: var(--accent-green); opacity: .8; }
-.stdc-head {
+.stdc-send:hover { filter: brightness(1.1); }
+.stdc-send:active { transform: scale(.94); }
+.stdc-cancel {
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0 4px 10px;
+}
+.stdc-cancel:hover { color: var(--text-main); }
+.stdc-hint { margin: 4px 4px 0; font-size: 11px; color: var(--text-dim); text-align: right; }
+
+/* --- Лента --- */
+.stdc-list { display: flex; flex-direction: column; gap: 4px; }
+.stdc-item {
+  padding: 10px 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.stdc-item:last-child { border-bottom: none; }
+.stdc-msg,
+.stdc-reply { display: flex; gap: 10px; align-items: flex-start; }
+.stdc-reply { margin: 8px 0 0 44px; }
+
+.stdc-avatar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent-cyan) 16%, transparent);
+  color: var(--accent-cyan);
+  font-weight: 700;
+  font-size: 14px;
+}
+.stdc-avatar-an {
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+  background: color-mix(in srgb, var(--accent-purple) 16%, transparent);
+  color: var(--accent-purple);
+}
+
+.stdc-bubble {
+  min-width: 0;
+  max-width: 760px;
+  padding: 8px 12px 10px;
+  border-radius: 4px 14px 14px 14px;
+  background: var(--bg-hover);
+}
+.stdc-bubble-an {
+  background: color-mix(in srgb, var(--accent-purple) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-purple) 20%, transparent);
+}
+.stdc-meta {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+  margin-bottom: 3px;
   font-size: 12px;
   color: var(--text-second);
 }
+.stdc-meta b { color: var(--text-main); font-weight: 600; }
+.stdc-bubble-an .stdc-meta b { color: var(--accent-purple); }
+.stdc-when { color: var(--text-dim); }
+.stdc-text { white-space: pre-wrap; word-break: break-word; color: var(--text-main); line-height: 1.5; }
+
 .stdc-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   padding: 1px 8px;
-  border-radius: 10px;
-  font-weight: 600;
-  color: var(--on-accent);
-}
-.stdc-status.new  { background: var(--accent-cyan); }
-.stdc-status.done { background: var(--accent-green); }
-.stdc-author { margin-left: auto; color: var(--text-dim); }
-.stdc-text { margin: 6px 0; white-space: pre-wrap; color: var(--text-main); }
-.stdc-reply {
-  margin: 6px 0;
-  padding: 6px 10px;
-  border-radius: 6px;
-  background: var(--bg-hover);
-  white-space: pre-wrap;
-  color: var(--text-main);
-}
-.stdc-reply-label {
-  display: block;
+  border-radius: 999px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--accent-purple);
 }
-.stdc-actions { display: flex; gap: 6px; justify-content: flex-end; }
-.stdc-del { margin-left: 4px; }
-.stdc-del:hover { color: var(--accent-red); }
-.stdc-reply-form { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.stdc-status.new  { background: color-mix(in srgb, var(--accent-cyan) 15%, transparent); color: var(--accent-cyan); }
+.stdc-status.done { background: color-mix(in srgb, var(--accent-green) 15%, transparent); color: var(--accent-green); }
+.stdc-item.is-done .stdc-bubble:not(.stdc-bubble-an) { opacity: .75; }
+
+/* --- Действия: текстовые кнопки под сообщением --- */
+.stdc-actions { display: flex; gap: 2px; margin: 4px 0 0 44px; }
+.stdc-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-second);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.stdc-act:hover { background: var(--bg-hover); color: var(--text-main); }
+.stdc-act-done { color: var(--accent-green); }
+.stdc-act-done:hover { color: var(--accent-green); }
+.stdc-act-icon { margin-left: auto; }
+.stdc-act-icon span { display: none; }
+.stdc-act-icon:hover { color: var(--accent-red); }
+.stdc-reply-form { margin: 6px 0 0 44px; }
+.stdc-composer-sm { padding: 4px 4px 4px 12px; border-radius: 12px; }
+.stdc-composer-sm .stdc-send { width: 30px; height: 30px; border-radius: 8px; background: var(--accent-purple); }
+
 .stdc-badge-new { background: var(--accent-cyan) !important; color: var(--on-accent) !important; }
