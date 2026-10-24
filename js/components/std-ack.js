@@ -92,12 +92,28 @@ function renderStdAck(kind, row) {
   }
   if (!wrap || !s) { if (wrap) wrap.innerHTML = ''; return; }
 
-  const rows = s.acks.map(a => {
+  // Одна строка на человека: его последнее ознакомление. Пока нет автологина,
+  // who = '—' у всех — это один «Оператор» этого компьютера.
+  const people = [];
+  const seen = new Set();
+  s.acks.forEach(a => {                       // s.acks — новые сверху
+    const who = a.who || '—';
+    if (seen.has(who)) return;
+    seen.add(who);
+    people.push(a);
+  });
+  // Кому нужно повторно — сверху
+  people.sort((x, y) => ((x.edition || 1) >= s.edition) - ((y.edition || 1) >= s.edition));
+
+  const rows = people.map(a => {
     const night = a.shiftType === 'night';
     const cur = (a.edition || 1) >= s.edition;
+    const name = a.who && a.who !== '—'
+      ? `<span class="stda-who">${escapeHtml(a.who)}</span>`
+      : '<span class="stda-who">Оператор</span><span class="stda-who-note">ФИО — после автологина</span>';
     return `
       <tr class="${cur ? '' : 'is-old'}">
-        <td><span class="stda-who">Оператор</span><span class="stda-who-note">ФИО — после автологина</span></td>
+        <td>${name}</td>
         <td>${escapeHtml(stdAckWhen(a.at))}</td>
         <td><span class="stdc-sh ${night ? 'n' : 'd'}">${escapeHtml(a.shiftLetter || '?')}</span> ${night ? 'ночь' : 'день'}</td>
         <td><span class="stda-ed${cur ? '' : ' old'}">ред. ${a.edition || 1}${cur ? ' · актуальная' : ' · нужно повторно'}</span></td>
@@ -106,9 +122,9 @@ function renderStdAck(kind, row) {
 
   wrap.innerHTML = `
     ${stdAckPlateHtml(s, kind)}
-    <div class="stda-head">Ознакомились <span class="stda-count">${s.acks.length}</span>
+    <div class="stda-head">Ознакомились
       <span class="stda-edition">Текущая редакция: ${s.edition}</span></div>
-    ${s.acks.length
+    ${people.length
       ? `<table class="stdc-table stda-table">
            <thead><tr><th>Кто</th><th>Когда</th><th>Смена</th><th>Редакция</th></tr></thead>
            <tbody>${rows}</tbody>
