@@ -141,4 +141,5 @@ document.addEventListener('click', e => {
   addStdAck(kind, st.id);
   showToast('Вы ознакомлены');
   renderStdAck(kind, { id: st.id });
+  if (typeof updateNotifyBadge === 'function') updateNotifyBadge();
 });

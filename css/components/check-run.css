@@ -1,0 +1,496 @@
+/* ============================================================ */
+/* === ОКНО ПРОВЕРКИ: список слева — стандарт справа ========== */
+/* ============================================================ */
+/* Общее для «CL при переходах» и TOP Losses (js/components/check-run.js).
+   Одно окно: слева шапка, прогресс, список, «Сохранить проверку»;
+   справа выбранный стандарт. Пункты списка — display: contents,
+   их части раскладываются по колонкам общей сетки. */
+
+.chk-run {
+  --chk-left-w: 380px;
+  --chk-left-bg: color-mix(in srgb, var(--accent-cyan) 4%, var(--bg-card));
+  display: grid;
+  grid-template-columns: var(--chk-left-w) minmax(0, 1fr);
+  grid-auto-rows: min-content;
+  align-items: start;
+  min-height: 640px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background:
+    linear-gradient(to right,
+      var(--chk-left-bg) 0 var(--chk-left-w),
+      var(--border) var(--chk-left-w) calc(var(--chk-left-w) + 1px),
+      var(--bg-card) calc(var(--chk-left-w) + 1px));
+  overflow: clip;
+}
+
+.chk-run > * { grid-column: 1; }
+
+.chk-run .chk-item,
+.chk-run .cocl-group { display: contents; }
+
+/* === Левая панель: шапка ==================================== */
+.chk-lhead {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.chk-lhead-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.chk-lhead-t {
+  flex: 1;
+  min-width: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.chk-back {
+  flex: none;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--accent-cyan);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chk-back:hover { text-decoration: underline; }
+
+.chk-lhead-sub {
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
+.chk-lhead-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.chk-bar {
+  height: 6px;
+  margin-top: 12px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.chk-bar i {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent-green);
+  transition: width 0.3s ease;
+}
+
+.chk-lhead-s {
+  margin-top: 7px;
+  font-size: 13px;
+  color: var(--text-second);
+}
+
+.chk-lhead-s b { color: var(--accent-red); }
+
+/* Группа по машинам (CL при переходах) */
+.chk-run .cocl-group-head {
+  margin: 0;
+  padding: 12px 20px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* === Левая панель: пункты =================================== */
+.chk-entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.chk-entry:hover { background: color-mix(in srgb, var(--accent-cyan) 6%, var(--bg-card)); }
+
+.chk-item.is-active > .chk-entry {
+  background: var(--bg-card);
+  box-shadow: inset 3px 0 0 var(--accent-cyan);
+}
+
+.chk-ic {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--border-hi);
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--on-accent);
+}
+
+.chk-item.is-active .chk-ic[data-acc-status="unchecked"] {
+  border-color: var(--accent-cyan);
+  background: var(--accent-cyan);
+}
+
+.chk-item.is-active .chk-ic[data-acc-status="unchecked"]::after { content: attr(data-n); }
+
+.chk-ic[data-acc-status="ok"] {
+  border-color: var(--accent-green);
+  background: var(--accent-green);
+}
+
+.chk-ic[data-acc-status="ok"]::after { content: "✓"; }
+
+.chk-ic[data-acc-status="fail"] {
+  border-color: var(--accent-red);
+  background: var(--accent-red);
+}
+
+.chk-ic[data-acc-status="fail"]::after { content: "✕"; }
+
+.chk-etext {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.chk-opl {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+}
+
+.chk-ename {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text-main);
+}
+
+/* Отклонение без комментария — метка в списке */
+.chk-needs-comment > .chk-entry .chk-ename::after {
+  content: " · нужен комментарий";
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-red);
+}
+
+/* === Левая панель: сохранение =============================== */
+.chk-lfoot { padding: 18px 20px 20px; }
+
+.chk-save {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 48px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--accent-green);
+  color: var(--on-accent);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chk-save:hover { filter: brightness(1.05); }
+
+/* === Правая часть: выбранный стандарт ======================= */
+.chk-detail { display: none; }
+
+.chk-item.is-active > .chk-detail {
+  display: flex;
+  flex-direction: column;
+  grid-column: 2;
+  grid-row: 1 / span 999;
+  align-self: stretch;
+  min-width: 0;
+  padding: 24px 28px;
+}
+
+.chk-d-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.chk-d-ttl {
+  flex: 1;
+  min-width: 0;
+}
+
+.chk-d-meta {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.chk-d-name {
+  margin-top: 3px;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--text-main);
+}
+
+.chk-run button.chk-eye {
+  flex: none;
+  gap: 7px;
+  width: auto;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.chk-d-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 20px;
+}
+
+.chk-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--bg-hover);
+  font-size: 13px;
+  color: var(--text-second);
+}
+
+.chk-fact b {
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.chk-fact.is-empty { opacity: 0.6; }
+
+.chk-fact.is-empty b { font-weight: 500; color: var(--text-dim); }
+
+.chk-fact-co {
+  background: color-mix(in srgb, var(--accent-cyan) 10%, transparent);
+  color: var(--accent-cyan);
+}
+
+.chk-d-body.has-photos {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 340px);
+  gap: 24px;
+  align-items: start;
+}
+
+.chk-d-col { min-width: 0; }
+
+/* Поля точек: CL при переходах */
+.chk-detail .cocl-pts {
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 14px;
+}
+
+.chk-detail .cocl-pt-norm {
+  font-size: 12px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.chk-detail .cocl-pt-norm b {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  text-transform: none;
+  color: var(--text-main);
+}
+
+.chk-detail .checklist-point-input {
+  height: 52px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 20px;
+  text-align: left;
+}
+
+.chk-detail .cocl-mark-btns button { height: 52px; font-size: 15px; }
+
+.chk-detail .cocl-okfail span { height: 44px; padding: 0 22px; font-size: 15px; }
+
+/* Поля точек: TOP Losses */
+.chk-detail .tl3-pts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 14px;
+  margin-top: 0;
+}
+
+.chk-detail .tl3-pt {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.chk-detail .tl3-pt small {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.chk-detail .tl3-pt small b {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  text-transform: none;
+  color: var(--text-main);
+}
+
+.chk-detail .tl3-pt input {
+  height: 52px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.chk-detail .tl3-pt.ok input { background: color-mix(in srgb, var(--accent-green) 7%, var(--bg-input)); }
+
+.chk-detail .tl3-mark button { height: 52px; font-size: 15px; }
+
+.chk-detail .tl3-okno { margin-top: 0; }
+
+.chk-detail .tl3-okno button { padding: 12px 26px; font-size: 15px; }
+
+/* Как проверять */
+.chk-how {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent-cyan) 6%, var(--bg-card));
+}
+
+.chk-how-t {
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-second);
+}
+
+.chk-how-b {
+  font-size: 15px;
+  line-height: 1.5;
+  white-space: pre-line;
+  color: var(--text-main);
+}
+
+/* Комментарий: обязателен при отклонении */
+.chk-comment {
+  display: block;
+  width: 100%;
+  min-height: 50px;
+  margin-top: 14px;
+  padding: 12px 16px;
+  border: 1px solid var(--border-hi);
+  border-radius: 10px;
+  background: var(--bg-input);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 15px;
+  resize: vertical;
+}
+
+.chk-comment:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-cyan) 16%, transparent);
+}
+
+.chk-needs-comment .chk-comment {
+  border-color: var(--accent-red);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-red) 14%, transparent);
+}
+
+/* Навигация */
+.chk-d-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 28px;
+}
+
+.chk-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--border-hi);
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chk-nav:hover { background: var(--bg-hover); }
+
+.chk-nav.primary {
+  padding: 0 22px;
+  border-color: var(--accent-cyan);
+  background: var(--accent-cyan);
+  color: var(--on-accent);
+}
+
+.chk-nav.primary:hover { filter: brightness(1.06); }
+
+/* === CL при переходах: во время проверки окно на всю ширину === */
+.cocl-layout.is-checking { grid-template-columns: minmax(0, 1fr); }
+
+.cocl-layout.is-checking > #coclSetupCard,
+.cocl-layout.is-checking .cocl-main-head { display: none; }
+
+.cocl-layout.is-checking > #checklistCard {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+/* === Узкий экран: одна колонка, стандарт под выбранным пунктом === */
+@media (max-width: 1100px) {
+  .chk-run {
+    grid-template-columns: minmax(0, 1fr);
+    background: var(--bg-card);
+  }
+
+  .chk-item.is-active > .chk-detail {
+    grid-column: 1;
+    grid-row: auto;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .chk-d-body.has-photos { grid-template-columns: minmax(0, 1fr); }
+}

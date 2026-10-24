@@ -4,7 +4,7 @@
 /* Замечания оператора к стандарту / параметру и ответ аналитика.
    Запись: { id, kind: 'mech'|'elec', refId, line, reason, text, author,
              createdAt, shiftDate, shiftType, shiftLetter,
-             status: 'new'|'done', reply, doneAt } */
+             status: 'new'|'done', reply, repliedAt, doneAt } */
 
 function getStdComments() {
   const v = load(STORAGE_KEYS.stdComments, []);
@@ -16,10 +16,6 @@ function getStdCommentsFor(kind, refId) {
   return getStdComments()
     .filter(c => c.kind === kind && c.refId === refId)
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));   // новые сверху
-}
-
-function countOpenStdComments(kind, refId) {
-  return getStdCommentsFor(kind, refId).filter(c => c.status !== 'done').length;
 }
 
 function addStdComment(kind, row, text, reason) {

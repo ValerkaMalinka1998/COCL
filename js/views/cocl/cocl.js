@@ -269,7 +269,7 @@ function closeCoclBrandPops(except) {
 
 /* Выпадающие списки брендов и «поменять местами» */
 $('#brandsCard')?.addEventListener('click', (e) => {
-  if ($('#coclSetupCard')?.classList.contains('is-locked')) return;
+  if (coclState.checking) return;
   const box = e.target.closest('.cocl-bsel');
 
   if (e.target.closest('.cocl-bsel-btn')) {
@@ -385,7 +385,7 @@ $('#partSelect')?.addEventListener('change', () => {
 /* Кнопки Maker / Packer → скрытый #partSelect */
 $('#coclPartSeg')?.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-part]');
-  if (!btn || $('#coclSetupCard')?.classList.contains('is-locked')) return;
+  if (!btn || coclState.checking) return;
   const sel = $('#partSelect');
   sel.value = btn.dataset.part;
   sel.dispatchEvent(new Event('change'));
@@ -432,7 +432,7 @@ function updateCoclStepStates() {
   });
 
   // Пустую часть не выбрать; если стандарты есть только у одной части — выбираем её сами
-  const locked = $('#coclSetupCard')?.classList.contains('is-locked');
+  const locked = coclState.checking;
   $$('#coclPartSeg [data-part]').forEach(b => { b.disabled = !!(line && type && partCount[b.dataset.part] === 0); });
   if (needsPart && type && !locked) {
     const withStd = ['Maker', 'Packer'].filter(p => partCount[p] > 0);
@@ -457,7 +457,7 @@ function openCoclTab() {
 /* Клик по кнопке типа проверки */
 $('#typeSelector')?.addEventListener('click', (e) => {
   const btn = e.target.closest('.type-option');
-  if (!btn || $('#coclSetupCard')?.classList.contains('is-locked')) return;
+  if (!btn || coclState.checking) return;
   $('#transitionType').value = btn.dataset.value;
   onTransitionTypeChange();
 });
@@ -639,13 +639,17 @@ function updateChecklist() {
   renderChecklist(relevant);
 }
 
+const COCL_TYPE_LABELS = { ChangeOver: 'Смена сорта', CL_TO: 'CL в ТО', CL_Conversion: 'CL в Конвертацию' };
+
 /* Чек-лист: строки стандартов, сгруппированные по машинам.
-   До «Начать проверку» — норма текстом, во время проверки — поля ввода
-   (точки и ОК / Не ОК — под названием, слева направо). */
+   До «Начать проверку» — список с нормой текстом. Во время проверки —
+   окно «список слева — стандарт справа» (js/components/check-run.js). */
 function renderChecklist(items) {
   const c = $('#checklistContainer');
   const type = $('#transitionType').value;
+  const brandFrom = (type === 'ChangeOver') ? $('#brandFrom').value : '';
   const brandTo = (type === 'ChangeOver') ? $('#brandTo').value : '';
+  const checking = !!coclState.checking;
 
   // Группы по машинам — в порядке появления
   const groups = [];
@@ -657,11 +661,12 @@ function renderChecklist(items) {
   });
 
   const pointCell = (m, i, showNum) => {
+    const head = `${showNum ? `Т.${i + 1} · ` : ''}норма <b>${escapeHtml(m.value || '—')}</b>`;
     // Точка-метка (словами или без числовой нормы) — ОК / Не ОК вместо поля
     if (isNormMark(m.value) || !parseNorm(m.value)) {
       return `
       <div class="checklist-point-cell cocl-pt-mark" data-point-index="${i}" data-mark="1">
-        <span class="cocl-pt-norm">${showNum ? `<b>${i + 1}</b>` : ''}${escapeHtml(m.value || '—')}<span class="checklist-point-status" data-point-status="${i}"></span></span>
+        <span class="cocl-pt-norm">${head}<span class="checklist-point-status" data-point-status="${i}"></span></span>
         <input type="hidden" class="checklist-point-input" data-point-input="${i}" value="">
         <span class="cocl-mark-btns">
           <button type="button" class="cocl-mark-ok" data-cocl-mark="ОК">ОК</button>
@@ -673,12 +678,14 @@ function renderChecklist(items) {
     const normData = norm ? JSON.stringify(norm).replace(/"/g, '&quot;') : '';
     return `
       <label class="checklist-point-cell" data-point-index="${i}" data-norm='${normData}'>
-        <span class="cocl-pt-norm">${showNum ? `<b>${i + 1}</b>` : ''}${escapeHtml(m.value || '—')}<span class="checklist-point-status" data-point-status="${i}"></span></span>
+        <span class="cocl-pt-norm">${head}<span class="checklist-point-status" data-point-status="${i}"></span></span>
         <input type="text" inputmode="decimal" class="checklist-point-input" data-point-input="${i}" autocomplete="off">
       </label>`;
   };
 
+  let n = 0;
   const rowHtml = (st) => {
+    n++;
     const blocks = Array.isArray(st.measurements) ? st.measurements : [];
     const block = (type === 'ChangeOver' && brandTo) ? getEffectiveBrandBlock(blocks, brandTo) : (blocks[0] || null);
     const points = block && Array.isArray(block.points) ? block.points : [];
@@ -689,6 +696,28 @@ function renderChecklist(items) {
     if (isOkNotOk) normText = marksText(points) || 'ОК / Не ОК';
     else if (points.length === 1) normText = points[0].value || '—';
     else normText = `${points.length} ${points.length < 5 ? 'точки' : 'точек'}`;
+
+    const meta = [st.oplNumber, st.node, block && block.brand ? 'бренд ' + block.brand : ''].filter(Boolean)
+      .map(escapeHtml).join(' · ');
+    const eyeAttrs = `data-view-btn data-std-id="${escapeAttr(st.id)}"`;
+
+    // До начала проверки — строка списка с нормой
+    if (!checking) {
+      return `
+      <div class="cocl-acc-item cocl-row" data-std-id="${st.id}" data-status="unchecked">
+        <div class="cocl-row-main">
+          <div class="cocl-row-title">
+            <div class="cocl-acc-title">${escapeHtml(st.title || '—')}</div>
+            <div class="cocl-acc-meta">${meta}</div>
+          </div>
+          <span class="cocl-row-norm">${escapeHtml(normText)}</span>
+          ${cilDurChip(cilRowDurationSec(st), 'cocl-row-time')}
+          <div class="cocl-row-tools">
+            <button type="button" class="cocl-acc-view-btn" ${eyeAttrs} title="Посмотреть стандарт">${CHK_ICONS.eye}</button>
+          </div>
+        </div>
+      </div>`;
+    }
 
     let ans = '';
     if (isOkNotOk) {
@@ -703,39 +732,53 @@ function renderChecklist(items) {
       ans = `<div class="cocl-pts">${points.map((m, i) => pointCell(m, i, points.length > 1)).join('')}</div>`;
     }
 
-    const meta = [st.oplNumber, st.node, block && block.brand ? 'бренд ' + block.brand : ''].filter(Boolean)
-      .map(escapeHtml).join(' · ');
-    const timeHtml = cilDurChip(cilRowDurationSec(st), 'cocl-row-time');
-
+    const photosHtml = typeof photoSliderHtml === 'function' ? photoSliderHtml(st) : '';
     return `
-      <div class="cocl-acc-item cocl-row" data-std-id="${st.id}" data-status="unchecked">
-        <div class="cocl-row-main">
-          <span class="cocl-status-dot" data-acc-status="unchecked"></span>
-          <div class="cocl-row-title">
-            <div class="cocl-acc-title">${escapeHtml(st.title || '—')}</div>
-            <div class="cocl-acc-meta">${meta}</div>
-          </div>
-          <span class="cocl-row-norm">${escapeHtml(normText)}</span>
-          ${timeHtml}
-          <div class="cocl-row-tools">
-            <button type="button" class="cocl-acc-comment-btn" data-comment-btn title="Комментарий">${cmtIcon(16, true)}</button>
-            <button type="button" class="cocl-acc-view-btn" data-view-btn data-std-id="${escapeAttr(st.id)}" title="Посмотреть стандарт">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
-          </div>
-        </div>
-        ${ans ? `<div class="cocl-row-input">${ans}</div>` : ''}
-        <div class="comment-preview" style="display:none" data-comment-preview></div>
+      <div class="cocl-acc-item chk-item" data-std-id="${st.id}" data-status="unchecked">
+        <div class="chk-entry" data-chk-pick>${chkEntryInner({ n, opl: st.oplNumber, title: st.title })}</div>
+        ${chkDetailHtml({
+          opl: st.oplNumber,
+          meta: [st.machine, st.node, st.nodePart],
+          title: st.title,
+          tool: st.tool,
+          durationSec: cilRowDurationSec(st),
+          changeOver: type === 'ChangeOver' ? { from: brandFrom, to: brandTo } : null,
+          brand: type !== 'ChangeOver' && block && block.brand ? block.brand : '',
+          eyeAttrs,
+          inputsHtml: ans ? `<div class="cocl-row-input">${ans}</div>` : '',
+          how: st.controlDescription,
+          photosHtml,
+          photosAttrs: `data-std-photos="${escapeAttr(st.id)}"`
+        })}
       </div>`;
   };
 
-  c.innerHTML = groups.map(g => `
+  const groupsHtml = groups.map(g => `
     <div class="cocl-group">
       <div class="cocl-group-head">${escapeHtml(g.key)}<span>${g.items.length}</span></div>
       ${g.items.map(rowHtml).join('')}
     </div>`).join('');
 
+  if (checking) {
+    const line = $('#lineSelect').value;
+    const part = $('#partSelect')?.value || '';
+    const title = [COCL_TYPE_LABELS[type] || 'Проверка', line, part].filter(Boolean).map(escapeHtml).join(' · ');
+    c.innerHTML = chkLeftHeadHtml({
+        title,
+        backHtml: `<button type="button" class="chk-back" data-cocl-edit>Изменить условия</button>`
+      })
+      + groupsHtml
+      + chkLeftFootHtml('data-cocl-save');
+  } else {
+    c.innerHTML = groupsHtml;
+  }
+
   bindCoclAccordionEvents();
+  c.querySelectorAll('[data-std-photos]').forEach(box => {
+    const st = items.find(x => x.id === box.dataset.stdPhotos);
+    if (st) bindPhotoSlider(box, st);
+  });
+  if (checking) coclSelectItem(c.querySelector('.cocl-acc-item'), false);
   updateProgress();
 }
 
@@ -768,6 +811,7 @@ function bindCoclAccordionEvents() {
       const val = e.target.value;
       updateCoclItemStatus(item, val === 'OK' ? 'ok' : 'fail');
       updateProgress();
+      if (val === 'OK') coclAdvanceLater(item);
     });
   });
 
@@ -834,8 +878,10 @@ function bindCoclAccordionEvents() {
         statusEl.textContent = inp.value ? (inp.value === 'ОК' ? '✓' : '✕') : '';
         statusEl.className = 'checklist-point-status' + (inp.value ? (inp.value === 'ОК' ? ' ok' : ' fail') : '');
       }
-      updateCoclItemStatusFromPoints(cell.closest('.cocl-acc-item'));
+      const mItem = cell.closest('.cocl-acc-item');
+      updateCoclItemStatusFromPoints(mItem);
       updateProgress();
+      if (mItem.dataset.status === 'ok' && inp.value) coclAdvanceLater(mItem);
     });
   });
 
@@ -844,32 +890,67 @@ function bindCoclAccordionEvents() {
     inp.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter') return;
       e.preventDefault();
-      const all = [...c.querySelectorAll('input.checklist-point-input[type="text"]')];
+      const item = inp.closest('.cocl-acc-item');
+      const all = [...item.querySelectorAll('input.checklist-point-input[type="text"]')];
       const next = all[all.indexOf(inp) + 1];
       if (next) next.focus();
+      else coclStep(item, 1);
     });
   });
 
-  // --- Кнопка комментария ---
-  c.querySelectorAll('[data-comment-btn]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const item = btn.closest('.cocl-acc-item');
-      openCommentModal(item);
+  // --- Комментарий к пункту (обязателен при отклонении) ---
+  c.querySelectorAll('[data-chk-comment]').forEach(ta => {
+    ta.addEventListener('input', () => {
+      ta.closest('.cocl-acc-item').dataset.comment = ta.value.trim();
+      updateProgress();
     });
   });
+
+  // --- Шапка и низ левой панели ---
+  c.querySelector('[data-cocl-edit]')?.addEventListener('click', () => editChecklistConditions());
+  c.querySelector('[data-cocl-save]')?.addEventListener('click', saveCoclCheck);
+
+  // --- Список слева: выбор стандарта; кнопки «Предыдущий / Следующий» ---
+  c.querySelectorAll('[data-chk-pick]').forEach(entry => {
+    entry.addEventListener('click', () => coclSelectItem(entry.closest('.cocl-acc-item'), true));
+  });
+  c.querySelectorAll('[data-chk-nav]').forEach(btn => {
+    btn.addEventListener('click', () => coclStep(btn.closest('.cocl-acc-item'), +btn.dataset.chkNav));
+  });
+}
+
+/* Показать стандарт справа. focus — перейти к первому полю ввода */
+function coclSelectItem(item, focus) {
+  const c = $('#checklistContainer');
+  if (!c || !item) return;
+  c.querySelectorAll('.cocl-acc-item.is-active').forEach(x => x.classList.remove('is-active'));
+  item.classList.add('is-active');
+  item.querySelector('.chk-entry')?.scrollIntoView({ block: 'nearest' });
+  if (focus) {
+    const f = item.querySelector('.chk-detail input[type="text"].checklist-point-input, .chk-detail input[data-ans]');
+    if (f) f.focus({ preventScroll: true });
+  }
+}
+
+/* Соседний стандарт списка (dir = 1 / -1) */
+function coclStep(item, dir) {
+  const all = [...$$('#checklistContainer .cocl-acc-item')];
+  const next = all[all.indexOf(item) + dir];
+  if (next) coclSelectItem(next, true);
+}
+
+/* После «ОК» — к следующему, если оператор ещё на этом стандарте */
+function coclAdvanceLater(item) {
+  setTimeout(() => {
+    if (item.classList.contains('is-active') && item.dataset.status === 'ok') coclStep(item, 1);
+  }, 350);
 }
 
 /** Обновить статус свёрнутой строки по явному ответу (radio ОК/Не ОК) */
 function updateCoclItemStatus(item, status) {
   item.dataset.status = status;
-
-  const dot = item.querySelector('[data-acc-status]');
-  if (dot) {
-    dot.classList.remove('cocl-status-unchecked', 'cocl-status-ok', 'cocl-status-fail');
-    dot.classList.add(status === 'ok' ? 'cocl-status-ok' : 'cocl-status-fail');
-    dot.dataset.accStatus = status;
-  }
+  const ic = item.querySelector('[data-acc-status]');
+  if (ic) ic.dataset.accStatus = status;
 }
 
 /** Обновить статус свёрнутой строки по точкам (value_input / range_input) */
@@ -888,13 +969,7 @@ function updateCoclItemStatusFromPoints(item) {
 
   if (!allFilled) {
     // Пока не всё заполнено — оставляем "не проверено"
-    item.dataset.status = 'unchecked';
-    const dot = item.querySelector('[data-acc-status]');
-    if (dot) {
-      dot.classList.remove('cocl-status-ok', 'cocl-status-fail');
-      dot.classList.add('cocl-status-unchecked');
-      dot.dataset.accStatus = 'unchecked';
-    }
+    updateCoclItemStatus(item, 'unchecked');
     return;
   }
 
@@ -903,84 +978,18 @@ function updateCoclItemStatusFromPoints(item) {
 }
 
 function updateProgress() {
+  const c = $('#checklistContainer');
   const items = $$('#checklistContainer .cocl-acc-item');
-  const wrap = $('#progressWrap');
-  const bar = $('#progressBarInner');
-  const percent = $('#progressPercent');
-  const text = $('#progressText');
-  const badge = $('#progressBadge');
-
-  if (!items.length || !coclState.checking) {
-    badge.textContent = '';
-    badge.className = 'progress-badge';
-    wrap.style.display = 'none';
-    text.style.display = 'none';
-    return;
-  }
-
+  if (!c || !items.length || !coclState.checking) return;
   let filled = 0;
-  let oks = 0;
   let fails = 0;
-
   items.forEach(item => {
     const status = item.dataset.status;
-    if (status === 'ok') { filled++; oks++; }
-    else if (status === 'fail') { filled++; fails++; }
+    if (status === 'ok' || status === 'fail') filled++;
+    if (status === 'fail') fails++;
+    chkMarkComment(item, status === 'fail');
   });
-
-  const total = items.length;
-  const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
-
-  wrap.style.display = 'flex';
-  text.style.display = 'block';
-
-  bar.style.width = pct + '%';
-  bar.classList.remove('low', 'mid', 'high', 'done');
-  if (pct === 100)      bar.classList.add('done');
-  else if (pct >= 67)   bar.classList.add('high');
-  else if (pct >= 34)   bar.classList.add('mid');
-  else                  bar.classList.add('low');
-
-  percent.textContent = pct + '%';
-
-  // Текст с деталями
-  const parts = [`Проверено ${filled} из ${total}`];
-  if (oks > 0) parts.push(`ОК: ${oks}`);
-  if (fails > 0) parts.push(`Не ОК: ${fails}`);
-  text.textContent = parts.join(' · ');
-
-  badge.textContent = `Проверено ${filled} из ${total}`;
-  badge.className = 'progress-badge' + (filled === total ? ' complete' : '');
-}
-
-function updateCommentUrgency(item) {
-  const btn = item.querySelector('[data-comment-btn]');
-  if (!btn) return;
-  const failRadio = item.querySelector('input[data-ans]:checked[value="FAIL"]')
-                 || item.querySelector('input[data-tol]:checked[value="FAIL"]');
-  const hasComment = item.dataset.comment && item.dataset.comment.trim() !== '';
-  if (failRadio && !hasComment) {
-    btn.classList.add('urgent');
-  } else {
-    btn.classList.remove('urgent');
-  }
-}
-
-/* ============================================================
-   МОДАЛЬНОЕ ОКНО КОММЕНТАРИЯ
-   ============================================================ */
-let currentCommentItem = null;
-
-function openCommentModal(item) {
-  currentCommentItem = item;
-  const std = getStandards().find(s => s.id === item.dataset.stdId);
-  $('#commentModalPoint').textContent = std
-    ? `№${std.number || '—'} · ${std.oplNumber || ''} — ${std.title || ''}`
-    : '';
-  const existing = item.dataset.comment || '';
-  $('#commentText').value = existing;
-  openModal('#commentModal');
-  setTimeout(() => $('#commentText').focus(), 100);
+  chkUpdateProgress(c, filled, items.length, fails);
 }
 
 /* ============================================================
@@ -1010,17 +1019,11 @@ function updateChecklistForCheck() {
 }
 
 /* Вид панелей: проверка идёт / не идёт */
+/* Во время проверки условия скрыты: на всю ширину — окно «список — стандарт» */
 function setCoclCheckingUi(on) {
-  $('#coclSetupCard')?.classList.toggle('is-locked', on);
   $('#checklistContainer')?.classList.toggle('cocl-preview', !on);
-  const edit = $('#editConditionsBtn');
-  if (edit) edit.hidden = !on;
-  const build = $('#buildChecklistCard');
-  if (build) build.hidden = on;
-  const act = $('#coclCheckActions');
-  if (act) act.hidden = !on;
-  const info = $('#coclBuildInfo');
-  if (info) info.hidden = on;
+  $('#checklistContainer')?.classList.toggle('chk-run', on);
+  $('#coclLayout')?.classList.toggle('is-checking', on);
   if (typeof updateCoclPick === 'function') updateCoclPick();
 }
 
@@ -1036,4 +1039,3 @@ function editChecklistConditions() {
 
 // Обработчики
 $('#buildChecklistBtn')?.addEventListener('click', buildChecklistView);
-$('#editConditionsBtn')?.addEventListener('click', editChecklistConditions);

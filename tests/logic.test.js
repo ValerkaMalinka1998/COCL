@@ -22,7 +22,9 @@ const MODULES = [
   'js/data/workshops.js',
   'js/data/catalog.js',
   'js/data/schedule.js',
+  'js/data/changelog.js',
   'js/data/line-brand.js',
+  'js/data/ack.js',
   'js/views/settings/shifts.js'
 ];
 
@@ -235,4 +237,33 @@ test('валидация: 28 смен, границы срока, решение
   const decided = { validation: { ...row.validation, decidedAt: '2026-10-25', decidedShift: 'day', result: 'approved' } };
   assert.equal(vs(decided, '2026-10-24', 'night'), true, 'до решения');
   assert.equal(vs(decided, '2026-10-25', 'day'), false, 'с решения — уже обычный');
+});
+
+test('существенные правки: одно правило для листа линии, истории и ознакомления', () => {
+  const describe = fn('describeRowChange');
+  const major = fn('stdAckIsMajor');
+  const st = { id: 's1', line: 'SD12', title: 'Зазор', active: true, durationSec: 60, photos: ['a.jpg'],
+    appliesTo: ['ChangeOver'], triggers: [], topLosses: [], measurements: [{ brand: '', points: [{ value: '0,3' }] }] };
+  const check = (patch) => {
+    const d = describe('mech', st, { ...plain(st), ...patch });
+    return { sheet: d.sheet !== false, ack: major({ action: d.action, sheet: d.sheet, details: d.details }), action: d.action };
+  };
+  for (const [name, patch] of [
+    ['фото', { photos: ['b.jpg'] }],
+    ['время на проверку', { durationSec: 90 }],
+    ['точки', { measurements: [{ brand: '', points: [{ value: '0,4' }] }] }],
+    ['описание контроля', { controlDescription: 'новое' }]
+  ]) {
+    const r = check(patch);
+    assert.equal(r.sheet, true, name + ' → в лист линии');
+    assert.equal(r.ack, true, name + ' → повторное ознакомление');
+  }
+  for (const [name, patch] of [['CL относится к', { appliesTo: ['CL_TO'] }], ['триггеры', { triggers: ['x'] }]]) {
+    const r = check(patch);
+    assert.equal(r.sheet, false, name + ' → не в лист линии');
+    assert.equal(r.ack, false, name + ' → не требует ознакомления');
+  }
+  const off = check({ active: false });
+  assert.equal(off.action, 'deactivated');
+  assert.equal(off.sheet, true, 'деактивация → в лист линии');
 });

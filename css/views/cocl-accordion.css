@@ -39,39 +39,12 @@
   margin-top: 6px;
 }
 
-.cocl-row[data-status="ok"] {
-  --row-c: var(--accent-green);
-}
-
-.cocl-row[data-status="fail"] {
-  --row-c: var(--accent-red);
-  background: color-mix(in srgb, var(--accent-red) 4%, var(--bg-card));
-}
-
 .cocl-row-main {
   display: flex;
   align-items: center;
   gap: 12px;
   min-height: 56px;
   padding: 8px 10px 8px 12px;
-}
-
-.cocl-status-dot {
-  flex: 0 0 10px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 2px solid var(--border-hi);
-}
-
-.cocl-status-dot.cocl-status-ok {
-  border-color: var(--accent-green);
-  background: var(--accent-green);
-}
-
-.cocl-status-dot.cocl-status-fail {
-  border-color: var(--accent-red);
-  background: var(--accent-red);
 }
 
 .cocl-row-title {
@@ -114,11 +87,6 @@
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   color: var(--text-dim);
-}
-
-/* Во время проверки норма видна в полях */
-#checklistContainer:not(.cocl-preview) .cocl-row-norm {
-  display: none;
 }
 
 .cocl-row-tools {
@@ -169,7 +137,7 @@
 
 /* Ввод под названием: точки слева направо, ОК / Не ОК */
 .cocl-row-input {
-  padding: 0 10px 12px 34px;
+  padding: 0;
 }
 
 .cocl-pts {
@@ -245,17 +213,6 @@
   border-color: var(--accent-red);
   background: color-mix(in srgb, var(--accent-red) 8%, var(--bg-input));
   color: var(--accent-red);
-}
-
-.cocl-row .comment-preview {
-  margin: 0 12px 10px 34px;
-}
-
-/* До «Начать проверку» — без полей и кнопок ввода */
-.cocl-preview .cocl-row-input,
-.cocl-preview .cocl-acc-comment-btn,
-.cocl-preview .cocl-status-dot {
-  display: none;
 }
 
 /* Метки фиксированного стандарта: что должно совпадать (ОК / Не ОК) */

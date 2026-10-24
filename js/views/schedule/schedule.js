@@ -348,7 +348,7 @@ function renderScheduleMatrix() {
       ${scopeHtml}
     </div>
     <div class="sch-cil-hint">${escapeHtml(weekSub)}</div>
-    <div class="cil-scroll"><table class="cil-table ${isPastWeek ? 'cil-readonly' : ''}">`;
+    <div class="cil-scroll cil-scroll-page"><table class="cil-table ${isPastWeek ? 'cil-readonly' : ''}">`;
 
   html += cilHeadHtml(dateByDayIdx, {
     activeDate: off === 0 ? cur.date : '',
