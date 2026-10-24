@@ -1,15 +1,16 @@
 /* ============================================================ */
 /* === КОМПОНЕНТЫ: вкладка «Ознакомление» стандарта / E-Param = */
 /* ============================================================ */
-/* Что изменилось → сколько смен ещё действует ознакомление →
-   кто ознакомился. Кто — заглушка до автологина. */
+/* Сверху плашка-статус: синяя «Ознакомьтесь», оранжевая «Изменён —
+   ознакомьтесь повторно» (что изменилось), зелёная «Вы ознакомлены».
+   Ниже — кто ознакомился и с какой редакцией (ФИО — после автологина). */
 
 const STD_ACK_TARGETS = {
-  mech: { wrap: '#svAckTableWrap', badge: '#svAckBadge', btn: '#svAckMarkBtn' },
-  elec: { wrap: '#epAckTableWrap', badge: '#epAckBadge', btn: '#epAckMarkBtn' }
+  mech: { wrap: '#svAckTableWrap', badge: '#svAckBadge' },
+  elec: { wrap: '#epAckTableWrap', badge: '#epAckBadge' }
 };
 
-/* Открытый стандарт / параметр и его текущее изменение */
+/* Открытый стандарт / параметр */
 const stdAckState = { mech: null, elec: null };
 
 function stdAckWhen(iso) {
@@ -19,70 +20,109 @@ function stdAckWhen(iso) {
   return `${p(d.getDate())}.${p(d.getMonth() + 1)}, ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+function stdAckIcon(paths, size = 24, sw = 2) {
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+}
+const STD_ACK_ICONS = {
+  book: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+  again: '<polyline points="23 4 23 10 17 10"/><path d="M20.5 15a9 9 0 1 1-2.1-9.4L23 10"/>',
+  ok: '<polyline points="20 6 9 17 4 12"/>'
+};
+
+/* Что изменилось: строки details существенных изменений, без мелочей */
+function stdAckChangesHtml(list) {
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  const items = [];
+  list.forEach(e => {
+    const det = (Array.isArray(e.details) ? e.details : []).filter(d => !STD_ACK_MINOR_LABELS.includes(d.label));
+    if (!det.length && e.comment) items.push(`<li>${escapeHtml(e.comment)}</li>`);
+    det.forEach(d => {
+      const label = escapeHtml(cap(String(d.label || '')));
+      if (d.label === 'фото') { items.push(`<li>${label}: изменено</li>`); return; }
+      if (d.from == null && d.to == null) { items.push(`<li>${label}</li>`); return; }
+      const from = d.from && d.from !== '—' ? `<s>${escapeHtml(d.from)}</s> → ` : '';
+      items.push(`<li>${label}: ${from}<b>${escapeHtml(d.to || '—')}</b></li>`);
+    });
+  });
+  return items.length ? `<ul class="stda-list">${items.join('')}</ul>` : '';
+}
+
+function stdAckPlateHtml(s, kind) {
+  const what = kind === 'elec' ? 'параметром' : 'стандартом';
+  const btn = (label) => `<button type="button" class="stda-btn" data-stda-mark="${kind}">${stdAckIcon(STD_ACK_ICONS.book, 18)}<span>${label}</span></button>`;
+  if (s.state === 'need') {
+    return `
+      <div class="stda-plate need">
+        <div class="stda-ic">${stdAckIcon(STD_ACK_ICONS.book)}</div>
+        <div class="stda-body"><h4>Ознакомьтесь со ${what}</h4><p>Прочитайте описание, точки контроля и фото, затем нажмите «Ознакомиться»</p></div>
+        ${btn('Ознакомиться')}
+      </div>`;
+  }
+  if (s.state === 'again') {
+    const when = s.lastDate ? ` · ${stdAckWhen(s.lastDate).split(',')[0]}` : '';
+    return `
+      <div class="stda-plate again">
+        <div class="stda-ic">${stdAckIcon(STD_ACK_ICONS.again)}</div>
+        <div class="stda-body"><h4>${kind === 'elec' ? 'Параметр изменён' : 'Стандарт изменён'} — ознакомьтесь повторно${when}</h4>
+          <p>Вы знакомились с редакцией ${s.mine.edition || 1}, сейчас — редакция ${s.edition}. Что изменилось:</p>
+          ${stdAckChangesHtml(s.since)}</div>
+        ${btn('Ознакомиться')}
+      </div>`;
+  }
+  const m = s.mine;
+  const night = m.shiftType === 'night';
+  return `
+    <div class="stda-plate ok">
+      <div class="stda-ic">${stdAckIcon(STD_ACK_ICONS.ok, 24, 2.5)}</div>
+      <div class="stda-body"><h4>Вы ознакомлены со ${what}</h4>
+        <p>${escapeHtml(stdAckWhen(m.at))} · смена ${escapeHtml(m.shiftLetter || '?')}, ${night ? 'ночь' : 'день'} · редакция ${m.edition || 1}</p></div>
+    </div>`;
+}
+
 function renderStdAck(kind, row) {
   const t = STD_ACK_TARGETS[kind];
   const wrap = $(t.wrap);
-  const change = row && row.id ? getStdAckChange(kind, row.id) : null;
-  stdAckState[kind] = row && row.id ? { id: row.id, change } : null;
-  const left = change ? stdAckShiftsLeft(change) : 0;
-  const acks = change ? getStdAcksFor(change.id) : [];
+  stdAckState[kind] = row && row.id ? { id: row.id } : null;
+  const s = row && row.id ? getStdAckStatus(kind, row.id) : null;
 
   const badge = $(t.badge);
   if (badge) {
-    badge.textContent = 'Новое';
-    badge.style.display = change && left > 0 ? 'inline-flex' : 'none';
+    badge.textContent = s && s.state === 'again' ? 'Изменён' : 'Новое';
+    badge.style.display = s && s.state !== 'ok' ? 'inline-flex' : 'none';
   }
-  const btn = $(t.btn);
-  if (btn) btn.style.display = change ? '' : 'none';
-  if (!wrap) return;
+  if (!wrap || !s) { if (wrap) wrap.innerHTML = ''; return; }
 
-  if (!change) {
-    wrap.innerHTML = `
-      <div class="sv-full-empty-table">
-        <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        <div>${kind === 'elec' ? 'Параметр' : 'Стандарт'} не менялся — знакомиться не с чем</div>
-      </div>`;
-    return;
-  }
-
-  const used = STD_ACK_WINDOW_SHIFTS - left;
-  const pct = Math.min(100, Math.round(used / STD_ACK_WINDOW_SHIFTS * 100));
-  const period = left > 0
-    ? `Ознакомиться — ещё <b>${left}</b> ${pluralRu(left, 'смена', 'смены', 'смен')} из ${STD_ACK_WINDOW_SHIFTS}`
-    : `Срок ознакомления (${STD_ACK_WINDOW_SHIFTS} смен) прошёл`;
-
-  const rows = acks.map(a => {
+  const rows = s.acks.map(a => {
     const night = a.shiftType === 'night';
+    const cur = (a.edition || 1) >= s.edition;
     return `
-      <tr>
-        <td><span class="stda-who">Оператор</span><span class="stda-who-note">ФИО появится после автологина</span></td>
+      <tr class="${cur ? '' : 'is-old'}">
+        <td><span class="stda-who">Оператор</span><span class="stda-who-note">ФИО — после автологина</span></td>
         <td>${escapeHtml(stdAckWhen(a.at))}</td>
         <td><span class="stdc-sh ${night ? 'n' : 'd'}">${escapeHtml(a.shiftLetter || '?')}</span> ${night ? 'ночь' : 'день'}</td>
+        <td><span class="stda-ed${cur ? '' : ' old'}">ред. ${a.edition || 1}${cur ? ' · актуальная' : ' · нужно повторно'}</span></td>
       </tr>`;
   }).join('');
 
   wrap.innerHTML = `
-    <div class="stda-change">
-      <div class="stda-head">Что изменилось</div>
-      ${changeHistoryHtml([change])}
-    </div>
-    <div class="stda-window${left > 0 ? '' : ' is-over'}">
-      <div class="stda-window-text">${period}</div>
-      <div class="stda-bar"><span style="width:${pct}%"></span></div>
-    </div>
-    <div class="stda-head">Ознакомились <span class="stda-count">${acks.length}</span></div>
-    ${acks.length
+    ${stdAckPlateHtml(s, kind)}
+    <div class="stda-head">Ознакомились <span class="stda-count">${s.acks.length}</span>
+      <span class="stda-edition">Текущая редакция: ${s.edition}</span></div>
+    ${s.acks.length
       ? `<table class="stdc-table stda-table">
-           <thead><tr><th>Кто</th><th>Когда</th><th>Смена</th></tr></thead>
+           <thead><tr><th>Кто</th><th>Когда</th><th>Смена</th><th>Редакция</th></tr></thead>
            <tbody>${rows}</tbody>
          </table>`
-      : `<div class="stda-empty">Пока никто не отметил ознакомление</div>`}`;
+      : `<div class="stda-empty">Пока никто не ознакомился</div>`}`;
 }
 
-function markStdAck(kind) {
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-stda-mark]');
+  if (!b) return;
+  const kind = b.dataset.stdaMark;
   const st = stdAckState[kind];
-  if (!st || !st.change) return;
-  addStdAck(kind, st.id, st.change);
-  showToast('Ознакомление отмечено');
+  if (!st) return;
+  addStdAck(kind, st.id);
+  showToast('Вы ознакомлены');
   renderStdAck(kind, { id: st.id });
-}
+});

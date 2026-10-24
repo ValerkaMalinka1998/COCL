@@ -549,7 +549,6 @@ $('#epTabs')?.addEventListener('click', (e) => {
   const btn = e.target.closest('.sv-full-tab-btn');
   if (btn) switchEparamTab(btn.dataset.epTab);
 });
-$('#epAckMarkBtn')?.addEventListener('click', () => markStdAck('elec'));
 $('#epPageBackBtn')?.addEventListener('click', () => closeEparamPage(false));
 $('#epPageCancelBtn')?.addEventListener('click', () => closeEparamPage(false));
 $('#epPageEditBtn')?.addEventListener('click', () => {

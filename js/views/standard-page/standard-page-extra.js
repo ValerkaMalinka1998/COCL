@@ -437,7 +437,6 @@ $('#svFullTabs')?.addEventListener('click', (e) => {
   switchSvFullTab(btn.dataset.svTab);
 });
 
-$('#svAckMarkBtn')?.addEventListener('click', () => markStdAck('mech'));
 
 /* ============================================================
    СОХРАНЕНИЕ СТАНДАРТА ИЗ ПОЛНОЭКРАННОГО ПРОСМОТРА

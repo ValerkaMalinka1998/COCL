@@ -1,13 +1,17 @@
 /* ============================================================ */
-/* === ОЗНАКОМЛЕНИЕ С ИЗМЕНЕНИЯМИ СТАНДАРТА / E-PARAM ========= */
+/* === ОЗНАКОМЛЕНИЕ СО СТАНДАРТОМ / E-PARAM =================== */
 /* ============================================================ */
-/* С чем знакомиться — последнее существенное изменение из листа
-   изменений (action 'changed', sheet !== false). Окно — 28 смен.
-   Отметка: { id, kind, refId, changeId, at, shiftDate, shiftType,
-              shiftLetter, who }. who = '—' до автологина: кто именно
-   ознакомился, станет известно, когда появится вход по пользователю. */
+/* Знакомятся со стандартом целиком, в любую смену, без срока.
+   Редакция = 1 + число существенных изменений из листа изменений:
+   точки и нормы, бренды, описания, фото (как в листе линии + фото).
+   После новой редакции прежняя отметка устаревает — нужно повторно.
+   Отметка: { id, kind, refId, edition, changeId, at, shiftDate,
+              shiftType, shiftLetter, who }.
+   who = '—' до автологина: пока «вы» — этот компьютер. */
 
-const STD_ACK_WINDOW_SHIFTS = 28;
+/* Правки, которые НЕ требуют повторного ознакомления */
+const STD_ACK_MINOR_LABELS = ['применяемость', 'триггеры', 'Top Losses',
+  'всегда показывать в Change Over', 'длительность'];
 
 function getStdAck() {
   const v = load(STORAGE_KEYS.stdAck, []);
@@ -15,36 +19,46 @@ function getStdAck() {
 }
 function setStdAck(v) { save(STORAGE_KEYS.stdAck, v); }
 
-/* Последнее изменение, с которым нужно ознакомиться, или null */
-function getStdAckChange(kind, refId) {
-  const rows = getChangeLogForRef(kind, refId)
-    .filter(e => e.action === 'changed' && e.sheet !== false);
-  return rows.length ? rows[rows.length - 1] : null;
+function stdAckIsMajor(e) {
+  if (e.action !== 'changed') return false;
+  if (e.sheet !== false) return true;
+  const det = Array.isArray(e.details) ? e.details : [];
+  return det.some(d => !STD_ACK_MINOR_LABELS.includes(d.label));
 }
 
-/* Сколько смен из окна осталось (0 — срок прошёл) */
-function stdAckShiftsLeft(change, now = new Date()) {
-  if (!change || !change.date) return 0;
-  const from = getCurrentShiftPeriod(new Date(change.date));
-  const cur = getCurrentShiftPeriod(now);
-  const passed = valShiftIndex(cur.date, cur.shiftType) - valShiftIndex(from.date, from.shiftType);
-  return Math.max(0, STD_ACK_WINDOW_SHIFTS - passed);
+/* Существенные изменения по порядку: [{ ...entry, edition }] (edition 2, 3, …) */
+function getStdAckEditions(kind, refId) {
+  return getChangeLogForRef(kind, refId)
+    .filter(stdAckIsMajor)
+    .map((e, i) => ({ ...e, edition: i + 2 }));
 }
 
-function getStdAcksFor(changeId) {
-  return getStdAck()
-    .filter(a => a.changeId === changeId)
+/* Состояние ознакомления для этого компьютера */
+function getStdAckStatus(kind, refId) {
+  const editions = getStdAckEditions(kind, refId);
+  const edition = editions.length + 1;
+  const acks = getStdAck()
+    .filter(a => a.kind === kind && a.refId === refId)
     .sort((a, b) => String(b.at).localeCompare(String(a.at)));   // новые сверху
+  const mine = acks[0] || null;
+  let state = 'need';
+  if (mine) state = (mine.edition || 1) >= edition ? 'ok' : 'again';
+  // Что изменилось с момента моей отметки (для оранжевой плашки)
+  const since = mine ? editions.filter(e => e.edition > (mine.edition || 1)) : [];
+  return { edition, editions, acks, mine, state, since, lastDate: editions.length ? editions[editions.length - 1].date : null };
 }
 
-function addStdAck(kind, refId, change) {
+function addStdAck(kind, refId) {
+  const st = getStdAckStatus(kind, refId);
   const period = getCurrentShiftPeriod();
   const letters = getShiftsForDate(period.date) || {};
+  const last = st.editions[st.editions.length - 1];
   const entry = {
     id: uid(),
     kind,
     refId,
-    changeId: change.id,
+    edition: st.edition,
+    changeId: last ? last.id : '',
     at: new Date().toISOString(),
     shiftDate: period.date,
     shiftType: period.shiftType,

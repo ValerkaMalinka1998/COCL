@@ -1,7 +1,60 @@
 /* ============================================================ */
-/* === ОЗНАКОМЛЕНИЕ С ИЗМЕНЕНИЯМИ ============================= */
+/* === ОЗНАКОМЛЕНИЕ СО СТАНДАРТОМ ============================= */
 /* ============================================================ */
 
+/* --- Плашка-статус --- */
+.stda-plate {
+  --stda-tone: var(--accent-cyan);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, var(--stda-tone) 38%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--stda-tone) 8%, transparent);
+}
+.stda-plate.again { --stda-tone: var(--accent-amber); align-items: flex-start; }
+.stda-plate.ok    { --stda-tone: var(--accent-green); }
+.stda-ic {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--stda-tone);
+  color: var(--on-accent);
+}
+.stda-body { flex: 1; min-width: 0; }
+.stda-body h4 { margin: 0 0 3px; font-size: 16px; color: var(--text-main); }
+.stda-body p { margin: 0; font-size: 13px; color: var(--text-second); }
+.stda-list { margin: 6px 0 0; padding-left: 18px; font-size: 13.5px; line-height: 1.6; color: var(--text-main); }
+.stda-list s { color: var(--accent-red); }
+.stda-list b { color: var(--accent-green); font-weight: 600; }
+
+/* Кнопка «Ознакомиться» — циан, как все действия */
+.stda-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 10px;
+  background: var(--accent-cyan);
+  color: var(--on-accent);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.stda-btn:hover { filter: brightness(1.08); }
+.stda-btn:focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 2px; }
+
+/* --- Кто ознакомился --- */
 .stda-head {
   display: flex;
   align-items: center;
@@ -20,37 +73,31 @@
   font-size: 12px;
   text-align: center;
 }
-.stda-change { margin-bottom: 16px; }
-
-.stda-window {
-  margin-bottom: 20px;
-  padding: 12px 14px;
-  border: 1px solid color-mix(in srgb, var(--accent-amber) 40%, transparent);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--accent-amber) 8%, transparent);
-}
-.stda-window.is-over {
-  border-color: var(--border);
-  background: var(--bg-hover);
-}
-.stda-window-text { margin-bottom: 8px; font-size: 14px; color: var(--text-main); }
-.stda-window-text b { color: var(--accent-amber); }
-.stda-bar {
-  height: 6px;
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--accent-amber) 18%, transparent);
-  overflow: hidden;
-}
-.stda-bar span { display: block; height: 100%; background: var(--accent-amber); }
-.stda-window.is-over .stda-bar span { background: var(--text-dim); }
-
+.stda-edition { margin-left: auto; font-size: 12.5px; font-weight: 500; color: var(--text-second); }
 .stda-who { display: block; font-weight: 600; color: var(--text-main); }
 .stda-who-note { display: block; font-size: 12px; color: var(--text-dim); }
 .stda-table td { vertical-align: middle; }
+.stda-table tr.is-old td { color: var(--text-dim); }
+.stda-table tr.is-old .stda-who { color: var(--text-second); }
+.stda-ed {
+  display: inline-block;
+  padding: 1px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--accent-green) 14%, transparent);
+  color: var(--accent-green);
+}
+.stda-ed.old { background: var(--bg-hover); color: var(--text-dim); }
 .stda-empty {
   padding: 14px;
   border: 1px dashed var(--border-hi);
   border-radius: 10px;
   text-align: center;
   color: var(--text-dim);
+}
+
+@media (max-width: 760px) {
+  .stda-plate { flex-wrap: wrap; }
+  .stda-btn { width: 100%; justify-content: center; }
 }
