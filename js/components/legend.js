@@ -16,7 +16,8 @@ const LEGEND_ITEMS = {
   day:       () => '<i class="lg-sw lg-sw-day"></i>дневная смена',
   night:     () => '<i class="lg-sw lg-sw-night"></i>ночная смена',
   past:      () => '<i class="lg-sw lg-sw-past"></i>смена прошла, изменить нельзя',
-  val:       () => '<i class="lg-sw lg-sw-val"></i>на валидации'
+  val:       () => '<i class="lg-sw lg-sw-val"></i>на валидации',
+  chg:       () => `<i class="cil-tag cil-tag-chg">${CIL_ICONS.warn}Изм.</i>стандарт изменён — ознакомьтесь`
 };
 
 function legendHtml(keys, label) {

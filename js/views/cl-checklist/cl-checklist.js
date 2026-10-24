@@ -297,15 +297,16 @@ function renderClMatrix() {
       ${isCurrentWeek ? `<button type="button" class="cil-onlyshift${clState.onlyShift ? ' on' : ''}" id="clOnlyShiftBtn"
         title="Показать только то, что нужно проверить в текущую смену">
         <i></i>Только эта смена</button>` : ''}
-      ${legendHtml(['ok', 'fail', 'missed', 'due', 'na', 'ruler', 'eye', 'val'])}
+      ${legendHtml(['ok', 'fail', 'missed', 'due', 'na', 'ruler', 'eye', 'val', 'chg'])}
     </div>
-    <div class="cil-scroll"><table class="cil-table">`;
+    <div class="cil-scroll cil-scroll-page"><table class="cil-table cil-has-when">`;
 
   html += cilHeadHtml(dateByDayIdx, {
     activeDate: isCurrentWeek ? clState.activeDate : '',
     activeShift: clState.shiftType,
     infoHeads: `<th class="cil-c-zone" rowspan="2">Машина<br>/ №</th>
       <th class="cil-c-std" rowspan="2">${isElec ? 'Параметр' : 'Стандарт'}</th>
+      <th class="cil-c-when" rowspan="2">Когда</th>
       <th class="cil-c-norm" rowspan="2">Норма / точки</th>`,
     shiftSub: (dateStr, shift) => {
       const p = prog[`${dateStr}|${shift}`] || { done: 0, planned: 0, sec: 0 };
@@ -315,7 +316,7 @@ function renderClMatrix() {
 
   html += '<tbody>';
   if (!rows.length) {
-    html += `<tr><td class="cil-empty-row" colspan="17">В текущую смену проверок нет.
+    html += `<tr><td class="cil-empty-row" colspan="18">В текущую смену проверок нет.
       <button type="button" class="cil-week-today" id="clOnlyShiftOff">Показать всю неделю</button></td></tr>`;
   }
   const numInZone = {};
@@ -450,19 +451,23 @@ function renderClRow(row, num, zone, cells, hist, isElec) {
     ? `<span class="cil-std-name">${escapeHtml(title)}</span>`
     : `<button type="button" class="cil-std-name cil-std-link" data-cl-view="${escapeAttr(row.id)}" title="Открыть стандарт">${escapeHtml(title)}</button>`;
 
+  // «Изм.»: стандарт изменён после ознакомления на этом компьютере (или с ним ещё не знакомились)
+  const ack = getStdAckStatus(isElec ? 'elec' : 'mech', row.id);
+  const chgBadge = ack.editions.length && ack.state !== 'ok'
+    ? `<span class="cil-tag cil-tag-chg" title="Стандарт изменён — откройте и ознакомьтесь">${CIL_ICONS.warn}Изм.</span>` : '';
   const valOn = isOnValidation(row);
+  const dur = cilDurChip(cilRowDurationSec(row), 'cil-tag cil-tag-dur');
   let html = `<tr class="cil-row${valOn ? ' cil-row-val' : ''}" data-row-id="${escapeAttr(row.id)}">
     <td class="cil-c-zone cil-z${zone}">${escapeHtml(machine)}<small>№ ${num}</small></td>
     <td class="cil-c-std">
-      <div class="cil-std-title">${nameHtml}${devBadge}${valOn ? valChipHtml(row) : ''}</div>
+      <div class="cil-std-title">${nameHtml}${devBadge}${chgBadge}${valOn ? valChipHtml(row) : ''}</div>
       <div class="cil-std-sub">
         ${row.oplNumber ? `<span class="cil-opl">${escapeHtml(row.oplNumber)}</span>` : ''}
         ${row.node ? `<span class="cil-node">${CIL_ICONS.gear}${escapeHtml(row.node)}</span>` : ''}
-        ${cilWorkTag(normWork(freq.work))}
-        ${cilTimeChips(freq.timeWindows, freq.work)}
-        ${cilDurChip(cilRowDurationSec(row), 'cil-tag cil-tag-dur')}
+        ${dur}
       </div>
     </td>
+    <td class="cil-c-when">${cilWorkTag(normWork(freq.work))}${cilTimeChips(freq.timeWindows, freq.work)}</td>
     <td class="cil-c-norm">${norm.html}</td>`;
 
   cells.forEach(c => {

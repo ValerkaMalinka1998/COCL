@@ -12,6 +12,7 @@
   --cil-zone-w: 76px;
   --cil-std-w: 350px;
   --cil-third-w: 124px;
+  --cil-when-w: 0px;        /* колонка «Когда» — только в Чек-листе (.cil-has-when) */
   padding: 14px 16px 16px;
 }
 :root[data-theme="dark"] .cil-wrap {
@@ -94,7 +95,7 @@
 }
 .cil-table {
   width: 100%;
-  min-width: calc(var(--cil-zone-w) + var(--cil-std-w) + var(--cil-third-w) + 14 * 60px);
+  min-width: calc(var(--cil-zone-w) + var(--cil-std-w) + var(--cil-when-w) + var(--cil-third-w) + 14 * 56px);
   border-collapse: separate;
   border-spacing: 0;
 }
@@ -173,13 +174,13 @@
 }
 
 /* --- Закреплённые левые колонки --- */
-.cil-c-zone, .cil-c-std, .cil-c-norm, .cil-c-cnt { position: sticky; z-index: 2; }
-.cil-table thead .cil-c-zone, .cil-table thead .cil-c-std,
+.cil-c-zone, .cil-c-std, .cil-c-when, .cil-c-norm, .cil-c-cnt { position: sticky; z-index: 2; }
+.cil-table thead .cil-c-zone, .cil-table thead .cil-c-std, .cil-table thead .cil-c-when,
 .cil-table thead .cil-c-norm, .cil-table thead .cil-c-cnt { z-index: 4; }
 .cil-c-zone { left: 0; width: var(--cil-zone-w); min-width: var(--cil-zone-w); }
 .cil-c-std { left: var(--cil-zone-w); width: var(--cil-std-w); min-width: var(--cil-std-w); text-align: left !important; }
 .cil-c-norm, .cil-c-cnt {
-  left: calc(var(--cil-zone-w) + var(--cil-std-w));
+  left: calc(var(--cil-zone-w) + var(--cil-std-w) + var(--cil-when-w));
   width: var(--cil-third-w);
   min-width: var(--cil-third-w);
   border-right: 2px solid var(--border-hi);
@@ -478,3 +479,28 @@ button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentCol
 
 /* Время на проверку строки (стандарт или E-Param) */
 .cil-tag-dur { display: inline-flex; align-items: center; gap: 3px; color: var(--text-second); background: var(--bg-hover); font-variant-numeric: tabular-nums; }
+
+/* ============================================================
+   ЧЕК-ЛИСТ CL: колонка «Когда» (Run / Stop / CIL + время),
+   метка «Изм.», прокрутка всей страницей с закреплённой шапкой
+   ============================================================ */
+.cil-table.cil-has-when { --cil-zone-w: 76px; --cil-std-w: 330px; --cil-when-w: 104px; --cil-third-w: 112px; }
+.cil-c-when { left: calc(var(--cil-zone-w) + var(--cil-std-w)); width: var(--cil-when-w); min-width: var(--cil-when-w); }
+.cil-table tbody td.cil-c-when { padding: 6px 8px; }
+.cil-table tbody td.cil-c-when .cil-tag { display: flex; justify-content: center; margin: 2px auto; width: max-content; }
+.cil-tag-chg { color: var(--accent-amber); background: color-mix(in srgb, var(--accent-amber) 15%, transparent); }
+.lg .cil-tag-chg { font-style: normal; margin-right: 4px; }
+
+/* Таблица растёт вниз, прокручивается вся страница; шапка таблицы
+   прилипает под шапкой приложения (84px). На узком экране, где таблица
+   не помещается по ширине, — прежняя прокрутка внутри рамки. */
+@media (min-width: 1440px) {
+  .cil-scroll.cil-scroll-page { max-height: none; min-height: 0; overflow: visible; }
+  /* overflow: hidden у карточки ломает «прилипание» шапки; clip режет так же, но не мешает */
+  .editor-table-card:has(.cil-scroll-page) { overflow: clip; }
+  .cil-scroll-page .cil-table thead th { top: 84px; }
+  .cil-scroll-page .cil-table thead tr:nth-child(2) th { top: calc(84px + 31px); }
+  .cil-scroll-page .cil-table thead tr:first-child th:first-child { border-top-left-radius: 13px; }
+  .cil-scroll-page .cil-table thead tr:first-child th:last-child { border-top-right-radius: 13px; }
+}
+
