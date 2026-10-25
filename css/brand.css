@@ -108,8 +108,7 @@ header.bft-header .header-right {
 
 /* ============ Карточки и заголовки ============ */
 /* Заголовки вкладок — широкий Unbounded */
-.card > h2,
-.hist-rp-tt h2 {
+.card > h2 {
   font-family: var(--font-display);
   font-style: normal;
   font-weight: 600;

@@ -127,14 +127,12 @@
 .hist-more { display: block; margin: 12px auto 0; }
 
 /* === Страница проверки === */
-.hist-rp-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 16px; }
-.hist-rp-head .hist-ico { width: 48px; height: 48px; border-radius: var(--r-lg); }
-.hist-rp-tt { min-width: 0; }
-.hist-rp-tt h2 { margin: 0; font-size: 19px; color: var(--text-main); }
-.hist-rp-meta { display: flex; gap: 6px 14px; flex-wrap: wrap; font-size: 12px; color: var(--text-second); margin-top: 4px; }
+/* Значок вида проверки рядом с заголовком */
+.hist-rp-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.hist-rp-title .hist-ico { width: 44px; height: 44px; flex-shrink: 0; border-radius: var(--r-lg); }
+.hist-rp-meta { display: flex; gap: 6px 14px; flex-wrap: wrap; font-size: 13.5px; color: var(--text-second); }
 .hist-rp-meta b { color: var(--text-main); }
 .hist-rp-extra { margin-top: 6px; font-size: 12px; color: var(--text-second); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-.hist-rp-nav { display: flex; gap: 6px; }
 .hist-rp { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 12px; align-items: start; }
 .hist-rp-items { padding: 0; overflow: hidden; }
 .hist-mg {
@@ -205,9 +203,6 @@
 .hist-mjbox b { color: var(--accent-red); }
 
 /* === История стандарта === */
-.hist-std-head { padding: 0; }
-.hist-std-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 16px; }
-.hist-std-top .btn svg { width: 14px; height: 14px; }
 
 /* Лента результатов — когда числовых замеров нет */
 

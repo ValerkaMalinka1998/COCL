@@ -133,18 +133,19 @@ function renderStandardHistory() {
   const tableRows = allRows.slice(from, to);
 
   box.innerHTML = `
-    <div class="card hist-std-head">
-      <div class="hist-std-top">
+    <div class="page-head">
+      <div class="ph-context">
         <button type="button" class="btn btn-secondary" data-hist-std-back>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
           Назад
         </button>
-        <div class="hist-rp-tt">
-          <h2>${row.oplNumber ? `<span class="hist-opl">${escapeHtml(row.oplNumber)}</span> · ` : ''}${escapeHtml(title)}${isElec ? ' <span class="hist-tag hist-tag-elec">E-Param</span>' : ''}</h2>
-          <div class="hist-sub">${escapeHtml(sub.join(' · '))}</div>
+      </div>
+      <div class="ph-main">
+        <div class="ph-title">
+          <h2 class="ph-h1">${row.oplNumber ? `<span class="hist-opl">${escapeHtml(row.oplNumber)}</span> · ` : ''}${escapeHtml(title)}${isElec ? ' <span class="hist-tag hist-tag-elec">E-Param</span>' : ''}</h2>
+          <span class="ph-sub">${escapeHtml(sub.join(' · '))}</span>
         </div>
-        <span class="hist-sp"></span>
-        ${!isElec ? `<button type="button" class="btn btn-secondary" data-hist-std-open>${CIL_ICONS.eye} Стандарт</button>` : ''}
+        ${!isElec ? `<div class="ph-actions"><button type="button" class="btn btn-secondary" data-hist-std-open>${CIL_ICONS.eye} Стандарт</button></div>` : ''}
       </div>
     </div>
     <section class="card hist-std-sec">
