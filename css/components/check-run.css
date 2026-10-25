@@ -15,7 +15,7 @@
   align-items: start;
   min-height: 640px;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--r-lg);
   background:
     linear-gradient(to right,
       var(--chk-left-bg) 0 var(--chk-left-w),
@@ -200,7 +200,7 @@
   width: 100%;
   height: 48px;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   background: var(--accent-green);
   color: var(--on-accent);
   font: inherit;
@@ -254,7 +254,7 @@
   width: auto;
   height: 36px;
   padding: 0 14px;
-  border-radius: 9px;
+  border-radius: var(--r-md);
   font: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -323,7 +323,7 @@
 .chk-detail .checklist-point-input {
   height: 52px;
   padding: 0 16px;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   font-size: 20px;
   text-align: left;
 }
@@ -366,7 +366,7 @@
 .chk-detail .tl3-pt input {
   height: 52px;
   padding: 0 16px;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   font-size: 20px;
   font-weight: 700;
 }
@@ -383,7 +383,7 @@
 .chk-how {
   margin-top: 16px;
   padding: 14px 16px;
-  border-radius: 12px;
+  border-radius: var(--r-md);
   background: color-mix(in srgb, var(--accent-cyan) 6%, var(--bg-card));
 }
 
@@ -409,7 +409,7 @@
   margin-top: 14px;
   padding: 12px 16px;
   border: 1px solid var(--border-hi);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   background: var(--bg-input);
   color: var(--text-main);
   font: inherit;
@@ -444,7 +444,7 @@
   height: 44px;
   padding: 0 18px;
   border: 1px solid var(--border-hi);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   background: var(--bg-card);
   color: var(--text-main);
   font: inherit;

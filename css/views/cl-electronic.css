@@ -14,7 +14,7 @@
   align-items: center;
   gap: 8px;
   padding: 10px 18px;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   cursor: pointer;
   font-family: inherit;
   font-size: 13px;
@@ -39,11 +39,11 @@
 }
 .ebs-mode-btn.active {
   background: linear-gradient(135deg, var(--blue-mid), var(--blue-light));
-  color: #ffffff;
+  color: var(--on-accent);
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 14px rgba(58, 166, 240, 0.35);
+  box-shadow: 0 0 14px rgba(var(--cyan-rgb), 0.35);
 }
-.ebs-mode-btn.active svg { stroke: #ffffff; }
+.ebs-mode-btn.active svg { stroke: var(--on-accent); }
 
 /* Режим «По дням» — строки */
 .ebs-day-row {
@@ -67,10 +67,10 @@
   padding: 6px;
   font-size: 16px;
   line-height: 1;
-  border-radius: 4px;
+  border-radius: var(--r-xs);
 }
 .ebs-day-row .ebs-remove:hover {
-  background: rgba(230, 36, 79, 0.1);
+  background: rgba(var(--red-rgb), 0.1);
 }
 
 /* Превью итогового расписания */
@@ -83,7 +83,7 @@
   padding: 10px 12px;
   background: var(--bg-input);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
 }
 .ebs-preview-row {
   display: grid;
@@ -104,7 +104,7 @@
   text-align: center;
   font-family: var(--font-mono);
   padding: 1px 8px;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   font-size: 11px;
   background: var(--bg-hover);
 }
@@ -125,10 +125,10 @@
 }
 /* CL Electronic — бейдж режима (фиолетовый) */
 .badge-mode-electronic {
-  background: rgba(123, 92, 255, 0.12);
+  background: rgba(var(--purple-rgb), 0.12);
   color: var(--accent-purple);
-  border: 1px solid rgba(123, 92, 255, 0.5);
-  box-shadow: 0 0 8px rgba(123, 92, 255, 0.2);
+  border: 1px solid rgba(var(--purple-rgb), 0.5);
+  box-shadow: 0 0 8px rgba(var(--purple-rgb), 0.2);
 }
 
 .elec-subtab-btn {
@@ -140,7 +140,7 @@
   padding: 12px 20px;
   background: transparent;
   border: 2px solid var(--border-hi);      /* ← было: transparent */
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   cursor: pointer;
   font-family: inherit;
   font-size: 14px;
@@ -177,11 +177,11 @@
 
 .elec-subtab-btn.active {
   background: linear-gradient(135deg, var(--blue-mid), var(--blue-light));
-  color: #ffffff;
+  color: var(--on-accent);
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 16px rgba(58, 166, 240, 0.35);
+  box-shadow: 0 0 16px rgba(var(--cyan-rgb), 0.35);
 }
 
 .elec-subtab-btn.active svg {
-  stroke: #ffffff;
+  stroke: var(--on-accent);
 }

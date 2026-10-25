@@ -6,7 +6,7 @@
   overflow-x: auto;
   margin-top: 8px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   background: var(--bg-input);
 }
 
@@ -73,7 +73,7 @@
   transition: background 0.15s, color 0.15s;
 }
 .bt-remove-point:hover {
-  background: rgba(230, 36, 79, 0.15);
+  background: rgba(var(--red-rgb), 0.15);
   color: var(--accent-red);
 }
 .bt-remove-point svg { display: block; pointer-events: none; }
@@ -87,16 +87,16 @@
   padding: 4px 10px;
   font-size: 11px;
   font-weight: 700;
-  background: rgba(58, 166, 240, 0.08);
-  border: 1px dashed rgba(58, 166, 240, 0.5);
-  border-radius: 14px;
+  background: rgba(var(--cyan-rgb), 0.08);
+  border: 1px dashed rgba(var(--cyan-rgb), 0.5);
+  border-radius: var(--r-lg);
   color: var(--accent-cyan);
   cursor: pointer;
   font-family: inherit;
   transition: all 0.15s;
 }
 .bt-add-point-btn:hover {
-  background: rgba(58, 166, 240, 0.15);
+  background: rgba(var(--cyan-rgb), 0.15);
   border-style: solid;
   border-color: var(--accent-cyan);
 }
@@ -111,7 +111,7 @@
 .brands-table tbody tr:last-child td { border-bottom: none; }
 .brands-table tbody td:last-child { border-right: none; }
 
-.bt-row:hover td { background: rgba(58, 166, 240, 0.02); }
+.bt-row:hover td { background: rgba(var(--cyan-rgb), 0.02); }
 
 .bt-td-brand {
   position: sticky;
@@ -134,14 +134,14 @@
   color: var(--text-main);
   background: var(--bg-card);
   border: 1px solid var(--border-hi);
-  border-radius: 4px;
+  border-radius: var(--r-xs);
   font-family: inherit;
   cursor: pointer;
 }
 .bt-brand-select:focus {
   outline: none;
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 2px rgba(58, 166, 240, 0.15);
+  box-shadow: 0 0 0 2px rgba(var(--cyan-rgb), 0.15);
 }
 
 .bt-remove-brand {
@@ -151,7 +151,7 @@
   padding: 0;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--r-xs);
   color: var(--text-dim);
   cursor: pointer;
   display: inline-flex;
@@ -160,8 +160,8 @@
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .bt-remove-brand:hover {
-  background: rgba(230, 36, 79, 0.1);
-  border-color: rgba(230, 36, 79, 0.4);
+  background: rgba(var(--red-rgb), 0.1);
+  border-color: rgba(var(--red-rgb), 0.4);
   color: var(--accent-red);
 }
 .bt-remove-brand svg { display: block; pointer-events: none; }
@@ -179,12 +179,12 @@
   color: var(--text-main);
   background: var(--bg-card);
   border: 1px solid var(--border-hi);
-  border-radius: 4px;
+  border-radius: var(--r-xs);
 }
 .bt-point-input:focus {
   outline: none;
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 2px rgba(58, 166, 240, 0.15);
+  box-shadow: 0 0 0 2px rgba(var(--cyan-rgb), 0.15);
 }
 .bt-point-input::placeholder { color: var(--text-dim); font-weight: 400; }
 

@@ -2,7 +2,7 @@
 .photo-path-block {
   background: var(--bg-input);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   padding: 14px 16px;
   margin-bottom: 16px;
 }
@@ -24,7 +24,7 @@
   padding: 8px 12px;
   background: var(--bg-hover);
   border: 1px dashed var(--border-hi);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   font-family: var(--font-mono);
   font-size: 13px;
   color: var(--accent-cyan);
@@ -52,7 +52,7 @@
 .photo-stat {
   background: var(--bg-input);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   padding: 14px 16px;
   text-align: center;
   transition: border-color 0.15s;

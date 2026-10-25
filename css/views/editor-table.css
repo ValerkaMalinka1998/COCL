@@ -34,7 +34,7 @@
 .pagination-btn {
   background: var(--bg-input);
   border: 1px solid var(--border-hi);
-  border-radius: 5px;
+  border-radius: var(--r-xs);
   padding: 6px 11px;
   font-size: 13px;
   font-weight: 600;
@@ -65,7 +65,7 @@
 .pagination-size {
   background: var(--bg-input);
   border: 1px solid var(--border-hi);
-  border-radius: 5px;
+  border-radius: var(--r-xs);
   padding: 6px 8px;
   font-size: 13px;
   color: var(--text-main);
@@ -90,7 +90,7 @@
   background: var(--bg-input);
   border-left: 3px solid var(--border-hi);
   padding: 8px 12px;
-  border-radius: 4px;
+  border-radius: var(--r-xs);
   font-size: 12px;
   color: var(--text-second);
 }
@@ -188,7 +188,7 @@
   transform: scale(1.1);
 }
 .sidebar button.active .nav-icon svg {
-  filter: drop-shadow(0 0 4px rgba(58, 166, 240, 0.6));
+  filter: drop-shadow(0 0 4px rgba(var(--cyan-rgb), 0.6));
 }
 
 /* Линии PMD / FMD: части линии (Maker / Packer) нет — колонку скрываем */

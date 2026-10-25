@@ -7,7 +7,7 @@
   flex-wrap: wrap;
   gap: 10px 20px;
   padding: 12px 20px;
-  background: rgba(58, 166, 240, 0.04);
+  background: rgba(var(--cyan-rgb), 0.04);
   border-top: 1px solid var(--border);
   align-items: center;
 }
@@ -45,16 +45,16 @@
   min-width: 22px;
   height: 22px;
   padding: 0 8px;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   font-family: var(--font-mono);
   font-weight: 800;
   font-size: 13px;
   letter-spacing: 0.4px;
 }
-.cl-shift-A { color: var(--accent-cyan);   background: rgba(58, 166, 240, 0.12);   border: 1px solid rgba(58, 166, 240, 0.4); }
-.cl-shift-B { color: var(--accent-purple); background: rgba(123, 92, 255, 0.12);  border: 1px solid rgba(123, 92, 255, 0.4); }
-.cl-shift-C { color: var(--accent-amber);  background: rgba(232, 154, 0, 0.12);   border: 1px solid rgba(232, 154, 0, 0.4); }
-.cl-shift-D { color: var(--accent-green);  background: rgba(0, 196, 122, 0.12);   border: 1px solid rgba(0, 196, 122, 0.4); }
+.cl-shift-A { color: var(--accent-cyan);   background: rgba(var(--cyan-rgb), 0.12);   border: 1px solid rgba(var(--cyan-rgb), 0.4); }
+.cl-shift-B { color: var(--accent-purple); background: rgba(var(--purple-rgb), 0.12);  border: 1px solid rgba(var(--purple-rgb), 0.4); }
+.cl-shift-C { color: var(--accent-amber);  background: rgba(var(--amber-rgb), 0.12);   border: 1px solid rgba(var(--amber-rgb), 0.4); }
+.cl-shift-D { color: var(--accent-green);  background: rgba(var(--green-rgb), 0.12);   border: 1px solid rgba(var(--green-rgb), 0.4); }
 
 
 /* === Итог смены для доски =================================== */

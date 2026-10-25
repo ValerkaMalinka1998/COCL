@@ -75,7 +75,7 @@
 .svm-card {
   padding: 14px 16px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--r-md);
   background: var(--bg-card);
 }
 
@@ -93,7 +93,7 @@
 
 .svm-card h4 small {
   padding: 1px 7px;
-  border-radius: 9px;
+  border-radius: var(--r-md);
   background: var(--bg-hover);
   font-size: 10.5px;
   letter-spacing: 0;
@@ -184,9 +184,9 @@
 .svm-now {
   margin-left: 6px;
   padding: 1px 6px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   background: var(--accent-cyan);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 10px;
   font-weight: 800;
 }
@@ -333,7 +333,7 @@
 .svm-norm tr.is-new th,
 .svm-norm tr.is-new td {
   background: var(--accent-green);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .svm-norm tr.is-new th { border-radius: 8px 0 0 8px; }
@@ -342,8 +342,8 @@
 .svm-new {
   margin-left: 6px;
   padding: 1px 6px;
-  border-radius: 6px;
-  background: #fff;
+  border-radius: var(--r-sm);
+  background: var(--bg-card);
   color: var(--accent-green);
   font-size: 10px;
   font-weight: 800;

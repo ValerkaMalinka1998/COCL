@@ -7,7 +7,7 @@
   padding: 4px;
   background: var(--bg-hover);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   flex-shrink: 0;
 }
 
@@ -19,7 +19,7 @@
   padding: 6px 14px;
   border: none;
   background: transparent;
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   cursor: pointer;
   font-family: inherit;
   font-size: 12px;
@@ -36,8 +36,8 @@
 
 .editor-part-switch-btn.active {
   background: linear-gradient(135deg, var(--blue-mid), var(--blue-light));
-  color: #ffffff;
-  box-shadow: 0 2px 8px rgba(46, 82, 136, 0.35);
+  color: var(--on-accent);
+  box-shadow: 0 2px 8px rgba(var(--shadow-rgb), 0.35);
 }
 
 .editor-part-switch-count {
@@ -46,14 +46,14 @@
   font-variant-numeric: tabular-nums;
   font-family: var(--font-mono);
   padding: 1px 6px;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   background: rgba(255, 255, 255, 0.15);
   color: inherit;
 }
 
 .editor-part-switch-btn.active .editor-part-switch-count {
   background: rgba(255, 255, 255, 0.25);
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 /* Цвет счётчика — зелёный, если есть активные */
@@ -61,7 +61,7 @@
   color: var(--accent-green);
 }
 .editor-part-switch-btn.active .editor-part-switch-count:not(:empty) {
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 /* На узких экранах — переносим на новую строку */

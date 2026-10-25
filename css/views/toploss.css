@@ -10,7 +10,7 @@
   padding: 14px 18px;
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   position: sticky;
   bottom: 12px;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
@@ -41,12 +41,12 @@
   display: inline-flex;
   align-items: center;
   padding: 4px 12px;
-  border-radius: 14px;
+  border-radius: var(--r-lg);
   font-size: 12px;
   font-weight: 600;
-  background: rgba(232, 154, 0, 0.1);
+  background: rgba(var(--amber-rgb), 0.1);
   color: var(--accent-amber);
-  border: 1px solid rgba(232, 154, 0, 0.4);
+  border: 1px solid rgba(var(--amber-rgb), 0.4);
   white-space: nowrap;
 }
 
@@ -77,10 +77,10 @@
   display: block;
 }
 .tl-summary-icon-ok {
-  background: rgba(0, 196, 122, 0.15);
+  background: rgba(var(--green-rgb), 0.15);
   color: var(--accent-green);
   border: 2px solid var(--accent-green);
-  box-shadow: 0 0 16px rgba(0, 196, 122, 0.4);
+  box-shadow: 0 0 16px rgba(var(--green-rgb), 0.4);
 }
 .tl-summary-title {
   font-size: 20px;
@@ -102,19 +102,19 @@
 /* ============================================================ */
 
 .badge-mode-cocl {
-  background: rgba(58, 166, 240, 0.1);
+  background: rgba(var(--cyan-rgb), 0.1);
   color: var(--accent-cyan);
-  border: 1px solid rgba(58, 166, 240, 0.45);
+  border: 1px solid rgba(var(--cyan-rgb), 0.45);
 }
 .badge-mode-toploss {
-  background: rgba(232, 154, 0, 0.1);
+  background: rgba(var(--amber-rgb), 0.1);
   color: var(--accent-amber);
-  border: 1px solid rgba(232, 154, 0, 0.45);
+  border: 1px solid rgba(var(--amber-rgb), 0.45);
 }
 .badge-mode-cl {
-  background: rgba(58, 166, 240, 0.12);
+  background: rgba(var(--cyan-rgb), 0.12);
   color: var(--accent-cyan);
-  border: 1px solid rgba(58, 166, 240, 0.55);
+  border: 1px solid rgba(var(--cyan-rgb), 0.55);
 }
 
 /* ============================================================ */
@@ -128,7 +128,7 @@
   padding: 24px 28px;
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--r-lg);
   margin-bottom: 16px;
   flex-wrap: wrap;
 }
@@ -216,7 +216,7 @@
   align-items: center;
   gap: 5px;
   padding: 3px 10px;
-  border-radius: 12px;
+  border-radius: var(--r-md);
   font-size: 11px;
   font-weight: 600;
   font-family: var(--font-mono);
@@ -226,14 +226,14 @@
   white-space: nowrap;
 }
 .tl-shield-chip-ok {
-  background: rgba(0, 196, 122, 0.1);
+  background: rgba(var(--green-rgb), 0.1);
   color: var(--accent-green);
-  border-color: rgba(0, 196, 122, 0.4);
+  border-color: rgba(var(--green-rgb), 0.4);
 }
 .tl-shield-chip-fail {
-  background: rgba(255, 45, 111, 0.1);
+  background: rgba(var(--red-rgb), 0.1);
   color: var(--accent-red);
-  border-color: rgba(255, 45, 111, 0.4);
+  border-color: rgba(var(--red-rgb), 0.4);
 }
 .tl-shield-chip-dot {
   width: 6px;
@@ -243,11 +243,11 @@
 }
 .tl-shield-chip-ok .tl-shield-chip-dot {
   background: var(--accent-green);
-  box-shadow: 0 0 6px rgba(0, 196, 122, 0.8);
+  box-shadow: 0 0 6px rgba(var(--green-rgb), 0.8);
 }
 .tl-shield-chip-fail .tl-shield-chip-dot {
   background: var(--accent-red);
-  box-shadow: 0 0 6px rgba(255, 45, 111, 0.8);
+  box-shadow: 0 0 6px rgba(var(--red-rgb), 0.8);
 }
 
 /* Плитки потерь */
@@ -259,7 +259,7 @@
 .tl-loss-tile {
   background: var(--bg-input);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
@@ -270,7 +270,7 @@
 }
 .tl-loss-tile-fail {
   border-left: 4px solid var(--accent-red);
-  background: rgba(255, 45, 111, 0.04);
+  background: rgba(var(--red-rgb), 0.04);
 }
 .tl-loss-tile-head {
   display: flex;
@@ -307,8 +307,8 @@
   gap: 8px;
   font-size: 12px;
   padding: 4px 8px;
-  background: rgba(255, 45, 111, 0.06);
-  border-radius: 5px;
+  background: rgba(var(--red-rgb), 0.06);
+  border-radius: var(--r-xs);
 }
 .tl-loss-tile-fail-opl {
   font-family: var(--font-mono);
@@ -356,10 +356,10 @@
   gap: 8px;
   margin-top: 12px;
   padding: 10px 14px;
-  background: rgba(255, 184, 0, 0.08);
-  border: 1px solid rgba(255, 184, 0, 0.4);
+  background: rgba(var(--amber-rgb), 0.08);
+  border: 1px solid rgba(var(--amber-rgb), 0.4);
   border-left: 3px solid var(--accent-amber);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   font-size: 13px;
   line-height: 1.4;
   color: var(--text-main);
@@ -379,10 +379,10 @@
 /* ============================================================ */
 
 .badge-unchecked {
-  background: rgba(255, 184, 0, 0.12);
+  background: rgba(var(--amber-rgb), 0.12);
   color: var(--accent-amber);
-  border: 1px solid rgba(255, 184, 0, 0.5);
-  box-shadow: 0 0 8px rgba(255, 184, 0, 0.2);
+  border: 1px solid rgba(var(--amber-rgb), 0.5);
+  box-shadow: 0 0 8px rgba(var(--amber-rgb), 0.2);
 }
 /* ============================================================ */
 /* === TOP LOSSES — компактная шапка ========================== */
@@ -391,8 +391,8 @@
 /* Футер — приглушённо-зелёная disabled-кнопка */
 .tl-select-footer .btn-success:disabled,
 .tl-select-footer .btn-success[disabled] {
-  background: rgba(0, 196, 122, 0.35);
-  border-color: rgba(0, 196, 122, 0.35);
+  background: rgba(var(--green-rgb), 0.35);
+  border-color: rgba(var(--green-rgb), 0.35);
   color: rgba(255, 255, 255, 0.75);
   box-shadow: none;
   transform: none;
@@ -422,7 +422,7 @@
   color: var(--text-dim);
   background: var(--bg-input);
   border: 1px solid var(--border-hi);
-  border-radius: 10px;
+  border-radius: var(--r-md);
 }
 .tl2-search:focus-within { border-color: var(--accent-cyan); }
 .tl2-search input { flex: 1; min-width: 0; padding: 8px 0; font-size: 13px; background: transparent; border: 0; outline: none; }
@@ -446,7 +446,7 @@
   color: var(--text-main);
   background: transparent;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   cursor: pointer;
 }
 .tl2-cat-head:hover { background: var(--bg-hover); }
@@ -459,9 +459,9 @@
   height: 32px;
   color: var(--tl-c);
   background: color-mix(in srgb, var(--tl-c) 14%, transparent);
-  border-radius: 9px;
+  border-radius: var(--r-md);
 }
-.tl2-cat-ic-lg { width: 42px; height: 42px; border-radius: 11px; }
+.tl2-cat-ic-lg { width: 42px; height: 42px; border-radius: var(--r-md); }
 .tl2-cat-ic-lg svg { width: 21px; height: 21px; }
 .tl2-cat-text { flex: 1; min-width: 0; }
 .tl2-cat-text b { display: block; font-size: 13px; }
@@ -488,7 +488,7 @@
   color: var(--text-main);
   background: transparent;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   cursor: pointer;
 }
 .tl2-item:hover:not([disabled]) { background: var(--bg-hover); }
@@ -547,7 +547,7 @@
 .btn-tl-check:hover:not(:disabled) { filter: brightness(1.05); }
 .btn-tl-check:disabled { opacity: 0.5; cursor: not-allowed; }
 .tl2-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
-.tl2-seg { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--border); border-radius: 9px; }
+.tl2-seg { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--border); border-radius: var(--r-md); }
 .tl2-seg button {
   padding: 5px 12px;
   font: inherit;
@@ -556,7 +556,7 @@
   color: var(--text-second);
   background: transparent;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   cursor: pointer;
 }
 .tl2-seg button.on { color: var(--text-main); background: var(--bg-hover); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
@@ -573,15 +573,15 @@
   text-align: left;
   text-transform: uppercase;
   white-space: nowrap;
-  color: var(--nav-text);
-  background: var(--blue-deep);
+  color: var(--table-head-text);
+  background: var(--table-head-bg);
+  border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 1;
 }
-.tl2-table th:first-child { border-top-left-radius: 10px; }
-.tl2-table th:last-child { border-top-right-radius: 10px; }
-:root[data-theme="dark"] .tl2-table th { background: var(--nav-bg); }
+.tl2-table th:first-child { border-top-left-radius: var(--r-md); }
+.tl2-table th:last-child { border-top-right-radius: var(--r-md); }
 .tl2-table td { padding: 9px 10px; vertical-align: middle; border-bottom: 1px solid var(--border); }
 .tl2-table tbody tr:hover td { background: var(--bg-hover); }
 .tl2-kind {
@@ -604,7 +604,7 @@
 .tl2-nm { font-weight: 700; color: var(--text-main); }
 .tl2-sub { margin-top: 2px; font-size: 11px; color: var(--text-dim); }
 .tl2-last { display: inline-flex; gap: 4px; }
-.tl2-sq { display: inline-block; width: 20px; height: 20px; border-radius: 4px; }
+.tl2-sq { display: inline-block; width: 20px; height: 20px; border-radius: var(--r-xs); }
 .tl2-sq-ok { background: var(--accent-green); }
 .tl2-sq-fail { background: var(--accent-red); }
 .tl2-sq-missed { background: color-mix(in srgb, var(--accent-amber) 35%, transparent); border: 1px solid var(--accent-amber); }
@@ -625,7 +625,7 @@
   color: var(--accent-purple);
   background: var(--bg-card);
   border: 1px solid var(--border-hi);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   cursor: pointer;
 }
 .tl2-ib:hover { border-color: var(--accent-purple); }
@@ -643,7 +643,7 @@
   padding: 6px 8px;
   background: var(--bg-input);
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--r-md);
 }
 .tl3-pt small { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-dim); }
 .tl3-pt input { width: 100%; padding: 6px 8px; font-family: var(--font-mono); font-size: 13px; }
@@ -658,7 +658,7 @@
   color: var(--text-second);
   background: var(--bg-card);
   border: 1.5px solid var(--border-hi);
-  border-radius: 9px;
+  border-radius: var(--r-md);
   cursor: pointer;
 }
 .tl3-okno .tl3-ok.on { color: var(--on-accent); background: var(--accent-green); border-color: var(--accent-green); }
@@ -675,7 +675,7 @@
   color: var(--text-second);
   background: var(--bg-card);
   border: 1.5px solid var(--border-hi);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   cursor: pointer;
 }
 .tl3-mark .tl3-ok.on { color: var(--on-accent); background: var(--accent-green); border-color: var(--accent-green); }
@@ -709,7 +709,7 @@
   height: 40px;
   color: var(--on-accent);
   background: var(--accent-red);
-  border-radius: 11px;
+  border-radius: var(--r-md);
 }
 .mj-head-text { flex: 1; }
 .mj-head-text h3 { margin: 0 0 3px; font-size: 16px; color: var(--text-main); }
@@ -722,7 +722,7 @@
   margin-bottom: 6px;
   border: 1px solid color-mix(in srgb, var(--accent-red) 30%, var(--border));
   border-left: 4px solid var(--accent-red);
-  border-radius: 9px;
+  border-radius: var(--r-md);
 }
 .mj-item-title { font-size: 13px; font-weight: 700; color: var(--text-main); }
 .mj-opl { font-family: var(--font-mono); color: var(--accent-cyan); }
@@ -743,11 +743,11 @@
 .tl-pick { padding: 8px 20px 20px; }
 .tl-pick-hero { text-align: center; padding: 18px 10px 6px; }
 .tl-pick-hero > svg { color: var(--tab-coral, var(--accent-amber)); }
-.tl-pick-hero h3 { margin: 8px 0 4px; font-size: 20px; font-style: italic; font-weight: 800; color: var(--text-main); }
+.tl-pick-hero h3 { margin: 8px 0 4px; font-family: var(--font-display); font-size: 19px; font-weight: 600; color: var(--text-main); }
 .tl-pick-hero p { margin: 0; color: var(--text-second); font-size: 13px; }
 .tl-pick-search {
   display: flex; align-items: center; gap: 8px; max-width: 520px; margin: 16px auto 0;
-  padding: 10px 14px; border: 1.5px solid var(--border-hi); border-radius: 12px;
+  padding: 10px 14px; border: 1.5px solid var(--border-hi); border-radius: var(--r-md);
   background: var(--bg-input); color: var(--text-dim);
 }
 .tl-pick-search:focus-within { border-color: var(--accent-cyan); }
@@ -773,7 +773,7 @@ div.tl-pick-area-h { cursor: default; }
 .tl-pick-ln {
   --k: var(--border-hi);
   display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left;
-  border: 1px solid var(--border); border-left: 4px solid var(--k); border-radius: 10px;
+  border: 1px solid var(--border); border-left: 4px solid var(--k); border-radius: var(--r-md);
   padding: 8px 10px; background: var(--bg-card); font: inherit; color: var(--text-main); cursor: pointer; min-width: 0;
 }
 .tl-pick-ln:hover { background: var(--bg-hover); border-color: var(--blue-mid); border-left-color: var(--k); }

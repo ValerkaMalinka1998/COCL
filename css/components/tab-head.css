@@ -6,7 +6,7 @@
   margin-bottom: 16px;
   padding: 16px 18px 14px;
   border: 1px solid color-mix(in srgb, var(--th) 45%, var(--border));
-  border-radius: 14px;
+  border-radius: var(--r-lg);
   background: color-mix(in srgb, var(--th) 13%, var(--bg-card));
 }
 .th-band-coral { --th: var(--tab-coral); }
@@ -42,9 +42,10 @@
   margin: 0;
   padding: 0;
   border: 0;
-  font-size: 22px;
-  font-style: italic;
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-style: normal;
+  font-weight: 600;
   line-height: 1.2;
   color: var(--text-main);
 }
