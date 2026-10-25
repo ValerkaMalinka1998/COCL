@@ -7,7 +7,7 @@
    ============================================================ */
 
 const SETTINGS_PANEL_KEY = 'cl_settings_panel';
-const SETTINGS_PANELS = ['structure', 'brands', 'toplosses', 'triggers', 'shifts', 'operators', 'photos', 'data'];
+const SETTINGS_PANELS = ['structure', 'brands', 'toplosses', 'triggers', 'shifts', 'operators', 'oplimport', 'photos', 'data'];
 
 /* Общее состояние разделов: выбранный цех у справочников */
 const settingsState = {
@@ -30,6 +30,7 @@ function renderSettings() {
   renderBrandsSettings();
   renderCustomTriggersSettings();
   renderOperatorsSettings();
+  renderOplImportSettings();
   showSettingsPanel(getSavedSettingsPanel());
 }
 

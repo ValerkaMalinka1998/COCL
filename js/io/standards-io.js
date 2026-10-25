@@ -565,3 +565,166 @@ async function parseStandardsExcelV3(file, targetLine) {
   result.pointsImported = pointsImported;
   return result;
 }
+
+/* ============================================================
+   ИМПОРТ: бланк OPL из журнала (один лист — один стандарт)
+   Подпись ищется по тексту, значение — в ячейке под ней.
+   ============================================================ */
+
+/* «- 65 kPa (±10 kPa)» → «-65 kPa ±10 kPa»: parseNorm не понимает скобки у допуска и пробел после минуса */
+function oplCleanValue(s) {
+  return String(s).replace(/\(\s*(±[^)]*)\)/g, ' $1').replace(/\s+/g, ' ').trim().replace(/^([-+]) (?=\d)/, '$1');
+}
+
+/* «30 сек» → 30, «1,5 мин» → 90 */
+function oplDurationSec(s) {
+  const n = parseFloat(String(s).replace(',', '.'));
+  if (isNaN(n)) return 0;
+  return Math.round(/мин/i.test(s) ? n * 60 : n);
+}
+
+/* Дата ячейки (Date или «22.05.2026») → ISO; не дата → null */
+function oplDate(v) {
+  if (v instanceof Date) return new Date(v.getUTCFullYear(), v.getUTCMonth(), v.getUTCDate(), 12).toISOString();   // Excel отдаёт полночь UTC
+  const m = String(v || '').match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  return m ? new Date(+m[3], m[2] - 1, +m[1], 12).toISOString() : null;
+}
+
+/* Лист бланка → стандарт (без проверок); не бланк → null */
+function oplSheetToStandard(ws, line, part) {
+  const ends = {};   // главная ячейка объединения → нижняя строка и правая колонка
+  (ws.model.merges || []).forEach(m => {
+    const [a, b] = m.split(':');
+    ends[ws.getCell(a).address] = { bottom: ws.getCell(b).row, right: ws.getCell(b).col };
+  });
+  const labels = [];
+  ws.eachRow(row => row.eachCell(cell => {
+    if (cell.master.address !== cell.address) return;
+    const text = xlCellText(row, cell.col);
+    if (text) labels.push({ text, low: text.toLowerCase(), row: cell.row, col: cell.col,
+      ...(ends[cell.address] || { bottom: cell.row, right: cell.col }) });
+  }));
+  const find = (start, exact) => labels.find(l => exact ? l.low === start : l.low.startsWith(start));
+  const cellUnder = (start, exact) => { const l = find(start, exact); return l ? ws.getCell(l.bottom + 1, l.col) : null; };
+  const under = (start, exact) => { const c = cellUnder(start, exact); return c ? xlCellText(ws.getRow(c.row), c.col) : ''; };
+  if (!find('№ opl')) return null;
+
+  // Точки: номера — под «Точка замера», бренды — строка под «Значение» («Все сорта» = остальные бренды)
+  const measurements = [];
+  const pt = find('точка замера'), vl = find('значение');
+  if (pt && vl) {
+    labels.filter(l => l.row === vl.bottom + 1 && l.col >= vl.col && l.col <= vl.right).forEach(b => {
+      const points = [];
+      for (let r = pt.bottom + 1; /^\d+$/.test(xlCellText(ws.getRow(r), pt.col)); r++) {
+        const v = oplCleanValue(xlCellText(ws.getRow(r), b.col));
+        if (v) points.push({ value: v });
+      }
+      const rest = /^все (сорта|бренды)$/.test(b.low) || b.text === REST_BRANDS_LABEL;
+      if (points.length) measurements.push({ brand: rest ? '' : b.text, points });
+    });
+  }
+  const kinds = measurements.flatMap(b => b.points)
+    .map(p => isNormMark(p.value) ? null : classifyNormValue(p.value)).filter(Boolean);
+  const controlType = kinds.includes('variable') ? 'variable' : (kinds.includes('interval') ? 'interval' : 'fixed');
+
+  const machineNode = under('машина');   // «SE/Узел передачи…»
+  const cut = machineNode.indexOf('/');
+  const created = oplDate((cellUnder('дата создания') || {}).value) || new Date().toISOString();
+  return {
+    ...createEmptyStandard(),
+    id: uid(),
+    oplNumber: under('№ opl'),
+    machine: (cut >= 0 ? machineNode.slice(0, cut) : machineNode).trim(),
+    node: cut >= 0 ? machineNode.slice(cut + 1).trim() : '',
+    title: under('название cl'),
+    line,
+    nodePart: part,
+    controlType,
+    problemDescription: under('описание проблемы'),
+    controlDescription: under('описание', true),
+    purpose: under('цель'),
+    whyCreated: under('знаю почему'),
+    tool: under('инструмент'),
+    durationSec: oplDurationSec(under('время на проверку')),
+    measurements,
+    author: under('автор') || '—',
+    createdAt: created,
+    updatedAt: oplDate((cellUnder('дата изменения') || {}).value) || created
+  };
+}
+
+/* Файлы бланков → стандарты линии. Фото из листов — ZIP «photos/<линия>/<часть>/…» */
+async function parseOplJournalExcel(files, targetLine, nodePart) {
+  const part = lineHasParts(targetLine) ? nodePart : '';
+  const all = getStandards();
+  const keys = new Set(all.filter(s => s.line === targetLine)
+    .map(s => `${s.machine || ''}|${(s.oplNumber || '').toLowerCase()}`));
+  const lineMachines = getLineMachines();
+  if (!Array.isArray(lineMachines[targetLine])) lineMachines[targetLine] = [];
+  const result = { added: 0, skipped: 0, duplicates: [], empty: 0, errors: [], addedMachines: [], photos: 0 };
+  const added = [];
+  const zip = new JSZip();
+
+  for (const file of files) {
+    const wb = new ExcelJS.Workbook();
+    try { await wb.xlsx.load(await file.arrayBuffer()); }
+    catch (e) {
+      result.errors.push({ message: `${file.name}: файл не читается — нужен формат .xlsx (в Excel: «Сохранить как» → .xlsx)` });
+      continue;
+    }
+    for (const ws of wb.worksheets) {
+      const where = wb.worksheets.length > 1 ? `${file.name} / ${ws.name}` : file.name;
+      const std = oplSheetToStandard(ws, targetLine, part);
+      if (!std || !(std.oplNumber || std.machine || std.title)) { result.empty++; continue; }   // не бланк или пустой шаблон
+      const miss = [['№ OPL', std.oplNumber], ['машина', std.machine], ['узел', std.node], ['название CL', std.title]]
+        .filter(([, v]) => !v).map(([k]) => k);
+      const bad = [];
+      std.measurements.forEach(b => b.points.forEach((p, i) => {
+        const err = normTypeError(std.controlType, p.value);
+        if (err) bad.push(`т.${i + 1}: ${err}`);
+      }));
+      if (miss.length || bad.length) {
+        result.errors.push({ message: `${where}: ${miss.length ? 'не заполнено — ' + miss.join(', ') : bad.join('; ')}` });
+        result.skipped++;
+        continue;
+      }
+      const key = `${std.machine}|${std.oplNumber.toLowerCase()}`;
+      if (keys.has(key)) {
+        result.duplicates.push({ oplNumber: std.oplNumber, machine: std.machine });
+        result.skipped++;
+        continue;
+      }
+      keys.add(key);
+      // Фото лежат по части линии — у PMD / FMD части нет, путь не собрать
+      if (!part) result.photosLost = (result.photosLost || 0) + ws.getImages().length;
+      else ws.getImages().forEach((img, i) => {
+        const media = wb.getImage(img.imageId);
+        if (!media) return;
+        const name = `OPL${std.oplNumber}_${std.machine}_${i + 1}.${media.extension}`.replace(/[\\/:*?"<>|\s]+/g, '_');
+        zip.file(`photos/${targetLine}/${part}/${name}`, media.buffer);
+        std.photos.push(name);
+        result.photos++;
+      });
+      if (!lineMachines[targetLine].includes(std.machine)) {
+        lineMachines[targetLine].push(std.machine);
+        result.addedMachines.push(std.machine);
+      }
+      all.push(std);
+      added.push(std);
+    }
+  }
+
+  // Архив — до записи: если он не соберётся, не останется стандартов с именами несуществующих фото
+  const zipBlob = result.photos > 0 ? await zip.generateAsync({ type: 'blob' }) : null;
+  result.added = added.length;
+  if (added.length) {
+    setStandards(all);
+    added.forEach(std => addChangeLogEntry('mech', std, 'added', 'Новый стандарт (импорт бланка OPL)'));
+  }
+  if (result.addedMachines.length > 0) setLineMachines(lineMachines);
+  if (zipBlob) downloadBlob(zipBlob, `photos_${targetLine}.zip`);
+  if (result.photosLost) {
+    result.errors.push({ message: `фото не выгружены (${result.photosLost}): у линии ${targetLine} нет части Maker / Packer — добавьте фото вручную` });
+  }
+  return result;
+}

@@ -455,7 +455,7 @@ function showImportReport(result, containerId) {
   if (result.errors.length > 0) {
     html += '<div style="margin-top:8px"><strong>Строки с ошибками:</strong><ul>';
     result.errors.slice(0, 10).forEach(e => {
-      html += `<li>Строка ${e.row}: ${escapeHtml(e.message)}</li>`;
+      html += `<li>${e.row != null ? `Строка ${e.row}: ` : ''}${escapeHtml(e.message)}</li>`;
     });
     if (result.errors.length > 10) html += `<li>...и ещё ${result.errors.length - 10}</li>`;
     html += '</ul></div>';
