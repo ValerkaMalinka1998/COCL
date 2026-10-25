@@ -68,15 +68,24 @@ function fmtISODate(dateStr) {
   return `${dd}.${mm}.${yyyy}`;
 }
 
+/* Конфиг смен для расчёта дат: JSON разбирается заново, только когда строка в хранилище
+   изменилась (дашборд и матрицы зовут это тысячи раз). Только чтение — не мутировать. */
+let shiftCfgMemo = { raw: undefined, cfg: null };
+function shiftCfgCached() {
+  const raw = localStorage.getItem(STORAGE_KEYS.electronicShiftCfg);
+  if (raw !== shiftCfgMemo.raw) shiftCfgMemo = { raw, cfg: getElectronicShiftConfig() };
+  return shiftCfgMemo.cfg;
+}
+
 function daysSinceStart(date) {
-  const cfg = getElectronicShiftConfig();
+  const cfg = shiftCfgCached();
   const d = (date instanceof Date) ? date : new Date(date + 'T00:00:00');
   const start = new Date(cfg.startDate + 'T00:00:00');
   return Math.floor((d.getTime() - start.getTime()) / 86400000);
 }
 
 function getDayShiftForDate(date) {
-  const cfg = getElectronicShiftConfig();
+  const cfg = shiftCfgCached();
   const diff = daysSinceStart(date);
   if (diff < 0) return cfg.dayCycle[0];
   const pos = diff % cfg.dayCycle.length;
@@ -84,7 +93,7 @@ function getDayShiftForDate(date) {
 }
 
 function getNightShiftForDate(date) {
-  const cfg = getElectronicShiftConfig();
+  const cfg = shiftCfgCached();
   const diff = daysSinceStart(date);
   if (diff < 0) return cfg.nightCycle[0];
   const pos = diff % cfg.nightCycle.length;

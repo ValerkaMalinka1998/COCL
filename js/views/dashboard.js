@@ -179,7 +179,9 @@ function dashWeeks(lines) {
 /* ============================================================
    РЕНДЕР: ГЛАВНЫЙ ЭКРАН
    ============================================================ */
-function renderDashboard() {
+/* Отрисовка только читает данные — история и стандарты разбираются из JSON один раз */
+function renderDashboard() { withLoadCache(renderDashboardMain); }
+function renderDashboardMain() {
   const box = $('#dashboardContent');
   if (!box) return;
   dashboardWorkshop = localStorage.getItem('cl_dashboard_workshop') || '';
@@ -491,7 +493,8 @@ function dashLineSideHtml(line, machines, sum) {
     </button>`).join('') || '<div class="dash-empty">Стандартов нет</div>'}`;
 }
 
-function renderDashboardLine() {
+function renderDashboardLine() { withLoadCache(renderDashboardLineMain); }
+function renderDashboardLineMain() {
   const box = $('#dashboardContent');
   const line = dashState.line;
   renderDashboardHead();

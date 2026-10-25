@@ -362,3 +362,8 @@ button.hist-mh.is-pick { outline: 2px solid var(--accent-cyan); outline-offset: 
 /* Фокус поиска — на всей рамке, а не тенью вокруг поля внутри неё */
 .hist-search input:focus { box-shadow: none; border-color: transparent; }
 .hist-search:focus-within { border-color: var(--accent-cyan); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-cyan) 15%, transparent); }
+
+/* Телефон: сегменты прокручиваются внутри себя, страница не шире экрана */
+@media (max-width: 640px) {
+  .hist-seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+}

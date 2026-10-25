@@ -107,111 +107,6 @@ button.btn:disabled {
   gap: 6px;
 }
 
-/* ============ Checklist items ============ */
-.checklist-item {
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--blue-mid);
-  border-radius: var(--r-sm);
-  padding: 14px;
-  margin-bottom: 12px;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.checklist-item .meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  font-size: 12px;
-  color: var(--text-second);
-  margin-bottom: 8px;
-}
-.checklist-item .meta strong { color: var(--text-main); font-weight: 600; }
-.checklist-item .title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-main);
-  margin-bottom: 4px;
-}
-.checklist-item .desc {
-  font-size: 13px;
-  color: var(--text-second);
-  margin-bottom: 10px;
-}
-
-/* ============ Ответ в чек-листе: всё в одну строку ============ */
-.checklist-item .answer {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--border);
-}
-/* ============ Иконка комментария ============ */
-.comment-btn {
-  background: var(--bg-input);
-  border: 2px solid var(--blue-light);
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  cursor: pointer;
-  color: var(--accent-cyan);
-  transition: all 0.15s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  padding: 0;
-  position: relative;
-}
-.comment-btn svg {
-  width: 22px;
-  height: 22px;
-  display: block;
-  pointer-events: none;
-  stroke: var(--accent-cyan);
-}
-.comment-btn:hover {
-  background: var(--blue-mid);
-  transform: scale(1.08);
-  box-shadow: var(--glow-cyan);
-}
-.comment-btn:hover svg { stroke: var(--on-accent); }
-
-.comment-btn.has-comment {
-  background: rgba(var(--amber-rgb), 0.15);
-  border-color: var(--accent-amber);
-}
-.comment-btn.has-comment svg { stroke: var(--accent-amber); }
-.comment-btn.has-comment:hover {
-  background: var(--accent-amber);
-}
-.comment-btn.has-comment:hover svg { stroke: var(--bft-ink); }
-
-.comment-btn.urgent {
-  animation: urgentPulse 1s infinite;
-}
-.comment-btn.urgent:hover { animation: none; }
-.comment-btn.urgent svg { stroke: var(--accent-red); }
-
-@keyframes urgentPulse {
-  0% {
-    border-color: var(--accent-red);
-    background: var(--bg-card);
-    box-shadow: 0 0 0 0 rgba(var(--red-rgb), 0.7);
-  }
-  50% {
-    border-color: var(--accent-red);
-    background: rgba(var(--red-rgb), 0.15);
-    box-shadow: 0 0 0 8px rgba(var(--red-rgb), 0);
-  }
-  100% {
-    border-color: var(--accent-red);
-    background: var(--bg-card);
-    box-shadow: 0 0 0 0 rgba(var(--red-rgb), 0);
-  }
-}
 /* ============ Иконка «Просмотр стандарта» (глаз) ============ */
 .view-btn {
   background: var(--bg-input);
@@ -290,31 +185,6 @@ tr:hover td { background: var(--bg-hover); }
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-}
-.badge-changeover {
-  background: rgba(var(--cyan-rgb), 0.10);
-  color: var(--accent-cyan);
-  border: 1px solid rgba(var(--cyan-rgb), 0.35);
-}
-.badge-clto {
-  background: rgba(var(--purple-rgb), 0.10);
-  color: var(--accent-purple);
-  border: 1px solid rgba(var(--purple-rgb), 0.35);
-}
-.badge-clconv {
-  background: rgba(var(--emerald-rgb), 0.10);
-  color: var(--accent-emerald);
-  border: 1px solid rgba(var(--emerald-rgb), 0.35);
-}
-.badge-ok {
-  background: rgba(var(--green-rgb), 0.15);
-  color: var(--accent-green);
-  border: 1px solid var(--accent-green);
-}
-.badge-fail {
-  background: rgba(var(--red-rgb), 0.15);
-  color: var(--accent-red);
-  border: 1px solid var(--accent-red);
 }
 
 /* ============ Toast ============ */
@@ -467,16 +337,6 @@ tr:hover td { background: var(--bg-hover); }
 .modal-footer .modal-add-btn-left {
   margin-right: auto;
 }
-.status-ok {
-  background: rgba(var(--green-rgb), 0.15);
-  color: var(--accent-green);
-  border: 1px solid var(--accent-green);
-}
-.status-fail {
-  background: rgba(var(--red-rgb), 0.15);
-  color: var(--accent-red);
-  border: 1px solid var(--accent-red);
-}
 .type-chip {
   display: inline-block;
   padding: 3px 10px;
@@ -496,8 +356,6 @@ tr:hover td { background: var(--bg-hover); }
 /* Контурная версия для кнопок; при has-comment — заливается */
 .cmt-svg.cmt-outline .cmt-bubble { fill: none; stroke: currentColor; stroke-width: 1.8; }
 .cmt-svg.cmt-outline .cmt-dot { fill: currentColor; }
-.has-comment .cmt-svg.cmt-outline .cmt-bubble { fill: var(--accent-amber); stroke: var(--accent-amber); }
-.has-comment .cmt-svg.cmt-outline .cmt-dot { fill: var(--on-accent); }
 
 /* ============================================================ */
 /* === Кнопка-иконка просмотра стандарта ====================== */

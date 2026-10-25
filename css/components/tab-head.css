@@ -145,3 +145,10 @@
 }
 #tab-electronic .cil-wrap,
 #tab-schedule .cil-wrap { padding: 0; }
+
+/* Телефон: кнопки и переключатели шапки не шире экрана */
+@media (max-width: 640px) {
+  .ph-actions { justify-content: flex-start; max-width: 100%; }
+  .ph-actions .editor-mode-inline,
+  .ph-actions .editor-part-switch { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+}

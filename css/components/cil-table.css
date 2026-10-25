@@ -613,3 +613,8 @@ button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentCol
   font-size: 13px;
 }
 .cil-down-banner b { color: var(--text-main); }
+
+/* Телефон: подпись недели переносится, стрелки остаются по краям */
+@media (max-width: 640px) {
+  .cil-week { flex-wrap: wrap; max-width: 100%; }
+}

@@ -13,13 +13,6 @@
 let brandsQuery = '';
 let brandsAddWs = '';   // цех для нового бренда
 
-function pluralizeBrandsShort(n) {
-  const m10 = n % 10, m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return 'бренд';
-  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return 'бренда';
-  return 'брендов';
-}
-
 /* Линии, на которых стоит бренд */
 function getLinesForBrand(brand) {
   const lb = getLineBrands();
@@ -243,19 +236,7 @@ $('#downloadBrandsTemplateBtn')?.addEventListener('click', async () => {
   ws.addRow(['Camel']);
 
   // Стилизация шапки
-  const headerRow = ws.getRow(1);
-  headerRow.height = 30;
-  headerRow.eachCell((cell) => {
-    cell.font = { name: 'Calibri', size: 13, bold: true, color: { argb: 'FFFFFFFF' } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4FA8' } };
-    cell.alignment = { vertical: 'middle', horizontal: 'center' };
-    cell.border = {
-      top:    { style: 'thin', color: { argb: 'FF0A4FA8' } },
-      bottom: { style: 'thin', color: { argb: 'FF0A4FA8' } },
-      left:   { style: 'thin', color: { argb: 'FF0A4FA8' } },
-      right:  { style: 'thin', color: { argb: 'FF0A4FA8' } }
-    };
-  });
+  styleTemplateHeader(ws);
 
   // Лист с инструкцией
   const wsInfo = wb.addWorksheet('Инструкция');

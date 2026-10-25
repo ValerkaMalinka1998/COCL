@@ -33,7 +33,6 @@ function showToast(msg, isError) {
   t.className = 'toast show' + (isError ? ' error' : '');
   setTimeout(() => { t.className = 'toast'; }, 2500);
 }
-function nowStr() { return new Date().toLocaleString('ru-RU'); }
 
 function fmtDate(d) {
   const dt = new Date(d);
@@ -76,13 +75,24 @@ function escapeAttr(s) {
 /* ============================================================
    ДОСТУП К ДАННЫМ
    ============================================================ */
+/* Кэш чтений на время одной отрисовки (withLoadCache): каждый ключ разбирается из JSON
+   один раз. Только для кода, который не меняет полученные объекты. */
+let loadCache = null;
+function withLoadCache(fn) {
+  if (loadCache) return fn();
+  loadCache = new Map();
+  try { return fn(); } finally { loadCache = null; }
+}
 function load(key, fallback) {
+  if (loadCache && loadCache.has(key)) return loadCache.get(key) ?? fallback;
   try {
     const v = JSON.parse(localStorage.getItem(key));
+    if (loadCache) loadCache.set(key, v);
     return v != null ? v : fallback;
   } catch(e) { return fallback; }
 }
 function save(key, value) {
+  if (loadCache) loadCache.delete(key);
   localStorage.setItem(key, JSON.stringify(value));
 }
 function getOperators() { return load(STORAGE_KEYS.operators, []); }
