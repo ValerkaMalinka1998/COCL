@@ -371,3 +371,27 @@ test('счёт (вариант A): пропуск один раз, закрыт�
   assert.equal(one.get('2026-10-21|day|d1'), 'late', 'период — одна смена, закрыт уже после периода');
   assert.equal(one.has('2026-10-22|day|d1'), false, 'смены после периода в итог не попадают');
 });
+
+/* === КЭШ ЧТЕНИЙ === */
+test('буква смены пересчитывается после смены графика (кэш конфига смен)', () => {
+  app("localStorage.removeItem(STORAGE_KEYS.electronicShiftCfg)");
+  assert.equal(fn('getDayShiftForDate')('2026-10-01'), 'B', 'по умолчанию');
+  fn('setElectronicShiftConfig')({ dayCycle: ['C'], nightCycle: ['D'], startDate: '2026-10-01' });
+  assert.equal(fn('getDayShiftForDate')('2026-10-05'), 'C', 'новый график виден сразу');
+  assert.equal(fn('getNightShiftForDate')('2026-10-05'), 'D');
+  app("localStorage.removeItem(STORAGE_KEYS.electronicShiftCfg)");
+});
+
+test('withLoadCache: ключ читается один раз, save сбрасывает кэш', () => {
+  fn('save')('cl_test_key', [1]);
+  const r = fn('withLoadCache')(() => {
+    const a = fn('load')('cl_test_key', []);
+    const same = a === fn('load')('cl_test_key', []);
+    fn('save')('cl_test_key', [2]);
+    return { same, after: fn('load')('cl_test_key', []) };
+  });
+  assert.equal(r.same, true, 'внутри отрисовки — тот же объект');
+  assert.deepEqual(plain(r.after), [2], 'после save — свежие данные');
+  assert.notEqual(fn('load')('cl_test_key', []), fn('load')('cl_test_key', []), 'вне отрисовки — без кэша');
+  app("localStorage.removeItem('cl_test_key')");
+});

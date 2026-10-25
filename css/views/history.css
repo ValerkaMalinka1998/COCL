@@ -13,42 +13,36 @@
 
 /* === Шапка: заголовок, режим, период, Excel === */
 .hist-head-card { padding: 0; }
-.hist-head {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  padding: 14px 16px;
-}
-.hist-title { font-size: 18px; font-weight: 800; color: var(--text-main); display: flex; gap: 8px; align-items: baseline; }
-.hist-title small { font-size: 12px; font-weight: 600; color: var(--text-dim); }
 
+/* Сегменты — как переключатели «Аврора»: дорожка, выбранный пункт — белая пилюля */
 .hist-seg {
-  display: inline-flex; gap: 2px; padding: 3px;
-  border: 1px solid var(--border); border-radius: 10px; background: var(--bg-card);
+  display: inline-flex; gap: 2px; padding: 4px;
+  border: 1px solid var(--glass-border); border-radius: var(--r-pill); background: var(--seg-track);
 }
 .hist-seg button {
-  border: 0; background: transparent; padding: 6px 11px; border-radius: 8px;
-  font-size: 12px; font-weight: 700; color: var(--text-second); cursor: pointer;
-  font-family: inherit; white-space: nowrap;
+  border: 0; background: transparent; height: 32px; padding: 0 13px; border-radius: var(--r-pill);
+  font-size: 13px; font-weight: 600; color: var(--text-second); cursor: pointer;
+  font-family: inherit; white-space: nowrap; transition: background 0.15s, color 0.15s;
 }
-.hist-seg button:hover { color: var(--text-main); background: var(--bg-hover); }
-.hist-seg button.on { background: var(--blue-mid); color: var(--on-accent); }
+.hist-seg button:hover { color: var(--text-main); }
+.hist-seg button.on { background: var(--seg-on-bg); color: var(--text-main); box-shadow: var(--seg-on-shadow); }
 
 .hist-danger-item { color: var(--accent-red) !important; }
 
-.hist-custom { display: flex; gap: 12px; padding: 0 16px 12px; justify-content: flex-end; }
+.hist-custom { display: flex; gap: 12px; padding: 12px 16px; justify-content: flex-end; border-bottom: 1px solid var(--border); }
 .hist-custom label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--text-second); }
-.hist-custom input { padding: 6px 8px; border: 1px solid var(--border-hi); border-radius: 8px; background: var(--bg-input); color: var(--text-main); font-family: inherit; }
-
+.hist-custom input { padding: 6px 8px; border: 1px solid var(--border-hi); border-radius: var(--r-sm); background: var(--bg-input); color: var(--text-main); font-family: inherit; }
 
 /* === Фильтры === */
 .hist-fbar {
   display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: flex-start;
-  padding: 12px 16px 14px; border-top: 1px solid var(--border); background: var(--bg-input);
+  padding: 12px 16px 14px; border-bottom: 1px solid var(--border); background: var(--bg-input);
 }
 .hist-f { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .hist-f-lbl { font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); }
 .hist-search {
   display: flex; align-items: center; gap: 6px;
-  padding: 6px 12px; border: 1px solid var(--border-hi); border-radius: 10px;
+  padding: 6px 12px; border: 1px solid var(--border-hi); border-radius: var(--r-md);
   background: var(--bg-input); color: var(--text-dim);
 }
 .hist-search input { border: 0; outline: 0; background: transparent; width: 100%; color: var(--text-main); font: inherit; font-size: 13px; }
@@ -68,7 +62,7 @@
 /* Итог по отобранным записям */
 .hist-totals {
   display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px;
-  padding: 12px 16px; border-top: 1px solid var(--border);
+  padding: 12px 16px;
   font-size: 12px; color: var(--text-second);
 }
 .hist-totals b { font-size: 15px; color: var(--text-main); margin-right: 4px; }
@@ -81,8 +75,8 @@
 .hist-cov-no { font-size: 20px; font-weight: 800; color: var(--text-main); letter-spacing: -.2px; }
 .hist-cov-sub { margin-top: 4px; font-size: 12.5px; color: var(--text-dim); }
 .hist-cov-wk { align-items: center; }
-.hist-cov-wk .hist-cov-arrow { width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-card); color: var(--text-main); }
-.hist-cov-wk .hist-cov-arrow:hover:not(:disabled) { color: #fff; background: var(--accent-cyan); border-color: var(--accent-cyan); }
+.hist-cov-wk .hist-cov-arrow { width: 32px; height: 32px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg-card); color: var(--text-main); }
+.hist-cov-wk .hist-cov-arrow:hover:not(:disabled) { color: var(--on-accent); background: var(--accent-cyan); border-color: var(--accent-cyan); }
 .hist-cov-wk .hist-cov-arrow:disabled { opacity: .35; cursor: default; }
 
 /* Цвет состояния смены (полоски календаря истории) */
@@ -104,14 +98,14 @@
 .hist-rec:last-child { border-bottom: 0; }
 .hist-rec:hover { background: var(--bg-hover); }
 .hist-ico {
-  width: 36px; height: 36px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: 36px; height: 36px; border-radius: var(--r-md); display: inline-flex; align-items: center; justify-content: center; flex: none;
   color: var(--k); background: color-mix(in srgb, var(--k) 14%, transparent);
 }
 .hist-rec-t b { font-size: 13px; color: var(--text-main); }
 .hist-rec-t div { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
 .hist-rec-ctx { font-size: 12px; color: var(--text-second); min-width: 0; }
 .hist-res { display: flex; flex-direction: column; gap: 4px; }
-.hist-rbar { display: flex; height: 7px; border-radius: 4px; overflow: hidden; background: var(--bg-input); }
+.hist-rbar { display: flex; height: 7px; border-radius: var(--r-xs); overflow: hidden; background: var(--bg-input); }
 .hist-rbar .ok { background: var(--accent-green); }
 .hist-rbar .fail { background: var(--accent-red); }
 .hist-rbar .un { background: color-mix(in srgb, var(--accent-amber) 45%, transparent); }
@@ -132,16 +126,13 @@
 .hist-empty { padding: 28px 16px; text-align: center; color: var(--text-dim); font-size: 13px; }
 .hist-more { display: block; margin: 12px auto 0; }
 
-
 /* === Страница проверки === */
-.hist-rp-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 16px; }
-.hist-rp-head .hist-ico { width: 48px; height: 48px; border-radius: 13px; }
-.hist-rp-tt { min-width: 0; }
-.hist-rp-tt h2 { margin: 0; font-size: 19px; color: var(--text-main); }
-.hist-rp-meta { display: flex; gap: 6px 14px; flex-wrap: wrap; font-size: 12px; color: var(--text-second); margin-top: 4px; }
+/* Значок вида проверки рядом с заголовком */
+.hist-rp-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.hist-rp-title .hist-ico { width: 44px; height: 44px; flex-shrink: 0; border-radius: var(--r-lg); }
+.hist-rp-meta { display: flex; gap: 6px 14px; flex-wrap: wrap; font-size: 13.5px; color: var(--text-second); }
 .hist-rp-meta b { color: var(--text-main); }
 .hist-rp-extra { margin-top: 6px; font-size: 12px; color: var(--text-second); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-.hist-rp-nav { display: flex; gap: 6px; }
 .hist-rp { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 12px; align-items: start; }
 .hist-rp-items { padding: 0; overflow: hidden; }
 .hist-mg {
@@ -158,7 +149,7 @@
 .hist-it-fail { background: color-mix(in srgb, var(--accent-red) 5%, var(--bg-card)); }
 .hist-it-missed { background: color-mix(in srgb, var(--accent-amber) 5%, var(--bg-card)); }
 .hist-st {
-  width: 26px; height: 26px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: var(--r-sm); display: inline-flex; align-items: center; justify-content: center;
   color: var(--on-accent); font-weight: 900; font-size: 13px;
 }
 .hist-st svg { width: 15px; height: 15px; }
@@ -168,14 +159,14 @@
 .hist-it-title { font-weight: 700; color: var(--text-main); }
 .hist-pts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
 .hist-pt {
-  font-family: var(--font-mono); font-size: 11.5px; padding: 3px 8px; border-radius: 6px;
+  font-family: var(--font-mono); font-size: 11.5px; padding: 3px 8px; border-radius: var(--r-sm);
   border: 1px solid var(--border); background: var(--bg-input); color: var(--text-second);
 }
 .hist-pt { display: inline-flex; align-items: center; gap: 5px; }
 .hist-pt i { font-style: normal; color: var(--text-dim); }
 .hist-pt-n {
   font-size: 9.5px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase;
-  color: var(--text-dim); background: var(--bg-hover); border-radius: 4px; padding: 1px 4px;
+  color: var(--text-dim); background: var(--bg-hover); border-radius: var(--r-xs); padding: 1px 4px;
 }
 .hist-pt b { color: var(--text-main); }
 .hist-pt.bad { border-color: var(--accent-red); color: var(--accent-red); background: color-mix(in srgb, var(--accent-red) 8%, var(--bg-card)); }
@@ -205,23 +196,20 @@
 .hist-side-btns { display: flex; flex-direction: column; gap: 8px; }
 .hist-side-btns .btn { justify-content: center; width: 100%; }
 .hist-mjbox {
-  margin-top: 12px; padding: 10px 12px; border-radius: 10px; font-size: 12px; color: var(--text-second);
+  margin-top: 12px; padding: 10px 12px; border-radius: var(--r-md); font-size: 12px; color: var(--text-second);
   background: color-mix(in srgb, var(--accent-red) 7%, var(--bg-card));
   border: 1px solid color-mix(in srgb, var(--accent-red) 30%, var(--border));
 }
 .hist-mjbox b { color: var(--accent-red); }
 
 /* === История стандарта === */
-.hist-std-head { padding: 0; }
-.hist-std-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 16px; }
-.hist-std-top .btn svg { width: 14px; height: 14px; }
 
 /* Лента результатов — когда числовых замеров нет */
 
 /* === Карточка ячейки Чек-листа CL (клик по прошлой смене) === */
 .cl-peek {
   position: fixed; z-index: 900; width: 340px; max-width: calc(100vw - 24px);
-  background: var(--bg-card); border: 1px solid var(--border-hi); border-radius: 12px;
+  background: var(--bg-card); border: 1px solid var(--border-hi); border-radius: var(--r-md);
   box-shadow: var(--card-shadow-hover); padding: 12px 14px;
 }
 .cl-peek-h { display: flex; align-items: center; gap: 8px; }
@@ -256,12 +244,12 @@
 .hist-day .hist-day-sum { color: var(--text-second); }
 .hist-rec { padding: 8px 14px; }
 .hist-rec.is-fail { box-shadow: inset 3px 0 0 var(--accent-red); }
-.hist-rec .hist-ico { width: 30px; height: 30px; border-radius: 8px; }
+.hist-rec .hist-ico { width: 30px; height: 30px; border-radius: var(--r-sm); }
 .hist-rec-sh b { display: block; font-size: 13.5px; font-weight: 800; color: var(--text-main); }
 .hist-rec-sh-day b { color: var(--accent-cyan); }
 .hist-rec-sh-night b { color: var(--accent-purple); }
 .hist-rec-ctx { display: flex; flex-wrap: wrap; gap: 4px; }
-.hist-dchip { display: inline-flex; align-items: baseline; gap: 5px; max-width: 100%; padding: 2px 8px; border-radius: 6px; font-size: 11px; color: var(--accent-red); background: color-mix(in srgb, var(--accent-red) 9%, transparent); border: 1px solid color-mix(in srgb, var(--accent-red) 25%, transparent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-dchip { display: inline-flex; align-items: baseline; gap: 5px; max-width: 100%; padding: 2px 8px; border-radius: var(--r-sm); font-size: 11px; color: var(--accent-red); background: color-mix(in srgb, var(--accent-red) 9%, transparent); border: 1px solid color-mix(in srgb, var(--accent-red) 25%, transparent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hist-dchip b { font-weight: 800; }
 .hist-dchip em { font-style: normal; color: var(--text-second); }
 .hist-dchip-more { color: var(--text-second); background: var(--bg-hover); border-color: var(--border); }
@@ -277,24 +265,19 @@ button.hist-shh { cursor: pointer; }
 button.hist-shh:hover { background: color-mix(in srgb, var(--k) 14%, var(--bg-card)); }
 .hist-fold-act { margin-left: auto; font-size: 11.5px; font-weight: 800; color: var(--accent-cyan); }
 .hist-cov-card { margin-bottom: 4px; }
-.hist-pick { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 8px 12px; border-radius: 8px; font-size: 12.5px; background: color-mix(in srgb, var(--accent-cyan) 8%, transparent); border: 1px solid color-mix(in srgb, var(--accent-cyan) 30%, transparent); }
+.hist-pick { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 8px 12px; border-radius: var(--r-sm); font-size: 12.5px; background: color-mix(in srgb, var(--accent-cyan) 8%, transparent); border: 1px solid color-mix(in srgb, var(--accent-cyan) 30%, transparent); }
 .hist-pick > span { flex: 1; }
-
-/* === График отклонений стандарта: столбики по периодам ======= */
-
-
-
 
 /* === История: календарь месяца (неделя — строка, в дне две смены) === */
 .hist-cal-seg { float: right; }
 .hist-mon { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
 .hist-mon-wd { font-size: 11px; font-weight: 800; color: var(--text-second); text-align: center; }
-.hist-md { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 5px 6px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-card); }
+.hist-md { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 5px 6px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg-card); }
 .hist-md.is-out { background: var(--bg-input); border-style: dashed; min-height: 64px; }
 .hist-md.is-out .hist-md-n { color: var(--text-dim); }
 .hist-md.is-today { border: 2px solid var(--accent-cyan); }
 .hist-md-n { font-size: 12px; font-weight: 800; color: var(--text-main); }
-.hist-mh { --k: var(--text-dim); display: flex; align-items: center; gap: 4px; width: 100%; min-width: 0; padding: 2px 6px; border: 0; border-radius: 5px; font: inherit; font-size: 11px; font-weight: 700; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--k); background: color-mix(in srgb, var(--k) 12%, var(--bg-card)); }
+.hist-mh { --k: var(--text-dim); display: flex; align-items: center; gap: 4px; width: 100%; min-width: 0; padding: 2px 6px; border: 0; border-radius: var(--r-xs); font: inherit; font-size: 11px; font-weight: 700; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--k); background: color-mix(in srgb, var(--k) 12%, var(--bg-card)); }
 .hist-mh svg { flex: none; }
 /* Цвет состояния — как у клеток недели (правило .hist-mh выше перебивало --k) */
 .hist-mh.hist-cc-ok { --k: var(--accent-green); }
@@ -312,40 +295,38 @@ button.hist-mh.is-pick { outline: 2px solid var(--accent-cyan); outline-offset: 
 .hist-mon.is-week .hist-md { gap: 5px; padding: 8px; }
 .hist-mon.is-week .hist-mh { padding: 6px 8px; font-size: 12px; }
 
-
 /* === Шапка истории: одна строка + панель «Фильтры» + активные фильтры === */
-.hist-search-head { flex: 1 1 160px; max-width: 280px; min-width: 120px; height: 38px; box-sizing: border-box; margin: 0; padding: 0 12px; }
+.hist-search-head { flex: 1 1 160px; max-width: 280px; min-width: 120px; height: 42px; box-sizing: border-box; margin: 0; padding: 0 14px; border-radius: var(--r-pill); }
 .hist-fbtn { display: inline-flex; align-items: center; gap: 6px; }
 .hist-fbtn[aria-expanded="true"] { border-color: var(--accent-cyan); color: var(--accent-cyan); }
-.hist-fbtn b { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--accent-cyan); color: var(--on-accent); font-size: 11px; line-height: 18px; text-align: center; }
+.hist-fbtn b { min-width: 18px; height: 18px; padding: 0 5px; border-radius: var(--r-md); background: var(--accent-cyan); color: var(--on-accent); font-size: 11px; line-height: 18px; text-align: center; }
 .hist-af { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 0; border-radius: 999px; font: inherit; font-size: 12px; font-weight: 700; color: var(--accent-cyan); background: color-mix(in srgb, var(--accent-cyan) 12%, var(--bg-card)); cursor: pointer; }
 .hist-af:hover { background: color-mix(in srgb, var(--accent-cyan) 20%, var(--bg-card)); }
 .hist-af span { font-size: 10px; }
 .hist-af-all { border: 0; background: none; font: inherit; font-size: 12px; color: var(--text-dim); cursor: pointer; padding: 0; }
 .hist-af-all:hover { color: var(--accent-red); }
 
-
-
 /* === История стандарта: блок A (факты + все проверки) и блок C — как на макете === */
 .hist-std-sec { padding: 18px 20px; }
 .hist-std-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
-.hist-std-f { padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-hover); }
+.hist-std-f { padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg-hover); }
 .hist-std-f b { display: block; font-size: 18px; font-weight: 800; color: var(--text-main); }
 .hist-std-f span { font-size: 12px; color: var(--text-second); }
 .hist-std-f.is-bad b { color: var(--accent-red); }
-.hist-std-stale { margin-bottom: 14px; padding: 14px 18px; border: 1px dashed var(--border-hi); border-radius: 12px; font-size: 13.5px; color: var(--text-main); background: var(--bg-hover); }
-.hist-std-tbw { overflow-x: auto; }
+.hist-std-stale { margin-bottom: 14px; padding: 14px 18px; border: 1px dashed var(--border-hi); border-radius: var(--r-md); font-size: 13.5px; color: var(--text-main); background: var(--bg-hover); }
+.hist-std-tbw { overflow-x: auto; background: var(--bg-card); border: 1px solid var(--border-hi); border-radius: var(--r-lg); }
+.hist-std-tb tr:last-child td { border-bottom: 0; }
 .hist-std-tb { width: 100%; border-collapse: collapse; font-size: 13px; }
 .hist-std-tb th { background: none; text-align: left; font-size: 11px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; color: var(--text-second); padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
 .hist-std-tb td { padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text-main); vertical-align: middle; }
 .hist-std-tb tbody tr { cursor: pointer; }
 .hist-std-tb tbody tr:hover td { background: var(--bg-hover); }
 .hist-std-dim { color: var(--text-dim); }
-.hist-std-st { display: inline-flex; width: 22px; height: 22px; border-radius: 6px; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+.hist-std-st { display: inline-flex; width: 22px; height: 22px; border-radius: var(--r-sm); align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
 .hist-std-st-o { color: var(--accent-green); background: color-mix(in srgb, var(--accent-green) 16%, var(--bg-card)); }
 .hist-std-st-x { color: var(--accent-red); background: color-mix(in srgb, var(--accent-red) 14%, var(--bg-card)); }
 .hist-std-st-u { color: var(--accent-amber); background: color-mix(in srgb, var(--accent-amber) 16%, var(--bg-card)); }
-.hist-std-pt { display: inline-block; margin: 1px 4px 1px 0; padding: 2px 7px; border-radius: 6px; font-size: 12px; background: var(--bg-hover); color: var(--text-main); white-space: nowrap; }
+.hist-std-pt { display: inline-block; margin: 1px 4px 1px 0; padding: 2px 7px; border-radius: var(--r-sm); font-size: 12px; background: var(--bg-hover); color: var(--text-main); white-space: nowrap; }
 .hist-std-pt i { font-style: normal; font-size: 10.5px; color: var(--text-dim); }
 .hist-std-pt.bad { color: var(--accent-red); font-weight: 800; background: color-mix(in srgb, var(--accent-red) 12%, var(--bg-card)); }
 .card .hist-std-h { margin: 0 0 4px; font-size: 18px; letter-spacing: 0; text-transform: none; font-style: normal; font-weight: 800; color: var(--text-main); }
@@ -353,7 +334,7 @@ button.hist-mh.is-pick { outline: 2px solid var(--accent-cyan); outline-offset: 
 .hist-std-where { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .hist-std-wh { font-size: 12px; font-weight: 800; color: var(--text-second); text-transform: uppercase; margin-bottom: 6px; }
 .hist-std-wr { display: grid; grid-template-columns: 120px minmax(0, 1fr) 120px; gap: 10px; align-items: center; padding: 5px 0; font-size: 13px; color: var(--text-main); }
-.hist-std-wb { height: 8px; border-radius: 4px; background: var(--bg-hover); overflow: hidden; }
+.hist-std-wb { height: 8px; border-radius: var(--r-xs); background: var(--bg-hover); overflow: hidden; }
 .hist-std-wb i { display: block; height: 100%; background: var(--accent-red); }
 .hist-std-wbad { color: var(--accent-red); font-weight: 800; }
 .hist-std-wdim { color: var(--text-dim); }
@@ -361,3 +342,8 @@ button.hist-mh.is-pick { outline: 2px solid var(--accent-cyan); outline-offset: 
 /* Фокус поиска — на всей рамке, а не тенью вокруг поля внутри неё */
 .hist-search input:focus { box-shadow: none; border-color: transparent; }
 .hist-search:focus-within { border-color: var(--accent-cyan); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-cyan) 15%, transparent); }
+
+/* Телефон: сегменты прокручиваются внутри себя, страница не шире экрана */
+@media (max-width: 640px) {
+  .hist-seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+}

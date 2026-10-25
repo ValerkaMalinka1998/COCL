@@ -179,7 +179,9 @@ function dashWeeks(lines) {
 /* ============================================================
    РЕНДЕР: ГЛАВНЫЙ ЭКРАН
    ============================================================ */
-function renderDashboard() {
+/* Отрисовка только читает данные — история и стандарты разбираются из JSON один раз */
+function renderDashboard() { withLoadCache(renderDashboardMain); }
+function renderDashboardMain() {
   const box = $('#dashboardContent');
   if (!box) return;
   dashboardWorkshop = localStorage.getItem('cl_dashboard_workshop') || '';
@@ -320,12 +322,18 @@ function renderDashboardHead() {
   const scope = dashState.line ? dashState.line
     : (dashboardWorkshop ? (getWorkshop(dashboardWorkshop)?.name || '') : 'весь завод');
   bar.innerHTML = `
-    <div class="dash-title">Дашборд <small>${escapeHtml(scope)} · ${escapeHtml(periodText)}</small></div>
-    <span class="hist-sp"></span>
-    ${dashState.line ? '' : `<div class="hist-seg">${tabs.map(t =>
-      `<button type="button" class="${t.id === dashboardWorkshop ? 'on' : ''}" data-dash-ws="${escapeAttr(t.id)}">${escapeHtml(t.name)}</button>`).join('')}</div>`}
-    <div class="hist-seg">${DASH_PERIOD_BTNS.map(([p, t]) =>
-      `<button type="button" class="${p === dashState.period ? 'on' : ''}" data-dash-period="${p}">${t}</button>`).join('')}</div>
+    ${dashState.line ? '' : `<div class="ph-context"><div class="hist-seg">${tabs.map(t =>
+      `<button type="button" class="${t.id === dashboardWorkshop ? 'on' : ''}" data-dash-ws="${escapeAttr(t.id)}">${escapeHtml(t.name)}</button>`).join('')}</div></div>`}
+    <div class="ph-main">
+      <div class="ph-title">
+        <h2 class="ph-h1">Дашборд</h2>
+        <span class="ph-sub">${escapeHtml(scope)} · ${escapeHtml(periodText)}</span>
+      </div>
+      <div class="ph-actions">
+        <div class="hist-seg">${DASH_PERIOD_BTNS.map(([p, t]) =>
+          `<button type="button" class="${p === dashState.period ? 'on' : ''}" data-dash-period="${p}">${t}</button>`).join('')}</div>
+      </div>
+    </div>
     ${dashState.period === 'custom' ? `<div class="hist-custom dash-custom">
       <label>С <input type="date" data-dash-date="from" value="${escapeAttr(dashState.from)}" max="${getCurrentShiftPeriod().date}"></label>
       <label>По <input type="date" data-dash-date="to" value="${escapeAttr(dashState.to)}" max="${getCurrentShiftPeriod().date}"></label>
@@ -427,7 +435,7 @@ function dashMachines(line, m, rows) {
 
 /* Оборудование плитками: часть линии (Maker / Packer; в PMD / FMD — одна группа) → машины.
    Цвет плитки: отклонения за период — красный, выполнение < 90% — амбер, иначе зелёный */
-function dashEquipHtml(machines) {
+function dashEquipHtml(machines, line) {
   const parts = [...new Set(machines.map(x => x.part))].sort();
   const pct = (d, p) => p ? Math.round(d / p * 100) : null;
   return `<div class="dash-eq">${parts.map(part => {
@@ -435,7 +443,7 @@ function dashEquipHtml(machines) {
     const p = list.reduce((s, x) => s + x.planned, 0), d = list.reduce((s, x) => s + x.done, 0);
     const nf = list.reduce((s, x) => s + x.n, 0);
     return `<div class="dash-eq-part">
-      <div class="dash-eq-h"><b>${escapeHtml(part || 'Оборудование')}</b><span class="hist-sub">выполнение ${pct(d, p) == null ? '—' : pct(d, p) + '%'} · ${nf} откл.</span></div>
+      <div class="dash-eq-h"><b>${escapeHtml(part || (lineHasParts(line) ? 'Часть не указана' : 'Оборудование'))}</b>${!part && lineHasParts(line) ? '<span class="hist-tag hist-tag-warn" title="Укажите Maker или Packer в Стандартах CL">укажите Maker / Packer</span>' : ''}<span class="hist-sub">выполнение ${pct(d, p) == null ? '—' : pct(d, p) + '%'} · ${nf} откл.</span></div>
       <div class="dash-eq-tiles">${list.map(x => {
         const xp = pct(x.done, x.planned);
         const st = x.n ? 'bad' : xp != null && xp < 90 ? 'warn' : 'ok';
@@ -491,7 +499,8 @@ function dashLineSideHtml(line, machines, sum) {
     </button>`).join('') || '<div class="dash-empty">Стандартов нет</div>'}`;
 }
 
-function renderDashboardLine() {
+function renderDashboardLine() { withLoadCache(renderDashboardLineMain); }
+function renderDashboardLineMain() {
   const box = $('#dashboardContent');
   const line = dashState.line;
   renderDashboardHead();
@@ -536,7 +545,7 @@ function renderDashboardLine() {
     <div class="dash-g3 dash-pass-top">
       <div class="card dash-card">
         <h3 class="dash-h">Оборудование <small>цвет — состояние машины · клик — её стандарты</small></h3>
-        ${machines.length ? dashEquipHtml(machines) : '<div class="dash-empty">На линии нет стандартов</div>'}
+        ${machines.length ? dashEquipHtml(machines, line) : '<div class="dash-empty">На линии нет стандартов</div>'}
       </div>
       <div class="card dash-card dash-side"><div class="dash-side-in">${dashLineSideHtml(line, machines, sum)}</div></div>
     </div>

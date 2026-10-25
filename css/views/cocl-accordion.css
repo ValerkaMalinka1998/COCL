@@ -20,7 +20,7 @@
 
 .cocl-group-head span {
   padding: 1px 7px;
-  border-radius: 9px;
+  border-radius: var(--r-md);
   background: var(--bg-hover);
   color: var(--text-dim);
   font-size: 11px;
@@ -30,7 +30,7 @@
   --row-c: var(--border-hi);
   border: 1px solid var(--border);
   border-left: 3px solid var(--row-c);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   background: var(--bg-card);
   transition: border-color 0.15s, background 0.15s;
 }
@@ -70,7 +70,7 @@
 .cocl-row-norm {
   flex: 0 0 auto;
   padding: 3px 9px;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   background: var(--bg-hover);
   font-size: 12.5px;
   font-weight: 700;
@@ -100,7 +100,7 @@
   display: inline-flex;
   padding: 2px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--r-md);
   background: var(--bg-input);
 }
 
@@ -118,7 +118,7 @@
   align-items: center;
   height: 32px;
   padding: 0 14px;
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   font-size: 13px;
   font-weight: 700;
   color: var(--text-second);
@@ -127,12 +127,12 @@
 
 .cocl-okfail input[value="OK"]:checked + span {
   background: var(--accent-green);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .cocl-okfail input[value="FAIL"]:checked + span {
   background: var(--accent-red);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* Ввод под названием: точки слева направо, ОК / Не ОК */
@@ -189,7 +189,7 @@
   height: 34px;
   padding: 0 10px;
   border: 1px solid var(--border-hi);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   background: var(--bg-input);
   color: var(--text-main);
   font-size: 15px;
@@ -227,7 +227,7 @@
 .cocl-mark-btns { display: flex; gap: 4px; }
 .cocl-mark-btns button {
   flex: 1; height: 32px; padding: 0 10px; white-space: nowrap; font: inherit; font-size: 12.5px; font-weight: 800;
-  color: var(--text-second); background: var(--bg-input); border: 1px solid var(--border-hi); border-radius: 7px; cursor: pointer;
+  color: var(--text-second); background: var(--bg-input); border: 1px solid var(--border-hi); border-radius: var(--r-sm); cursor: pointer;
 }
 .cocl-mark-btns .cocl-mark-ok.on { background: var(--accent-green); border-color: var(--accent-green); color: var(--on-accent); }
 .cocl-mark-btns .cocl-mark-fail.on { background: var(--accent-red); border-color: var(--accent-red); color: var(--on-accent); }

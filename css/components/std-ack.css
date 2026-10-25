@@ -11,7 +11,7 @@
   margin-bottom: 20px;
   padding: 16px 18px;
   border: 1px solid color-mix(in srgb, var(--stda-tone) 38%, transparent);
-  border-radius: 12px;
+  border-radius: var(--r-md);
   background: color-mix(in srgb, var(--stda-tone) 8%, transparent);
 }
 .stda-plate.again { --stda-tone: var(--accent-amber); align-items: flex-start; }
@@ -23,7 +23,7 @@
   justify-content: center;
   width: 48px;
   height: 48px;
-  border-radius: 12px;
+  border-radius: var(--r-md);
   background: var(--stda-tone);
   color: var(--on-accent);
 }
@@ -43,7 +43,7 @@
   height: 42px;
   padding: 0 20px;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   background: var(--accent-cyan);
   color: var(--on-accent);
   font: inherit;
@@ -83,7 +83,7 @@
 .stda-empty {
   padding: 14px;
   border: 1px dashed var(--border-hi);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   text-align: center;
   color: var(--text-dim);
 }

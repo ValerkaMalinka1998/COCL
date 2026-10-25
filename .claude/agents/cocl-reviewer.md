@@ -22,6 +22,11 @@ model: inherit
    git diff origin/main
    ```
    Если правка ещё не закоммичена — смотри `git diff` и `git diff --cached`.
+   Если вызвавший назвал коммиты или диапазон (например, `b0f7426..HEAD`) — ревьюй
+   именно их, а не всё отличие от `origin/main`.
+
+   На Windows git не в PATH. В PowerShell сначала
+   `$env:Path += ";C:\Program Files\Git\cmd"`, в Bash — `"/c/Program Files/Git/cmd/git.exe"`.
 3. Где что в коде — `PROJECT_MAP.md`. Читай только затронутые модули и места их
    вызова, не весь проект.
 

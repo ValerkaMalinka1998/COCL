@@ -28,58 +28,58 @@
 
 /* --- Change Over — Циан --- */
 .type-checkbox-changeover {
-  color: rgba(58, 166, 240, 0.7);
-  border-color: rgba(58, 166, 240, 0.3) !important;
-  background: rgba(58, 166, 240, 0.04) !important;
+  color: rgba(var(--cyan-rgb), 0.7);
+  border-color: rgba(var(--cyan-rgb), 0.3) !important;
+  background: rgba(var(--cyan-rgb), 0.04) !important;
 }
 .type-checkbox-changeover:hover {
-  border-color: rgba(58, 166, 240, 0.6) !important;
+  border-color: rgba(var(--cyan-rgb), 0.6) !important;
   color: var(--bft-sky);
 }
 .type-checkbox-changeover.checked {
-  background: linear-gradient(135deg, var(--blue-mid) 0%, var(--bft-sky) 100%) !important;
+  background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--blue-mid) 100%) !important;
   border-color: var(--bft-sky) !important;
-  color: #ffffff !important;
-  box-shadow: 0 0 14px rgba(58, 166, 240, 0.6), 0 2px 6px rgba(0, 168, 204, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.25);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  color: var(--on-accent) !important;
+  box-shadow: 0 8px 18px -8px rgba(var(--cyan-rgb), 0.75), inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+  text-shadow: none;
   transform: translateY(-1px);
 }
 
 /* --- CL в ТО — Фиолетовый --- */
 .type-checkbox-clto {
-  color: rgba(123, 92, 255, 0.7);
-  border-color: rgba(123, 92, 255, 0.3) !important;
-  background: rgba(123, 92, 255, 0.04) !important;
+  color: rgba(var(--purple-rgb), 0.7);
+  border-color: rgba(var(--purple-rgb), 0.3) !important;
+  background: rgba(var(--purple-rgb), 0.04) !important;
 }
 .type-checkbox-clto:hover {
-  border-color: rgba(123, 92, 255, 0.6) !important;
-  color: #7b5cff;
+  border-color: rgba(var(--purple-rgb), 0.6) !important;
+  color: var(--accent-purple);
 }
 .type-checkbox-clto.checked {
-  background: linear-gradient(135deg, #6347d4 0%, #7b5cff 100%) !important;
-  border-color: #7b5cff !important;
-  color: #ffffff !important;
-  box-shadow: 0 0 14px rgba(123, 92, 255, 0.6), 0 2px 6px rgba(99, 71, 212, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.25);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, var(--blue-light) 0%, var(--accent-purple) 100%) !important;
+  border-color: var(--accent-purple) !important;
+  color: var(--on-accent) !important;
+  box-shadow: 0 8px 18px -8px rgba(var(--purple-rgb), 0.75), inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+  text-shadow: none;
   transform: translateY(-1px);
 }
 
 /* --- CL в Конвертацию — Изумрудный --- */
 .type-checkbox-clconv {
-  color: rgba(16, 185, 129, 0.7);
-  border-color: rgba(16, 185, 129, 0.3) !important;
-  background: rgba(16, 185, 129, 0.04) !important;
+  color: rgba(var(--emerald-rgb), 0.7);
+  border-color: rgba(var(--emerald-rgb), 0.3) !important;
+  background: rgba(var(--emerald-rgb), 0.04) !important;
 }
 .type-checkbox-clconv:hover {
-  border-color: rgba(16, 185, 129, 0.6) !important;
-  color: #10b981;
+  border-color: rgba(var(--emerald-rgb), 0.6) !important;
+  color: var(--accent-emerald);
 }
 .type-checkbox-clconv.checked {
-  background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
-  border-color: #10b981 !important;
-  color: #ffffff !important;
-  box-shadow: 0 0 14px rgba(16, 185, 129, 0.6), 0 2px 6px rgba(5, 150, 105, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.25);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, var(--accent-green) 0%, var(--accent-emerald) 100%) !important;
+  border-color: var(--accent-emerald) !important;
+  color: var(--on-accent) !important;
+  box-shadow: 0 8px 18px -8px rgba(var(--emerald-rgb), 0.75), inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+  text-shadow: none;
   transform: translateY(-1px);
 }
 
@@ -93,7 +93,7 @@
 .import-report {
   background: var(--bg-input);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   padding: 12px 16px;
   margin-top: 12px;
   font-size: 13px;
@@ -101,11 +101,11 @@
 }
 .import-report.success {
   border-color: var(--accent-green);
-  background: rgba(0, 196, 122, 0.08);
+  background: rgba(var(--green-rgb), 0.08);
 }
 .import-report.error {
   border-color: var(--accent-red);
-  background: rgba(230, 36, 79, 0.08);
+  background: rgba(var(--red-rgb), 0.08);
 }
 .import-report h4 {
   font-size: 14px;

@@ -4,21 +4,16 @@
 /* ============================================================ */
 
 .cil-wrap {
-  --cil-head-bg: var(--blue-deep);
-  --cil-head-bg-2: #22386a;
-  --cil-head-today: #1d4a7c;
-  --cil-head-text: #e0e7ff;
-  --cil-head-dim: #b3c0e0;
+  --cil-head-bg: var(--table-head-bg);
+  --cil-head-bg-2: var(--table-head-bg-2);
+  --cil-head-today: var(--table-head-today);
+  --cil-head-text: var(--table-head-text);
+  --cil-head-dim: var(--text-dim);
   --cil-zone-w: 76px;
   --cil-std-w: 350px;
   --cil-third-w: 124px;
   --cil-when-w: 0px;        /* колонка «Когда» — только в Чек-листе (.cil-has-when) */
   padding: 14px 16px 16px;
-}
-:root[data-theme="dark"] .cil-wrap {
-  --cil-head-bg: #050810;
-  --cil-head-bg-2: #0b1222;
-  --cil-head-today: #0f2a48;
 }
 
 /* --- Панель над таблицей: неделя + легенда --- */
@@ -30,57 +25,60 @@
   gap: 10px 16px;
   margin-bottom: 12px;
 }
+/* Неделя: круглые стрелки и подпись слева (макет «Аврора») */
 .cil-week {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  box-shadow: var(--card-shadow);
+  gap: 6px;
 }
 .cil-week-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 38px;
+  height: 38px;
   padding: 0;
   color: var(--text-second);
-  background: transparent;
-  border: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
   border-radius: 50%;
   cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, transform 0.15s;
 }
-.cil-week-btn:hover { color: var(--accent-cyan); background: var(--bg-hover); }
-.cil-week-label { display: flex; flex-direction: column; align-items: center; min-width: 170px; padding: 0 6px; }
-.cil-week-title { font-size: 13px; font-weight: 800; color: var(--text-main); white-space: nowrap; }
-.cil-week-sub { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent-cyan); }
+.cil-week-btn:hover { color: var(--blue-mid); border-color: var(--blue-mid); transform: translateY(-1px); }
+.cil-week-label { display: flex; flex-direction: column; align-items: flex-start; padding: 0 6px; }
+.cil-week-title { font-family: var(--font-display); font-size: 14.5px; font-weight: 600; color: var(--text-main); white-space: nowrap; }
+.cil-week-sub { font-size: 12px; font-weight: 500; color: var(--text-dim); }
 .cil-week-today {
   margin: 0 4px;
-  padding: 5px 12px;
+  min-height: 38px;
+  padding: 0 16px;
   font: inherit;
-  font-size: 11px;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--accent-cyan);
-  background: transparent;
+  background: var(--bg-card);
   border: 1px solid var(--accent-cyan);
   border-radius: 999px;
   cursor: pointer;
 }
+/* «Только эта смена» — переключатель с бегунком (макет «Аврора») */
 .cil-onlyshift {
-  display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px;
-  border: 1px solid var(--border-hi); border-radius: 999px; background: var(--bg-card);
-  font: inherit; font-size: 12px; font-weight: 700; color: var(--text-second); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 10px; min-height: 38px; padding: 0 14px 0 8px;
+  border: 1px solid var(--border-hi); border-radius: var(--r-pill); background: var(--bg-card);
+  font: inherit; font-size: 13px; font-weight: 600; color: var(--text-second); cursor: pointer;
 }
 .cil-onlyshift i {
-  width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid var(--border-hi);
-  display: inline-flex; align-items: center; justify-content: center;
+  position: relative; width: 32px; height: 18px; border-radius: 9px; background: var(--border-hi);
+  transition: background 0.2s;
 }
-.cil-onlyshift.on { color: var(--accent-cyan); border-color: var(--accent-cyan); background: color-mix(in srgb, var(--accent-cyan) 10%, var(--bg-card)); }
-.cil-onlyshift.on i { background: var(--accent-cyan); border-color: var(--accent-cyan); }
-.cil-onlyshift.on i::after { content: ""; width: 4px; height: 7px; border: solid var(--on-accent); border-width: 0 2px 2px 0; transform: rotate(45deg) translate(-1px, -1px); }
+.cil-onlyshift i::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--bg-card); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); transition: transform 0.2s;
+}
+.cil-onlyshift.on { color: var(--text-main); border-color: var(--accent-cyan); }
+.cil-onlyshift.on i { background: var(--accent-cyan); }
+.cil-onlyshift.on i::after { transform: translateX(14px); }
 .cil-empty-row { padding: 28px 16px; text-align: center; color: var(--text-dim); font-size: 13px; }
 .cil-empty-row .cil-week-today { margin-left: 10px; }
 
@@ -90,8 +88,9 @@
   min-height: 240px;
   overflow: auto;
   background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
+  border: 1px solid var(--border-hi);
+  border-radius: var(--r-lg);
+  box-shadow: var(--card-shadow);
 }
 .cil-table {
   width: 100%;
@@ -123,11 +122,11 @@
 }
 .cil-table thead th.cil-c-std { padding-left: 12px; }
 .cil-table thead th.cil-today { background: var(--cil-head-today); }
-.cil-day { border-left: 1px solid rgba(255, 255, 255, 0.14); }
+.cil-day { border-left: 1px solid var(--border); font-family: var(--font-display); font-weight: 600; letter-spacing: 0; }
 .cil-day-name { margin-right: 6px; color: var(--cil-head-dim); }
 .cil-shift { min-width: 56px; }
-.cil-shift-day { border-left: 1px solid rgba(255, 255, 255, 0.14); }
-.cil-shift-night { border-left: 1px dashed rgba(255, 255, 255, 0.22); }
+.cil-shift-day { border-left: 1px solid var(--border); }
+.cil-shift-night { border-left: 1px dashed var(--border-hi); }
 .cil-brig {
   display: inline-flex;
   align-items: center;
@@ -137,11 +136,13 @@
   font-size: 11px;
   font-weight: 800;
   color: var(--cil-head-dim);
-  border: 1px solid rgba(255, 255, 255, 0.38);
+  border: 1px solid var(--border-hi);
   border-radius: 50%;
 }
+.cil-shift-day .cil-brig { color: var(--accent-cyan); }
+.cil-shift-night .cil-brig { color: var(--accent-purple); }
 .cil-brig.now {
-  color: var(--blue-deep);
+  color: var(--on-accent);
   background: var(--accent-cyan);
   border-color: var(--accent-cyan);
   box-shadow: var(--glow-cyan-sm);
@@ -159,8 +160,8 @@
   height: 3px;
   margin: 5px 8px 0;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 2px;
+  background: var(--border);
+  border-radius: var(--r-pill);
 }
 .cil-prog i { display: block; height: 100%; background: var(--accent-green); }
 .cil-shift-total {
@@ -185,7 +186,7 @@
   min-width: var(--cil-third-w);
   border-right: 2px solid var(--border-hi);
 }
-.cil-table thead .cil-c-norm, .cil-table thead .cil-c-cnt { border-right-color: rgba(255, 255, 255, 0.2); }
+.cil-table thead .cil-c-norm, .cil-table thead .cil-c-cnt { border-right-color: var(--border-hi); }
 
 /* --- Тело --- */
 .cil-table tbody td {
@@ -274,7 +275,7 @@ button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentCol
 .cil-norm-val small { display: block; font-weight: 600; color: var(--text-dim); }
 .cil-norm-vals { display: inline-flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
 .cil-pt {
-  display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 7px;
+  display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: var(--r-sm);
   border: 1px solid var(--border); background: var(--bg-input);
   font-family: var(--font-mono); font-size: 12px;
 }
@@ -311,7 +312,7 @@ button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentCol
   color: var(--text-main);
   background: var(--bg-card);
   border: 1px solid var(--border-hi);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
   transform: translateX(-50%);
 }
@@ -356,27 +357,43 @@ button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentCol
   font-style: normal;
   color: var(--text-dim);
   background: var(--bg-card);
-  border: 1.5px solid var(--border-hi);
-  border-radius: 8px;
+  border: 1.5px dashed var(--border-hi);
+  border-radius: 50%;
   cursor: default;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
-.cil-cell-mini { width: 20px; height: 20px; font-size: 11px; border-radius: 5px; }
+.cil-cell-mini { width: 20px; height: 20px; font-size: 11px; border-radius: 50%; }
 .cil-cell-mini svg { width: 11px; height: 11px; }
 .cil-cell-future { opacity: 0.55; }
-.cil-cell-now { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+.cil-cell-now { border-style: solid; border-color: var(--accent-cyan); color: var(--accent-cyan); }
 .cil-cell-active {
   color: var(--accent-cyan);
-  border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-cyan) 20%, transparent);
+  border: 2px solid var(--accent-cyan);
+  background: rgba(var(--cyan-rgb), 0.1);
+  box-shadow: 0 0 0 3px rgba(var(--cyan-rgb), 0.18);
   cursor: pointer;
 }
-.cil-cell-active:hover { background: color-mix(in srgb, var(--accent-cyan) 12%, var(--bg-card)); }
-.cil-cell-ok { color: var(--on-accent); background: var(--accent-green); border-color: var(--accent-green); }
-.cil-cell-fail { color: var(--on-accent); background: var(--accent-red); border-color: var(--accent-red); }
+.cil-cell-active:hover { background: rgba(var(--cyan-rgb), 0.18); }
+/* Кликабельные ячейки чуть приподнимаются при наведении */
+.cl-cell-clickable:hover, .cil-cell-active:hover { transform: translateY(-1px) scale(1.07); }
+.cil-cell-ok { color: var(--accent-green); background: rgba(var(--green-rgb), 0.18); border: 1.5px solid transparent; }
+.cil-cell-fail {
+  color: var(--on-accent);
+  background: var(--accent-red);
+  border: 1.5px solid transparent;
+  box-shadow: 0 6px 14px -6px rgba(var(--red-rgb), 0.7);
+}
 .cil-cell-missed {
   color: var(--accent-amber);
-  background: color-mix(in srgb, var(--accent-amber) 14%, var(--bg-card));
-  border-color: var(--accent-amber);
+  background: rgba(var(--amber-rgb), 0.16);
+  border: 1.5px solid rgba(var(--amber-rgb), 0.45);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cil-cell-active:not(.cil-cell-ok):not(.cil-cell-fail) { animation: cilBreathe 2.4s ease-in-out infinite; }
+}
+@keyframes cilBreathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--cyan-rgb), 0.45); }
+  50% { box-shadow: 0 0 0 6px rgba(var(--cyan-rgb), 0); }
 }
 .cil-cell-unchecked { color: var(--accent-amber); border-style: dashed; border-color: var(--accent-amber); }
 .cl-cell-clickable.cil-cell-ok, .cl-cell-clickable.cil-cell-fail,
@@ -403,12 +420,12 @@ button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentCol
   color: transparent;
   background: transparent;
   border: 1.5px dashed var(--border-hi);
-  border-radius: 8px;
+  border-radius: var(--r-pill);
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 .cil-plan:hover { color: var(--accent-cyan); border-color: var(--accent-cyan); }
-.cil-plan.on.cil-plan-day { color: var(--blue-deep); background: var(--accent-cyan); border: 1.5px solid var(--accent-cyan); }
+.cil-plan.on.cil-plan-day { color: var(--on-accent); background: var(--accent-cyan); border: 1.5px solid var(--accent-cyan); }
 .cil-plan.on.cil-plan-night { color: var(--on-accent); background: var(--accent-purple); border: 1.5px solid var(--accent-purple); }
 .cil-plan.locked { cursor: not-allowed; opacity: 0.45; }
 .cil-plan.locked:not(.on) { background: repeating-linear-gradient(45deg, transparent 0 4px, var(--border) 4px 5px); }
@@ -431,7 +448,7 @@ button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentCol
   color: var(--text-second);
   background: transparent;
   border: 1px solid var(--border-hi);
-  border-radius: 5px;
+  border-radius: var(--r-xs);
   cursor: pointer;
 }
 .cil-quick button:hover { color: var(--accent-cyan); border-color: var(--accent-cyan); }
@@ -451,7 +468,7 @@ button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentCol
   color: var(--text-dim);
   background: transparent;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   cursor: pointer;
   opacity: 0;
 }
@@ -493,15 +510,16 @@ button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentCol
 
 /* Таблица растёт вниз, прокручивается вся страница; шапка таблицы
    прилипает под шапкой приложения (84px). На узком экране, где таблица
-   не помещается по ширине, — прежняя прокрутка внутри рамки. */
-@media (min-width: 1440px) {
-  .cil-scroll.cil-scroll-page { max-height: none; min-height: 0; overflow: visible; }
-  /* overflow: hidden у карточки ломает «прилипание» шапки; clip режет так же, но не мешает */
-  .editor-table-card:has(.cil-scroll-page) { overflow: clip; }
+   не помещается по ширине, — прежняя прокрутка внутри рамки.
+   1760px: таблица (~1410px) + раскрытое меню (272px) + отступы — иначе
+   правые колонки (сегодняшний день) обрезались бы без прокрутки. */
+@media (min-width: 1760px) {
+  /* overflow: hidden сломал бы «прилипание» шапки; clip режет по скруглению рамки и не мешает */
+  .cil-scroll.cil-scroll-page { max-height: none; min-height: 0; overflow: clip; }
   .cil-scroll-page .cil-table thead th { top: 84px; }
   .cil-scroll-page .cil-table thead tr:nth-child(2) th { top: calc(84px + 31px); }
-  .cil-scroll-page .cil-table thead tr:first-child th:first-child { border-top-left-radius: 13px; }
-  .cil-scroll-page .cil-table thead tr:first-child th:last-child { border-top-right-radius: 13px; }
+  .cil-scroll-page .cil-table thead tr:first-child th:first-child { border-top-left-radius: calc(var(--r-lg) - 1px); }
+  .cil-scroll-page .cil-table thead tr:first-child th:last-child { border-top-right-radius: calc(var(--r-lg) - 1px); }
 }
 
 
@@ -514,7 +532,7 @@ button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentCol
   width: 26px;
   height: 26px;
   border: 1.5px dashed color-mix(in srgb, var(--accent-amber) 60%, transparent);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   color: var(--accent-amber);
   background: color-mix(in srgb, var(--accent-amber) 6%, var(--bg-card));
 }
@@ -556,7 +574,7 @@ button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentCol
   margin: 0 0 10px;
   padding: 8px 12px;
   border: 1px solid color-mix(in srgb, var(--accent-amber) 45%, transparent);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   background: color-mix(in srgb, var(--accent-amber) 10%, var(--bg-card));
   color: var(--text-main);
   font-size: 13px;
@@ -570,14 +588,16 @@ button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentCol
 }
 /* Текущая смена — колонка проверки */
 .cil-table thead tr th.cil-shift-now {
-  background: var(--accent-cyan);
+  background: linear-gradient(135deg, var(--accent-cyan), var(--blue-mid));
   color: var(--on-accent);
 }
 .cil-table tbody td.cil-td-now {
   background-color: color-mix(in srgb, var(--accent-cyan) 22%, var(--bg-card));
   box-shadow: inset 2px 0 0 var(--accent-cyan), inset -2px 0 0 var(--accent-cyan);
 }
-.cil-shift-now .cil-brig.now { background: var(--on-accent); color: var(--blue-deep); border-color: var(--on-accent); }
+.cil-shift-now .cil-brig.now { background: var(--bg-card); color: var(--accent-cyan); border-color: var(--bg-card); }
+.cil-shift-now .cil-shift-sub, .cil-shift-now .cil-shift-total { color: inherit; }
+.cil-shift-now .cil-prog { background: rgba(255, 255, 255, 0.3); }
 /* Плашка «Линия в простое» над матрицей */
 .cil-down-banner {
   display: flex;
@@ -587,9 +607,14 @@ button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentCol
   margin: 0 0 10px;
   padding: 8px 12px;
   border: 1px dashed var(--text-dim);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   background: var(--bg-hover);
   color: var(--text-second);
   font-size: 13px;
 }
 .cil-down-banner b { color: var(--text-main); }
+
+/* Телефон: подпись недели переносится, стрелки остаются по краям */
+@media (max-width: 640px) {
+  .cil-week { flex-wrap: wrap; max-width: 100%; }
+}

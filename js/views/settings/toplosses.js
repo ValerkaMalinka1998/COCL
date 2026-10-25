@@ -209,13 +209,7 @@ $('#downloadTopLossesTemplateBtn')?.addEventListener('click', async () => {
   ws.addRow(['PMD', 'Повышенные выбросы',    'Выбросы по LES']);
 
   // Шапка
-  const headerRow = ws.getRow(1);
-  headerRow.height = 30;
-  headerRow.eachCell((cell) => {
-    cell.font = { name: 'Calibri', size: 13, bold: true, color: { argb: 'FFFFFFFF' } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4FA8' } };
-    cell.alignment = { vertical: 'middle', horizontal: 'center' };
-  });
+  styleTemplateHeader(ws);
 
   // Инструкция
   const wsInfo = wb.addWorksheet('Инструкция');

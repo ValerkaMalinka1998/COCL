@@ -63,6 +63,7 @@ def main():
     ap.add_argument('--repo', default=os.getcwd(), help='корень проекта (где index.html)')
     ap.add_argument('--backup', help='JSON-бэкап для заполнения localStorage (по умолчанию самый свежий checklist_backup_*.json)')
     ap.add_argument('--no-seed', action='store_true', help='запуск на пустом localStorage')
+    ap.add_argument('--theme', choices=['light', 'dark'], default='light', help='тема приложения для скриншотов')
     ap.add_argument('--line', default='SD12', help='линия для Чек-листа/Редактора/Расписания')
     ap.add_argument('--out', default=None, help='папка для отчёта и скриншотов')
     args = ap.parse_args()
@@ -116,6 +117,7 @@ def main():
         page.goto(url)
         page.wait_for_load_state('load')
         page.evaluate(SEED_JS, [backup, args.line])
+        page.evaluate("t => localStorage.setItem('cl_theme', t)", args.theme)
         # Тот же файл с другим #хэшем не перезагружает страницу — нужен reload,
         # иначе init() отработает на пустом localStorage.
         page.goto(url + '#electronic')

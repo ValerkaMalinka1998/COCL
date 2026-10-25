@@ -89,19 +89,6 @@ const MATERIAL_CHANGES = [
   { value: 'polypropylene', label: 'Полипропилен (цветной ↔ обычный)' }
 ];
 
-/* Что показывать оператору на вкладке Проверка — по частям линии */
-const MINOR_CHANGES_BY_PART = {
-  'Maker': [
-    { value: 'tobacco',         label: 'Табак' },
-    { value: 'materials',       label: 'Материалы' },
-    { value: 'tobacco_materials', label: 'Табак + Материалы' }
-  ],
-  'Packer': [
-    { value: 'foil_paper',    label: 'Фольга / Бумага' },
-    { value: 'polypropylene', label: 'Полипропилен (цветной ↔ обычный)' }
-  ]
-};
-
 /* Top Losses — категории и потери по умолчанию */
 const DEFAULT_TOP_LOSSES = [
   {
@@ -345,28 +332,6 @@ function switchEditorModeInline(mode) {
   }
 }
 /* ============================================================
-   Сброс линии
-   ============================================================ */
-
-function clearEditorLine() {
-  localStorage.removeItem('cl_editor_line');
-  currentEditorLine = null;
-
-  // Сброс пагинации и выделения
-  editorTableState.mechPage = 1;
-  editorTableState.elecPage = 1;
-  editorTableState.mechSelected.clear();
-  editorTableState.elecSelected.clear();
-
-  updateEditorLineContext();
-
-  if (typeof refreshEditorMechTable === 'function') refreshEditorMechTable();
-  if (typeof refreshEditorElecTable === 'function') refreshEditorElecTable();
-
-  showToast('Линия сброшена');
-}
-
-/* ============================================================
    Обработчики
    ============================================================ */
 
@@ -483,6 +448,47 @@ function resetElecFilters() {
   fillEditorFilters();
   refreshEditorElecTable();
   updatePartCounters();
+}
+
+/* Полоса страниц таблицы редактора; kind — 'mech' | 'elec' */
+function renderEditorPagination(kind, total, totalPages, startIdx, endIdx) {
+  const bar = $(kind === 'mech' ? '#editorMechPagination' : '#editorElecPagination');
+  if (!bar) return;
+  const pageKey = kind + 'Page', sizeKey = kind + 'PageSize';
+  const refresh = () => (kind === 'mech' ? refreshEditorMechTable() : refreshEditorElecTable());
+  const cur = editorTableState[pageKey];
+  const size = editorTableState[sizeKey];
+
+  let nav = '';
+  if (totalPages > 1) {
+    const pages = [];
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || Math.abs(i - cur) <= 2) pages.push(i);
+      else if (pages[pages.length - 1] !== '...') pages.push('...');
+    }
+    nav = `<button class="pagination-btn" ${cur === 1 ? 'disabled' : ''} data-page="${cur - 1}">←</button>` +
+      pages.map(p => p === '...'
+        ? '<span class="pagination-dots">…</span>'
+        : `<button class="pagination-btn ${p === cur ? 'active' : ''}" data-page="${p}">${p}</button>`).join('') +
+      `<button class="pagination-btn" ${cur === totalPages ? 'disabled' : ''} data-page="${cur + 1}">→</button>`;
+  }
+  bar.innerHTML = `
+    <span class="pagination-info">Показано ${startIdx + 1}–${endIdx} из ${total}</span>
+    <div class="pagination-controls">${nav}
+      <select class="pagination-size">
+        ${[10, 20, 50, 100].map(n => `<option value="${n}" ${size === n ? 'selected' : ''}>${n}</option>`).join('')}
+      </select>
+    </div>`;
+
+  bar.querySelectorAll('[data-page]').forEach(btn => btn.addEventListener('click', () => {
+    const p = parseInt(btn.dataset.page, 10);
+    if (!isNaN(p) && p >= 1 && p <= totalPages) { editorTableState[pageKey] = p; refresh(); }
+  }));
+  bar.querySelector('.pagination-size').addEventListener('change', (e) => {
+    editorTableState[sizeKey] = parseInt(e.target.value, 10) || 20;
+    editorTableState[pageKey] = 1;
+    refresh();
+  });
 }
 
 /* ============================================================
@@ -642,43 +648,6 @@ document.addEventListener('click', (e) => {
   if (toggle) toggle.closest('.et-excel').classList.toggle('open');
   else if (e.target.closest('.et-excel-item')) e.target.closest('.et-excel').classList.remove('open');
 });
-
-/* ============================================================
-   РЕДАКТОР: переключение активности стандарта
-   ============================================================ */
-
-function toggleStandardActive(id, newValue) {
-  const all = getStandards();
-  const st = all.find(s => s.id === id);
-  if (!st) return;
-
-  const wasActive = st.active !== false;
-  const willBeActive = !!newValue;
-
-  // При активации — архивируем комментарий к деактивации (если был)
-  if (!wasActive && willBeActive) {
-    if (st.deactivationComment && st.deactivationComment.trim()) {
-      if (!Array.isArray(st.deactivationHistory)) st.deactivationHistory = [];
-      st.deactivationHistory.push({
-        text: st.deactivationComment.trim(),
-        date: new Date().toISOString()
-      });
-      st.deactivationComment = '';
-    }
-  }
-
-  const before = JSON.parse(JSON.stringify(st));
-  st.active = willBeActive;
-  st.updatedAt = new Date().toISOString();
-  setStandards(all);
-  const logId = logRowChange('mech', before, st);
-
-  refreshEditorMechTable();
-  if (typeof updatePartCounters === 'function') updatePartCounters();
-
-  showToast(willBeActive ? 'Стандарт активирован' : 'Стандарт деактивирован');
-  askChangeReason(logId);
-}
 
 /* ============================================================
    РЕДАКТОР: копирование стандарта

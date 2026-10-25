@@ -76,36 +76,6 @@ function getWorkshopName(workshopId) {
   return w ? w.name : workshopId;
 }
 
-/* --- HTML-опции цехов для селекта (первый — «все цеха») --- */
-function workshopOptionsHtml(selected) {
-  return ['<option value="">— все цеха —</option>']
-    .concat(getWorkshops().map(w =>
-      `<option value="${escapeAttr(w.id)}"${w.id === selected ? ' selected' : ''}>${escapeHtml(w.name)}</option>`
-    )).join('');
-}
-
-/* --- Найти участок по id (поиск по всем цехам) --- */
-function getArea(areaId) {
-  for (const w of getWorkshops()) {
-    const a = (w.areas || []).find(x => x.id === areaId);
-    if (a) return { workshop: w, area: a };
-  }
-  return null;
-}
-
-/* --- Найти блок по id (поиск по всем цехам/участкам) --- */
-function getBlock(blockId) {
-  for (const w of getWorkshops()) {
-    for (const a of (w.areas || [])) {
-      if (Array.isArray(a.blocks)) {
-        const b = a.blocks.find(x => x.id === blockId);
-        if (b) return { workshop: w, area: a, block: b };
-      }
-    }
-  }
-  return null;
-}
-
 /* --- Найти, к какому цеху/участку/блоку относится линия --- */
 function getBlockForLine(line) {
   for (const w of getWorkshops()) {
@@ -175,57 +145,6 @@ function getLines() {
       seen.add(x.line);
       result.push(x.line);
     }
-  });
-  return result;
-}
-function setLines(v) {
-  // Сеттер больше не нужен — линии задаются в структуре производства.
-  // Оставлен для совместимости со старыми вызовами (бэкап).
-  console.warn('setLines() устарел — линии редактируются через getWorkshops().');
-}
-
-/* --- Плоский список всех блоков (с контекстом цеха/участка) --- */
-function getBlocks() {
-  const result = [];
-  getWorkshops().forEach(w => {
-    (w.areas || []).forEach(a => {
-      if (Array.isArray(a.blocks)) {
-        a.blocks.forEach(b => {
-          result.push({
-            id: b.id,
-            name: b.name,
-            lines: b.lines || [],
-            workshopId: w.id,
-            workshopName: w.name,
-            areaId: a.id,
-            areaName: a.name
-          });
-        });
-      }
-    });
-  });
-  return result;
-}
-function setBlocks(v) {
-  console.warn('setBlocks() устарел — блоки редактируются через getWorkshops().');
-}
-
-/* --- Плоский список всех участков --- */
-function getAllAreas() {
-  const result = [];
-  getWorkshops().forEach(w => {
-    (w.areas || []).forEach(a => {
-      result.push({
-        id: a.id,
-        name: a.name,
-        workshopId: w.id,
-        workshopName: w.name,
-        hasBlocks: Array.isArray(a.blocks) && a.blocks.length > 0,
-        linesCount: Array.isArray(a.blocks)
-          ? a.blocks.reduce((sum, b) => sum + (b.lines || []).length, 0)
-          : (a.lines || []).length
-      });
-    });
   });
   return result;
 }

@@ -3,11 +3,12 @@
    ============================================================ */
 
 /* ============ Cards ============ */
+/* «Аврора»: полупрозрачная белая панель над сиянием, светлая кромка, без размытия */
 .card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 20px;
+  background: var(--glass-card);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-xl);
+  padding: 22px;
   margin-bottom: 16px;
   box-shadow: var(--card-shadow);
   position: relative;
@@ -16,18 +17,10 @@
 .card:hover {
   box-shadow: var(--card-shadow-hover);
 }
-.card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 3px;
-  background: linear-gradient(90deg, transparent, var(--blue-mid), transparent);
-  border-radius: 10px 10px 0 0;
-}
 .card h2 {
   font-size: 16px;
   margin-bottom: 14px;
-  color: var(--blue-mid);
+  color: var(--text-main);
   border-bottom: 1px solid var(--border);
   padding-bottom: 8px;
   letter-spacing: 0.3px;
@@ -44,173 +37,76 @@
 .row > .field { flex: 1; min-width: 180px; }
 
 /* ============ Кнопки ============ */
+/* Кнопки-пилюли как «Начать проверку» в макете «Аврора»:
+   главное действие — градиент синий → индиго, остальное — белая пилюля с рамкой */
 button.btn {
-  padding: 10px 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 20px;
   border: 1px solid transparent;
-  border-radius: 6px;
-  font-size: 14px;
+  border-radius: var(--r-pill);
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
-  letter-spacing: 0.4px;
-  transition: all 0.15s;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  text-transform: uppercase;
-  font-size: 13px;
+  letter-spacing: 0;
+  white-space: nowrap;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s, border-color 0.15s, color 0.15s, filter 0.15s;
+  box-shadow: none;
+  font-size: 14px;
 }
-.btn-primary {
-  background: linear-gradient(100deg, var(--blue-deep) 0%, var(--blue-mid) 100%);
-  color: #ffffff;
-  border-color: #3d6db3;
+.btn-primary,
+.btn-success {
+  background: var(--grad-primary);
+  color: var(--on-primary);
+  border-color: transparent;
+  box-shadow: 0 12px 26px -12px rgba(var(--purple-rgb), 0.75);
 }
-.btn-primary:hover {
-  background: linear-gradient(100deg, var(--blue-mid) 0%, var(--blue-light) 100%);
-  box-shadow: 0 4px 14px rgba(61, 109, 179, 0.5);
+.btn-primary:hover,
+.btn-success:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 14px 30px -12px rgba(var(--purple-rgb), 0.85);
   transform: translateY(-1px);
 }
 .btn-secondary {
-  background: var(--bg-input);
+  background: var(--bg-card);
   color: var(--text-main);
   border-color: var(--border-hi);
 }
 .btn-secondary:hover {
-  background: var(--bg-hover);
+  background: var(--bg-card);
   border-color: var(--blue-mid);
-  color: var(--accent-cyan);
-}
-.btn-danger {
-  background: var(--bg-input);
-  color: var(--accent-red);
-  border-color: var(--accent-red);
-}
-.btn-danger:hover {
-  background: #e6244f;
-  color: #ffffff;
-  border-color: #e6244f;
-  box-shadow: 0 4px 12px rgba(230, 36, 79, 0.4);
+  color: var(--blue-mid);
   transform: translateY(-1px);
 }
-.btn-success {
-  background: linear-gradient(135deg, #00a865 0%, #00c47a 100%);
-  color: #ffffff;
-  border-color: #00c47a;
+button.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+  box-shadow: none;
 }
-.btn-success:hover {
-  background: linear-gradient(135deg, #00c47a 0%, #00e08a 100%);
-  box-shadow: 0 4px 14px rgba(0, 196, 122, 0.5);
+.btn-danger {
+  background: var(--bg-card);
+  color: var(--accent-red);
+  border-color: rgba(var(--red-rgb), 0.45);
+}
+.btn-danger:hover {
+  background: var(--accent-red);
+  color: var(--on-accent);
+  border-color: var(--accent-red);
+  box-shadow: 0 12px 24px -14px rgba(var(--red-rgb), 0.8);
   transform: translateY(-1px);
 }
 .btn-sm {
-  padding: 6px 12px;
-  font-size: 11px;
-  letter-spacing: 0.3px;
+  min-height: 32px;
+  padding: 0 14px;
+  font-size: 12.5px;
+  gap: 6px;
 }
 
-/* ============ Checklist items ============ */
-.checklist-item {
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--blue-mid);
-  border-radius: 8px;
-  padding: 14px;
-  margin-bottom: 12px;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.checklist-item .meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  font-size: 12px;
-  color: var(--text-second);
-  margin-bottom: 8px;
-}
-.checklist-item .meta strong { color: var(--text-main); font-weight: 600; }
-.checklist-item .title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-main);
-  margin-bottom: 4px;
-}
-.checklist-item .desc {
-  font-size: 13px;
-  color: var(--text-second);
-  margin-bottom: 10px;
-}
-
-/* ============ Ответ в чек-листе: всё в одну строку ============ */
-.checklist-item .answer {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--border);
-}
-/* ============ Иконка комментария ============ */
-.comment-btn {
-  background: var(--bg-input);
-  border: 2px solid var(--blue-light);
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  cursor: pointer;
-  color: var(--accent-cyan);
-  transition: all 0.15s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  padding: 0;
-  position: relative;
-}
-.comment-btn svg {
-  width: 22px;
-  height: 22px;
-  display: block;
-  pointer-events: none;
-  stroke: var(--accent-cyan);
-}
-.comment-btn:hover {
-  background: var(--blue-mid);
-  transform: scale(1.08);
-  box-shadow: var(--glow-cyan);
-}
-.comment-btn:hover svg { stroke: white; }
-
-.comment-btn.has-comment {
-  background: rgba(255, 184, 0, 0.15);
-  border-color: var(--accent-amber);
-}
-.comment-btn.has-comment svg { stroke: var(--accent-amber); }
-.comment-btn.has-comment:hover {
-  background: var(--accent-amber);
-}
-.comment-btn.has-comment:hover svg { stroke: #2a1a00; }
-
-.comment-btn.urgent {
-  animation: urgentPulse 1s infinite;
-}
-.comment-btn.urgent:hover { animation: none; }
-.comment-btn.urgent svg { stroke: var(--accent-red); }
-
-@keyframes urgentPulse {
-  0% {
-    border-color: var(--accent-red);
-    background: var(--bg-card);
-    box-shadow: 0 0 0 0 rgba(255, 45, 111, 0.7);
-  }
-  50% {
-    border-color: var(--accent-red);
-    background: rgba(255, 45, 111, 0.15);
-    box-shadow: 0 0 0 8px rgba(255, 45, 111, 0);
-  }
-  100% {
-    border-color: var(--accent-red);
-    background: var(--bg-card);
-    box-shadow: 0 0 0 0 rgba(255, 45, 111, 0);
-  }
-}
 /* ============ Иконка «Просмотр стандарта» (глаз) ============ */
 .view-btn {
   background: var(--bg-input);
@@ -238,10 +134,10 @@ button.btn {
 .view-btn:hover {
   background: var(--accent-purple);
   transform: scale(1.08);
-  box-shadow: 0 0 14px rgba(123, 92, 255, 0.55);
+  box-shadow: 0 10px 20px -10px rgba(var(--purple-rgb), 0.8);
 }
 .view-btn:hover svg {
-  stroke: #ffffff;
+  stroke: var(--on-accent);
 }
 .view-btn:active {
   transform: scale(0.95);
@@ -261,9 +157,9 @@ th, td {
   color: var(--text-main);
 }
 th {
-  background: var(--bg-hover);
+  background: var(--table-head-bg);
   font-weight: 700;
-  color: var(--blue-mid);
+  color: var(--table-head-text);
   text-transform: uppercase;
   font-size: 12px;
   letter-spacing: 0.5px;
@@ -284,39 +180,11 @@ tr:hover td { background: var(--bg-hover); }
 .badge {
   display: inline-block;
   padding: 3px 10px;
-  border-radius: 10px;
+  border-radius: var(--r-pill);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-}
-.badge-changeover {
-  background: rgba(58, 166, 240, 0.10);
-  color: var(--bft-sky);
-  border: 1px solid rgba(58, 166, 240, 0.5);
-  box-shadow: 0 0 8px rgba(58, 166, 240, 0.25);
-}
-.badge-clto {
-  background: rgba(123, 92, 255, 0.10);
-  color: #7b5cff;
-  border: 1px solid rgba(123, 92, 255, 0.5);
-  box-shadow: 0 0 8px rgba(123, 92, 255, 0.25);
-}
-.badge-clconv {
-  background: rgba(16, 185, 129, 0.10);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.5);
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.25);
-}
-.badge-ok {
-  background: rgba(0, 255, 157, 0.15);
-  color: var(--accent-green);
-  border: 1px solid var(--accent-green);
-}
-.badge-fail {
-  background: rgba(255, 45, 111, 0.15);
-  color: var(--accent-red);
-  border: 1px solid var(--accent-red);
 }
 
 /* ============ Toast ============ */
@@ -325,10 +193,10 @@ tr:hover td { background: var(--bg-hover); }
   bottom: 24px;
   right: 24px;
   background: var(--accent-green);
-  color: #002218;
+  color: var(--on-accent);
   padding: 14px 22px;
-  border-radius: 8px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4), 0 0 24px rgba(0, 255, 157, 0.5);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-pop);
   opacity: 0;
   transform: translateY(20px);
   transition: all 0.3s;
@@ -345,8 +213,8 @@ tr:hover td { background: var(--bg-hover); }
 }
 .toast.error {
   background: var(--accent-red);
-  color: #ffffff;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4), 0 0 24px rgba(255, 45, 111, 0.5);
+  color: var(--on-accent);
+  box-shadow: var(--shadow-pop);
 }
 
 .filters {
@@ -363,8 +231,9 @@ tr:hover td { background: var(--bg-hover); }
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0, 5, 15, 0.85);
-  backdrop-filter: blur(4px);
+  background: var(--overlay);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   /* z-index устанавливается динамически через JS
      (см. openModal / closeModal в app.js) */
   align-items: center;
@@ -372,16 +241,19 @@ tr:hover td { background: var(--bg-hover); }
   padding: 20px;
 }
 .modal-overlay.active { display: flex; }
+/* Модалка — матовое стекло (размытие — только у шапки, меню и модалок) */
 .modal {
-  background: var(--bg-card);
-  border: 2px solid var(--blue-mid);
-  border-radius: 12px;
+  background: var(--glass-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-xl);
   max-width: 500px;
   width: 100%;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 60px rgba(30, 58, 95, 0.35);
+  box-shadow: var(--shadow-pop);
   animation: modalIn 0.2s ease-out;
   overflow: hidden;
 }
@@ -417,16 +289,16 @@ tr:hover td { background: var(--bg-hover); }
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: var(--bg-hover);
-  border-radius: 10px 10px 0 0;
-  flex-shrink: 0; 
+  background: transparent;
+  flex-shrink: 0;
 }
 .modal-header h3 {
-  font-size: 16px;
-  color: var(--blue-mid);
+  font-family: var(--font-display);
+  font-size: 15px;
+  color: var(--text-main);
   margin: 0;
-  letter-spacing: 0.5px;
-  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-weight: 600;
 }
 .modal-close {
   background: none;
@@ -434,12 +306,12 @@ tr:hover td { background: var(--bg-hover); }
   font-size: 20px;
   cursor: pointer;
   color: var(--text-second);
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
   transition: all 0.15s;
 }
 .modal-close:hover {
-  background: rgba(230, 36, 79, 0.15);
+  background: rgba(var(--red-rgb), 0.15);
   color: var(--accent-red);
 }
 .modal-body {
@@ -465,20 +337,10 @@ tr:hover td { background: var(--bg-hover); }
 .modal-footer .modal-add-btn-left {
   margin-right: auto;
 }
-.status-ok {
-  background: rgba(0, 255, 157, 0.15);
-  color: var(--accent-green);
-  border: 1px solid var(--accent-green);
-}
-.status-fail {
-  background: rgba(255, 45, 111, 0.15);
-  color: var(--accent-red);
-  border: 1px solid var(--accent-red);
-}
 .type-chip {
   display: inline-block;
   padding: 3px 10px;
-  border-radius: 12px;
+  border-radius: var(--r-md);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.5px;
@@ -489,13 +351,11 @@ tr:hover td { background: var(--bg-hover); }
 /* ============ Иконка комментария (cmtIcon) ============ */
 .cmt-svg { display: inline-block; vertical-align: -3px; flex-shrink: 0; }
 .cmt-svg .cmt-bubble { fill: var(--accent-amber); stroke: var(--accent-amber); stroke-width: 1.5; stroke-linejoin: round; }
-.cmt-svg .cmt-dot { fill: #fff; }
+.cmt-svg .cmt-dot { fill: var(--on-accent); }
 .cmt-mark { display: inline-flex; margin-right: 2px; }
 /* Контурная версия для кнопок; при has-comment — заливается */
 .cmt-svg.cmt-outline .cmt-bubble { fill: none; stroke: currentColor; stroke-width: 1.8; }
 .cmt-svg.cmt-outline .cmt-dot { fill: currentColor; }
-.has-comment .cmt-svg.cmt-outline .cmt-bubble { fill: var(--accent-amber); stroke: var(--accent-amber); }
-.has-comment .cmt-svg.cmt-outline .cmt-dot { fill: #fff; }
 
 /* ============================================================ */
 /* === Кнопка-иконка просмотра стандарта ====================== */
@@ -512,7 +372,7 @@ button[data-tl-open-ep] {
   width: 32px;
   height: 32px;
   padding: 0;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }

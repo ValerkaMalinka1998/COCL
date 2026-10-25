@@ -26,7 +26,7 @@
   gap: 6px;
   padding: 12px 6px;
   border: 1.5px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   background: var(--bg-card);
   color: var(--text-main);
   font: inherit;
@@ -50,7 +50,7 @@
   width: 100%;
   padding: 8px 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   background: var(--bg-input);
   color: var(--text-main);
   font: inherit;
@@ -65,7 +65,7 @@
   height: 30px;
   padding: 0 10px;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   background: var(--bg-card);
   color: var(--text-main);
   font: inherit;
@@ -84,7 +84,11 @@
 .stdc-send { height: auto; padding: 0 18px; font-size: 14px; }
 
 /* --- Таблица замечаний --- */
-.stdc-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.stdc-table {
+  width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px;
+  border: 1px solid var(--border-hi); border-radius: var(--r-md); overflow: hidden; background: var(--bg-card);
+}
+.stdc-table tr:last-child td { border-bottom: 0; }
 .stdc-table th {
   padding: 6px 10px;
   border-bottom: 2px solid var(--border);
@@ -105,7 +109,7 @@
   justify-content: center;
   width: 42px;
   height: 42px;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   background: color-mix(in srgb, var(--stdc-tone) 13%, transparent);
   color: var(--stdc-tone);
 }
@@ -128,7 +132,7 @@
   min-width: 22px;
   margin-bottom: 3px;
   padding: 0 5px;
-  border-radius: 4px;
+  border-radius: var(--r-xs);
   font-size: 12px;
   font-weight: 700;
   text-align: center;

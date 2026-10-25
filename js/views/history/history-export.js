@@ -25,10 +25,6 @@ function buildDetailsText(record) {
   }).join('\n');
 }
 
-function buildDetailsTextForCsv(record) {
-  return buildDetailsText(record);
-}
-
 function exportToCsv(hist) {
   const headers = [
     'Дата/время','Режим','Оператор','Смена','Линия','Часть','Тип перехода',
@@ -98,7 +94,6 @@ const XL_COLOR_PRIMARY = 'FF0A4FA8';   // темнее синий
 const XL_COLOR_HEADER_TEXT = 'FFFFFFFF';
 const XL_FONT_SIZE = 14;                // базовый шрифт
 const XL_FONT_SIZE_HEADER = 18;         // шрифт шапки
-const XL_COLOR_WHITE   = 'FFFFFFFF';
 const XL_COLOR_FAIL_BG = 'FFFDE0DD';
 const XL_COLOR_FAIL_TX = 'FFC0392B';
 const XL_COLOR_OK_TX   = 'FF27AE60';
@@ -109,6 +104,50 @@ const EXPORT_HEADERS = [
   'С бренда','На бренд','Потери','Триггеры','Доп. узел',
   'Пунктов','Не ОК','Детали проверки','Бренд CL (факт)'
 ];
+
+
+/* Рамка ячейки одним цветом со всех сторон */
+function xlBorder(argb) {
+  const side = { style: 'thin', color: { argb } };
+  return { top: side, bottom: side, left: side, right: side };
+}
+
+/* Ячейка шапки таблицы: белый жирный текст на синем */
+function xlHeaderCell(cell) {
+  cell.font = { name: 'Calibri', size: XL_FONT_SIZE_HEADER, bold: true, color: { argb: XL_COLOR_HEADER_TEXT } };
+  cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLOR_PRIMARY } };
+  cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: false };
+  cell.border = xlBorder(XL_COLOR_PRIMARY);
+}
+
+/* Заголовок, шапка и строки данных листа аналитики шириной cols колонок */
+function xlSheetWriter(ws, cols) {
+  const eachCol = (row, fn) => { for (let c = 1; c <= cols; c++) fn(row.getCell(c)); };
+  return {
+    addTitle(text) {
+      const row = ws.addRow([text]);
+      row.height = 36;
+      const cell = row.getCell(1);
+      cell.font = { name: 'Calibri', size: 15, bold: true, color: { argb: XL_COLOR_PRIMARY } };
+      cell.alignment = { vertical: 'middle', horizontal: 'left' };
+      ws.mergeCells(row.number, 1, row.number, cols);
+    },
+    addHeader(arr) {
+      const row = ws.addRow(arr);
+      row.height = 32;
+      eachCol(row, xlHeaderCell);
+    },
+    addDataRow(arr) {
+      const row = ws.addRow(arr);
+      row.height = 24;
+      eachCol(row, cell => {
+        cell.font = { name: 'Calibri', size: XL_FONT_SIZE };
+        cell.alignment = { vertical: 'middle', horizontal: 'left' };
+        cell.border = xlBorder(XL_COLOR_BORDER);
+      });
+    }
+  };
+}
 
 async function exportToXlsx(hist) {
   if (typeof ExcelJS === 'undefined') {
@@ -215,12 +254,7 @@ const COLUMN_WIDTHS = [
     const isFailRow = fails > 0;
 
     row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-      cell.border = {
-        top:    { style: 'thin', color: { argb: XL_COLOR_BORDER } },
-        bottom: { style: 'thin', color: { argb: XL_COLOR_BORDER } },
-        left:   { style: 'thin', color: { argb: XL_COLOR_BORDER } },
-        right:  { style: 'thin', color: { argb: XL_COLOR_BORDER } }
-      };
+      cell.border = xlBorder(XL_COLOR_BORDER);
       cell.font = { name: 'Calibri', size: XL_FONT_SIZE };
 
       if (colNumber === 15) {
@@ -251,22 +285,7 @@ const COLUMN_WIDTHS = [
   /* ---- Шапка ---- */
   const headerRow = ws.getRow(1);
   headerRow.height = 38;
-  headerRow.eachCell({ includeEmpty: true }, (cell) => {
-    cell.font = {
-      name: 'Calibri',
-      size: XL_FONT_SIZE_HEADER,
-      bold: true,
-      color: { argb: XL_COLOR_HEADER_TEXT }
-    };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLOR_PRIMARY } };
-    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: false };
-    cell.border = {
-      top:    { style: 'thin', color: { argb: XL_COLOR_PRIMARY } },
-      bottom: { style: 'thin', color: { argb: XL_COLOR_PRIMARY } },
-      left:   { style: 'thin', color: { argb: XL_COLOR_PRIMARY } },
-      right:  { style: 'thin', color: { argb: XL_COLOR_PRIMARY } }
-    };
-  });
+  headerRow.eachCell({ includeEmpty: true }, xlHeaderCell);
 
   ws.autoFilter = {
     from: { row: 1, column: 1 },
@@ -344,57 +363,7 @@ function buildSheetAnalytics(wb, hist) {
   });
   });
 
-  const addTitle = (text) => {
-    const row = ws.addRow([text]);
-    row.height = 36;
-    const cell = row.getCell(1);
-    cell.font = {
-      name: 'Calibri',
-      size: 15,
-      bold: true,
-      color: { argb: XL_COLOR_PRIMARY }
-    };
-    cell.alignment = { vertical: 'middle', horizontal: 'left' };
-    ws.mergeCells(row.number, 1, row.number, 5);
-  };
-
-  const addHeader = (arr) => {
-    const row = ws.addRow(arr);
-    row.height = 32;
-    for (let c = 1; c <= 5; c++) {
-      const cell = row.getCell(c);
-      cell.font = {
-        name: 'Calibri',
-        size: XL_FONT_SIZE_HEADER,
-        bold: true,
-        color: { argb: XL_COLOR_HEADER_TEXT }
-      };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLOR_PRIMARY } };
-      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: false };
-      cell.border = {
-        top:    { style: 'thin', color: { argb: XL_COLOR_PRIMARY } },
-        bottom: { style: 'thin', color: { argb: XL_COLOR_PRIMARY } },
-        left:   { style: 'thin', color: { argb: XL_COLOR_PRIMARY } },
-        right:  { style: 'thin', color: { argb: XL_COLOR_PRIMARY } }
-      };
-    }
-  };
-
-  const addDataRow = (arr) => {
-    const row = ws.addRow(arr);
-    row.height = 24;
-    for (let c = 1; c <= 5; c++) {
-      const cell = row.getCell(c);
-      cell.font = { name: 'Calibri', size: XL_FONT_SIZE };
-      cell.alignment = { vertical: 'middle', horizontal: 'left' };
-      cell.border = {
-        top:    { style: 'thin', color: { argb: XL_COLOR_BORDER } },
-        bottom: { style: 'thin', color: { argb: XL_COLOR_BORDER } },
-        left:   { style: 'thin', color: { argb: XL_COLOR_BORDER } },
-        right:  { style: 'thin', color: { argb: XL_COLOR_BORDER } }
-      };
-    }
-  };
+  const { addTitle, addHeader, addDataRow } = xlSheetWriter(ws, 5);
 
   addTitle('📊 Сводная аналитика проверок');
   ws.addRow([]);
@@ -512,52 +481,7 @@ function buildSheetLosses(wb, hist) {
     });
   });
 
-  const addTitle = (text) => {
-    const row = ws.addRow([text]);
-    row.height = 36;
-    const cell = row.getCell(1);
-    cell.font = { name: 'Calibri', size: 15, bold: true, color: { argb: XL_COLOR_PRIMARY } };
-    cell.alignment = { vertical: 'middle', horizontal: 'left' };
-    ws.mergeCells(row.number, 1, row.number, 6);
-  };
-
-  const addHeader = (arr) => {
-    const row = ws.addRow(arr);
-    row.height = 32;
-    for (let c = 1; c <= 6; c++) {
-      const cell = row.getCell(c);
-      cell.font = {
-        name: 'Calibri',
-        size: XL_FONT_SIZE_HEADER,
-        bold: true,
-        color: { argb: XL_COLOR_HEADER_TEXT }
-      };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLOR_PRIMARY } };
-      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: false };
-      cell.border = {
-        top:    { style: 'thin', color: { argb: XL_COLOR_PRIMARY } },
-        bottom: { style: 'thin', color: { argb: XL_COLOR_PRIMARY } },
-        left:   { style: 'thin', color: { argb: XL_COLOR_PRIMARY } },
-        right:  { style: 'thin', color: { argb: XL_COLOR_PRIMARY } }
-      };
-    }
-  };
-
-  const addDataRow = (arr) => {
-    const row = ws.addRow(arr);
-    row.height = 24;
-    for (let c = 1; c <= 6; c++) {
-      const cell = row.getCell(c);
-      cell.font = { name: 'Calibri', size: XL_FONT_SIZE };
-      cell.alignment = { vertical: 'middle', horizontal: 'left' };
-      cell.border = {
-        top:    { style: 'thin', color: { argb: XL_COLOR_BORDER } },
-        bottom: { style: 'thin', color: { argb: XL_COLOR_BORDER } },
-        left:   { style: 'thin', color: { argb: XL_COLOR_BORDER } },
-        right:  { style: 'thin', color: { argb: XL_COLOR_BORDER } }
-      };
-    }
-  };
+  const { addTitle, addHeader, addDataRow } = xlSheetWriter(ws, 6);
 
   addTitle('📊 Аналитика по потерям (TOP Losses)');
   ws.addRow([]);
@@ -628,52 +552,7 @@ function buildSheetCL(wb, hist) {
     });
   });
 
-  const addTitle = (text) => {
-    const row = ws.addRow([text]);
-    row.height = 36;
-    const cell = row.getCell(1);
-    cell.font = { name: 'Calibri', size: 15, bold: true, color: { argb: XL_COLOR_PRIMARY } };
-    cell.alignment = { vertical: 'middle', horizontal: 'left' };
-    ws.mergeCells(row.number, 1, row.number, 7);
-  };
-
-  const addHeader = (arr) => {
-    const row = ws.addRow(arr);
-    row.height = 32;
-    for (let c = 1; c <= 7; c++) {
-      const cell = row.getCell(c);
-      cell.font = {
-        name: 'Calibri',
-        size: XL_FONT_SIZE_HEADER,
-        bold: true,
-        color: { argb: XL_COLOR_HEADER_TEXT }
-      };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLOR_PRIMARY } };
-      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: false };
-      cell.border = {
-        top:    { style: 'thin', color: { argb: XL_COLOR_PRIMARY } },
-        bottom: { style: 'thin', color: { argb: XL_COLOR_PRIMARY } },
-        left:   { style: 'thin', color: { argb: XL_COLOR_PRIMARY } },
-        right:  { style: 'thin', color: { argb: XL_COLOR_PRIMARY } }
-      };
-    }
-  };
-
-  const addDataRow = (arr) => {
-    const row = ws.addRow(arr);
-    row.height = 24;
-    for (let c = 1; c <= 7; c++) {
-      const cell = row.getCell(c);
-      cell.font = { name: 'Calibri', size: XL_FONT_SIZE };
-      cell.alignment = { vertical: 'middle', horizontal: 'left' };
-      cell.border = {
-        top:    { style: 'thin', color: { argb: XL_COLOR_BORDER } },
-        bottom: { style: 'thin', color: { argb: XL_COLOR_BORDER } },
-        left:   { style: 'thin', color: { argb: XL_COLOR_BORDER } },
-        right:  { style: 'thin', color: { argb: XL_COLOR_BORDER } }
-      };
-    }
-  };
+  const { addTitle, addHeader, addDataRow } = xlSheetWriter(ws, 7);
 
   addTitle('📊 Аналитика по Чек-листу CL (механика + электроника)');
   ws.addRow([]);

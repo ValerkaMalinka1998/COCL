@@ -2,10 +2,6 @@
    ВКЛАДКА «ДАШБОРД»: карта производства и паспорт линии
    ============================================================ */
 
-.dash-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 14px 16px; }
-.dash-title { font-size: 18px; font-weight: 800; color: var(--text-main); display: flex; gap: 8px; align-items: baseline; }
-.dash-title small { font-size: 12px; font-weight: 600; color: var(--text-dim); }
-
 .dash-card { padding: 14px 16px; }
 .dash-h {
   margin: 0 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .5px;
@@ -20,7 +16,7 @@
 /* === Показатели === */
 .dash-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
 .dash-kpi {
-  padding: 12px 14px; border-radius: 12px; background: var(--bg-card);
+  padding: 12px 14px; border-radius: var(--r-md); background: var(--bg-card);
   border: 1px solid var(--border); box-shadow: var(--card-shadow);
 }
 .dash-kpi b { display: block; font-size: 24px; color: var(--text-main); }
@@ -49,14 +45,15 @@ button.dash-li:hover { background: var(--bg-hover); }
   .dash-g2, .dash-g3 { grid-template-columns: 1fr; }
   .dash-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-.dash-custom { padding: 0; flex-basis: 100%; }
+.page-head .dash-custom { padding: 0; border: 0; }
 
 /* === Паспорт линии: метки настройки в шапке === */
 .dash-cfg { padding: 3px 10px; border-radius: 999px; font: inherit; font-size: 11.5px; font-weight: 700; color: var(--text-second); background: var(--bg-hover); border: 1px solid var(--border); white-space: nowrap; }
 .dash-cfg-warn { color: var(--accent-amber); border-color: color-mix(in srgb, var(--accent-amber) 40%, transparent); background: color-mix(in srgb, var(--accent-amber) 10%, transparent); cursor: pointer; }
 
 /* === ДАШБОРД: таблица «линия → часть → машина» === */
-.dash-tr-wrap { overflow-x: auto; }
+.dash-tr-wrap { overflow-x: auto; background: var(--bg-card); border: 1px solid var(--border-hi); border-radius: var(--r-lg); }
+.dash-tr tr:last-child td { border-bottom: 0; }
 .dash-tr { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .dash-tr th { text-align: left; font-size: 10.5px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; color: var(--text-second); padding: 6px 10px; border-bottom: 1px solid var(--border); }
 .dash-tr td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--text-main); white-space: nowrap; }
@@ -64,7 +61,7 @@ button.dash-li:hover { background: var(--bg-hover); }
 .dash-tr-line td { background: var(--bg-hover); font-weight: 700; }
 .dash-tr-tg { border: 0; background: none; font: inherit; font-weight: 800; color: var(--text-main); cursor: pointer; padding: 0; }
 .dash-tr-tg:hover { color: var(--accent-cyan); }
-.dash-tr-go { border: 1px solid var(--border-hi); border-radius: 8px; background: var(--bg-card); font: inherit; font-size: 11.5px; font-weight: 800; color: var(--accent-cyan); padding: 3px 10px; cursor: pointer; }
+.dash-tr-go { border: 1px solid var(--border-hi); border-radius: var(--r-sm); background: var(--bg-card); font: inherit; font-size: 11.5px; font-weight: 800; color: var(--accent-cyan); padding: 3px 10px; cursor: pointer; }
 .dash-tr-part td:first-child { padding-left: 28px; font-weight: 700; }
 .dash-tr-mach td:first-child { padding-left: 48px; color: var(--text-second); }
 .dash-tr-mach-top td:first-child { padding-left: 28px; }
@@ -91,7 +88,7 @@ button.dash-li:hover { background: var(--bg-hover); }
 
 /* === ДАШБОРД: смены A / B / C / D === */
 .dash-lt { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-.dash-lt-c { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font-size: 12px; display: flex; flex-direction: column; gap: 3px; }
+.dash-lt-c { border: 1px solid var(--border); border-radius: var(--r-md); padding: 10px 12px; font-size: 12px; display: flex; flex-direction: column; gap: 3px; }
 .dash-lt-c b { font-size: 22px; color: var(--text-main); display: inline; }
 .dash-lt-c b.hist-c-ok { color: var(--accent-green); }
 .dash-lt-c b.hist-c-warn { color: var(--accent-amber); }
@@ -106,14 +103,13 @@ button.dash-li:hover { background: var(--bg-hover); }
 .dash-tr-line.is-bad td:first-child { box-shadow: inset 3px 0 0 var(--accent-red); }
 .dash-tr-line.is-warn td:first-child { box-shadow: inset 3px 0 0 var(--accent-amber); }
 
-
 /* === ПАСПОРТ ЛИНИИ: оборудование плитками === */
 .dash-eq { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
-.dash-eq-part { border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
-.dash-eq-h { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
-.dash-eq-h b { font-size: 15px; color: var(--text-main); }
+.dash-eq-part { border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px; }
+.dash-eq-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-bottom: 10px; }
+.dash-eq-h b { font-size: 15px; color: var(--text-main); white-space: nowrap; }
 .dash-eq-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
-.dash-eq-t { --k: var(--accent-green); display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; box-shadow: inset 0 3px 0 var(--k); background: var(--bg-card); font: inherit; text-align: left; color: var(--text-main); cursor: pointer; }
+.dash-eq-t { --k: var(--accent-green); display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-md); box-shadow: inset 0 3px 0 var(--k); background: var(--bg-card); font: inherit; text-align: left; color: var(--text-main); cursor: pointer; }
 .dash-eq-t:hover { background: var(--bg-hover); }
 .dash-eq-t b { font-size: 15px; }
 .dash-eq-t small { font-size: 11.5px; color: var(--text-second); }
