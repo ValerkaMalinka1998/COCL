@@ -35,19 +35,6 @@
   font-size: 18px;
 }
 
-.cocl-edit-link {
-  border: 0;
-  background: none;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--accent-cyan);
-  cursor: pointer;
-}
-
-.cocl-edit-link:hover {
-  text-decoration: underline;
-}
-
 .cocl-sec {
   padding: 14px 0;
   border-top: 1px solid var(--border);

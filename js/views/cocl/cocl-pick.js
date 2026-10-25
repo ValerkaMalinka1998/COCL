@@ -130,7 +130,7 @@ function updateCoclPick() {
   if (pick) pick.style.display = picking ? '' : 'none';
   if (picking) renderCoclLinePick();
   const back = $('#coclBackToPick');
-  if (back) back.hidden = picking || coclState.checking || !($('#lineSelect')?.value);
+  if (back) back.style.display = picking || coclState.checking || !($('#lineSelect')?.value) ? 'none' : '';
   renderCoclHead();
 }
 

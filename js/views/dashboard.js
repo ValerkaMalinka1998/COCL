@@ -1,8 +1,7 @@
 /* ============================================================
    ВКЛАДКА «Дашборд»
-   Главный экран — «Карта производства»: показатели периода,
-   плитки цех → участок → линия, «Требует внимания», динамика по
-   неделям, повторяющиеся отклонения.
+   Главный экран: показатели периода, таблица «линия → часть →
+   машина», динамика по неделям, смены A–D.
    Клик по линии — «Паспорт линии».
    Расчёты опираются на функции Истории (history-data.js).
    Модуль общего пространства имён: функции и переменные видны
@@ -14,10 +13,10 @@ const DASH_PERIOD_LABELS = { shift: 'текущая смена', day: 'посл�
 const DASH_PERIOD_BTNS = [['shift', 'Смена'], ['day', 'Сутки'], ['7', '7 дней'], ['30', '30 дней'], ['all', 'Всё'], ['custom', 'Период…']];
 
 const dashState = {
-  view: (() => { try { return localStorage.getItem('cl_dashboard_view') === 'period' ? 'period' : 'now'; } catch (e) { return 'now'; } })(),
   period: (() => { try { return localStorage.getItem('cl_dashboard_period') || '7'; } catch (e) { return '7'; } })(),
   line: null,          // открыт паспорт линии
-  week: 0,             // неделя покрытия в паспорте
+  openLines: new Set(), // раскрытые строки таблицы линий
+  mach: '',            // паспорт: выбранная машина «часть|машина»
   keepLine: false,     // вернуться в паспорт после Истории
   from: (() => { try { return localStorage.getItem('cl_dashboard_from') || ''; } catch (e) { return ''; } })(),
   to: (() => { try { return localStorage.getItem('cl_dashboard_to') || ''; } catch (e) { return ''; } })()
@@ -73,7 +72,8 @@ function dashLines() {
 function dashClMetrics(line, slots, includeCurrent) {
   const rows = clLineRows(line);
   const cur = getCurrentShiftPeriod();
-  const m = { planned: 0, done: 0, fail: 0, late: 0, missed: [], hasPlan: false };
+  // groups: «часть|машина» → выполнение; letters: буква смены → выполнение и пропуски
+  const m = { planned: 0, done: 0, fail: 0, late: 0, missed: [], hasPlan: false, groups: {}, letters: {} };
   if (!slots.length) return m;
   const dates = slots.map(s => s.date).sort();
   const tally = clTallyIndex(line, dates[0], dates[dates.length - 1], rows);
@@ -86,8 +86,12 @@ function dashClMetrics(line, slots, includeCurrent) {
     rows.forEach(({ row }) => {
       const k = tally.get(`${s.date}|${s.shift}|${row.id}`);
       if (!k) return;
+      const isDone = k === 'OK' || k === 'FAIL' || k === 'late';
+      const gk = (row.nodePart || '') + '|' + (row.machine || 'Без машины');
+      const g = m.groups[gk] || (m.groups[gk] = { planned: 0, done: 0 });
+      g.planned++;
       planned++;
-      if (k === 'OK' || k === 'FAIL' || k === 'late') done++;
+      if (isDone) { done++; g.done++; }
       if (k === 'late') late++;
       if (k === 'FAIL') m.fail++;
     });
@@ -96,8 +100,11 @@ function dashClMetrics(line, slots, includeCurrent) {
     m.planned += planned;
     m.done += done;
     m.late += late;
+    const lt = m.letters[letter] || (m.letters[letter] = { planned: 0, done: 0, missed: 0 });
+    lt.planned += planned;
+    lt.done += done;
     // Закрытое позже — выполнено, но смена всё равно пропущена (считается один раз — здесь)
-    if (done === late && !isNow) m.missed.push({ ...s, letter });
+    if (done === late && !isNow) { m.missed.push({ ...s, letter }); lt.missed++; }
   });
   return m;
 }
@@ -116,71 +123,37 @@ function dashSummary(lines, slots) {
   let planned = 0, done = 0, missed = 0, late = 0;
   lines.forEach(x => {
     const m = dashClMetrics(x.line, slots, includeCurrent);
-    perLine[x.line] = { ...m, fails: 0 };
+    perLine[x.line] = { ...m, fails: 0, pts: 0, ptGroups: {} };
     planned += m.planned; done += m.done; missed += m.missed.length; late += m.late;
   });
   const recs = dashRecords(slots, lineSet);
   let ok = 0, fail = 0;
-  const rep = {};
+  const letterFails = {};
   recs.forEach(h => (h.items || []).forEach(it => {
+    if (it.status !== 'OK' && it.status !== 'FAIL') return;
+    const pl = perLine[h.line];
+    if (pl) {
+      // Проверенные пункты по части и машине — для доли «N из M»
+      const gk = (it.nodePart || '') + '|' + (it.machine || 'Без машины');
+      const g = pl.ptGroups[gk] || (pl.ptGroups[gk] = { n: 0, total: 0 });
+      g.total++;
+      pl.pts++;
+      if (it.status === 'FAIL') g.n++;
+    }
     if (it.status === 'OK') ok++;
     if (it.status === 'FAIL') {
       fail++;
-      if (perLine[h.line]) perLine[h.line].fails++;
-      const k = h.line + '|' + it.standardId;
-      if (!rep[k]) rep[k] = { line: h.line, it, n: 0, last: h };
-      rep[k].n++;
-      if (histOrderKey(h) > histOrderKey(rep[k].last)) { rep[k].last = h; rep[k].it = it; }
+      const lt = histShift(h).letter;
+      if (lt) letterFails[lt] = (letterFails[lt] || 0) + 1;
+      if (pl) pl.fails++;
     }
   }));
   return {
-    perLine, recs,
+    perLine, recs, letterFails,
     compliance: planned ? Math.round(done / planned * 100) : null,
     okPct: ok + fail ? Math.round(ok / (ok + fail) * 100) : null,
-    fail, missed, late,
-    repeats: Object.values(rep).filter(r => r.n >= 2).sort((a, b) => b.n - a.n)
+    fail, missed, late
   };
-}
-
-/* Сколько последних проверок стандарта подряд — с отклонением */
-function dashFailStreak(list) {
-  let n = 0;
-  for (let i = list.length - 1; i >= 0 && list[i].it.status === 'FAIL'; i--) n++;
-  return n;
-}
-
-/* «Требует внимания»: конкретные пункты */
-function dashAttention(lines, sum) {
-  const items = [];
-  const lineSet = new Set(lines.map(x => x.line));
-
-  // 1. Повторяющиеся отклонения
-  sum.repeats.slice(0, 4).forEach(r => {
-    const list = (histStdEntries(r.line).get(r.it.standardId)) || [];
-    const streak = dashFailStreak(list);
-    const s = histShift(r.last);
-    items.push({
-      sev: 3, kind: 'red',
-      title: `${r.line} · ${r.it.oplNumber ? r.it.oplNumber + ' ' : ''}${histItemTitle(r.it)} — ${streak >= 2 ? streak + ' откл. подряд' : r.n + ' откл. за период'}`,
-      sub: `${[r.it.machine, r.it.nodePart].filter(Boolean).join(' · ')} · последнее ${fmtShortDate(s.date)} ${s.shift === 'day' ? 'день' : 'ночь'} · ${s.letter}`,
-      act: `data-dash-std="${escapeAttr(r.it.standardId)}" data-dash-line="${escapeAttr(r.line)}"`
-    });
-  });
-
-  // 2. Пропущенные смены
-  lines.forEach(x => {
-    const m = sum.perLine[x.line];
-    if (!m || !m.missed.length) return;
-    const list = m.missed.slice(0, 4).map(s => `${histDayName(s.date)} ${s.shift === 'day' ? 'день' : 'ночь'} (${s.letter})`);
-    items.push({
-      sev: 2, kind: 'amber',
-      title: `${x.line} — ${m.missed.length} ${pluralRu(m.missed.length, 'пропущенная смена', 'пропущенные смены', 'пропущенных смен')}`,
-      sub: list.join(', ') + (m.missed.length > 4 ? '…' : ''),
-      act: `data-dash-open-line="${escapeAttr(x.line)}"`
-    });
-  });
-
-  return items.sort((a, b) => b.sev - a.sev);
 }
 
 /* Динамика: последние 6 недель (выполнение и отклонения) */
@@ -220,7 +193,6 @@ function renderDashboard() {
   dashState.line = null;
   renderDashboardHead();
 
-  if (dashState.view === 'now') return renderDashboardNow();
 
   const lines = dashLines();
   const slots = dashSlots(dashState.period);
@@ -229,269 +201,132 @@ function renderDashboard() {
 
   box.innerHTML = `
     ${dashKpisHtml(sum, prev)}
-    <div class="dash-g3">
-      <div class="card dash-card">
-        <h3 class="dash-h">Цеха и линии <small>% — выполнение расписания CL · цвет — состояние · клик — паспорт линии</small></h3>
-        ${dashMapHtml(sum)}
-      </div>
-      <div class="card dash-card">
-        <h3 class="dash-h">Требует внимания</h3>
-        ${dashAttentionHtml(dashAttention(lines, sum))}
-      </div>
+    <div class="card dash-card">
+      <h3 class="dash-h">Линии, части и машины <small>выполнение расписания CL · отклонений из проверенных пунктов · клик по линии — раскрыть</small></h3>
+      ${dashTreeHtml(lines, sum)}
     </div>
-    <div class="dash-g2">
-      <div class="card dash-card">
-        <h3 class="dash-h">Динамика по неделям <small>у каждой полосы своя шкала</small></h3>
-        ${dashTrendHtml(dashWeeks(lines))}
-      </div>
-      <div class="card dash-card">
-        <h3 class="dash-h">Где чаще отклонения <small>доля «Не ОК» от проверенных пунктов за период</small></h3>
-        ${dashTopHtml(sum)}
-      </div>
+    <div class="card dash-card">
+      <h3 class="dash-h">Динамика по неделям <small>выполнение расписания CL и число отклонений</small></h3>
+      ${dashWeeksHtml(dashWeeks(lines))}
     </div>
-    <div class="dash-g2">
-      <div class="card dash-card">
-        <h3 class="dash-h">Повторяющиеся отклонения <small>≥ 2 раз за период</small></h3>
-        ${sum.repeats.length ? sum.repeats.slice(0, 8).map(r => `
-          <button type="button" class="dash-li" data-dash-std="${escapeAttr(r.it.standardId)}" data-dash-line="${escapeAttr(r.line)}">
-            <span>${r.it.oplNumber ? `<span class="hist-opl">${escapeHtml(r.it.oplNumber)}</span> ` : ''}${escapeHtml(histItemTitle(r.it))}
-              ${histIsElecItem(r.last, r.it) ? '<span class="hist-tag hist-tag-elec">E-Param</span>' : ''}
-              <span class="hist-sub"> · ${escapeHtml([r.line, r.it.machine].filter(Boolean).join(' · '))}</span></span>
-            <span class="hist-tag hist-tag-fail">×${r.n}</span>
-          </button>`).join('') : '<div class="dash-empty">Повторов нет</div>'}
-      </div>
+    <div class="card dash-card">
+      <h3 class="dash-h">Смены <small>выполнение проверок по букве смены за период</small></h3>
+      ${dashLettersHtml(sum)}
     </div>`;
 }
 
 /* Меньше стольких проверок — доля отклонений не показательна */
 const DASH_MIN_CHECKS = 10;
 
-/* Топ по доле отклонений: машины и линии за период.
-   n — «Не ОК», total — проверено пунктов; мало проверок — ниже остальных */
-function dashTop(sum, by) {
-  const map = {};
-  sum.recs.forEach(h => (h.items || []).forEach(it => {
-    if (it.status !== 'FAIL' && it.status !== 'OK') return;
-    const key = by === 'line' ? h.line : [h.line, it.machine || 'без машины', it.nodePart].filter(Boolean).join(' · ');
-    if (!key) return;
-    const x = map[key] || (map[key] = { name: key, line: h.line, n: 0, total: 0 });
-    x.total++;
-    if (it.status === 'FAIL') x.n++;
-  }));
-  return Object.values(map).filter(x => x.n)
-    .map(x => ({ ...x, pct: Math.round(x.n / x.total * 100), few: x.total < DASH_MIN_CHECKS }))
-    .sort((a, b) => (a.few - b.few) || (b.pct - a.pct) || (b.n - a.n))
-    .slice(0, 6);
+/* «N из M · P%», мало проверок — без процента */
+function dashShareText(n, total) {
+  if (!total) return '—';
+  return `${n} из ${total} · ${total < DASH_MIN_CHECKS ? 'мало проверок' : Math.round(n / total * 100) + '%'}`;
 }
 
-function dashTopHtml(sum) {
-  const groups = [['Машины', dashTop(sum, 'machine'), 'machine'], ['Линии', dashTop(sum, 'line'), 'line']];
-  const body = groups.map(([title, list, kind]) => {
-    if (!list.length) return '';
-    return `<div class="dash-top">
-      <div class="dash-top-h">${title}</div>
-      ${list.map(x => `
-        <div class="dash-li dash-li-bar${x.few ? ' dash-li-few' : ''}"${kind === 'line' ? ` data-dash-open-line="${escapeAttr(x.line)}" role="button" tabindex="0"` : ''}>
-          <div><span>${escapeHtml(x.name)}</span><b class="${x.few ? '' : 'hist-c-fail'}">${x.n} из ${x.total} · ${x.few ? 'мало проверок' : x.pct + '%'}</b></div>
-          <div class="dash-bar"><i style="width:${x.pct}%"></i></div>
-        </div>`).join('')}
-    </div>`;
-  }).join('');
-  return body || '<div class="dash-empty">Отклонений за период нет</div>';
+/* Ячейки таблиц: выполнение (N из M + полоска) и отклонения («N из M · %») */
+function dashDoneCell(done, planned) {
+  return planned
+    ? `${Math.round(done / planned * 100)}% <span class="hist-sub">· ${done} из ${planned}</span><span class="dash-bar dash-bar-done"><i style="width:${Math.round(done / planned * 100)}%"></i></span>`
+    : '<span class="hist-sub">нет плана</span>';
+}
+function dashFailCell(n, total) {
+  return `<span class="${n && total >= DASH_MIN_CHECKS ? 'hist-c-fail' : total ? '' : 'hist-sub'}">${dashShareText(n, total)}</span>`;
 }
 
-/* ============================================================
-   ВКЛАДКА «СЕЙЧАС»: состояние текущей смены
-   Что осталось проверить до конца смены, где уже отклонения,
-   какие линии отстают. Расчёт — по окнам проверки расписания.
-   ============================================================ */
-
-/* Состояние линии в текущей смене */
-function dashNowLine(line) {
-  const cur = getCurrentShiftPeriod();
-  const letter = getShiftsForDate(cur.date)[cur.shiftType];
-  const idx = clResultIndex(line);
-  const rows = clLineRows(line);
-  const tally = clTallyIndex(line, cur.date, cur.date, rows, idx);
-  const m = { line, planned: 0, done: 0, fail: 0, late: 0, rows: [] };
-
-  rows.forEach(({ row, isElec }) => {
-    const res = idx.get(`${cur.date}|${letter}|${row.id}`);
-    // Долг с прошлых смен — в работе текущей смены; закрытый в норме долг зачтён в смене пропуска
-    if (!tally.has(`${cur.date}|${cur.shiftType}|${row.id}`)) return;
-    const status = res ? res.it.status : 'due';
-    m.planned++;
-    if (status === 'OK' || status === 'FAIL') m.done++;
-    if (status === 'FAIL') m.fail++;
-    const late = status === 'due' && dashWindowPassed(row, line);
-    if (late) m.late++;
-    m.rows.push({ row, isElec, status, late, it: res ? res.it : null });
+/* Строки «Maker / Packer → машина» линии: план — из расписания, отклонения — из проверок;
+   pad — пустые ячейки справа (под колонки таблицы линий) */
+function dashPartRowsHtml(m, pad = 0) {
+  const tail = '<td></td>'.repeat(pad);
+  const parts = {};
+  const keys = [...new Set([...Object.keys(m.groups), ...Object.keys(m.ptGroups)])];
+  keys.forEach(k => {
+    const [part, machine] = k.split('|');
+    const p = parts[part] || (parts[part] = { done: 0, planned: 0, n: 0, total: 0, machines: [] });
+    const g = m.groups[k] || { done: 0, planned: 0 };
+    const f = m.ptGroups[k] || { n: 0, total: 0 };
+    p.done += g.done; p.planned += g.planned; p.n += f.n; p.total += f.total;
+    p.machines.push({ machine, ...g, ...f });
   });
-  return m;
-}
-
-/* Окно проверки текущей смены уже прошло, а проверки нет.
-   Окна — autoTimeWindows по строке недели этой линии (хранимые не читаем);
-   смотрим только окно своей смены. CIL окна не имеет — не просрочен. */
-function dashWindowPassed(row, line) {
-  const cur = getCurrentShiftPeriod();
-  const w = getRowForWeek(row, histWeekStartOf(cur.date), line);
-  const win = autoTimeWindows(w.work, w.schedule).find(x => getTimeWindowShift(x.from) === cur.shiftType);
-  if (!win) return false;
-  const [h, mm] = String(win.to || '').split(':').map(Number);
-  if (isNaN(h)) return false;
-  let end = h * 60 + (mm || 0);
-  const now = new Date();
-  let nowMins = now.getHours() * 60 + now.getMinutes();
-  // Ночная смена идёт через полночь: после 00:00 — это ещё та же смена
-  if (cur.shiftType === 'night') {
-    if (end < 9 * 60) end += 24 * 60;
-    if (nowMins < 9 * 60) nowMins += 24 * 60;
-  }
-  return nowMins > end;
-}
-
-function dashNowKpis(all) {
-  const planned = all.reduce((s, m) => s + m.planned, 0);
-  const done = all.reduce((s, m) => s + m.done, 0);
-  const fail = all.reduce((s, m) => s + m.fail, 0);
-  const late = all.reduce((s, m) => s + m.late, 0);
-  // Просроченные не входят в «предстоит»: каждый пункт считается в одной карточке
-  const left = planned - done - late;
-  const cur = getCurrentShiftPeriod();
-  const letter = getShiftsForDate(cur.date)[cur.shiftType];
-  return `<div class="dash-kpis">
-    <div class="dash-kpi dash-kpi-now"><b>${cur.shiftType === 'day' ? 'День' : 'Ночь'} · ${escapeHtml(letter || '—')}</b>
-      <span>${escapeHtml(fmtShortDate(cur.date))} · смена идёт</span></div>
-    <div class="dash-kpi"><b class="${planned && done === planned ? 'hist-c-ok' : ''}">${done} / ${planned}</b><span>проверок сделано</span></div>
-    <div class="dash-kpi"><b class="${left ? 'hist-c-warn' : 'hist-c-ok'}">${left}</b><span>ещё предстоит (окно не прошло)</span></div>
-    <div class="dash-kpi"><b class="${late ? 'hist-c-fail' : ''}">${late}</b><span>просрочено (окно прошло)</span></div>
-    <div class="dash-kpi"><b class="${fail ? 'hist-c-fail' : ''}">${fail}</b><span>${pluralRu(fail, 'отклонение', 'отклонения', 'отклонений')} в смене</span></div>
-  </div>`;
-}
-
-/* Строка линии: прогресс-полоса, просрочено, отклонения */
-function dashNowLineHtml(m) {
-  const pct = m.planned ? Math.round(m.done / m.planned * 100) : 0;
-  const cls = m.late || m.fail ? 'red' : pct === 100 ? 'green' : 'amber';
-  return `<button type="button" class="dash-now-line dash-now-${cls}" data-dash-open-line="${escapeAttr(m.line)}" title="Паспорт линии">
-    <span class="dash-now-name">${escapeHtml(m.line)}</span>
-    <span class="dash-now-bar"><i style="width:${pct}%"></i></span>
-    <span class="dash-now-num">${m.done} / ${m.planned}</span>
-    <span class="dash-now-tags">
-      ${m.late ? `<span class="hist-tag hist-tag-fail">${m.late} просроч.</span>` : ''}
-      ${m.fail ? `<span class="hist-tag hist-tag-fail">${m.fail} откл.</span>` : ''}
-      ${!m.late && !m.fail && pct === 100 ? '<span class="hist-tag hist-tag-ok">всё сделано</span>' : ''}
-    </span>
-  </button>`;
-}
-
-/* Линии смены: в «Общем» — по цехам, внутри цеха самые срочные сверху */
-function dashNowLinesHtml(all) {
-  const work = all.filter(m => m.planned);
-  if (!work.length) return '<div class="dash-empty">В текущую смену проверок не запланировано</div>';
-  const urgent = (a, b) => (b.late - a.late) || (b.fail - a.fail) || (b.planned - b.done) - (a.planned - a.done);
-  work.sort(urgent);
-  if (dashboardWorkshop) return work.map(dashNowLineHtml).join('');
-
-  const groups = {};
-  work.forEach(m => {
-    const id = getWorkshopIdForLine(m.line) || '';
-    (groups[id] = groups[id] || []).push(m);
+  let html = '';
+  Object.keys(parts).sort().forEach(part => {
+    const p = parts[part];
+    if (part) html += `<tr class="dash-tr-part"><td>${escapeHtml(part)}</td><td>${dashDoneCell(p.done, p.planned)}</td><td>${dashFailCell(p.n, p.total)}</td>${tail}</tr>`;
+    p.machines.sort((a, b) => a.machine.localeCompare(b.machine, 'ru', { numeric: true })).forEach(x => {
+      html += `<tr class="dash-tr-mach${part ? '' : ' dash-tr-mach-top'}"><td>${escapeHtml(x.machine)}</td><td>${dashDoneCell(x.done, x.planned)}</td><td>${dashFailCell(x.n, x.total)}</td>${tail}</tr>`;
+    });
   });
-  const order = getWorkshops().map(w => w.id).concat('');
-  return order.filter(id => groups[id]).map(id => {
-    const list = groups[id];
-    const ws = id ? getWorkshop(id) : null;
-    const bad = list.filter(m => m.late || m.fail).length;
-    const done = list.filter(m => m.done === m.planned).length;
-    const tag = bad ? `<span class="hist-tag hist-tag-fail">${bad} из ${list.length} требуют внимания</span>`
-      : done === list.length ? '<span class="hist-tag hist-tag-ok">всё сделано</span>'
-      : `<span class="hist-tag hist-tag-warn">${list.length - done} в работе</span>`;
-    // Цех, где всё сделано, — одной строкой; остальные раскрыты
-    if (!bad && done === list.length) {
-      return `<div class="dash-now-ws"><b>${escapeHtml(ws ? ws.name : 'Вне структуры')}</b><small>${list.length} ${pluralRu(list.length, 'линия', 'линии', 'линий')}</small>${tag}</div>`;
-    }
-    return `<div class="dash-now-ws"><b>${escapeHtml(ws ? ws.name : 'Вне структуры')}</b><small>${list.length} ${pluralRu(list.length, 'линия', 'линии', 'линий')}</small>${tag}</div>`
-      + list.map(dashNowLineHtml).join('');
+  return html;
+}
+
+/* Таблица «Линия → Maker / Packer → машина».
+   Линии сгруппированы по участкам (блокам); внутри группы — от худших к лучшим */
+function dashTreeHtml(lines, sum) {
+  const shown = lines.filter(x => { const m = sum.perLine[x.line]; return m && (m.hasPlan || m.pts); });
+  const idle = lines.filter(x => !shown.includes(x)).map(x => x.line);
+  if (!shown.length) return '<div class="dash-empty">За период нет ни плана, ни проверок</div>';
+
+  // Хуже — выше доля отклонений, ниже выполнение
+  const failPct = (m) => m.pts >= DASH_MIN_CHECKS ? m.fails / m.pts : 0;
+  const donePct = (m) => m.planned ? m.done / m.planned : 1;
+  const groups = [];
+  shown.forEach(x => {
+    const name = [dashboardWorkshop ? '' : x.workshopName, x.areaName, x.blockName].filter(Boolean).join(' · ') || 'Вне структуры';
+    let g = groups.find(y => y.name === name);
+    if (!g) groups.push(g = { name, lines: [] });
+    g.lines.push(x.line);
+  });
+
+  const body = groups.map(g => {
+    g.lines.sort((a, b) => {
+      const ma = sum.perLine[a], mb = sum.perLine[b];
+      return (failPct(mb) - failPct(ma)) || (donePct(ma) - donePct(mb));
+    });
+    const gp = g.lines.reduce((s, l) => s + sum.perLine[l].planned, 0);
+    const gd = g.lines.reduce((s, l) => s + sum.perLine[l].done, 0);
+    const gf = g.lines.reduce((s, l) => s + sum.perLine[l].fails, 0);
+    let html = `<tr class="dash-tr-grp"><td colspan="5">${escapeHtml(g.name)}<span>${g.lines.length} ${pluralRu(g.lines.length, 'линия', 'линии', 'линий')}
+      · выполнение ${gp ? Math.round(gd / gp * 100) + '%' : '—'} · ${gf} откл.</span></td></tr>`;
+    g.lines.forEach(line => {
+      const m = sum.perLine[line];
+      const open = dashState.openLines.has(line);
+      const mark = m.fails && m.pts >= DASH_MIN_CHECKS ? ' is-bad' : m.missed.length ? ' is-warn' : '';
+      html += `<tr class="dash-tr-line${mark}">
+        <td><button type="button" class="dash-tr-tg" data-dash-toggle="${escapeAttr(line)}" aria-expanded="${open}">${open ? '▾' : '▸'} ${escapeHtml(line)}</button></td>
+        <td>${dashDoneCell(m.done, m.planned)}</td>
+        <td>${dashFailCell(m.fails, m.pts)}</td>
+        <td class="${m.missed.length ? 'hist-c-warn' : 'hist-sub'}">${m.missed.length || '—'}</td>
+        <td><button type="button" class="dash-tr-go" data-dash-open-line="${escapeAttr(line)}">Паспорт</button></td>
+      </tr>`;
+      if (!open) return;
+      html += dashPartRowsHtml(m, 2);
+    });
+    return html;
   }).join('');
-}
 
-/* Что проверить прямо сейчас и что уже не в норме */
-function dashNowListHtml(all) {
-  const late = [];
-  const fails = [];
-  const due = [];
-  all.forEach(m => m.rows.forEach(r => {
-    const item = {
-      line: m.line, row: r.row, isElec: r.isElec, it: r.it,
-      title: r.row.title || r.row.paramName || '—',
-      sub: [r.row.machine, r.row.nodePart, r.row.node].filter(Boolean).join(' · ')
-    };
-    if (r.status === 'FAIL') fails.push(item);
-    else if (r.late) late.push(item);
-    else if (r.status === 'due') due.push(item);
-  }));
-
-  const block = (title, list, tag, cls) => list.length ? `
-    <div class="dash-top">
-      <div class="dash-top-h">${title} · ${list.length}</div>
-      ${list.slice(0, 8).map(x => `
-        <button type="button" class="dash-li" data-dash-std="${escapeAttr(x.row.id)}" data-dash-line="${escapeAttr(x.line)}">
-          <span><span class="hist-opl">${escapeHtml(x.line)}</span> ${escapeHtml(x.title)}
-            <div class="hist-sub">${escapeHtml(x.sub)}</div></span>
-          <span class="hist-tag hist-tag-${cls}">${tag}</span>
-        </button>`).join('')}
-      ${list.length > 8 ? `<div class="hist-sub">…ещё ${list.length - 8}</div>` : ''}
-    </div>` : '';
-
-  const html = block('Отклонения в этой смене', fails, 'не ОК', 'fail')
-    + block('Просрочено — окно проверки прошло', late, 'просроч.', 'warn')
-    + block('Ещё предстоит в эту смену', due, 'ждёт', 'ok');
-  return html || '<div class="dash-empty">В текущую смену проверок не запланировано</div>';
-}
-
-function renderDashboardNow() {
-  const box = $('#dashboardContent');
-  if (!box) return;
-  const all = dashLines().map(x => dashNowLine(x.line));
-  box.innerHTML = `
-    ${dashNowKpis(all)}
-    <div class="dash-g3">
-      <div class="card dash-card">
-        <h3 class="dash-h">Линии в этой смене <small>сделано из запланированного · клик — паспорт линии</small></h3>
-        ${dashNowLinesHtml(all)}
-      </div>
-      <div class="card dash-card">
-        <h3 class="dash-h">Что требует действия <small>клик — история стандарта</small></h3>
-        ${dashNowListHtml(all)}
-      </div>
-    </div>`;
+  return `<div class="dash-tr-wrap"><table class="dash-tr">
+    <thead><tr><th>Где</th><th>Выполнение</th><th>Отклонений</th><th>Пропущено смен</th><th></th></tr></thead>
+    <tbody>${body}</tbody>
+  </table></div>${idle.length ? `<div class="hist-sub dash-tr-idle">Ещё ${idle.length} ${pluralRu(idle.length, 'линия', 'линии', 'линий')} без плана и проверок за период: ${escapeHtml(idle.join(', '))}</div>` : ''}`;
 }
 
 function renderDashboardHead() {
   const bar = $('#dashboardWorkshopBar');
   if (!bar) return;
   const tabs = [{ id: '', name: 'Общий' }].concat(getWorkshops().map(w => ({ id: w.id, name: w.name })));
-  const periodText = dashState.line || dashState.view === 'period'
-    ? (dashState.period === 'custom' && (dashState.from || dashState.to)
-      ? `${dashState.from ? fmtShortDate(dashState.from) : '…'} – ${dashState.to ? fmtShortDate(dashState.to) : 'сегодня'}`
-        : DASH_PERIOD_LABELS[dashState.period])
-    : 'текущая смена';
+  const periodText = dashState.period === 'custom' && (dashState.from || dashState.to)
+    ? `${dashState.from ? fmtShortDate(dashState.from) : '…'} – ${dashState.to ? fmtShortDate(dashState.to) : 'сегодня'}`
+    : DASH_PERIOD_LABELS[dashState.period];
   const scope = dashState.line ? dashState.line
     : (dashboardWorkshop ? (getWorkshop(dashboardWorkshop)?.name || '') : 'весь завод');
   bar.innerHTML = `
     <div class="dash-title">Дашборд <small>${escapeHtml(scope)} · ${escapeHtml(periodText)}</small></div>
     <span class="hist-sp"></span>
-    ${dashState.line ? '' : `<div class="hist-seg dash-view-seg">
-      <button type="button" class="${dashState.view === 'now' ? 'on' : ''}" data-dash-view="now">Сейчас</button>
-      <button type="button" class="${dashState.view === 'period' ? 'on' : ''}" data-dash-view="period">Период</button>
-    </div>`}
     ${dashState.line ? '' : `<div class="hist-seg">${tabs.map(t =>
       `<button type="button" class="${t.id === dashboardWorkshop ? 'on' : ''}" data-dash-ws="${escapeAttr(t.id)}">${escapeHtml(t.name)}</button>`).join('')}</div>`}
-    ${dashState.view === 'period' || dashState.line ? `<div class="hist-seg">${DASH_PERIOD_BTNS.map(([p, t]) =>
-      `<button type="button" class="${p === dashState.period ? 'on' : ''}" data-dash-period="${p}">${t}</button>`).join('')}</div>` : ''}
-    ${(dashState.view === 'period' || dashState.line) && dashState.period === 'custom' ? `<div class="hist-custom dash-custom">
+    <div class="hist-seg">${DASH_PERIOD_BTNS.map(([p, t]) =>
+      `<button type="button" class="${p === dashState.period ? 'on' : ''}" data-dash-period="${p}">${t}</button>`).join('')}</div>
+    ${dashState.period === 'custom' ? `<div class="hist-custom dash-custom">
       <label>С <input type="date" data-dash-date="from" value="${escapeAttr(dashState.from)}" max="${getCurrentShiftPeriod().date}"></label>
       <label>По <input type="date" data-dash-date="to" value="${escapeAttr(dashState.to)}" max="${getCurrentShiftPeriod().date}"></label>
     </div>` : ''}`;
@@ -514,94 +349,146 @@ function dashKpisHtml(sum, prev) {
     <div class="dash-kpi"><b>${sum.okPct == null ? '—' : sum.okPct + '%'}</b><span>пунктов в норме</span>${dashDelta(sum.okPct, prev.okPct, true, '%')}</div>
     <div class="dash-kpi"><b class="${sum.fail ? 'hist-c-fail' : ''}">${sum.fail}</b><span>${pluralRu(sum.fail, 'отклонение', 'отклонения', 'отклонений')}</span>${dashDelta(sum.fail, prev.fail, false)}</div>
     <div class="dash-kpi"><b class="${sum.missed ? 'hist-c-warn' : ''}">${sum.missed}</b><span>пропущенных смен${sum.late ? ` · ${sum.late} ${pluralRu(sum.late, 'пункт закрыт', 'пункта закрыто', 'пунктов закрыто')} позже` : ''}</span>${dashDelta(sum.missed, prev.missed, false)}</div>
-    <div class="dash-kpi"><b class="${sum.repeats.length ? 'hist-c-fail' : ''}">${sum.repeats.length}</b><span>повторяющихся отклонений</span></div>
   </div>`;
 }
 
-function dashLineColor(m) {
-  if (!m) return 'none';
-  const pct = m.planned ? m.done / m.planned * 100 : null;
-  if (m.fails > 1 || (pct != null && pct < 70)) return 'red';
-  if (m.fails || (pct != null && pct < 90)) return 'amber';
-  if (pct == null) return 'none';
-  return 'green';
-}
-
-function dashMapHtml(sum) {
-  const ws = getWorkshops().filter(w => !dashboardWorkshop || w.id === dashboardWorkshop);
-  const tile = (line) => {
-    const m = sum.perLine[line];
-    const color = dashLineColor(m);
-    const pct = m && m.planned ? Math.round(m.done / m.planned * 100) : null;
-    const sub = m && m.fails ? `${m.fails} откл.` : (pct == null ? (m && m.hasPlan ? 'нет смен в периоде' : 'нет расписания') : 'без откл.');
-    return `<button type="button" class="dash-ln dash-ln-${color}" data-dash-open-line="${escapeAttr(line)}" title="Паспорт линии">
-      <b>${escapeHtml(line)}</b>
-      <span class="dash-ln-p">${pct == null ? '—' : pct + '%'}</span>
-      <span class="dash-ln-s">${sub}${m && m.missed.length ? ` · ${m.missed.length} проп.` : ''}</span>
-    </button>`;
-  };
-  return `<div class="dash-ws">${ws.map(w => `
-    <div class="dash-wsc">
-      <h4>${escapeHtml(w.name)}<span>${escapeHtml(w.subtitle || '')}</span></h4>
-      ${(w.areas || []).map(a => {
-        const lines = Array.isArray(a.blocks) ? a.blocks.flatMap(b => b.lines || []) : (a.lines || []);
-        return `<div class="dash-area"><div class="dash-area-h">${escapeHtml(a.name)}</div>
-          ${lines.length ? `<div class="dash-lines">${lines.map(tile).join('')}</div>` : '<div class="hist-sub">линий нет</div>'}</div>`;
-      }).join('')}
-    </div>`).join('')}</div>`;
-}
-
-function dashAttentionHtml(items) {
-  if (!items.length) return '<div class="dash-empty">Всё в порядке — замечаний нет</div>';
-  return items.slice(0, 8).map(it => `
-    <button type="button" class="dash-att dash-att-${it.kind}" ${it.act}>
-      <b>${escapeHtml(it.title)}</b>
-      <span>${escapeHtml(it.sub)}</span>
-    </button>`).join('') + (items.length > 8 ? `<div class="hist-sub">И ещё ${items.length - 8}…</div>` : '');
-}
-
-/* Динамика: две полосы с общей осью недель и своими шкалами —
-   сверху выполнение расписания (0–100%), снизу число отклонений.
-   Разные единицы на одной шкале искажали масштаб. */
-function dashTrendHtml(weeks) {
-  const W = 600, L = 64, R = 20;
-  const T1 = 14, H1 = 110;          // полоса «выполнение, %»
-  const T2 = T1 + H1 + 30, H2 = 56; // полоса «отклонения, шт.»
-  const H = T2 + H2 + 22;
-  const x = i => L + 20 + i * (W - L - R - 40) / Math.max(1, weeks.length - 1);
-  const y = v => T1 + (100 - v) / 100 * H1;
+/* Динамика: две полосы с общими неделями. Сверху — выполнение расписания CL
+   (шкала 0–100%), снизу — число отклонений (шкала — от максимума за 6 недель) */
+function dashWeeksHtml(weeks) {
   const maxF = Math.max(1, ...weeks.map(w => w.fail));
-  const bh = f => f / maxF * H2;
-  let s = '';
-  [0, 50, 100].forEach(v => {
-    s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" class="dash-ch-grid"/><text x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${v}%</text>`;
-  });
-  s += `<text x="${L}" y="${T1 - 4}" class="dash-ch-cap">выполнение расписания CL</text>`;
-  s += `<text x="${L}" y="${T2 - 6}" class="dash-ch-cap">отклонений за неделю</text>`;
-  s += `<line x1="${L}" x2="${W - R}" y1="${T2 + H2}" y2="${T2 + H2}" class="dash-ch-grid"/>`;
-  weeks.forEach((w, i) => {
-    const h = bh(w.fail);
-    if (w.fail) s += `<rect x="${x(i) - 12}" y="${T2 + H2 - h}" width="24" height="${h}" rx="3" class="dash-ch-bar"><title>${w.label}: ${w.fail} откл.</title></rect>`;
-    s += `<text x="${x(i)}" y="${T2 + H2 - h - 4}" text-anchor="middle" class="dash-ch-num">${w.fail}</text>`;
-    s += `<text x="${x(i)}" y="${H - 6}" text-anchor="middle">${w.label}</text>`;
-  });
-  const pts = weeks.map((w, i) => w.compliance == null ? null : [x(i), y(w.compliance), w]).filter(Boolean);
-  if (pts.length > 1) s += `<polyline class="dash-ch-line" points="${pts.map(p => p[0] + ',' + p[1]).join(' ')}"/>`;
-  pts.forEach(p => {
-    s += `<circle cx="${p[0]}" cy="${p[1]}" r="4" class="dash-ch-pt"><title>${p[2].label}: ${p[2].compliance}%</title></circle>
-      <text x="${p[0]}" y="${p[1] - 8}" text-anchor="middle" class="dash-ch-num">${p[2].compliance}%</text>`;
-  });
-  return `<svg class="dash-chart" viewBox="0 0 ${W} ${H}" width="100%">${s}</svg>`;
+  // Подпись значения стоит прямо над столбиком; нет плана — подпись у базовой линии
+  const cell = (cls, pct, text, tip) => `<div class="dash-wk-cell ${cls}" title="${escapeAttr(tip)}">
+      ${pct == null ? `<span class="dash-wk-na">${text}</span>` : `<div class="dash-wk-bar" style="height:${pct}%"><em>${text}</em></div>`}
+    </div>`;
+  return `<div class="dash-wk">
+    <div class="dash-wk-rl">Выполнение<small>расписания CL, %</small></div>
+    ${weeks.map(w => cell('dash-wk-done', w.compliance, w.compliance == null ? 'нет плана' : w.compliance + '%',
+      w.label + ': ' + (w.compliance == null ? 'нет плана' : 'выполнено ' + w.compliance + '%'))).join('')}
+    <div class="dash-wk-rl">Отклонения<small>за неделю, шт.</small></div>
+    ${weeks.map(w => cell('dash-wk-fail' + (w.fail ? '' : ' is-zero'), Math.round(w.fail / maxF * 100), String(w.fail),
+      w.label + ': ' + w.fail + ' откл.')).join('')}
+    <span></span>
+    ${weeks.map(w => `<div class="dash-wk-lbl">${escapeHtml(w.label)}</div>`).join('')}
+  </div>`;
+}
+
+/* Смены A / B / C / D: выполнение и пропуски из расписания, отклонения — из проверок */
+function dashLettersHtml(sum) {
+  const tot = {};
+  Object.values(sum.perLine).forEach(m => Object.entries(m.letters).forEach(([l, v]) => {
+    const t = tot[l] || (tot[l] = { planned: 0, done: 0, missed: 0 });
+    t.planned += v.planned; t.done += v.done; t.missed += v.missed;
+  }));
+  const letters = [...new Set([...Object.keys(tot), ...Object.keys(sum.letterFails)])].filter(Boolean).sort();
+  if (!letters.length) return '<div class="dash-empty">За период нет смен с планом</div>';
+  return `<div class="dash-lt">${letters.map(l => {
+    const t = tot[l] || { planned: 0, done: 0, missed: 0 };
+    const pct = t.planned ? Math.round(t.done / t.planned * 100) : null;
+    const f = sum.letterFails[l] || 0;
+    return `<div class="dash-lt-c">
+      <div class="dash-lt-h">Смена ${escapeHtml(l)}</div>
+      <div><b class="${pct == null ? '' : pct >= 90 ? 'hist-c-ok' : pct >= 70 ? 'hist-c-warn' : 'hist-c-fail'}">${pct == null ? '—' : pct + '%'}</b><span class="hist-sub"> выполнено</span></div>
+      <div class="dash-bar dash-bar-done"><i style="width:${pct || 0}%"></i></div>
+      <div class="${f ? 'hist-c-fail' : 'hist-sub'}">${f} ${pluralRu(f, 'отклонение', 'отклонения', 'отклонений')}</div>
+      <div class="${t.missed ? 'hist-c-warn' : 'hist-sub'}">${t.missed ? t.missed + ' ' + pluralRu(t.missed, 'смена пропущена', 'смены пропущены', 'смен пропущено') : 'пропусков нет'}</div>
+    </div>`;
+  }).join('')}</div>`;
 }
 
 /* ============================================================
-   ПАСПОРТ ЛИНИИ
+   ПАСПОРТ ЛИНИИ: «дашборд одной линии» — показатели, оборудование
+   (Maker / Packer → машины плитками), стандарты с отклонениями за период,
+   таблица частей и машин, динамика по неделям
    ============================================================ */
 function openDashboardLine(line) {
   dashState.line = line;
-  dashState.week = 0;
+  dashState.mach = '';
   renderDashboardLine();
   window.scrollTo(0, 0);
+}
+
+/* Машины линии: «часть|машина» → стандарты, выполнение, отклонения за период */
+function dashMachines(line, m, rows) {
+  const map = new Map();
+  const get = (part, machine) => {
+    const k = part + '|' + machine;
+    if (!map.has(k)) map.set(k, { key: k, part, machine, mech: 0, elec: 0, planned: 0, done: 0, n: 0, total: 0, rows: [] });
+    return map.get(k);
+  };
+  rows.forEach(({ row, isElec }) => {
+    const x = get(row.nodePart || '', row.machine || 'Без машины');
+    if (isElec) x.elec++; else x.mech++;
+    x.rows.push({ row, isElec });
+  });
+  Object.entries(m.groups).forEach(([k, g]) => { const [p, mc] = k.split('|'); const x = get(p, mc); x.planned += g.planned; x.done += g.done; });
+  Object.entries(m.ptGroups).forEach(([k, g]) => { const [p, mc] = k.split('|'); const x = get(p, mc); x.n += g.n; x.total += g.total; });
+  return [...map.values()].sort((a, b) => a.machine.localeCompare(b.machine, 'ru', { numeric: true }));
+}
+
+/* Оборудование плитками: часть линии (Maker / Packer; в PMD / FMD — одна группа) → машины.
+   Цвет плитки: отклонения за период — красный, выполнение < 90% — амбер, иначе зелёный */
+function dashEquipHtml(machines) {
+  const parts = [...new Set(machines.map(x => x.part))].sort();
+  const pct = (d, p) => p ? Math.round(d / p * 100) : null;
+  return `<div class="dash-eq">${parts.map(part => {
+    const list = machines.filter(x => x.part === part);
+    const p = list.reduce((s, x) => s + x.planned, 0), d = list.reduce((s, x) => s + x.done, 0);
+    const nf = list.reduce((s, x) => s + x.n, 0);
+    return `<div class="dash-eq-part">
+      <div class="dash-eq-h"><b>${escapeHtml(part || 'Оборудование')}</b><span class="hist-sub">выполнение ${pct(d, p) == null ? '—' : pct(d, p) + '%'} · ${nf} откл.</span></div>
+      <div class="dash-eq-tiles">${list.map(x => {
+        const xp = pct(x.done, x.planned);
+        const st = x.n ? 'bad' : xp != null && xp < 90 ? 'warn' : 'ok';
+        const cnt = [x.mech ? `${x.mech} ${pluralRu(x.mech, 'стандарт', 'стандарта', 'стандартов')}` : '', x.elec ? `${x.elec} E-Param` : ''].filter(Boolean).join(' · ');
+        return `<button type="button" class="dash-eq-t is-${st}${dashState.mach === x.key ? ' is-on' : ''}" data-dash-mach="${escapeAttr(x.key)}" aria-pressed="${dashState.mach === x.key}">
+          <b>${escapeHtml(x.machine)}</b>
+          <small>${cnt || 'нет стандартов'}</small>
+          <small>${xp == null ? 'нет плана' : 'выполнено ' + xp + '%'} · ${dashShareText(x.n, x.total)}</small>
+          <span class="hist-tag ${st === 'bad' ? 'hist-tag-fail' : st === 'warn' ? 'hist-tag-warn' : 'hist-tag-ok'}">${st === 'bad' ? x.n + ' откл.' : st === 'warn' ? 'пропуски' : 'в норме'}</span>
+        </button>`;
+      }).join('')}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+/* Правая колонка: стандарты линии с отклонениями за период («N из M» проверок)
+   или (выбрана машина) её стандарты с последним результатом */
+function dashLineSideHtml(line, machines, sum) {
+  const x = machines.find(y => y.key === dashState.mach);
+  const opl = (it) => it.oplNumber ? `<span class="hist-opl">${escapeHtml(it.oplNumber)}</span> ` : '';
+  const when = (h) => { const sh = histShift(h); return `${fmtShortDate(sh.date)} ${sh.shift === 'day' ? 'день' : 'ночь'}`; };
+  if (!x) {
+    const map = new Map();
+    sum.recs.forEach(h => (h.items || []).forEach(it => {
+      if (it.status !== 'OK' && it.status !== 'FAIL') return;
+      const e = map.get(it.standardId) || { it, n: 0, total: 0, last: null };
+      e.total++;
+      if (it.status === 'FAIL') { e.n++; if (!e.last || histOrderKey(h) > histOrderKey(e.last)) { e.last = h; e.it = it; } }
+      map.set(it.standardId, e);
+    }));
+    const list = [...map.entries()].filter(([, e]) => e.n)
+      .sort((a, b) => (b[1].n - a[1].n) || histOrderKey(b[1].last).localeCompare(histOrderKey(a[1].last)));
+    return `<h3 class="dash-h">Стандарты с отклонениями <small>за период · N из M проверок · клик — история стандарта</small></h3>
+      ${list.length ? list.map(([id, e]) => `<button type="button" class="dash-li" data-dash-std="${escapeAttr(id)}" data-dash-line="${escapeAttr(line)}">
+        <span>${opl(e.it)}${escapeHtml(histItemTitle(e.it))}<div class="hist-sub">${escapeHtml([e.it.nodePart, e.it.machine].filter(Boolean).join(' · '))} · последнее ${when(e.last)}</div></span>
+        <span class="hist-tag hist-tag-fail">${e.n} из ${e.total}</span>
+      </button>`).join('') : '<div class="dash-empty">За период отклонений нет</div>'}`;
+  }
+  const entries = histStdEntries(line);
+  const list = x.rows.map(({ row }) => {
+    const checked = (entries.get(row.id) || []).filter(e => e.it.status === 'OK' || e.it.status === 'FAIL');
+    const last = checked[checked.length - 1];
+    const res = !last ? { ord: 1, cls: '', text: 'не проверялся' }
+      : last.it.status === 'FAIL' ? { ord: 0, cls: 'hist-tag-fail', text: `Не ОК · ${fmtShortDate(histShift(last.h).date)}` }
+      : { ord: 2, cls: 'hist-tag-ok', text: `ОК · ${fmtShortDate(histShift(last.h).date)}` };
+    return { row, res };
+  }).sort((a, b) => a.res.ord - b.res.ord);
+  return `<h3 class="dash-h">${escapeHtml([x.part, x.machine].filter(Boolean).join(' · '))} <small>последняя проверка · клик — история стандарта</small>
+      <button type="button" class="dash-eq-back" data-dash-mach="">← Все с отклонениями</button></h3>
+    ${list.map(({ row, res }) => `<button type="button" class="dash-li" data-dash-std="${escapeAttr(row.id)}" data-dash-line="${escapeAttr(line)}">
+      <span>${opl(row)}${escapeHtml(row.title || row.paramName || '—')}</span>
+      <span class="hist-tag ${res.cls}">${res.text}</span>
+    </button>`).join('') || '<div class="dash-empty">Стандартов нет</div>'}`;
 }
 
 function renderDashboardLine() {
@@ -612,64 +499,30 @@ function renderDashboardLine() {
   const siblings = ctx ? ((ctx.block ? ctx.block.lines : ctx.area.lines) || []) : [line];
   const slots = dashSlots(dashState.period);
   const sum = dashSummary([{ line }], slots);
+  const prev = dashSummary([{ line }], dashSlots(dashState.period, 1));
   const m = sum.perLine[line];
-  // Состояние стандартов
-  const weekStart = getSchWeekStart(0);
   const rows = clLineRows(line);
-  const entries = histStdEntries(line);
+  const machines = dashMachines(line, m, rows);
+  if (dashState.mach && !machines.some(x => x.key === dashState.mach)) dashState.mach = '';
+
+  // Настройка расписания: сколько в нём на этой неделе, у скольких нет точек замера
+  const weekStart = getSchWeekStart(0);
   let inMech = 0, inElec = 0, noPoints = 0;
   rows.forEach(({ row, isElec }) => {
-    const member = getRowForWeek(row, weekStart, line).member;
-    if (member) { if (isElec) inElec++; else inMech++; }
+    if (getRowForWeek(row, weekStart, line).member) { if (isElec) inElec++; else inMech++; }
     if (!isElec) {
       const t = migrateControlType(row.controlType, row.measurements);
       const hasPts = (row.measurements || []).some(b => (b.points || []).length);
       if ((t === 'variable' || t === 'interval') && !hasPts) noPoints++;
     }
   });
-
-  // Проблемные стандарты
-  const problems = [];
-  sum.repeats.forEach(r => problems.push({ id: r.it.standardId, it: r.it, tag: `×${r.n}`, cls: 'fail', why: `${r.n} откл. за период` }));
-  const cur = getCurrentShiftPeriod();
-  const dates = slots.map(s => s.date).sort();
-  const tally = dates.length ? clTallyIndex(line, dates[0], dates[dates.length - 1], rows) : new Map();
-  rows.forEach(({ row }) => {
-    if (problems.some(p => p.id === row.id)) return;
-    let miss = 0;
-    slots.forEach(s => {
-      if (!isShiftPast(s.date, s.shift) || (s.date === cur.date && s.shift === cur.shiftType)) return;
-      const k = tally.get(`${s.date}|${s.shift}|${row.id}`);
-      if (k === 'missed' || k === 'late') miss++;
-    });
-    if (miss >= 2) problems.push({ id: row.id, it: { oplNumber: row.oplNumber, title: row.title || row.paramName }, tag: 'пропуски', cls: 'warn', why: `пропущен ${miss} ${pluralRu(miss, 'смену', 'смены', 'смен')}` });
-  });
-
-  // Машины
-  const machines = {};
-  rows.forEach(({ row }) => {
-    const k = [row.machine || 'Без машины', row.nodePart].filter(Boolean).join(' · ');
-    if (!machines[k]) machines[k] = { n: 0, fail: 0 };
-    machines[k].n++;
-  });
-  sum.recs.forEach(h => (h.items || []).forEach(it => {
-    if (it.status !== 'FAIL') return;
-    const k = [it.machine || 'Без машины', it.nodePart].filter(Boolean).join(' · ');
-    if (!machines[k]) machines[k] = { n: 0, fail: 0 };
-    machines[k].fail++;
-  }));
-  const maxFail = Math.max(1, ...Object.values(machines).map(x => x.fail));
-
-  const recent = getHistory().filter(h => h.line === line)
-    .map(h => ({ h, key: histOrderKey(h) })).sort((a, b) => b.key.localeCompare(a.key)).slice(0, 6).map(x => x.h);
-
   const ctxText = ctx ? [ctx.workshop.name, ctx.area.name, ctx.block && ctx.block.name].filter(Boolean).join(' · ') : '';
 
   box.innerHTML = `
     <div class="card dash-card dash-line-head">
       <button type="button" class="btn btn-secondary" data-dash-back>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-        Карта
+        Дашборд
       </button>
       <b class="dash-line-name">${escapeHtml(line)}</b><span class="hist-sub">${escapeHtml(ctxText)}</span>
       <span class="dash-cfg" title="Стандартов и параметров в Расписании CL на этой неделе">${inMech} мех · ${inElec} E-Param в расписании</span>
@@ -677,39 +530,27 @@ function renderDashboardLine() {
       <span class="hist-sp"></span>
       ${siblings.length > 1 ? `<div class="hist-seg">${siblings.map(l =>
         `<button type="button" class="${l === line ? 'on' : ''}" data-dash-open-line="${escapeAttr(l)}">${escapeHtml(l)}</button>`).join('')}</div>` : ''}
+      <button type="button" class="btn btn-secondary" data-dash-hist="${escapeAttr(line)}">Все проверки линии</button>
     </div>
-    ${dashKpisHtml(sum, dashSummary([{ line }], dashSlots(dashState.period, 1)))}
-    <div class="dash-g3">
+    ${dashKpisHtml(sum, prev)}
+    <div class="dash-g3 dash-pass-top">
       <div class="card dash-card">
-        ${histCoverageHtml(line, dashState.week, 'data-dash-week')}
+        <h3 class="dash-h">Оборудование <small>цвет — состояние машины · клик — её стандарты</small></h3>
+        ${machines.length ? dashEquipHtml(machines) : '<div class="dash-empty">На линии нет стандартов</div>'}
       </div>
-      <div class="card dash-card">
-        <h3 class="dash-h">Проблемные стандарты <small>клик — история стандарта</small></h3>
-        ${problems.length ? problems.slice(0, 10).map(p => `
-          <button type="button" class="dash-li" data-dash-std="${escapeAttr(p.id)}" data-dash-line="${escapeAttr(line)}">
-            <span>${p.it.oplNumber ? `<span class="hist-opl">${escapeHtml(p.it.oplNumber)}</span> ` : ''}${escapeHtml(histItemTitle(p.it))}<div class="hist-sub">${escapeHtml(p.why)}</div></span>
-            <span class="hist-tag hist-tag-${p.cls}">${escapeHtml(p.tag)}</span>
-          </button>`).join('') : '<div class="dash-empty">Проблемных стандартов нет</div>'}
-      </div>
+      <div class="card dash-card dash-side"><div class="dash-side-in">${dashLineSideHtml(line, machines, sum)}</div></div>
     </div>
     <div class="dash-g2">
       <div class="card dash-card">
-        <h3 class="dash-h">Части оборудования <small>стандартов · отклонений за период</small></h3>
-        ${Object.entries(machines).sort((a, b) => b[1].fail - a[1].fail || a[0].localeCompare(b[0], 'ru', { numeric: true })).map(([k, v]) => `
-          <div class="dash-li dash-li-bar"><div><span>${escapeHtml(k)} <span class="hist-sub">— ${v.n} ${pluralRu(v.n, 'стандарт', 'стандарта', 'стандартов')}</span></span>
-            <b class="${v.fail ? 'hist-c-fail' : 'hist-c-ok'}">${v.fail ? v.fail + ' откл.' : '0'}</b></div>
-            <div class="dash-bar"><i style="width:${v.fail / maxFail * 100}%"></i></div></div>`).join('') || '<div class="dash-empty">Нет стандартов</div>'}
+        <h3 class="dash-h">Maker / Packer → машины <small>выполнение расписания CL · отклонений из проверенных пунктов</small></h3>
+        <div class="dash-tr-wrap"><table class="dash-tr">
+          <thead><tr><th>Где</th><th>Выполнение</th><th>Отклонений</th></tr></thead>
+          <tbody>${dashPartRowsHtml(m)}</tbody>
+        </table></div>
       </div>
       <div class="card dash-card">
-        <h3 class="dash-h">Последние проверки</h3>
-        ${recent.length ? recent.map(h => {
-          const c = histCounts(h);
-          const s = histShift(h);
-          return `<button type="button" class="dash-li" data-dash-rec="${escapeAttr(h.id)}">
-            <span>${fmtShortDate(s.date)} ${histTime(h)} · ${escapeHtml(histKindLabel(h))} <span class="hist-sub">· смена ${escapeHtml(s.letter || '—')}</span></span>
-            ${c.fail ? `<span class="hist-tag hist-tag-fail">${c.fail} откл.</span>` : c.unchecked ? '<span class="hist-tag hist-tag-warn">не всё</span>' : '<span class="hist-tag hist-tag-ok">в норме</span>'}
-          </button>`;
-        }).join('') : '<div class="dash-empty">Проверок пока нет</div>'}
+        <h3 class="dash-h">Динамика по неделям</h3>
+        ${dashWeeksHtml(dashWeeks([{ line }]))}
       </div>
     </div>`;
 }
@@ -719,12 +560,6 @@ function renderDashboardLine() {
    ============================================================ */
 $('#tab-dashboard')?.addEventListener('click', (e) => {
   const t = e.target;
-  const vw = t.closest('[data-dash-view]');
-  if (vw) {
-    dashState.view = vw.dataset.dashView === 'period' ? 'period' : 'now';
-    try { localStorage.setItem('cl_dashboard_view', dashState.view); } catch (err) { /* нет доступа */ }
-    return renderDashboard();
-  }
   const ws = t.closest('[data-dash-ws]');
   if (ws) {
     dashboardWorkshop = ws.dataset.dashWs;
@@ -739,11 +574,20 @@ $('#tab-dashboard')?.addEventListener('click', (e) => {
   }
   if (t.closest('[data-dash-back]')) { dashState.line = null; return renderDashboard(); }
   if (t.closest('[data-dash-date]')) return;
-  const wk = t.closest('[data-dash-week]');
-  if (wk) {
-    const d = parseInt(wk.dataset.dashWeek, 10);
-    dashState.week = d === 0 ? 0 : Math.min(0, dashState.week + d);
-    return renderDashboardLine();
+  const mach = t.closest('[data-dash-mach]');
+  if (mach) { dashState.mach = dashState.mach === mach.dataset.dashMach ? '' : mach.dataset.dashMach; return renderDashboardLine(); }
+  const hl = t.closest('[data-dash-hist]');
+  if (hl) {
+    dashState.keepLine = true;
+    histSetLine(hl.dataset.dashHist, true);
+    histState.pick = '';
+    return switchTab('history');
+  }
+  const tg = t.closest('[data-dash-toggle]');
+  if (tg) {
+    const l = tg.dataset.dashToggle;
+    if (!dashState.openLines.delete(l)) dashState.openLines.add(l);
+    return renderDashboard();
   }
   const ln = t.closest('[data-dash-open-line]');
   if (ln) return openDashboardLine(ln.dataset.dashOpenLine);
@@ -752,21 +596,11 @@ $('#tab-dashboard')?.addEventListener('click', (e) => {
     dashState.keepLine = !!dashState.line;
     return openStandardHistory(std.dataset.dashStd, std.dataset.dashLine, { from: 'dashboard' });
   }
-  const rec = t.closest('[data-dash-rec]');
-  if (rec) { dashState.keepLine = true; return openHistoryRecord(rec.dataset.dashRec, { from: 'dashboard' }); }
-  const sh = t.closest('[data-hist-shift]');
-  if (sh && dashState.line) {
-    const [date, shift] = sh.dataset.histShift.split('|');
-    dashState.keepLine = true;
-    return openHistoryShift(dashState.line, date, shift, { from: 'dashboard' });
-  }
   const ed = t.closest('[data-dash-editor]');
   if (ed) {
     try { localStorage.setItem('cl_editor_line', ed.dataset.dashEditor); } catch (err) { /* нет доступа */ }
     return switchTab('editor');
   }
-  const go = t.closest('[data-dash-go]');
-  if (go) return switchTab(go.dataset.dashGo);
 });
 
 /* Даты «с / по» для «Период…» */

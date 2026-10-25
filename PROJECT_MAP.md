@@ -1,8 +1,8 @@
 # Карта проекта COCL
 
-Сгенерировано 2026-10-24 по коммиту `` скриптом `.claude/skills/cocl-session-close/scripts/gen_project_map.py` — пересоздавайте после крупных правок.
+Сгенерировано 2026-10-25 по коммиту `33f696d Р”Р°С€Р±РѕСЂРґ, РїР°СЃРїРѕСЂС‚ Р»РёРЅРёРё, РёСЃС‚РѕСЂРёСЏ Рё РёСЃС‚РѕСЂРёСЏ СЃС‚Р°РЅРґР°СЂС‚Р° РїРѕ РЅРѕРІС‹Рј РјР°РєРµС‚Р°Рј` скриптом `.claude/skills/cocl-session-close/scripts/gen_project_map.py` — пересоздавайте после крупных правок.
 
-JS — 69 модулей, 22007 строк, 780 функций · CSS — 40 файлов, 11518 строк.
+JS — 69 модулей, 21724 строк, 772 функций · CSS — 40 файлов, 11453 строк.
 Как искать: модуль по назначению → раздел в таблице ниже → `Grep` по имени функции в этом файле.
 
 ## JS-модули (в порядке подключения в index.html)
@@ -53,21 +53,21 @@ JS — 69 модулей, 22007 строк, 780 функций · CSS — 40 ф�
 | `js/views/cl-checklist/cl-board.js` | 120 | 4 | ЧЕК-ЛИСТ CL: «Итог смены для доски» |
 | `js/views/toploss/toploss.js` | 509 | 19 | ВКЛАДКА «TOP Losses»: разбор потерь линии |
 | `js/views/toploss/toploss-check.js` | 473 | 13 | TOP LOSSES: проверка, сохранение, итог |
-| `js/views/history/history-data.js` | 271 | 24 | ИСТОРИЯ: данные |
-| `js/views/history/history.js` | 621 | 27 | ВКЛАДКА «История»: лента проверок и журнал отклонений |
+| `js/views/history/history-data.js` | 268 | 24 | ИСТОРИЯ: данные |
+| `js/views/history/history.js` | 510 | 24 | ВКЛАДКА «История»: лента проверок по дням и сменам |
 | `js/views/history/history-record.js` | 321 | 10 | ИСТОРИЯ: страница проверки (вместо окна «Просмотр проверки») |
-| `js/views/history/history-standard.js` | 201 | 6 | ИСТОРИЯ: история одного стандарта / E-Param |
+| `js/views/history/history-standard.js` | 194 | 6 | ИСТОРИЯ: история одного стандарта / E-Param |
 | `js/views/history/history-export.js` | 728 | 9 | ИСТОРИЯ: экспорт CSV / XLSX |
-| `js/views/dashboard.js` | 781 | 29 | ВКЛАДКА «Дашборд» |
+| `js/views/dashboard.js` | 615 | 24 | ВКЛАДКА «Дашборд» |
 | `js/views/editor/editor-core.js` | 803 | 19 | ВКЛАДКА «Стандарты CL»: каркас |
 | `js/views/editor/editor-mech.js` | 331 | 12 | СТАНДАРТЫ CL: таблица механических стандартов |
 | `js/views/editor/editor-elec.js` | 569 | 13 | СТАНДАРТЫ CL: таблица электронных параметров + Excel |
 | `js/views/editor/editor-bulk.js` | 144 | 9 | СТАНДАРТЫ CL: панель массовых действий над выбранными строками |
-| `js/views/editor/eparam-page.js` | 657 | 13 | СТРАНИЦА электронного параметра |
+| `js/views/editor/eparam-page.js` | 658 | 13 | СТРАНИЦА электронного параметра |
 | `js/views/editor/changelog-view.js` | 517 | 19 | СТАНДАРТЫ CL: ЛИСТ ИСТОРИИ ИЗМЕНЕНИЙ |
 | `js/views/standard-page/standard-page.js` | 753 | 20 | СТРАНИЦА стандарта: открытие, поля, точки |
 | `js/views/standard-page/standard-page-extra.js` | 621 | 10 | СТРАНИЦА стандарта: фото, связи, доп. информация, сохранение |
-| `js/views/schedule/schedule.js` | 918 | 28 | ВКЛАДКА «Расписание CL» |
+| `js/views/schedule/schedule.js` | 921 | 28 | ВКЛАДКА «Расписание CL» |
 | `js/views/schedule/schedule-add.js` | 446 | 8 | РАСПИСАНИЕ CL: добавление стандартов |
 | `js/views/schedule/schedule-downtime.js` | 154 | 8 | РАСПИСАНИЕ CL: простой линии |
 | `js/views/settings/settings-shell.js` | 154 | 9 | НАСТРОЙКИ: каркас вкладки |
@@ -162,22 +162,21 @@ JS — 69 модулей, 22007 строк, 780 функций · CSS — 40 ф�
 | js/views/toploss/toploss-check.js:205 | СОХРАНЕНИЕ | `saveTopLossCheck` |
 | js/views/toploss/toploss-check.js:285 | ИТОГ ПРОВЕРКИ | `renderTopLossSummary` |
 | js/views/toploss/toploss-check.js:368 | ОБРАБОТЧИКИ | `tlSelectItem`, `tlStep`, `tlAdvanceLater` |
-| js/views/history/history-data.js:1 | (начало модуля) | `histKind`, `histKindLabel`, `histIcon`, `histShift`, `histOrderKey`, `getHistoryModeText`, `formatClShift`, `histShiftLabel`, `histTime`, `histDayName`, `histDayTitle`, `histIsElecItem`, `histItemNorms`, `histItemValues` … +10 |
+| js/views/history/history-data.js:1 | (начало модуля) | `histKind`, `histKindLabel`, `histIcon`, `histShift`, `histOrderKey`, `getHistoryModeText`, `formatClShift`, `histTime`, `histDayName`, `histDayTitle`, `histIsElecItem`, `histItemNorms`, `histItemValues`, `histNum` … +10 |
 | js/views/history/history.js:1 | (начало модуля) | `loadHistFilters`, `saveHistFilters` |
-| js/views/history/history.js:31 | ФИЛЬТРЫ | `fillHistoryFilters`, `fillHistMachineFilter`, `histPeriodMatch`, `histSearchMatch`, `getFilteredHistory`, `histPickMatch` |
-| js/views/history/history.js:145 | РЕНДЕР | `histShowView`, `renderHistory`, `renderHistTotals`, `pluralRu`, `histIsoWeek`, `histCoverageHtml`, `histRecordContext`, `histRecordSub`, `histResultHtml`, `renderHistFeed`, `histRecHtml`, `histWeekCardHtml`, `histMarkPick`, `histDeviationEntries` … +3 |
-| js/views/history/history.js:537 | ОБРАБОТЧИКИ | `histFilterChanged`, `viewRecord` |
+| js/views/history/history.js:37 | ФИЛЬТРЫ | `fillHistoryFilters`, `histPeriodMatch`, `histSearchMatch`, `getFilteredHistory`, `histPickMatch` |
+| js/views/history/history.js:109 | РЕНДЕР | `histShowView`, `renderHistory`, `histActiveFilters`, `renderHistTotals`, `pluralRu`, `histIsoWeek`, `histRecordContext`, `histRecordSub`, `histResultHtml`, `renderHistFeed`, `histRecHtml`, `histWeekCardHtml`, `histCalHtml`, `histMarkPick` |
+| js/views/history/history.js:411 | ОБРАБОТЧИКИ | `histFilterChanged`, `histSetLine`, `viewRecord` |
 | js/views/history/history-record.js:1 | (начало модуля) | `histOpenSub`, `histBack`, `openHistoryRecord`, `openHistoryShift`, `histPageData`, `histNeighbors`, `histNavLabel`, `renderHistRecordPage`, `histItemHtml`, `histMjText` |
-| js/views/history/history-standard.js:1 | (начало модуля) | `openStandardHistory`, `histStdBack`, `histStdData`, `renderStandardHistory`, `histStdBuckets`, `histStdChart` |
+| js/views/history/history-standard.js:1 | (начало модуля) | `openStandardHistory`, `histStdBack`, `histStdData`, `histStdBrand`, `histStdWhereHtml`, `renderStandardHistory` |
 | js/views/history/history-export.js:7 | ЭКСПОРТ: детали и CSV | `buildDetailsText`, `buildDetailsTextForCsv`, `exportToCsv` |
 | js/views/history/history-export.js:94 | ЭКСПОРТ В XLSX (ExcelJS) | `exportToXlsx`, `buildSheetChecks`, `buildSheetAnalytics` |
 | js/views/history/history-export.js:472 | XLSX: лист «Потери» — аналитика по TOP Losses | `buildSheetLosses` |
 | js/views/history/history-export.js:589 | XLSX: лист «CL» — аналитика по Чек-листу CL (мех + электро) | `buildSheetCL` |
 | js/views/history/history-export.js:707 | СКАЧИВАНИЕ ФАЙЛОВ | `downloadBlob` |
-| js/views/dashboard.js:27 | ДАННЫЕ | `dashSlots`, `dashSlotKey`, `dashFirstDate`, `dashLines`, `dashClMetrics`, `dashRecords`, `dashSummary`, `dashFailStreak`, `dashAttention`, `dashWeeks` |
-| js/views/dashboard.js:206 | РЕНДЕР: ГЛАВНЫЙ ЭКРАН | `renderDashboard`, `dashTop`, `dashTopHtml` |
-| js/views/dashboard.js:303 | ВКЛАДКА «СЕЙЧАС»: состояние текущей смены | `dashNowLine`, `dashWindowPassed`, `dashNowKpis`, `dashNowLineHtml`, `dashNowLinesHtml`, `dashNowListHtml`, `renderDashboardNow`, `renderDashboardHead`, `dashDelta`, `dashKpisHtml`, `dashLineColor`, `dashMapHtml`, `dashAttentionHtml`, `dashTrendHtml` |
-| js/views/dashboard.js:597 | ПАСПОРТ ЛИНИИ | `openDashboardLine`, `renderDashboardLine` |
+| js/views/dashboard.js:26 | ДАННЫЕ | `dashSlots`, `dashSlotKey`, `dashFirstDate`, `dashLines`, `dashClMetrics`, `dashRecords`, `dashSummary`, `dashWeeks` |
+| js/views/dashboard.js:179 | РЕНДЕР: ГЛАВНЫЙ ЭКРАН | `renderDashboard`, `dashShareText`, `dashDoneCell`, `dashFailCell`, `dashPartRowsHtml`, `dashTreeHtml`, `renderDashboardHead`, `dashDelta`, `dashKpisHtml`, `dashWeeksHtml`, `dashLettersHtml` |
+| js/views/dashboard.js:398 | ПАСПОРТ ЛИНИИ: «дашборд одной линии» — показатели, оборудова | `openDashboardLine`, `dashMachines`, `dashEquipHtml`, `dashLineSideHtml`, `renderDashboardLine` |
 | js/views/editor/editor-core.js:8 | РЕДАКТОР: недавние линии и режим просмотра | `getRecentLines`, `addRecentLine`, `getRecentStandards`, `addRecentStandard`, `renderEditorRecentStd` |
 | js/views/editor/editor-core.js:141 | Выбор линии | `selectLine` |
 | js/views/editor/editor-core.js:192 | Обновление UI: чип + крошки + счётчики | `updateEditorLineContext`, `buildEditorCrumbs` |
@@ -248,11 +247,11 @@ JS — 69 модулей, 22007 строк, 780 функций · CSS — 40 ф�
 | `css/base.css` | 201 | BASE — переменные, сброс, типографика, ф; ТЕМА: Дневная (light) — по умолчанию; ТЕМА: Ночная (dark) — «Pit Wall»; Сброс; Формы; Скроллбар |
 | `css/layout.css` | 404 | LAYOUT — header, sidebar, main, tabs, fo; Header; Layout; Вкладки; Sidebar; Кнопка закрепления sidebar … +7 |
 | `css/components/ui-base.css` | 534 | Cards; Layout; Кнопки; Checklist items; Ответ в чек-листе: всё в одну строку; Иконка комментария … +9 |
-| `css/views/cocl-panel.css` | 488 | COCL: две панели — условия слева, чек-ли; Условия; Чек-лист |
+| `css/views/cocl-panel.css` | 475 | COCL: две панели — условия слева, чек-ли; Условия; Чек-лист |
 | `css/components/forms.css` | 137 | Компактные чекбоксы типов (Редактор); Импорт: отчёт по ошибкам; Компактный список с поиском |
 | `css/components/points.css` | 56 | Панель кнопок внизу карточки; Форма стандарта; Строка «селект + кнопка» |
 | `css/views/settings-photo-card.css` | 78 | Карточка «Хранилище фото» |
-| `css/views/dashboard.css` | 150 | ВКЛАДКА «ДАШБОРД»: карта производства и ; Показатели; Карта: цеха → участки → линии; Требует внимания; Строки списков; График недель … +5 |
+| `css/views/dashboard.css` | 131 | ВКЛАДКА «ДАШБОРД»: карта производства и ; Показатели; Строки списков; Паспорт линии; Паспорт линии: метки настройки в шапке; ДАШБОРД: таблица «линия → часть → машина … +4 |
 | `css/components/photos.css` | 259 | Результат проверки фото; Строка добавления фото (textarea + кнопк; МОДАЛКА ПРОСМОТРА СТАНДАРТА; ЛАЙТБОКС; Лайтбокс: счётчик фото |
 | `css/components/theme-transition.css` | 17 |  |
 | `css/views/editor-table.css` | 196 | Блоки в редакторе — плитки; Пагинация; ТАБЛИЦА СТАНДАРТОВ; Кнопки-иконки (векторные SVG); Кнопки «иконка + текст» |
@@ -265,26 +264,26 @@ JS — 69 модулей, 22007 строк, 780 функций · CSS — 40 ф�
 | `css/views/editor.css` | 805 | Редактор: список линий в блоке; CL Electronic: аккордеон в «Параметры на; РЕДАКТОР: чипы типов (ChangeOver / CL_TO; РЕДАКТОР: единая панель + фильтры + табл; РЕДАКТОР: карточка таблицы; РЕДАКТОР: таблица стандартов … +10 |
 | `css/components/line-picker.css` | 319 | МОДАЛКА-ВЫБОР ЛИНИИ (двухпанельная) |
 | `css/views/editor-part-switch.css` | 75 | РЕДАКТОР: переключатель по части линии |
-| `css/views/schedule.css` | 524 | РАСПИСАНИЕ CL: матрица (с инфо-колонками; Тулбар над матрицей: фильтр+поиск слева,; Пустое состояние; Панель массовых операций; Адаптив; РАСПИСАНИЕ CL: модалка добавления станда … +2 |
+| `css/views/schedule.css` | 527 | РАСПИСАНИЕ CL: матрица (с инфо-колонками; Тулбар над матрицей: фильтр+поиск слева,; Пустое состояние; Панель массовых операций; Адаптив; РАСПИСАНИЕ CL: модалка добавления станда … +3 |
 | `css/views/cl-checklist.css` | 73 | ПРОВЕРКА CL: контекстная строка; Итог смены для доски |
 | `css/views/standard-page.css` | 921 | ПОЛНОЭКРАННЫЙ СТАНДАРТ (sv-full); Шапка; Вкладки внутри; Контент; Карточки; Поля «Основная информация» … +10 |
 | `css/views/eparam-page.css` | 115 | СТРАНИЦА ЭЛЕКТРОННОГО ПАРАМЕТРА |
 | `css/views/changelog.css` | 133 | СТАНДАРТЫ CL: ЛИСТ ИСТОРИИ ИЗМЕНЕНИЙ |
 | `css/components/line-brand.css` | 62 | БРЕНД НА ЛИНИИ (Чек-лист CL, Расписание  |
 | `css/views/settings.css` | 901 | НАСТРОЙКИ: каркас, меню разделов, справо; СТРУКТУРА: дерево + карточка линии; TOP LOSSES: категории цеха карточками; Адаптив; СТРУКТУРА: перенос линии; БРЕНДЫ: сетка плиток … +2 |
-| `css/views/history.css` | 399 | ВКЛАДКА «ИСТОРИЯ»: лента, покрытие смен,; Шапка: заголовок, режим, период, Excel; KPI; Фильтры; Покрытие смен; Лента проверок … +8 |
+| `css/views/history.css` | 364 | ВКЛАДКА «ИСТОРИЯ»: лента, покрытие смен,; Шапка: заголовок, режим, период, Excel; Фильтры; Покрытие смен; Лента проверок; Страница проверки … +9 |
 | `css/components/cil-table.css` | 595 | ТАБЛИЦА НЕДЕЛИ В СТИЛЕ CIL; Чек-лист CL и Расписание CL; ЧЕК-ЛИСТ CL: колонка «Когда» (Run / Stop; ДОЛГ ПРОВЕРОК И ПРОСТОЙ ЛИНИИ |
 | `css/components/legend.css` | 26 | ЛЕГЕНДА ТАБЛИЦ |
 | `css/components/tab-head.css` | 102 | ШАПКА ВКЛАДКИ: цветная плашка с шагами |
 | `css/components/photo-slider.css` | 177 | СЛАЙДЕР ФОТО СТАНДАРТА |
 | `css/components/standard-view.css` | 360 | ОКНО ПРОСМОТРА СТАНДАРТА (#standardViewM |
 | `css/views/quick-check.css` | 456 | БЫСТРАЯ ПРОВЕРКА (#quickCheckModal) — ме; ТОЧКА-МЕТКА: ОК / Не ОК вместо поля ввод |
-| `css/components/validation.css` | 181 | ВАЛИДАЦИЯ НОВОГО СТАНДАРТА / E-PARAM |
+| `css/components/validation.css` | 182 | ВАЛИДАЦИЯ НОВОГО СТАНДАРТА / E-PARAM |
 | `css/components/std-comments.css` | 161 | КОММЕНТАРИИ К СТАНДАРТУ / E-PARAM |
 | `css/components/std-ack.css` | 95 | ОЗНАКОМЛЕНИЕ СО СТАНДАРТОМ |
 | `css/components/notify.css` | 114 | КОЛОКОЛЬЧИК УВЕДОМЛЕНИЙ |
 | `css/components/check-run.css` | 497 | ОКНО ПРОВЕРКИ: список слева — стандарт с; Левая панель: шапка; Левая панель: пункты; Левая панель: сохранение; Правая часть: выбранный стандарт; CL при переходах: во время проверки окно … +1 |
-| `css/brand.css` | 222 | БРЕНД BFT — Building the Future of Tobac; Шапка; Логотип; Смена, время и «круг смены»; Кнопка темы — шлем; Боковое меню … +3 |
+| `css/brand.css` | 220 | БРЕНД BFT — Building the Future of Tobac; Шапка; Логотип; Смена, время и «круг смены»; Кнопка темы — шлем; Боковое меню … +3 |
 
 ## Ключи localStorage
 
@@ -302,11 +301,10 @@ JS — 69 модулей, 22007 строк, 780 функций · CSS — 40 ф�
 | `cl_cl_part` | js/views/cl-checklist/cl-checklist.js:46 |
 | `cl_current_user` | js/views/cocl/cocl.js:190 |
 | `cl_custom_triggers_v1` | STORAGE_KEYS.customTriggers (js/core/state.js) |
-| `cl_dashboard_from` | js/views/dashboard.js:22 |
-| `cl_dashboard_period` | js/views/dashboard.js:18 |
-| `cl_dashboard_to` | js/views/dashboard.js:23 |
-| `cl_dashboard_view` | js/views/dashboard.js:17 |
-| `cl_dashboard_workshop` | js/views/dashboard.js:212 |
+| `cl_dashboard_from` | js/views/dashboard.js:21 |
+| `cl_dashboard_period` | js/views/dashboard.js:16 |
+| `cl_dashboard_to` | js/views/dashboard.js:22 |
+| `cl_dashboard_workshop` | js/views/dashboard.js:185 |
 | `cl_editor_block` | js/core/modal.js:130 |
 | `cl_editor_line` | js/router.js:118 |
 | `cl_editor_mode` | js/router.js:103 |

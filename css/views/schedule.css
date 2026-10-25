@@ -521,3 +521,6 @@
   font-size: 13px;
   color: var(--text-dim);
 }
+
+/* === РАСПИСАНИЕ CL: колонка «Когда» как в Чек-листе; «Смен» шире — кнопки все/день/ночь === */
+#tab-schedule .cil-table.cil-has-when { --cil-third-w: 124px; }

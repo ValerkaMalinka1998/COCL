@@ -18,7 +18,7 @@
 .dash-g3 { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 12px; align-items: start; }
 
 /* === Показатели === */
-.dash-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.dash-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
 .dash-kpi {
   padding: 12px 14px; border-radius: 12px; background: var(--bg-card);
   border: 1px solid var(--border); box-shadow: var(--card-shadow);
@@ -30,45 +30,6 @@
 .dash-kpi span { font-size: 11px; color: var(--text-dim); }
 .dash-d { font-style: normal; font-size: 11px; font-weight: 800; margin-left: 6px; color: var(--text-dim); white-space: nowrap; }
 
-/* === Карта: цеха → участки → линии === */
-.dash-ws { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
-.dash-wsc { border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: var(--bg-card); min-width: 0; }
-.dash-wsc h4 { margin: 0; font-size: 15px; display: flex; justify-content: space-between; gap: 8px; color: var(--text-main); }
-.dash-wsc h4 span { font-size: 11px; color: var(--text-dim); font-weight: 600; }
-.dash-area { margin-top: 10px; }
-.dash-area-h { font-size: 11px; font-weight: 800; color: var(--text-second); text-transform: uppercase; letter-spacing: .4px; }
-.dash-lines { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 6px; margin-top: 6px; }
-.dash-ln {
-  --k: var(--border-hi);
-  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
-  border: 1px solid var(--border); border-top: 4px solid var(--k); border-radius: 8px;
-  padding: 6px 7px; background: var(--bg-card); cursor: pointer; font: inherit; color: inherit; text-align: left; min-width: 0;
-}
-.dash-ln:hover { background: var(--bg-hover); }
-.dash-ln b { font-size: 12.5px; color: var(--text-main); overflow-wrap: anywhere; }
-.dash-ln-p { font-size: 16px; font-weight: 800; color: var(--k); }
-.dash-ln-s { font-size: 10px; color: var(--text-dim); }
-.dash-ln-green { --k: var(--accent-green); }
-.dash-ln-amber { --k: var(--accent-amber); }
-.dash-ln-red { --k: var(--accent-red); }
-.dash-ln-none { opacity: .6; }
-.dash-ln-none .dash-ln-p { color: var(--text-dim); }
-
-/* === Требует внимания === */
-.dash-att {
-  --k: var(--accent-cyan);
-  display: block; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer;
-  border: 0; border-left: 4px solid var(--k); padding: 8px 10px; border-radius: 8px; margin-bottom: 8px;
-  background: color-mix(in srgb, var(--k) 7%, var(--bg-card));
-}
-.dash-att:hover { background: color-mix(in srgb, var(--k) 13%, var(--bg-card)); }
-.dash-att b { display: block; font-size: 12.5px; color: var(--text-main); }
-.dash-att span { display: block; font-size: 11px; color: var(--text-second); margin-top: 2px; }
-.dash-att-red { --k: var(--accent-red); }
-.dash-att-amber { --k: var(--accent-amber); }
-.dash-att-purple { --k: var(--accent-purple); }
-.dash-att-cyan { --k: var(--accent-cyan); }
-
 /* === Строки списков === */
 .dash-li {
   display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%;
@@ -78,18 +39,6 @@
 .dash-li:last-child { border-bottom: 0; }
 button.dash-li { cursor: pointer; }
 button.dash-li:hover { background: var(--bg-hover); }
-.dash-li-bar { display: block; }
-.dash-li-bar > div:first-child { display: flex; justify-content: space-between; gap: 10px; }
-.dash-bar { height: 6px; border-radius: 3px; background: var(--bg-input); overflow: hidden; margin-top: 5px; }
-.dash-bar i { display: block; height: 100%; background: var(--accent-red); }
-
-/* === График недель === */
-.dash-chart { display: block; max-height: 280px; }
-.dash-chart text { font-size: 10px; fill: var(--text-dim); }
-.dash-ch-grid { stroke: var(--border); }
-.dash-ch-bar { fill: var(--accent-red); opacity: .75; }
-.dash-ch-line { fill: none; stroke: var(--accent-green); stroke-width: 2.5; }
-.dash-ch-pt { fill: var(--bg-card); stroke: var(--accent-green); stroke-width: 2; }
 
 /* === Паспорт линии === */
 .dash-line-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -102,48 +51,80 @@ button.dash-li:hover { background: var(--bg-hover); }
 }
 .dash-custom { padding: 0; flex-basis: 100%; }
 
-/* Топ по отклонениям: машины и линии */
-.dash-top + .dash-top { margin-top: 14px; }
-.dash-top-h {
-  font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
-  color: var(--text-dim); margin-bottom: 6px;
-}
-.dash-li-bar[role="button"] { cursor: pointer; }
-
-/* === ВКЛАДКА «СЕЙЧАС»: текущая смена === */
-.dash-kpi-now b { color: var(--accent-cyan); font-size: 17px; }
-.dash-now-line {
-  display: grid; grid-template-columns: 76px 1fr 64px auto; align-items: center; gap: 12px;
-  width: 100%; padding: 10px 12px; margin-bottom: 6px; text-align: left;
-  border: 1px solid var(--border); border-left: 3px solid var(--border-hi);
-  border-radius: 10px; background: var(--bg-card); font: inherit; cursor: pointer;
-}
-.dash-now-line:hover { background: var(--bg-hover); }
-.dash-now-name { font-weight: 800; color: var(--text-main); }
-.dash-now-bar { height: 8px; border-radius: 999px; background: var(--bg-input); overflow: hidden; }
-.dash-now-bar i { display: block; height: 100%; background: var(--accent-cyan); }
-.dash-now-num { font-family: var(--font-mono); font-size: 12px; color: var(--text-second); text-align: right; }
-.dash-now-tags { display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-.dash-now-green { border-left-color: var(--accent-green); }
-.dash-now-green .dash-now-bar i { background: var(--accent-green); }
-.dash-now-amber { border-left-color: var(--accent-amber); }
-.dash-now-amber .dash-now-bar i { background: var(--accent-amber); }
-.dash-now-red { border-left-color: var(--accent-red); }
-.dash-now-red .dash-now-bar i { background: var(--accent-red); }
-.dash-view-seg button.on { background: var(--accent-cyan); color: var(--on-accent); }
-
 /* === Паспорт линии: метки настройки в шапке === */
 .dash-cfg { padding: 3px 10px; border-radius: 999px; font: inherit; font-size: 11.5px; font-weight: 700; color: var(--text-second); background: var(--bg-hover); border: 1px solid var(--border); white-space: nowrap; }
 .dash-cfg-warn { color: var(--accent-amber); border-color: color-mix(in srgb, var(--accent-amber) 40%, transparent); background: color-mix(in srgb, var(--accent-amber) 10%, transparent); cursor: pointer; }
 
-/* === «Сейчас»: заголовки цехов === */
-.dash-now-ws { display: flex; align-items: center; gap: 8px; margin: 14px 0 4px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
-.dash-now-ws:first-child { margin-top: 0; }
-.dash-now-ws b { font-size: 12px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--text-main); }
-.dash-now-ws small { font-size: 11.5px; color: var(--text-dim); margin-right: auto; }
+/* === ДАШБОРД: таблица «линия → часть → машина» === */
+.dash-tr-wrap { overflow-x: auto; }
+.dash-tr { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.dash-tr th { text-align: left; font-size: 10.5px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; color: var(--text-second); padding: 6px 10px; border-bottom: 1px solid var(--border); }
+.dash-tr td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--text-main); white-space: nowrap; }
+.dash-tr td:first-child { width: 30%; }
+.dash-tr-line td { background: var(--bg-hover); font-weight: 700; }
+.dash-tr-tg { border: 0; background: none; font: inherit; font-weight: 800; color: var(--text-main); cursor: pointer; padding: 0; }
+.dash-tr-tg:hover { color: var(--accent-cyan); }
+.dash-tr-go { border: 1px solid var(--border-hi); border-radius: 8px; background: var(--bg-card); font: inherit; font-size: 11.5px; font-weight: 800; color: var(--accent-cyan); padding: 3px 10px; cursor: pointer; }
+.dash-tr-part td:first-child { padding-left: 28px; font-weight: 700; }
+.dash-tr-mach td:first-child { padding-left: 48px; color: var(--text-second); }
+.dash-tr-mach-top td:first-child { padding-left: 28px; }
+.dash-bar { height: 6px; border-radius: 3px; background: var(--bg-input); overflow: hidden; margin-top: 5px; }
+.dash-bar i { display: block; height: 100%; background: var(--accent-red); }
+.dash-bar-done { display: inline-block; width: 80px; margin: 0 0 0 8px; vertical-align: middle; }
+.dash-bar-done i { background: var(--accent-cyan); }
+.dash-tr-idle { margin-top: 8px; }
 
-/* === ДАШБОРД: честные цифры (подписи шкал, мало проверок) === */
-.dash-chart text.dash-ch-cap { font-size: 10.5px; font-weight: 700; fill: var(--text-second); }
-.dash-chart text.dash-ch-num { font-size: 10px; fill: var(--text-second); }
-.dash-li-few span, .dash-li-few b { color: var(--text-dim); }
-.dash-li-few .dash-bar i { background: var(--border-hi); }
+/* === ДАШБОРД: динамика по неделям — две строки графика с общими неделями === */
+.dash-wk { display: grid; grid-template-columns: 112px repeat(6, minmax(0, 1fr)); column-gap: 8px; align-items: end; }
+.dash-wk-rl { align-self: center; font-size: 12px; font-weight: 800; color: var(--text-main); line-height: 1.25; }
+.dash-wk-rl small { display: block; font-size: 10.5px; font-weight: 600; color: var(--text-dim); }
+.dash-wk-cell { position: relative; height: 130px; padding-top: 22px; box-sizing: border-box; display: flex; align-items: flex-end; justify-content: center; border-bottom: 1px solid var(--border-hi); }
+.dash-wk-fail { height: 100px; margin-top: 14px; }
+.dash-wk-bar { position: relative; width: 60%; max-width: 44px; min-height: 2px; border-radius: 6px 6px 0 0; background: var(--accent-cyan); }
+.dash-wk-fail .dash-wk-bar { background: var(--accent-red); }
+.dash-wk-bar em { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 3px; font-style: normal; font-size: 12px; font-weight: 800; color: var(--text-main); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dash-wk-fail .dash-wk-bar em { color: var(--accent-red); }
+.dash-wk-fail.is-zero .dash-wk-bar { background: transparent; }
+.dash-wk-fail.is-zero .dash-wk-bar em { color: var(--text-dim); font-weight: 600; }
+.dash-wk-na { font-size: 11px; color: var(--text-dim); padding-bottom: 4px; }
+.dash-wk-lbl { padding-top: 6px; text-align: center; font-size: 11.5px; font-weight: 700; color: var(--text-second); }
+
+/* === ДАШБОРД: смены A / B / C / D === */
+.dash-lt { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.dash-lt-c { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font-size: 12px; display: flex; flex-direction: column; gap: 3px; }
+.dash-lt-c b { font-size: 22px; color: var(--text-main); display: inline; }
+.dash-lt-c b.hist-c-ok { color: var(--accent-green); }
+.dash-lt-c b.hist-c-warn { color: var(--accent-amber); }
+.dash-lt-c b.hist-c-fail { color: var(--accent-red); }
+.dash-lt-c .dash-bar-done { width: 100%; margin: 2px 0 4px; }
+.dash-lt-h { font-size: 11px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; color: var(--text-second); }
+@media (max-width: 760px) { .dash-lt { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* === ДАШБОРД: группы участков в таблице линий === */
+.dash-tr-grp td { background: var(--bg-input); font-size: 12px; font-weight: 800; color: var(--text-main); padding: 7px 10px; }
+.dash-tr-grp td span { margin-left: 8px; font-weight: 600; color: var(--text-dim); }
+.dash-tr-line.is-bad td:first-child { box-shadow: inset 3px 0 0 var(--accent-red); }
+.dash-tr-line.is-warn td:first-child { box-shadow: inset 3px 0 0 var(--accent-amber); }
+
+
+/* === ПАСПОРТ ЛИНИИ: оборудование плитками === */
+.dash-eq { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.dash-eq-part { border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+.dash-eq-h { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.dash-eq-h b { font-size: 15px; color: var(--text-main); }
+.dash-eq-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.dash-eq-t { --k: var(--accent-green); display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; box-shadow: inset 0 3px 0 var(--k); background: var(--bg-card); font: inherit; text-align: left; color: var(--text-main); cursor: pointer; }
+.dash-eq-t:hover { background: var(--bg-hover); }
+.dash-eq-t b { font-size: 15px; }
+.dash-eq-t small { font-size: 11.5px; color: var(--text-second); }
+.dash-eq-t .hist-tag { margin-top: 2px; }
+.dash-eq-t.is-bad { --k: var(--accent-red); background: color-mix(in srgb, var(--accent-red) 5%, var(--bg-card)); border-color: color-mix(in srgb, var(--accent-red) 35%, var(--border)); }
+.dash-eq-t.is-warn { --k: var(--accent-amber); background: color-mix(in srgb, var(--accent-amber) 6%, var(--bg-card)); border-color: color-mix(in srgb, var(--accent-amber) 35%, var(--border)); }
+.dash-eq-t.is-on { outline: 2px solid var(--accent-cyan); outline-offset: 1px; }
+.dash-eq-back { margin-left: auto; border: 0; background: none; font: inherit; font-size: 11.5px; font-weight: 800; text-transform: none; letter-spacing: 0; color: var(--accent-cyan); cursor: pointer; }
+/* Паспорт: высоту ряда задаёт «Оборудование» (не меньше 360px), список справа прокручивается внутри */
+.dash-g3.dash-pass-top { align-items: stretch; }
+.dash-pass-top > .card { min-height: 360px; }
+.dash-side { position: relative; }
+.dash-side-in { position: absolute; inset: 14px 16px; overflow-y: auto; }
+@media (max-width: 1100px) { .dash-side-in { position: static; max-height: 480px; } }

@@ -33,9 +33,6 @@ const HIST_COCL_TYPES = {
   CL_Conversion: 'CL в Конвертацию'
 };
 
-/* Сколько дней показывает «История стандарта» максимум */
-const HIST_STD_MAX_DAYS = 90;
-
 function histKind(h) {
   if (h.mode === 'toploss') return 'toploss';
   if (h.mode === 'cl') return 'cl';
@@ -84,10 +81,6 @@ function getHistoryModeText(h) {
 function formatClShift(h) {
   const s = histShift(h);
   return (s.shift === 'day' ? 'День' : 'Ночь') + (s.letter ? ' · ' + s.letter : '');
-}
-
-function histShiftLabel(s, withLetter = true) {
-  return (s.shift === 'day' ? 'день' : 'ночь') + (withLetter && s.letter ? ' · ' + s.letter : '');
 }
 
 function histTime(h) {
@@ -218,9 +211,13 @@ function histWeekStartOf(dateStr) {
    смена: { letter, planned, done, fail, unchecked, late, state }
    late — пропущено в этой смене, закрыто позже (входит в done) */
 function histCoverage(line, weekOffset = 0) {
-  const days = getClWeekDays(weekOffset);
+  return histCoverageDays(line, getClWeekDays(weekOffset));
+}
+
+/* Состояние смен линии по списку дат (неделя или месяц календаря) */
+function histCoverageDays(line, days) {
   const rows = clLineRows(line);
-  const tally = clTallyIndex(line, days[0], days[6], rows);
+  const tally = clTallyIndex(line, days[0], days[days.length - 1], rows);
   const cur = getCurrentShiftPeriod();
   return days.map(dateStr => {
     const letters = getShiftsForDate(dateStr);
