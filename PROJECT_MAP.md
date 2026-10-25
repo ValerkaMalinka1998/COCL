@@ -1,8 +1,8 @@
 # Карта проекта COCL
 
-Сгенерировано 2026-10-25 по коммиту `a94d0b4 Аврора: шапка .page-head у Стандартов CL, Дашборда и Истории` скриптом `.claude/skills/cocl-session-close/scripts/gen_project_map.py` — пересоздавайте после крупных правок.
+Сгенерировано 2026-10-25 по коммиту `adbccc2 Импорт OPL: фото по месту на листе, «Пустых листов» в отчёте` скриптом `.claude/skills/cocl-session-close/scripts/gen_project_map.py` — пересоздавайте после крупных правок.
 
-JS — 69 модулей, 21223 строк, 759 функций · CSS — 40 файлов, 11214 строк.
+JS — 70 модулей, 21442 строк, 766 функций · CSS — 40 файлов, 11214 строк.
 Как искать: модуль по назначению → раздел в таблице ниже → `Grep` по имени функции в этом файле.
 
 ## JS-модули (в порядке подключения в index.html)
@@ -43,7 +43,7 @@ JS — 69 модулей, 21223 строк, 759 функций · CSS — 40 ф�
 | `js/components/mj-notice.js` | 72 | 2 | КОМПОНЕНТЫ: уведомление «Сделайте запись в Machine Journal» |
 | `js/components/line-brand-picker.js` | 54 | 2 | КОМПОНЕНТЫ: «Бренд на линии» — плашка и окно выбора |
 | `js/io/excel-common.js` | 57 | 1 | EXCEL: общие функции шаблонов |
-| `js/io/standards-io.js` | 568 | 18 | EXCEL: шаблон, экспорт и импорт стандартов линии |
+| `js/io/standards-io.js` | 732 | 23 | EXCEL: шаблон, экспорт и импорт стандартов линии |
 | `js/views/brand-schedule.js` | 396 | 7 | ВКЛАДКА CL: расписание брендов |
 | `js/views/cocl/cocl.js` | 1037 | 33 | ВКЛАДКА «CL при переходах» |
 | `js/views/cocl/cocl-save.js` | 183 | 2 | ВКЛАДКА «CL при переходах»: сохранение |
@@ -70,13 +70,14 @@ JS — 69 модулей, 21223 строк, 759 функций · CSS — 40 ф�
 | `js/views/schedule/schedule.js` | 921 | 28 | ВКЛАДКА «Расписание CL» |
 | `js/views/schedule/schedule-add.js` | 446 | 8 | РАСПИСАНИЕ CL: добавление стандартов |
 | `js/views/schedule/schedule-downtime.js` | 154 | 8 | РАСПИСАНИЕ CL: простой линии |
-| `js/views/settings/settings-shell.js` | 154 | 9 | НАСТРОЙКИ: каркас вкладки |
+| `js/views/settings/settings-shell.js` | 155 | 9 | НАСТРОЙКИ: каркас вкладки |
 | `js/views/settings/structure-tree.js` | 659 | 18 | НАСТРОЙКИ: структура производства — дерево и карточка линии |
 | `js/views/settings/shifts.js` | 218 | 8 | НАСТРОЙКИ: график смен |
 | `js/views/settings/toplosses.js` | 471 | 9 | НАСТРОЙКИ: Top Losses |
 | `js/views/settings/brands.js` | 334 | 6 | НАСТРОЙКИ: общий список брендов |
 | `js/views/settings/operators.js` | 208 | 7 | НАСТРОЙКИ: операторы |
 | `js/views/settings/triggers.js` | 184 | 6 | НАСТРОЙКИ: триггеры Change Over |
+| `js/views/settings/opl-import.js` | 54 | 2 | НАСТРОЙКИ: импорт бланков OPL из журнала |
 | `js/views/settings/photos.js` | 380 | 10 | НАСТРОЙКИ: хранилище и проверка фото |
 | `js/components/hotkeys.js` | 75 | 4 | ГОРЯЧИЕ КЛАВИШИ |
 | `js/app.js` | 195 | 7 | ЗАПУСК ПРИЛОЖЕНИЯ |
@@ -132,6 +133,7 @@ JS — 69 модулей, 21223 строк, 759 функций · CSS — 40 ф�
 | js/io/standards-io.js:288 | РЕДАКТОР: скачать шаблон для линии | `editorDownloadTemplate` |
 | js/io/standards-io.js:325 | РЕДАКТОР: экспорт стандартов линии в XLSX | `editorExportLine` |
 | js/io/standards-io.js:353 | ИМПОРТ: разбор файла (новый и старый формат листа «Точки») | `xlCellText`, `xlIsBareFormula`, `parseStandardsExcelV3` |
+| js/io/standards-io.js:569 | ИМПОРТ: бланк OPL из журнала (один лист — один стандарт) | `oplCleanValue`, `oplDurationSec`, `oplDate`, `oplSheetToStandard`, `parseOplJournalExcel` |
 | js/views/brand-schedule.js:8 | CL ELECTRONIC — расписание брендов | `getElectronicBrandSchedule`, `setElectronicBrandSchedule` |
 | js/views/brand-schedule.js:29 | CL ELECTRONIC — модалка «Расписание брендов» | `openElectronicBrandSchedule`, `closeElectronicBrandSchedule`, `fillBrandSelectOptions` |
 | js/views/brand-schedule.js:108 | Режим «По дням» — рендер строк | `renderEbsDailyRows` |
@@ -214,7 +216,7 @@ JS — 69 модулей, 21223 строк, 759 функций · CSS — 40 ф�
 | js/views/schedule/schedule-downtime.js:9 | ПРОСТОЙ — ОКНО | `openScheduleDowntimeModal`, `closeScheduleDowntimeModal`, `readSchDowntimeForm`, `syncSchDowntimeForm`, `saveSchDowntime` |
 | js/views/schedule/schedule-downtime.js:84 | ПРОСТОЙ — СПИСОК ЛИНИИ | `renderSchDowntimeList`, `endSchDowntime`, `deleteSchDowntime` |
 | js/views/settings/settings-shell.js:23 | ОТРИСОВКА ВСЕЙ ВКЛАДКИ | `renderSettings`, `getSavedSettingsPanel`, `showSettingsPanel`, `updateSettingsNavCounts` |
-| js/views/settings/settings-shell.js:78 | ОБЩИЕ ПОМОЩНИКИ РАЗДЕЛОВ | `settingsChipsHtml`, `settingsSearchHtml`, `settingsHighlight`, `startInlineEdit`, `settingsWorkshopChipItems` |
+| js/views/settings/settings-shell.js:79 | ОБЩИЕ ПОМОЩНИКИ РАЗДЕЛОВ | `settingsChipsHtml`, `settingsSearchHtml`, `settingsHighlight`, `startInlineEdit`, `settingsWorkshopChipItems` |
 | js/views/settings/structure-tree.js:20 | ДАННЫЕ | `stFindOwner`, `stDetachLine`, `stLineUsage`, `stOrphanLines`, `stAddLine`, `stMoveLine`, `stDeleteLine`, `stAddBlock`, `stRenameBlock`, `stDeleteBlock`, `stAddMachine`, `stRenameMachine`, `removeMachineFromLine`, `stToggleBrand` … +2 |
 | js/views/settings/structure-tree.js:275 | ДЕРЕВО | `renderStructureSettings` |
 | js/views/settings/structure-tree.js:405 | КАРТОЧКА ЛИНИИ | `renderStructureLineCard` |
@@ -226,6 +228,7 @@ JS — 69 модулей, 21223 строк, 759 функций · CSS — 40 ф�
 | js/views/settings/brands.js:217 | ИМПОРТ/ЭКСПОРТ БРЕНДОВ | `parseBrandsExcel` |
 | js/views/settings/operators.js:7 | ОПЕРАТОРЫ — строки + inline + пагинация | `renderOperatorsSettings`, `highlightOperatorName`, `renderOperatorsPagination`, `changeOperatorsPage`, `sortOperatorsRus`, `openAddOperatorModal`, `closeAddOperatorModal` |
 | js/views/settings/triggers.js:7 | НАСТРОЙКИ: пользовательские триггеры Change Over | `renderCustomTriggersSettings`, `addCustomTriggerInline`, `updateCustomTrigger`, `deleteCustomTrigger`, `getAvailableLines`, `getBrandsForLine` |
+| js/views/settings/opl-import.js:1 | (начало модуля) | `renderOplImportSettings`, `oplImportSyncPart` |
 | js/views/settings/photos.js:7 | КАРТОЧКА «ХРАНИЛИЩЕ ФОТО» | `renderPhotoStorageSettings` |
 | js/views/settings/photos.js:28 | ПРОВЕРКА ФОТОГРАФИЙ НА БИТЫЕ ССЫЛКИ | `checkPhotoExists`, `runPhotosCheck`, `renderPhotosCheckResult`, `buildPhotosCheckReport`, `closePhotosCheckModal` |
 | js/views/settings/photos.js:232 | ХРАНИЛИЩЕ ФОТО — обработчики | `fallbackCopy` |
