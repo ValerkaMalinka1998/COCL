@@ -304,24 +304,8 @@ header::before {
   visibility: visible;
   transition: opacity 0.2s ease 0.1s, visibility 0s;
 }
-/* ============ Заголовки групп в sidebar ============ */
-.nav-group-title {
-  display: none;
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--nav-text-dim);
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  padding: 12px 22px 4px;
-  opacity: 0.75;
-  white-space: nowrap;
-  user-select: none;
-}
-/* Показываем заголовки только в раскрытом sidebar */
-.sidebar:hover .nav-group-title,
-.sidebar.expanded .nav-group-title {
-  display: block;
-}
+/* Распорка: прижимает «Настройки» к низу меню */
+.sidebar-spacer { flex: 1; min-height: 8px; }
 
 /* ============ Main ============ */
 main {

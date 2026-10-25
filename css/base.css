@@ -107,6 +107,7 @@
 
   /* Шапка */
   --header-bg:    rgba(255, 255, 255, 0.55);
+  --logo-color:   #023372;   /* фирменный синий BFT */
   --header-strip: linear-gradient(90deg, #38bdf8, #5b4ff0 50%, #2dd4bf);
 
   /* Стекло, градиенты, фон */
@@ -208,6 +209,7 @@
   --glow-cyan-sm: 0 0 0 transparent;
 
   --header-bg:    rgba(20, 20, 48, 0.55);
+  --logo-color:   #eeedff;
   --header-strip: linear-gradient(90deg, #38bdf8, #a78bfa 50%, #2dd4bf);
 
   --grad-primary: linear-gradient(135deg, #60a5fa, #a78bfa);
