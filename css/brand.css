@@ -109,19 +109,12 @@ header.bft-header .header-right {
 /* ============ Карточки и заголовки ============ */
 /* Заголовки вкладок — широкий Unbounded */
 .card > h2,
-.dash-title,
-.hist-title,
-.hist-rp-tt h2,
-.editor-panel-title {
+.hist-rp-tt h2 {
   font-family: var(--font-display);
   font-style: normal;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
-/* Заголовки вкладок — один вид: Чек-лист, Стандарты, Расписание как Дашборд и История */
-.editor-panel-title { color: var(--text-main); }
-.dash-title small,
-.hist-title small { font-family: var(--font-body); font-style: normal; }
 
 /* Крупные цифры — Unbounded */
 .dash-kpi b,

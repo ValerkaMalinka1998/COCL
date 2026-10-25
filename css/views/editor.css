@@ -40,65 +40,8 @@
 }
 
 /* Шапка панели: заголовок слева, действия справа */
-.editor-panel-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  padding: 16px 20px;
-}
-
-.editor-panel-title-wrap {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  min-width: 0;
-}
-
-.editor-panel-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--blue-mid);
-  margin: 0;
-  padding: 0;
-  border: none;
-  letter-spacing: 0.3px;
-}
-
-.editor-panel-title svg {
-  width: 24px;
-  height: 24px;
-  display: block;
-  flex-shrink: 0;
-  color: var(--accent-cyan);
-  stroke: var(--accent-cyan);
-}
-
-.editor-panel-count {
-  font-size: 12px;
-  color: var(--text-dim);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-.editor-panel-count:empty { display: none; }
-
-.editor-panel-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-}
 
 /* Разделитель между шапкой и фильтрами */
-.editor-panel-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 0 20px;
-}
 
 /* ============================================================ */
 /* === РЕДАКТОР: карточка таблицы ============================= */
@@ -246,20 +189,6 @@
 }
 
 /* ============================================================ */
-/* === РЕДАКТОР: адаптив ====================================== */
-/* ============================================================ */
-
-@media (max-width: 700px) {
-  .editor-panel-head {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .editor-panel-actions {
-    justify-content: flex-start;
-  }
-}
-
-/* ============================================================ */
 /* === РЕДАКТОР: крошки ======================================= */
 /* ============================================================ */
 
@@ -268,10 +197,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 4px;
-  padding: 0 20px 12px;
   font-size: 13px;
-  border-bottom: 1px dashed var(--border);
-  margin-bottom: 4px;
 }
 
 .editor-crumbs:empty {
@@ -330,14 +256,6 @@
 /* ============================================================ */
 /* === РЕДАКТОР: контекстная строка (чип + переключатель + счётчики) */
 /* ============================================================ */
-
-.editor-context-bar {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  padding: 14px 20px;
-}
 
 /* --- Чип линии --- */
 /* Пилюля как в макете «Аврора»: белая, с тонкой рамкой */
@@ -759,7 +677,8 @@
 .et-bulk-del:hover { border-color: var(--accent-red, #e5484d); color: var(--accent-red, #e5484d); }
 
 /* === СТАНДАРТЫ CL: недавно открытые стандарты === */
-.editor-recent-std { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 20px 4px; }
+.editor-recent-std { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.editor-recent-std[hidden] { display: none; }
 .editor-recent-std-label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; color: var(--text-dim); margin-right: 4px; }
 .editor-recent-std-chip {
   display: inline-flex; align-items: center; gap: 6px; max-width: 280px; padding: 4px 10px;

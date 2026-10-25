@@ -1,8 +1,8 @@
 # Карта проекта COCL
 
-Сгенерировано 2026-10-25 по коммиту `3bc9c12 Оптимизация: мёртвый код, дубли, кэш чтений, телефонная ширина` скриптом `.claude/skills/cocl-session-close/scripts/gen_project_map.py` — пересоздавайте после крупных правок.
+Сгенерировано 2026-10-25 по коммиту `b0f7426 docs: итоги сессии 20 — Аврора и оптимизация` скриптом `.claude/skills/cocl-session-close/scripts/gen_project_map.py` — пересоздавайте после крупных правок.
 
-JS — 69 модулей, 21214 строк, 759 функций · CSS — 40 файлов, 11328 строк.
+JS — 69 модулей, 21220 строк, 759 функций · CSS — 40 файлов, 11220 строк.
 Как искать: модуль по назначению → раздел в таблице ниже → `Grep` по имени функции в этом файле.
 
 ## JS-модули (в порядке подключения в index.html)
@@ -58,7 +58,7 @@ JS — 69 модулей, 21214 строк, 759 функций · CSS — 40 ф�
 | `js/views/history/history-record.js` | 321 | 10 | ИСТОРИЯ: страница проверки (вместо окна «Просмотр проверки») |
 | `js/views/history/history-standard.js` | 194 | 6 | ИСТОРИЯ: история одного стандарта / E-Param |
 | `js/views/history/history-export.js` | 607 | 11 | ИСТОРИЯ: экспорт CSV / XLSX |
-| `js/views/dashboard.js` | 618 | 26 | ВКЛАДКА «Дашборд» |
+| `js/views/dashboard.js` | 624 | 26 | ВКЛАДКА «Дашборд» |
 | `js/views/editor/editor-core.js` | 772 | 18 | ВКЛАДКА «Стандарты CL»: каркас |
 | `js/views/editor/editor-mech.js` | 258 | 11 | СТАНДАРТЫ CL: таблица механических стандартов |
 | `js/views/editor/editor-elec.js` | 500 | 12 | СТАНДАРТЫ CL: таблица электронных параметров + Excel |
@@ -176,7 +176,7 @@ JS — 69 модулей, 21214 строк, 759 функций · CSS — 40 ф�
 | js/views/history/history-export.js:586 | СКАЧИВАНИЕ ФАЙЛОВ | `downloadBlob` |
 | js/views/dashboard.js:26 | ДАННЫЕ | `dashSlots`, `dashSlotKey`, `dashFirstDate`, `dashLines`, `dashClMetrics`, `dashRecords`, `dashSummary`, `dashWeeks` |
 | js/views/dashboard.js:179 | РЕНДЕР: ГЛАВНЫЙ ЭКРАН | `renderDashboard`, `renderDashboardMain`, `dashShareText`, `dashDoneCell`, `dashFailCell`, `dashPartRowsHtml`, `dashTreeHtml`, `renderDashboardHead`, `dashDelta`, `dashKpisHtml`, `dashWeeksHtml`, `dashLettersHtml` |
-| js/views/dashboard.js:400 | ПАСПОРТ ЛИНИИ: «дашборд одной линии» — показатели, оборудова | `openDashboardLine`, `dashMachines`, `dashEquipHtml`, `dashLineSideHtml`, `renderDashboardLine`, `renderDashboardLineMain` |
+| js/views/dashboard.js:406 | ПАСПОРТ ЛИНИИ: «дашборд одной линии» — показатели, оборудова | `openDashboardLine`, `dashMachines`, `dashEquipHtml`, `dashLineSideHtml`, `renderDashboardLine`, `renderDashboardLineMain` |
 | js/views/editor/editor-core.js:8 | РЕДАКТОР: недавние линии и режим просмотра | `getRecentLines`, `addRecentLine`, `getRecentStandards`, `addRecentStandard`, `renderEditorRecentStd` |
 | js/views/editor/editor-core.js:128 | Выбор линии | `selectLine` |
 | js/views/editor/editor-core.js:179 | Обновление UI: чип + крошки + счётчики | `updateEditorLineContext`, `buildEditorCrumbs` |
@@ -249,7 +249,7 @@ JS — 69 модулей, 21214 строк, 759 функций · CSS — 40 ф�
 | `css/components/forms.css` | 137 | Компактные чекбоксы типов (Редактор); Импорт: отчёт по ошибкам; Компактный список с поиском |
 | `css/components/points.css` | 56 | Панель кнопок внизу карточки; Форма стандарта; Строка «селект + кнопка» |
 | `css/views/settings-photo-card.css` | 78 | Карточка «Хранилище фото» |
-| `css/views/dashboard.css` | 132 | ВКЛАДКА «ДАШБОРД»: карта производства и ; Показатели; Строки списков; Паспорт линии; Паспорт линии: метки настройки в шапке; ДАШБОРД: таблица «линия → часть → машина … +4 |
+| `css/views/dashboard.css` | 127 | ВКЛАДКА «ДАШБОРД»: карта производства и ; Показатели; Строки списков; Паспорт линии; Паспорт линии: метки настройки в шапке; ДАШБОРД: таблица «линия → часть → машина … +4 |
 | `css/components/photos.css` | 259 | Результат проверки фото; Строка добавления фото (textarea + кнопк; МОДАЛКА ПРОСМОТРА СТАНДАРТА; ЛАЙТБОКС; Лайтбокс: счётчик фото |
 | `css/components/theme-transition.css` | 17 |  |
 | `css/views/editor-table.css` | 198 | Блоки в редакторе — плитки; Пагинация; ТАБЛИЦА СТАНДАРТОВ; Кнопки-иконки (векторные SVG); Кнопки «иконка + текст» |
@@ -259,7 +259,7 @@ JS — 69 модулей, 21214 строк, 759 функций · CSS — 40 ф�
 | `css/components/points-table.css` | 202 | Точки замера: таблица по брендам |
 | `css/views/cocl-accordion.css` | 234 | COCL: строки чек-листа (группы по машина; ТОЧКА-МЕТКА: ОК / Не ОК вместо поля ввод |
 | `css/views/toploss-accordion.css` | 145 | Модалка выбора потерь; ОКНО ВЫБОРА TOP LOSSES СТАНДАРТА |
-| `css/views/editor.css` | 772 | РЕДАКТОР: чипы типов (ChangeOver / CL_TO; РЕДАКТОР: единая панель + фильтры + табл; РЕДАКТОР: карточка таблицы; РЕДАКТОР: таблица стандартов; РЕДАКТОР: чипы типов и Maker/Packer; РЕДАКТОР: адаптив … +8 |
+| `css/views/editor.css` | 691 | РЕДАКТОР: чипы типов (ChangeOver / CL_TO; РЕДАКТОР: единая панель + фильтры + табл; РЕДАКТОР: карточка таблицы; РЕДАКТОР: таблица стандартов; РЕДАКТОР: чипы типов и Maker/Packer; РЕДАКТОР: крошки … +7 |
 | `css/components/line-picker.css` | 319 | МОДАЛКА-ВЫБОР ЛИНИИ (двухпанельная) |
 | `css/views/editor-part-switch.css` | 70 | РЕДАКТОР: переключатель по части линии |
 | `css/views/schedule.css` | 530 | РАСПИСАНИЕ CL: матрица (с инфо-колонками; Тулбар над матрицей: фильтр+поиск слева,; Пустое состояние; Панель массовых операций; Адаптив; РАСПИСАНИЕ CL: модалка добавления станда … +3 |
@@ -269,7 +269,7 @@ JS — 69 модулей, 21214 строк, 759 функций · CSS — 40 ф�
 | `css/views/changelog.css` | 139 | СТАНДАРТЫ CL: ЛИСТ ИСТОРИИ ИЗМЕНЕНИЙ |
 | `css/components/line-brand.css` | 64 | БРЕНД НА ЛИНИИ (Чек-лист CL, Расписание  |
 | `css/views/settings.css` | 901 | НАСТРОЙКИ: каркас, меню разделов, справо; СТРУКТУРА: дерево + карточка линии; TOP LOSSES: категории цеха карточками; Адаптив; СТРУКТУРА: перенос линии; БРЕНДЫ: сетка плиток … +2 |
-| `css/views/history.css` | 370 | ВКЛАДКА «ИСТОРИЯ»: лента, покрытие смен,; Шапка: заголовок, режим, период, Excel; Фильтры; Покрытие смен; Лента проверок; Страница проверки … +9 |
+| `css/views/history.css` | 355 | ВКЛАДКА «ИСТОРИЯ»: лента, покрытие смен,; Шапка: заголовок, режим, период, Excel; Фильтры; Покрытие смен; Лента проверок; Страница проверки … +8 |
 | `css/components/cil-table.css` | 621 | ТАБЛИЦА НЕДЕЛИ В СТИЛЕ CIL; Чек-лист CL и Расписание CL; ЧЕК-ЛИСТ CL: колонка «Когда» (Run / Stop; ДОЛГ ПРОВЕРОК И ПРОСТОЙ ЛИНИИ |
 | `css/components/legend.css` | 26 | ЛЕГЕНДА ТАБЛИЦ |
 | `css/components/tab-head.css` | 155 | ШАПКА ВКЛАДКИ: цветная плашка с шагами; ШАПКА СТРАНИЦЫ «Аврора»: Чек-лист CL, Ра |
@@ -281,7 +281,7 @@ JS — 69 модулей, 21214 строк, 759 функций · CSS — 40 ф�
 | `css/components/std-ack.css` | 95 | ОЗНАКОМЛЕНИЕ СО СТАНДАРТОМ |
 | `css/components/notify.css` | 118 | КОЛОКОЛЬЧИК УВЕДОМЛЕНИЙ |
 | `css/components/check-run.css` | 499 | ОКНО ПРОВЕРКИ: список слева — стандарт с; Левая панель: шапка; Левая панель: пункты; Левая панель: сохранение; Правая часть: выбранный стандарт; CL при переходах: во время проверки окно … +1 |
-| `css/brand.css` | 146 | БРЕНД BFT — Building the Future of Tobac; Шапка; Логотип; Смена, время и «круг смены»; Кнопка темы — шлем; Карточки и заголовки … +1 |
+| `css/brand.css` | 139 | БРЕНД BFT — Building the Future of Tobac; Шапка; Логотип; Смена, время и «круг смены»; Кнопка темы — шлем; Карточки и заголовки … +1 |
 
 ## Ключи localStorage
 

@@ -322,12 +322,18 @@ function renderDashboardHead() {
   const scope = dashState.line ? dashState.line
     : (dashboardWorkshop ? (getWorkshop(dashboardWorkshop)?.name || '') : 'весь завод');
   bar.innerHTML = `
-    <div class="dash-title">Дашборд <small>${escapeHtml(scope)} · ${escapeHtml(periodText)}</small></div>
-    <span class="hist-sp"></span>
-    ${dashState.line ? '' : `<div class="hist-seg">${tabs.map(t =>
-      `<button type="button" class="${t.id === dashboardWorkshop ? 'on' : ''}" data-dash-ws="${escapeAttr(t.id)}">${escapeHtml(t.name)}</button>`).join('')}</div>`}
-    <div class="hist-seg">${DASH_PERIOD_BTNS.map(([p, t]) =>
-      `<button type="button" class="${p === dashState.period ? 'on' : ''}" data-dash-period="${p}">${t}</button>`).join('')}</div>
+    ${dashState.line ? '' : `<div class="ph-context"><div class="hist-seg">${tabs.map(t =>
+      `<button type="button" class="${t.id === dashboardWorkshop ? 'on' : ''}" data-dash-ws="${escapeAttr(t.id)}">${escapeHtml(t.name)}</button>`).join('')}</div></div>`}
+    <div class="ph-main">
+      <div class="ph-title">
+        <h2 class="ph-h1">Дашборд</h2>
+        <span class="ph-sub">${escapeHtml(scope)} · ${escapeHtml(periodText)}</span>
+      </div>
+      <div class="ph-actions">
+        <div class="hist-seg">${DASH_PERIOD_BTNS.map(([p, t]) =>
+          `<button type="button" class="${p === dashState.period ? 'on' : ''}" data-dash-period="${p}">${t}</button>`).join('')}</div>
+      </div>
+    </div>
     ${dashState.period === 'custom' ? `<div class="hist-custom dash-custom">
       <label>С <input type="date" data-dash-date="from" value="${escapeAttr(dashState.from)}" max="${getCurrentShiftPeriod().date}"></label>
       <label>По <input type="date" data-dash-date="to" value="${escapeAttr(dashState.to)}" max="${getCurrentShiftPeriod().date}"></label>
