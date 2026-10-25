@@ -435,7 +435,7 @@ function dashMachines(line, m, rows) {
 
 /* Оборудование плитками: часть линии (Maker / Packer; в PMD / FMD — одна группа) → машины.
    Цвет плитки: отклонения за период — красный, выполнение < 90% — амбер, иначе зелёный */
-function dashEquipHtml(machines) {
+function dashEquipHtml(machines, line) {
   const parts = [...new Set(machines.map(x => x.part))].sort();
   const pct = (d, p) => p ? Math.round(d / p * 100) : null;
   return `<div class="dash-eq">${parts.map(part => {
@@ -443,7 +443,7 @@ function dashEquipHtml(machines) {
     const p = list.reduce((s, x) => s + x.planned, 0), d = list.reduce((s, x) => s + x.done, 0);
     const nf = list.reduce((s, x) => s + x.n, 0);
     return `<div class="dash-eq-part">
-      <div class="dash-eq-h"><b>${escapeHtml(part || 'Оборудование')}</b><span class="hist-sub">выполнение ${pct(d, p) == null ? '—' : pct(d, p) + '%'} · ${nf} откл.</span></div>
+      <div class="dash-eq-h"><b>${escapeHtml(part || (lineHasParts(line) ? 'Часть не указана' : 'Оборудование'))}</b>${!part && lineHasParts(line) ? '<span class="hist-tag hist-tag-warn" title="Укажите Maker или Packer в Стандартах CL">укажите Maker / Packer</span>' : ''}<span class="hist-sub">выполнение ${pct(d, p) == null ? '—' : pct(d, p) + '%'} · ${nf} откл.</span></div>
       <div class="dash-eq-tiles">${list.map(x => {
         const xp = pct(x.done, x.planned);
         const st = x.n ? 'bad' : xp != null && xp < 90 ? 'warn' : 'ok';
@@ -545,7 +545,7 @@ function renderDashboardLineMain() {
     <div class="dash-g3 dash-pass-top">
       <div class="card dash-card">
         <h3 class="dash-h">Оборудование <small>цвет — состояние машины · клик — её стандарты</small></h3>
-        ${machines.length ? dashEquipHtml(machines) : '<div class="dash-empty">На линии нет стандартов</div>'}
+        ${machines.length ? dashEquipHtml(machines, line) : '<div class="dash-empty">На линии нет стандартов</div>'}
       </div>
       <div class="card dash-card dash-side"><div class="dash-side-in">${dashLineSideHtml(line, machines, sum)}</div></div>
     </div>
