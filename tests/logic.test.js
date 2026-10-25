@@ -27,7 +27,8 @@ const MODULES = [
   'js/data/changelog.js',
   'js/data/line-brand.js',
   'js/data/ack.js',
-  'js/views/settings/shifts.js'
+  'js/views/settings/shifts.js',
+  'js/io/standards-io.js'
 ];
 
 function makeApp() {
@@ -394,4 +395,22 @@ test('withLoadCache: ключ читается один раз, save сбрас�
   assert.deepEqual(plain(r.after), [2], 'после save — свежие данные');
   assert.notEqual(fn('load')('cl_test_key', []), fn('load')('cl_test_key', []), 'вне отрисовки — без кэша');
   app("localStorage.removeItem('cl_test_key')");
+});
+
+/* === ИМПОРТ БЛАНКА OPL === */
+test('бланк OPL: значение, время, дата', () => {
+  const clean = fn('oplCleanValue');
+  assert.equal(clean(' - 65 kPa (±10 kPa)'), '-65 kPa ±10 kPa');
+  assert.deepEqual(plain(fn('parseNorm')(clean(' - 65 kPa (±10 kPa)'))), { min: -75, max: -55 });
+  assert.equal(clean('5 - 8'), '5 - 8', 'диапазон не ломается');
+  assert.equal(fn('classifyNormValue')(clean('5 - 8')), 'interval');
+  assert.equal(clean('метки совпадают'), 'метки совпадают');
+  const dur = fn('oplDurationSec');
+  assert.equal(dur('30 сек'), 30);
+  assert.equal(dur('1,5 мин'), 90);
+  assert.equal(dur(''), 0);
+  const d = fn('oplDate');
+  assert.equal(new Date(d('22.05.2026')).getDate(), 22);
+  assert.equal(new Date(d(app('new Date(Date.UTC(2026, 4, 22))'))).getDate(), 22, 'полночь UTC из Excel — тот же день');
+  assert.equal(d('нет'), null);
 });

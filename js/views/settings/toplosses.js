@@ -429,7 +429,7 @@ function showImportReport(result, containerId) {
   if (result.added > 0)   html += `<li>✅ Добавлено ${noun}: <strong>${result.added}</strong></li>`;
   if (result.pointsImported > 0) html += `<li>✅ Загружено ${result.pointsNoun || 'точек'}: <strong>${result.pointsImported}</strong></li>`;
   if (result.skipped > 0) html += `<li>⚠️ Пропущено (уже есть или ошибки): <strong>${result.skipped}</strong></li>`;
-  if (result.empty > 0)   html += `<li>⚪ Пустых строк: ${result.empty}</li>`;
+  if (result.empty > 0)   html += `<li>⚪ Пустых ${result.emptyNoun || 'строк'}: ${result.empty}</li>`;
   if (result.errors.length > 0) {
     html += `<li>❌ Ошибок: <strong>${result.errors.length}</strong></li>`;
   }
@@ -455,7 +455,7 @@ function showImportReport(result, containerId) {
   if (result.errors.length > 0) {
     html += '<div style="margin-top:8px"><strong>Строки с ошибками:</strong><ul>';
     result.errors.slice(0, 10).forEach(e => {
-      html += `<li>Строка ${e.row}: ${escapeHtml(e.message)}</li>`;
+      html += `<li>${e.row != null ? `Строка ${e.row}: ` : ''}${escapeHtml(e.message)}</li>`;
     });
     if (result.errors.length > 10) html += `<li>...и ещё ${result.errors.length - 10}</li>`;
     html += '</ul></div>';
