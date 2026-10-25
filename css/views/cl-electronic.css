@@ -6,29 +6,33 @@
 
 .ebs-mode-switch {
   display: flex;
-  gap: 10px;
+  gap: 4px;
+  padding: 4px;
   margin-bottom: 16px;
+  background: var(--seg-track);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-pill);
 }
 .ebs-mode-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 18px;
-  border-radius: var(--r-sm);
+  min-height: 38px;
+  padding: 0 18px;
+  border-radius: var(--r-pill);
   cursor: pointer;
   font-family: inherit;
   font-size: 13px;
-  font-weight: 700;
-  background: var(--bg-input);
+  font-weight: 600;
+  background: transparent;
   color: var(--text-second);
-  border: 2px solid var(--border-hi);
+  border: 0;
   transition: all 0.15s ease;
   flex: 1;
   justify-content: center;
 }
 .ebs-mode-btn:hover {
-  border-color: var(--accent-cyan);
-  color: var(--accent-cyan);
+  color: var(--text-main);
 }
 .ebs-mode-btn svg {
   width: 18px;
@@ -38,12 +42,10 @@
   pointer-events: none;
 }
 .ebs-mode-btn.active {
-  background: linear-gradient(135deg, var(--blue-mid), var(--blue-light));
-  color: var(--on-accent);
-  border-color: var(--accent-cyan);
-  box-shadow: 0 0 14px rgba(var(--cyan-rgb), 0.35);
+  background: var(--seg-on-bg);
+  color: var(--text-main);
+  box-shadow: var(--seg-on-shadow);
 }
-.ebs-mode-btn.active svg { stroke: var(--on-accent); }
 
 /* Режим «По дням» — строки */
 .ebs-day-row {
@@ -122,66 +124,4 @@
   color: var(--text-dim);
   font-style: italic;
   font-size: 13px;
-}
-/* CL Electronic — бейдж режима (фиолетовый) */
-.badge-mode-electronic {
-  background: rgba(var(--purple-rgb), 0.12);
-  color: var(--accent-purple);
-  border: 1px solid rgba(var(--purple-rgb), 0.5);
-  box-shadow: 0 0 8px rgba(var(--purple-rgb), 0.2);
-}
-
-.elec-subtab-btn {
-  flex: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 12px 20px;
-  background: transparent;
-  border: 2px solid var(--border-hi);      /* ← было: transparent */
-  border-radius: var(--r-sm);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  color: var(--text-second);
-  transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
-  min-height: 48px;
-  overflow: hidden;
-}
-
-.elec-subtab-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-main);
-}
-
-/* Жёстко ограничиваем SVG — 18×18 */
-.elec-subtab-btn svg {
-  width: 18px !important;
-  height: 18px !important;
-  max-width: 18px;
-  max-height: 18px;
-  display: block;
-  flex: 0 0 18px;
-  pointer-events: none;
-}
-
-.elec-subtab-btn span {
-  display: inline-block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.elec-subtab-btn.active {
-  background: linear-gradient(135deg, var(--blue-mid), var(--blue-light));
-  color: var(--on-accent);
-  border-color: var(--accent-cyan);
-  box-shadow: 0 0 16px rgba(var(--cyan-rgb), 0.35);
-}
-
-.elec-subtab-btn.active svg {
-  stroke: var(--on-accent);
 }

@@ -100,3 +100,48 @@
   background: color-mix(in srgb, var(--th) 2%, var(--bg-card));
   border-color: color-mix(in srgb, var(--th) 50%, var(--border));
 }
+
+/* ============================================================ */
+/* === ШАПКА СТРАНИЦЫ «Аврора»: Чек-лист CL, Расписание CL ==== */
+/* ============================================================ */
+/* Без карточки, прямо на фоне: строка контекста (линия, дата, смена, бренд),
+   ниже — крупный заголовок с подписью, справа переключатели и действия */
+.page-head { display: flex; flex-direction: column; gap: 18px; margin: 2px 0 18px; }
+.ph-context { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ph-context .editor-line-pill-icon { display: none; }
+.ph-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px 20px;
+}
+.ph-title { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ph-h1 {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--text-main);
+}
+.ph-sub { font-size: 13.5px; color: var(--text-second); font-variant-numeric: tabular-nums; }
+.ph-sub:empty { display: none; }
+.ph-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; }
+
+/* Таблица недели без подложки-карточки: панель только у самой таблицы */
+#tab-electronic .editor-table-card,
+#tab-electronic .editor-table-card:hover,
+#tab-schedule .editor-table-card,
+#tab-schedule .editor-table-card:hover {
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+#tab-electronic .cil-wrap,
+#tab-schedule .cil-wrap { padding: 0; }

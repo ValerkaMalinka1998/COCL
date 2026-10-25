@@ -388,16 +388,6 @@
 /* === TOP LOSSES — компактная шапка ========================== */
 /* ============================================================ */
 
-/* Футер — приглушённо-зелёная disabled-кнопка */
-.tl-select-footer .btn-success:disabled,
-.tl-select-footer .btn-success[disabled] {
-  background: rgba(var(--green-rgb), 0.35);
-  border-color: rgba(var(--green-rgb), 0.35);
-  color: rgba(255, 255, 255, 0.75);
-  box-shadow: none;
-  transform: none;
-  cursor: not-allowed;
-}
 .tl2-split {
   display: grid;
   grid-template-columns: 330px minmax(0, 1fr);
@@ -539,12 +529,14 @@
 .tl2-dg-cat { font-size: 11px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-dim); }
 .tl2-dg-title h2 { margin: 0; padding: 0; font-size: 19px; border: 0; }
 .tl2-sp { flex: 1; }
+/* Главная кнопка TOP Losses — форма как у всех главных кнопок, цвет янтарный (смысл TOP Losses) */
 .btn-tl-check {
   color: var(--on-accent);
-  background: var(--accent-amber);
-  border: 1px solid var(--accent-amber);
+  background: linear-gradient(135deg, var(--accent-amber), var(--accent-yellow));
+  border: 1px solid transparent;
+  box-shadow: 0 12px 26px -12px rgba(var(--amber-rgb), 0.75);
 }
-.btn-tl-check:hover:not(:disabled) { filter: brightness(1.05); }
+.btn-tl-check:hover:not(:disabled) { filter: brightness(1.06); transform: translateY(-1px); }
 .btn-tl-check:disabled { opacity: 0.5; cursor: not-allowed; }
 .tl2-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
 .tl2-seg { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--border); border-radius: var(--r-md); }

@@ -122,12 +122,6 @@
   align-items: center;
 }
 
-.editor-panel-actions .btn {
-  padding: 8px 14px;
-  font-size: 11px;
-  letter-spacing: 0.3px;
-}
-
 /* Разделитель между шапкой и фильтрами */
 .editor-panel-divider {
   height: 1px;
@@ -373,14 +367,16 @@
 }
 
 /* --- Чип линии --- */
+/* Пилюля как в макете «Аврора»: белая, с тонкой рамкой */
 .editor-line-pill {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px 8px 10px;
-  background: var(--bg-input);
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px;
+  background: var(--bg-card);
   border: 1px solid var(--border-hi);
-  border-radius: var(--r-md);
+  border-radius: var(--r-pill);
   cursor: pointer;
   font-family: inherit;
   color: var(--text-main);
@@ -388,9 +384,8 @@
   flex-shrink: 0;
 }
 .editor-line-pill:hover {
-  border-color: var(--accent-cyan);
-  background: rgba(var(--cyan-rgb), 0.04);
-  box-shadow: 0 0 12px rgba(var(--cyan-rgb), 0.15);
+  border-color: var(--blue-mid);
+  box-shadow: var(--focus-ring);
 }
 
 .editor-line-pill-icon {
@@ -410,9 +405,8 @@
 
 .editor-line-pill-code {
   font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 0.3px;
-  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0;
   color: var(--text-main);
   white-space: nowrap;
 }
@@ -433,7 +427,7 @@
   display: block;
 }
 .editor-line-pill:hover .editor-line-pill-caret {
-  color: var(--accent-cyan);
+  color: var(--blue-mid);
   transform: translateY(1px);
 }
 
@@ -441,12 +435,14 @@
 /* === РЕДАКТОР: инлайн-переключатель Механические/Электронные */
 /* ============================================================ */
 
+/* Сегментный переключатель «Аврора»: светлая дорожка, выбранный пункт — белая пилюля */
 .editor-mode-inline {
   display: inline-flex;
+  gap: 4px;
   padding: 4px;
-  background: var(--bg-hover);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
+  background: var(--seg-track);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-pill);
   flex-shrink: 0;
 }
 
@@ -455,21 +451,22 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 6px 14px;
+  height: 34px;
+  padding: 0 14px;
   border: none;
   background: transparent;
-  border-radius: var(--r-sm);
+  border-radius: var(--r-pill);
   cursor: pointer;
   font-family: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
   color: var(--text-second);
   transition: all 0.15s;
   white-space: nowrap;
 }
 .editor-mode-inline-btn:hover {
-  color: var(--accent-cyan);
+  color: var(--text-main);
 }
 .editor-mode-inline-btn svg {
   width: 14px;
@@ -479,12 +476,9 @@
   pointer-events: none;
 }
 .editor-mode-inline-btn.active {
-  background: linear-gradient(135deg, var(--blue-mid), var(--blue-light));
-  color: var(--on-accent);
-  box-shadow: 0 2px 8px rgba(var(--shadow-rgb), 0.35);
-}
-.editor-mode-inline-btn.active svg {
-  stroke: var(--on-accent);
+  background: var(--seg-on-bg);
+  color: var(--text-main);
+  box-shadow: var(--seg-on-shadow);
 }
 
 /* ============================================================ */

@@ -25,57 +25,60 @@
   gap: 10px 16px;
   margin-bottom: 12px;
 }
+/* Неделя: круглые стрелки и подпись слева (макет «Аврора») */
 .cil-week {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  box-shadow: var(--card-shadow);
+  gap: 6px;
 }
 .cil-week-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 38px;
+  height: 38px;
   padding: 0;
   color: var(--text-second);
-  background: transparent;
-  border: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
   border-radius: 50%;
   cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, transform 0.15s;
 }
-.cil-week-btn:hover { color: var(--accent-cyan); background: var(--bg-hover); }
-.cil-week-label { display: flex; flex-direction: column; align-items: center; min-width: 170px; padding: 0 6px; }
-.cil-week-title { font-size: 13px; font-weight: 800; color: var(--text-main); white-space: nowrap; }
-.cil-week-sub { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent-cyan); }
+.cil-week-btn:hover { color: var(--blue-mid); border-color: var(--blue-mid); transform: translateY(-1px); }
+.cil-week-label { display: flex; flex-direction: column; align-items: flex-start; padding: 0 6px; }
+.cil-week-title { font-family: var(--font-display); font-size: 14.5px; font-weight: 600; color: var(--text-main); white-space: nowrap; }
+.cil-week-sub { font-size: 12px; font-weight: 500; color: var(--text-dim); }
 .cil-week-today {
   margin: 0 4px;
-  padding: 5px 12px;
+  min-height: 38px;
+  padding: 0 16px;
   font: inherit;
-  font-size: 11px;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--accent-cyan);
-  background: transparent;
+  background: var(--bg-card);
   border: 1px solid var(--accent-cyan);
   border-radius: 999px;
   cursor: pointer;
 }
+/* «Только эта смена» — переключатель с бегунком (макет «Аврора») */
 .cil-onlyshift {
-  display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px;
-  border: 1px solid var(--border-hi); border-radius: 999px; background: var(--bg-card);
-  font: inherit; font-size: 12px; font-weight: 700; color: var(--text-second); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 10px; min-height: 38px; padding: 0 14px 0 8px;
+  border: 1px solid var(--border-hi); border-radius: var(--r-pill); background: var(--bg-card);
+  font: inherit; font-size: 13px; font-weight: 600; color: var(--text-second); cursor: pointer;
 }
 .cil-onlyshift i {
-  width: 14px; height: 14px; border-radius: var(--r-xs); border: 1.5px solid var(--border-hi);
-  display: inline-flex; align-items: center; justify-content: center;
+  position: relative; width: 32px; height: 18px; border-radius: 9px; background: var(--border-hi);
+  transition: background 0.2s;
 }
-.cil-onlyshift.on { color: var(--accent-cyan); border-color: var(--accent-cyan); background: color-mix(in srgb, var(--accent-cyan) 10%, var(--bg-card)); }
-.cil-onlyshift.on i { background: var(--accent-cyan); border-color: var(--accent-cyan); }
-.cil-onlyshift.on i::after { content: ""; width: 4px; height: 7px; border: solid var(--on-accent); border-width: 0 2px 2px 0; transform: rotate(45deg) translate(-1px, -1px); }
+.cil-onlyshift i::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--bg-card); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); transition: transform 0.2s;
+}
+.cil-onlyshift.on { color: var(--text-main); border-color: var(--accent-cyan); }
+.cil-onlyshift.on i { background: var(--accent-cyan); }
+.cil-onlyshift.on i::after { transform: translateX(14px); }
 .cil-empty-row { padding: 28px 16px; text-align: center; color: var(--text-dim); font-size: 13px; }
 .cil-empty-row .cil-week-today { margin-left: 10px; }
 

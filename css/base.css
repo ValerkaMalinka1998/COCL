@@ -123,6 +123,10 @@
     radial-gradient(820px 520px at 55% 112%, rgba(45, 212, 191, 0.3), transparent 70%);
   --focus-ring:   0 0 0 4px rgba(37, 99, 235, 0.18);
   --overlay:      rgba(21, 20, 47, 0.34);
+  /* Сегментные переключатели: дорожка и выбранный пункт */
+  --seg-track:     rgba(255, 255, 255, 0.55);
+  --seg-on-bg:     #ffffff;
+  --seg-on-shadow: 0 6px 16px -8px rgba(76, 64, 160, 0.45);
 
   /* Шапки таблиц (непрозрачные — под ними прокручиваются строки) */
   --table-head-bg:    #f4f3fc;
@@ -223,6 +227,9 @@
     radial-gradient(820px 520px at 55% 112%, rgba(20, 184, 166, 0.22), transparent 70%);
   --focus-ring:   0 0 0 4px rgba(167, 139, 250, 0.25);
   --overlay:      rgba(3, 3, 12, 0.66);
+  --seg-track:     rgba(255, 255, 255, 0.05);
+  --seg-on-bg:     rgba(255, 255, 255, 0.14);
+  --seg-on-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
 
   --table-head-bg:    #1d1d46;
   --table-head-bg-2:  #19193e;
