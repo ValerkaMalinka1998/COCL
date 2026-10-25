@@ -63,11 +63,11 @@ header.bft-header::after {
 .bft-shift-name {
   font-size: 12px;
   font-weight: 700;
-  color: var(--accent-purple);
+  color: var(--text-main);
   padding: 4px 12px;
   border-radius: var(--r-pill);
-  background: rgba(var(--purple-rgb), 0.12);
-  border: 1px solid rgba(var(--purple-rgb), 0.22);
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
   white-space: nowrap;
 }
 header.bft-header .header-right {
