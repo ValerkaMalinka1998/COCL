@@ -142,6 +142,8 @@ checklist-app/
 │                              загрузки (важен!)
 ├── style.css               — точка входа: @import всех CSS в
 │                              порядке каскада + anti-flash + print
+├── fonts/                  — Manrope и Unbounded (woff2, OFL),
+│                              подключены @font-face в base.css
 ├── css/
 │   ├── base.css            — переменные темы, body, формы
 │   ├── layout.css          — header, sidebar, main, footer
@@ -1637,12 +1639,72 @@ claude.ai («Макеты COCL: дашборд и история»), делал�
    E-Param — после «Сохранить» остаёмся на параметре (openEparamPage view);
    Расписание CL — колонка «Когда» (RUN/STOP/CIL + время) как в Чек-листе.
 
+СЕССИЯ 20 (25.10.2026) — стиль «Аврора», оптимизация
+Ветка aurora (от main после PR #68). Тексты, логика, окна — без изменений,
+менялся только вид (договорённость с пользователем).
+1. Стиль «Аврора»: матовое стекло на мягком сиянии, скругления, заголовки
+   Unbounded, текст Manrope. Шрифты — файлы в fonts/ (woff2, OFL, README),
+   @font-face в css/base.css. Размытие (backdrop-filter) только у шапки
+   (на header::before — иначе фиксированные окна внутри шапки обрезаются),
+   меню и модалок. Токены в base.css: старые имена с новыми значениями +
+   --cyan-rgb … --shadow-rgb (rgba(var(--x-rgb), a)), радиусы --r-xs … --r-pill,
+   --glass-*, --aurora, --grad-primary, --on-primary, --focus-ring, --overlay,
+   --table-head-*, --seg-*, --logo-color, --font-body / --font-display.
+   Убраны --blue-deep, --nav-bg-2, --bft-copper, --glow-green.
+2. Меню: значки Feather и порядок как в образце (Чек-лист CL, CL при
+   переходах, TOP Losses, Стандарты CL, Расписание CL, Дашборд, История;
+   Настройки внизу после .sidebar-spacer), «Закрепить панель» сверху,
+   заголовки групп убраны. Логотип BFT — встроенный SVG .bft-logo-svg.
+3. Шапка Чек-листа CL и Расписания CL по макету: .page-head (.ph-context —
+   линия и дата/смена/бренд пилюлями, .ph-main — заголовок .ph-h1 + счётчик,
+   .ph-actions — Механические/Электронные, Maker/Packer, кнопки). Все id
+   прежние. Главные кнопки (.btn-primary/.btn-success, .chk-save) —
+   градиент-пилюля как «Начать проверку»; TOP Losses — амбер.
+4. Окантовка у всех таблиц (--border-hi). Таблица недели растёт вниз
+   страницей только от 1760 px (раньше 1440 — при закреплённом меню
+   сегодняшний день обрезался без прокрутки).
+5. Оптимизация: удалены 24 неиспользуемые функции (getOpenDebts, getBlocks,
+   getAllAreas, getArea, getBlock, workshopOptionsHtml, setLines, setBlocks,
+   getElectronicBrandsForLine, getElectronicParamsForMachine,
+   setElectronicBrandForDate, setElectronicBrandScheduleBulk,
+   isElectronicParamDue, toggleStandardActive, clearEditorLine,
+   bulkSelectedRows, updateBrandToOptions, pluralizeBrandsShort,
+   buildDetailsTextForCsv, nowStr, DEFAULT_LINES, DEFAULT_SHIFTS,
+   MINOR_CHANGES_BY_PART, XL_COLOR_WHITE) и 35 мёртвых CSS-правил
+   (.checklist-item, .comment-btn, .badge-ok/fail/changeover/clto/clconv,
+   .badge-mode-*, .badge-unchecked, .status-ok/fail, #elecChecklistContainer…).
+6. Дубли: renderEditorPagination(kind, …) вместо копий mech/elec;
+   Excel — xlBorder / xlHeaderCell / xlSheetWriter(ws, cols) в
+   history-export.js, styleTemplateHeader(ws) в excel-common.js для шаблонов
+   операторов, брендов, Top Losses.
+7. Скорость: shiftCfgCached() в dates.js — конфиг смен разбирается только
+   при изменении строки в хранилище; withLoadCache(fn) в utils.js — на время
+   одной отрисовки load() разбирает ключ один раз, save() сбрасывает ключ
+   (только для кода, который не меняет полученные объекты; сейчас —
+   renderDashboard / renderDashboardLine). Дашборд на истории ×40 (1,7 МБ):
+   390 → 83 мс.
+8. Телефон (≤ 640 px): сегменты .hist-seg и переключатели шапки
+   прокручиваются внутри себя, неделя и «Действует для» переносятся —
+   страница не шире экрана.
+9. Тесты: 24 (добавлены кэш смен и withLoadCache); смоук-тест получил флаг
+   --theme light|dark.
+
 ================================================================
 16. ЧТО ОСТАЛОСЬ
 ================================================================
 
+СЕССИЯ 20 — осталось:
+  - Проверить и влить PR ветки aurora.
+  - Шапку Стандартов CL сделать как .page-head в Чек-листе — предложено.
+  - Главная кнопка TOP Losses осталась амбер (правило 8) — спросить, нужна ли
+    синяя.
+  - Проверить размытие (backdrop-filter) на старых заводских ПК — если
+    тормозит, отключить у меню.
+  - Телефон: меню остаётся колонкой слева (~90 px) — нижняя панель по
+    желанию.
+
 СЕССИЯ 19 — осталось:
-  - Проверить и влить PR #67 (сессии 18 + 19).
+  - (сделано: PR #67 и #68 влиты.)
   - Таблица линий на Дашборде при 28 линиях с планом растянется — предложено
     свернуть участки или показывать 8 худших; решения нет.
   - Фильтр Maker / Packer в Истории — предложен (скрывать пункты другой
@@ -1954,6 +2016,11 @@ Maker/Packer → машина, динамика (выполнение + откл
 «Фильтры», лента по сменам, календарь «7 дней / Месяц», без журнала;
 История стандарта: факты + все проверки, «Где выходит из нормы»;
 «открытые отклонения» сделаны и убраны (подробно — раздел 15).
+
+Сессия 20 — стиль «Аврора» (только CSS: шрифты в fonts/, стекло у шапки,
+меню и модалок, меню по образцу, логотип SVG, шапка .page-head, кнопки
+градиентом, окантовка таблиц); оптимизация: мёртвый код и дубли удалены,
+кэш конфига смен и withLoadCache для дашборда, телефонная ширина.
 
 НЕ ДОДЕЛАНО: см. раздел 16 и Handoff.md.
 
