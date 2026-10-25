@@ -5,8 +5,8 @@
 .brands-table-wrap {
   overflow-x: auto;
   margin-top: 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--r-md);
   background: var(--bg-input);
 }
 

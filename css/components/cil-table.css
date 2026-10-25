@@ -88,7 +88,7 @@
   min-height: 240px;
   overflow: auto;
   background: var(--bg-card);
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--border-hi);
   border-radius: var(--r-lg);
   box-shadow: var(--card-shadow);
 }
@@ -510,11 +510,12 @@ button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentCol
 
 /* Таблица растёт вниз, прокручивается вся страница; шапка таблицы
    прилипает под шапкой приложения (84px). На узком экране, где таблица
-   не помещается по ширине, — прежняя прокрутка внутри рамки. */
-@media (min-width: 1440px) {
-  .cil-scroll.cil-scroll-page { max-height: none; min-height: 0; overflow: visible; }
-  /* overflow: hidden у карточки ломает «прилипание» шапки; clip режет так же, но не мешает */
-  .editor-table-card:has(.cil-scroll-page) { overflow: clip; }
+   не помещается по ширине, — прежняя прокрутка внутри рамки.
+   1760px: таблица (~1410px) + раскрытое меню (272px) + отступы — иначе
+   правые колонки (сегодняшний день) обрезались бы без прокрутки. */
+@media (min-width: 1760px) {
+  /* overflow: hidden сломал бы «прилипание» шапки; clip режет по скруглению рамки и не мешает */
+  .cil-scroll.cil-scroll-page { max-height: none; min-height: 0; overflow: clip; }
   .cil-scroll-page .cil-table thead th { top: 84px; }
   .cil-scroll-page .cil-table thead tr:nth-child(2) th { top: calc(84px + 31px); }
   .cil-scroll-page .cil-table thead tr:first-child th:first-child { border-top-left-radius: calc(var(--r-lg) - 1px); }

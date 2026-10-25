@@ -555,7 +555,7 @@
 .tl2-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; color: var(--text-second); }
 .tl2-legend span { display: inline-flex; align-items: center; gap: 5px; }
 /* Длинный список стандартов прокручивается внутри блока, шапка таблицы остаётся на месте */
-.tl2-table-wrap { overflow: auto; max-height: calc(100vh - 330px); min-height: 240px; }
+.tl2-table-wrap { overflow: auto; max-height: calc(100vh - 330px); min-height: 240px; background: var(--bg-card); border: 1px solid var(--border-hi); border-radius: var(--r-lg); }
 .tl2-table { width: 100%; border-collapse: separate; border-spacing: 0; }
 .tl2-table th {
   padding: 9px 10px;

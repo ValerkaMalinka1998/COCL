@@ -15,7 +15,12 @@
 }
 .ep-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--border-hi);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--bg-card);
   font-size: 13px;
 }
 .ep-table th {

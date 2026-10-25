@@ -136,6 +136,8 @@
 .editor-table-card {
   padding: 0;
   overflow: hidden;
+  border-color: var(--border-hi);
+  border-radius: var(--r-lg);
 }
 
 .editor-table-wrap {

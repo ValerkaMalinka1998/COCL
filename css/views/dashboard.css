@@ -56,7 +56,8 @@ button.dash-li:hover { background: var(--bg-hover); }
 .dash-cfg-warn { color: var(--accent-amber); border-color: color-mix(in srgb, var(--accent-amber) 40%, transparent); background: color-mix(in srgb, var(--accent-amber) 10%, transparent); cursor: pointer; }
 
 /* === ДАШБОРД: таблица «линия → часть → машина» === */
-.dash-tr-wrap { overflow-x: auto; }
+.dash-tr-wrap { overflow-x: auto; background: var(--bg-card); border: 1px solid var(--border-hi); border-radius: var(--r-lg); }
+.dash-tr tr:last-child td { border-bottom: 0; }
 .dash-tr { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .dash-tr th { text-align: left; font-size: 10.5px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; color: var(--text-second); padding: 6px 10px; border-bottom: 1px solid var(--border); }
 .dash-tr td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--text-main); white-space: nowrap; }

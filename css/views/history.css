@@ -334,7 +334,8 @@ button.hist-mh.is-pick { outline: 2px solid var(--accent-cyan); outline-offset: 
 .hist-std-f span { font-size: 12px; color: var(--text-second); }
 .hist-std-f.is-bad b { color: var(--accent-red); }
 .hist-std-stale { margin-bottom: 14px; padding: 14px 18px; border: 1px dashed var(--border-hi); border-radius: var(--r-md); font-size: 13.5px; color: var(--text-main); background: var(--bg-hover); }
-.hist-std-tbw { overflow-x: auto; }
+.hist-std-tbw { overflow-x: auto; background: var(--bg-card); border: 1px solid var(--border-hi); border-radius: var(--r-lg); }
+.hist-std-tb tr:last-child td { border-bottom: 0; }
 .hist-std-tb { width: 100%; border-collapse: collapse; font-size: 13px; }
 .hist-std-tb th { background: none; text-align: left; font-size: 11px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; color: var(--text-second); padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
 .hist-std-tb td { padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text-main); vertical-align: middle; }

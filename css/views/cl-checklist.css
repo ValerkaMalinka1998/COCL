@@ -65,7 +65,11 @@
 
 /* === Итог смены для доски =================================== */
 .clb-modal { max-width: 560px; }
-.clb-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.clb-table {
+  width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px;
+  border: 1px solid var(--border-hi); border-radius: var(--r-md); overflow: hidden; background: var(--bg-card);
+}
+.clb-table tr:last-child td { border-bottom: 0; }
 .clb-table th, .clb-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: center; }
 .clb-table th:first-child, .clb-table td:first-child { text-align: left; color: var(--text-second); }
 .clb-table th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-dim); }

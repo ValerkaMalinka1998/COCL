@@ -118,6 +118,9 @@
 
 .svm-norm-wrap {
   overflow-x: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--r-md);
 }
 
 .svm-norm {

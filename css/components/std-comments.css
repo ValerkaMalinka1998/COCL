@@ -84,7 +84,11 @@
 .stdc-send { height: auto; padding: 0 18px; font-size: 14px; }
 
 /* --- Таблица замечаний --- */
-.stdc-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.stdc-table {
+  width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px;
+  border: 1px solid var(--border-hi); border-radius: var(--r-md); overflow: hidden; background: var(--bg-card);
+}
+.stdc-table tr:last-child td { border-bottom: 0; }
 .stdc-table th {
   padding: 6px 10px;
   border-bottom: 2px solid var(--border);
