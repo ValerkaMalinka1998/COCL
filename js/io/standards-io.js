@@ -661,7 +661,7 @@ async function parseOplJournalExcel(files, targetLine, nodePart) {
     .map(s => `${s.machine || ''}|${(s.oplNumber || '').toLowerCase()}`));
   const lineMachines = getLineMachines();
   if (!Array.isArray(lineMachines[targetLine])) lineMachines[targetLine] = [];
-  const result = { added: 0, skipped: 0, duplicates: [], empty: 0, errors: [], addedMachines: [], photos: 0 };
+  const result = { added: 0, skipped: 0, duplicates: [], empty: 0, emptyNoun: 'листов', errors: [], addedMachines: [], photos: 0 };
   const added = [];
   const zip = new JSZip();
 
@@ -697,7 +697,8 @@ async function parseOplJournalExcel(files, targetLine, nodePart) {
       keys.add(key);
       // Фото лежат по части линии — у PMD / FMD части нет, путь не собрать
       if (!part) result.photosLost = (result.photosLost || 0) + ws.getImages().length;
-      else ws.getImages().forEach((img, i) => {
+      else ws.getImages().sort((a, b) => (a.range.tl.nativeRow - b.range.tl.nativeRow)   // по месту на листе
+        || (a.range.tl.nativeCol - b.range.tl.nativeCol)).forEach((img, i) => {
         const media = wb.getImage(img.imageId);
         if (!media) return;
         const name = `OPL${std.oplNumber}_${std.machine}_${i + 1}.${media.extension}`.replace(/[\\/:*?"<>|\s]+/g, '_');
