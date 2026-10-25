@@ -227,11 +227,6 @@ function fillBrandsForLine(line) {
   renderCoclBrandTiles();
 }
 
-/* Совместимость: опции «На бренд» = все бренды линии */
-function updateBrandToOptions() {
-  renderCoclBrandTiles();
-}
-
 /* Выбор брендов «С» / «На»: кнопка + выпадающий список с поиском
    (названия брендов бывают длинными — плитки для них не годятся) */
 function renderCoclBrandTiles() {

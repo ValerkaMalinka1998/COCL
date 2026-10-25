@@ -6,38 +6,6 @@
    ============================================================ */
 
 /* ============================================================
-   CL ELECTRONIC — попадает ли параметр в конкретную дату/смену
-   ============================================================ */
-
-/* Проверяет: должен ли параметр проверяться в указанную дату
-   и указанную смену. Возвращает true/false. */
-function isElectronicParamDue(p, dateStr, shiftType) {
-  const freq = p.frequency;
-  if (!freq) return false;
-
-  // shiftType: 'day' | 'night' — смена по времени суток
-  // freq.shifts: массив, содержащий 'day' и/или 'night'
-  if (Array.isArray(freq.shifts) && freq.shifts.length) {
-    if (!freq.shifts.includes(shiftType)) return false;
-  }
-
-  switch (freq.type) {
-    case 'daily':
-      return true;
-
-    case 'weekly': {
-      const d = new Date(dateStr + 'T00:00:00');
-      return freq.daysOfWeek.includes(d.getDay());
-    }
-
-    case 'once':
-      return freq.dates.includes(dateStr);
-
-    default:
-      return false;
-  }
-}
-/* ============================================================
    ПРОВЕРКА CL — логика
    ============================================================ */
 

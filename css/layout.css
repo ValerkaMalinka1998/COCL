@@ -3,19 +3,30 @@
    ============================================================ */
 
 /* ============ Header ============ */
+/* Стекло над «сиянием»: размытие только у шапки, меню и модалок.
+   Размытие — на ::before: backdrop-filter на самой шапке сделал бы её рамкой
+   для position: fixed внутри (панель колокольчика обрезалась бы шапкой). */
 header {
-  background: linear-gradient(180deg, var(--nav-bg) 0%, var(--nav-bg-2) 100%);
-  border-bottom: 2px solid var(--accent-cyan);
-  color: white;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--glass-border);
+  color: var(--nav-text);
   padding: 18px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 4px 20px rgba(58, 166, 240, 0.15);
+  box-shadow: 0 12px 32px -26px rgba(var(--shadow-rgb), 0.6);
   min-height: 84px;
   position: sticky;
   top: 0;
   z-index: 500;
+}
+header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .header-left {
@@ -23,14 +34,13 @@ header {
   font-weight: 700;
   letter-spacing: 0.5px;
   flex: 1;
-  color: var(--accent-cyan);
-  text-shadow: var(--glow-cyan-sm);
+  color: var(--nav-text);
 }
 
 .header-right {
   font-size: 20px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--text-main);
   flex: 1;
   text-align: right;
   white-space: nowrap;
@@ -53,56 +63,62 @@ header {
 }
 
 /* ============ Sidebar ============ */
+/* Парящая стеклянная панель-док */
 .sidebar {
   width: 64px;
-  background: linear-gradient(180deg, var(--nav-bg) 0%, var(--nav-bg-2) 100%);
-  border-right: 1px solid var(--nav-border);
+  margin: 12px 0 12px 12px;
+  background: var(--nav-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--nav-border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--card-shadow);
   display: flex;
   flex-direction: column;
-  padding: 12px 0;
+  padding: 10px 0;
   gap: 4px;
   position: sticky;
-  top: 84px;
-  height: calc(100vh - 84px);
+  top: 96px;
+  height: calc(100vh - 108px);
   overflow: hidden;
-  transition: width 0.25s ease;
+  transition: width 0.25s ease, box-shadow 0.25s ease;
   z-index: 400;
   flex-shrink: 0;
 }
 .sidebar:hover,
 .sidebar.expanded {
   width: 260px;
-  box-shadow: 4px 0 24px rgba(58, 166, 240, 0.25);
-  border-right-color: var(--accent-cyan);
+  box-shadow: var(--shadow-pop);
 }
 
 /* ============ Кнопка закрепления sidebar ============ */
 .sidebar-pin-btn {
   background: none;
   border: none;
-  color: var(--accent-amber);
+  color: var(--nav-text-dim);
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 14px 20px;
+  margin: 0 8px;
+  padding: 12px 14px;
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
   text-align: left;
   white-space: nowrap;
-  width: 100%;
+  width: calc(100% - 16px);
   font-family: inherit;
-  border: none;
-  border-left: 4px solid transparent;
+  border-radius: var(--r-pill);
   transition: background 0.15s, color 0.15s, padding 0.25s ease, gap 0.25s ease;
-  height: 50px;
+  height: 46px;
   box-sizing: border-box;
 }
 .sidebar-pin-btn:hover {
   background: var(--nav-hover);
-  color: var(--accent-cyan);
+  color: var(--nav-text);
   opacity: 1;
 }
+.sidebar-pin-btn .sidebar-pin-icon { color: var(--accent-purple); }
 .sidebar-pin-icon {
   flex-shrink: 0;
   width: 24px;
@@ -134,13 +150,12 @@ header {
 .sidebar:hover .sidebar-pin-label,
 .sidebar.expanded .sidebar-pin-label {
   display: inline;
-} 
+}
 
 .sidebar-divider {
   height: 1px;
-  background: var(--nav-border);
+  background: var(--border);
   margin: 6px 16px;
-  opacity: 0.6;
 }
 
 /* ============ Ссылки навигации ============ */
@@ -151,29 +166,29 @@ header {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 14px 20px;
+  margin: 0 8px;
+  padding: 12px 14px;
   cursor: pointer;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   text-align: left;
   white-space: nowrap;
-  width: 100%;
-  transition: background 0.15s, color 0.15s, border-color 0.15s, padding 0.25s ease, gap 0.25s ease;
+  width: calc(100% - 16px);
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s, padding 0.25s ease, gap 0.25s ease;
   font-family: inherit;
-  border-left: 4px solid transparent;
+  border-radius: var(--r-pill);
   text-decoration: none;
   user-select: none;
   box-sizing: border-box;
 }
 .sidebar a:hover {
   background: var(--nav-hover);
-  color: var(--accent-cyan);
+  color: var(--nav-text);
 }
 .sidebar a.active {
   background: var(--nav-active);
-  color: var(--accent-cyan);
-  border-left-color: var(--accent-cyan);
-  text-shadow: var(--glow-cyan-sm);
+  color: var(--on-primary);
+  box-shadow: 0 10px 22px -10px rgba(var(--purple-rgb), 0.75);
 }
 
 /* В свёрнутом виде — центрируем иконку, убираем боковой padding и gap */
@@ -203,7 +218,7 @@ header {
   padding: 0;
   font-size: 0;
   border: none;
-  box-shadow: 0 0 6px rgba(230, 36, 79, 0.8);
+  box-shadow: 0 0 0 2px var(--bg-card);
   margin: 0;
   opacity: 1;
   visibility: visible;
@@ -228,10 +243,6 @@ header {
 .sidebar a:hover .nav-icon svg {
   transform: scale(1.1);
 }
-.sidebar a.active .nav-icon svg {
-  filter: drop-shadow(0 0 6px rgba(58, 166, 240, 0.9))
-          drop-shadow(0 0 12px rgba(58, 166, 240, 0.5));
-}
 
 /* Текст пункта меню */
 .nav-label {
@@ -247,16 +258,21 @@ header {
 .nav-counter {
   margin-left: auto;
   padding: 2px 8px;
-  background: rgba(58, 166, 240, 0.15);
-  color: var(--accent-cyan);
-  border: 1px solid rgba(58, 166, 240, 0.4);
-  border-radius: 10px;
+  background: rgba(var(--purple-rgb), 0.12);
+  color: var(--accent-purple);
+  border: 1px solid rgba(var(--purple-rgb), 0.3);
+  border-radius: var(--r-pill);
   font-size: 11px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.3px;
   flex-shrink: 0;
   display: none;
+}
+.sidebar a.active .nav-counter {
+  background: rgba(255, 255, 255, 0.22);
+  color: inherit;
+  border-color: transparent;
 }
 .sidebar:hover .nav-counter,
 .sidebar.expanded .nav-counter {
@@ -269,7 +285,7 @@ header {
   height: 20px;
   border-radius: 50%;
   background: var(--accent-red);
-  color: #ffffff;
+  color: var(--on-accent);
   font-size: 13px;
   font-weight: 800;
   display: flex;
@@ -277,7 +293,7 @@ header {
   justify-content: center;
   line-height: 1;
   flex-shrink: 0;
-  box-shadow: 0 0 8px rgba(230, 36, 79, 0.6);
+  box-shadow: 0 6px 14px -6px rgba(var(--red-rgb), 0.8);
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.2s ease, visibility 0s linear 0.2s;
@@ -288,29 +304,13 @@ header {
   visibility: visible;
   transition: opacity 0.2s ease 0.1s, visibility 0s;
 }
-/* ============ Заголовки групп в sidebar ============ */
-.nav-group-title {
-  display: none;
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--nav-text-dim);
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  padding: 12px 20px 4px;
-  opacity: 0.6;
-  white-space: nowrap;
-  user-select: none;
-}
-/* Показываем заголовки только в раскрытом sidebar */
-.sidebar:hover .nav-group-title,
-.sidebar.expanded .nav-group-title {
-  display: block;
-}
+/* Распорка: прижимает «Настройки» к низу меню */
+.sidebar-spacer { flex: 1; min-height: 8px; }
 
 /* ============ Main ============ */
 main {
   flex: 1;
-  padding: 20px 24px 80px 24px;
+  padding: 20px 24px 80px 20px;
   max-width: none;
   margin: 0;
   min-width: 0;
@@ -330,8 +330,8 @@ main {
 }
 
 .theme-toggle {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
   border-radius: 50%;
   width: 42px;
   height: 42px;
@@ -347,9 +347,8 @@ main {
   overflow: hidden;
 }
 .theme-toggle:hover {
-  background: rgba(58, 166, 240, 0.15);
-  border-color: var(--accent-cyan);
-  box-shadow: 0 0 16px rgba(58, 166, 240, 0.5);
+  border-color: var(--blue-mid);
+  box-shadow: var(--focus-ring);
   transform: scale(1.08);
 }
 .theme-toggle:active {
@@ -361,19 +360,21 @@ main {
   position: fixed;
   bottom: 0;
   right: 0;
-  background: linear-gradient(90deg, var(--nav-bg), var(--nav-bg-2));
+  background: var(--glass-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   color: var(--text-second);
   padding: 8px 20px;
   font-size: 13px;
   font-weight: 500;
-  border-top-left-radius: 8px;
-  border-top: 1px solid var(--accent-cyan);
-  border-left: 1px solid var(--accent-cyan);
-  box-shadow: 0 0 16px rgba(58, 166, 240, 0.2);
+  border-top-left-radius: var(--r-md);
+  border-top: 1px solid var(--glass-border);
+  border-left: 1px solid var(--glass-border);
+  box-shadow: var(--card-shadow);
   z-index: 600;
   letter-spacing: 0.3px;
 }
-.site-footer span { color: var(--accent-cyan); }
+.site-footer span { color: var(--accent-purple); }
 
 /* ============ Адаптив ============ */
 @media (max-width: 640px) {
@@ -384,12 +385,12 @@ main {
   }
   .header-left {
     font-size: 18px;
-    color: var(--accent-cyan);
+    color: var(--nav-text);
   }
   .header-right {
     font-size: 14px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--text-main);
     flex: 1;
     text-align: right;
     white-space: nowrap;

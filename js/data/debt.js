@@ -133,21 +133,3 @@ function clTallyIndex(line, from, to, rows = clLineRows(line), idx = clResultInd
   });
   return out;
 }
-
-/* Долги текущей смены линии (блок «С прошлых смен»), старые первыми:
-   [{ row, isElec, from, shifts }] — shifts: сколько смен прошло с пропуска.
-   Стандарт, который и так стоит в этой смене, долгом не показывается. */
-function getOpenDebts(line, now = new Date()) {
-  const cur = getCurrentShiftPeriod(now);
-  const curI = valShiftIndex(cur.date, cur.shiftType);
-  const key = `${cur.date}|${cur.shiftType}`;
-  const idx = clResultIndex(line);
-  const out = [];
-  clLineRows(line).forEach(({ row, isElec }) => {
-    const t = clRowTimeline(row, line, cur.date, cur.date, idx, now);
-    const c = t.cells.get(key);
-    if (!c || c.s !== 'carry' || !t.open) return;
-    out.push({ row, isElec, from: t.open.from, shifts: curI - valShiftIndex(t.open.from.date, t.open.from.shift) });
-  });
-  return out.sort((a, b) => b.shifts - a.shifts);
-}

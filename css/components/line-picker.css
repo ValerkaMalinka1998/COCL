@@ -17,7 +17,7 @@
   flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--border-hi);
-  border-radius: 14px;
+  border-radius: var(--r-lg);
   background: var(--bg-card);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
   animation: linePickerIn 0.15s ease-out;
@@ -49,13 +49,13 @@
   justify-content: center;
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   color: var(--text-dim);
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
 .line-picker-close:hover {
-  background: rgba(230, 36, 79, 0.1);
+  background: rgba(var(--red-rgb), 0.1);
   color: var(--accent-red);
 }
 .line-picker-close svg {
@@ -86,7 +86,7 @@
   padding: 10px 12px 10px 38px;
   font-size: 14px;
   border: 1px solid var(--border-hi);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   background: var(--bg-input);
   color: var(--text-main);
   font-family: inherit;
@@ -95,7 +95,7 @@
 .line-picker-search-wrap input:focus {
   outline: none;
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 3px rgba(58, 166, 240, 0.15);
+  box-shadow: 0 0 0 3px rgba(var(--cyan-rgb), 0.15);
 }
 
 .line-picker-body {
@@ -125,7 +125,7 @@
   padding: 4px 11px;
   background: var(--bg-input);
   border: 1px solid var(--border-hi);
-  border-radius: 14px;
+  border-radius: var(--r-lg);
   font-size: 12px;
   font-weight: 700;
   font-family: var(--font-mono);
@@ -166,13 +166,13 @@
   background: transparent;
   border: none;
   border-left: 3px solid transparent;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   font-family: inherit;
   text-align: left;
   cursor: pointer;
   transition: background 0.15s;
 }
-.line-picker-ws:hover { background: rgba(58, 166, 240, 0.07); }
+.line-picker-ws:hover { background: rgba(var(--cyan-rgb), 0.07); }
 .line-picker-ws.active {
   background: var(--bg-card);
   border-left-color: var(--accent-cyan);
@@ -190,7 +190,7 @@
 .line-picker-ws-count {
   min-width: 22px;
   padding: 1px 7px;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   background: var(--border);
   font-size: 11px;
   font-weight: 700;
@@ -198,7 +198,7 @@
   color: var(--text-second);
 }
 .line-picker-ws.active .line-picker-ws-count {
-  background: rgba(58, 166, 240, 0.15);
+  background: rgba(var(--cyan-rgb), 0.15);
   color: var(--accent-cyan);
 }
 
@@ -253,7 +253,7 @@
   padding: 11px 14px;
   background: var(--bg-input);
   border: 1px solid var(--border-hi);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   font-size: 14px;
   font-weight: 700;
   font-family: var(--font-mono);
@@ -264,7 +264,7 @@
 }
 .line-picker-line:hover {
   border-color: var(--accent-cyan);
-  background: rgba(58, 166, 240, 0.08);
+  background: rgba(var(--cyan-rgb), 0.08);
   color: var(--accent-cyan);
 }
 .line-picker-line.is-last { border-color: var(--accent-cyan); }

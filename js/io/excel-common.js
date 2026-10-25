@@ -8,6 +8,17 @@
    ИМПОРТ/ЭКСПОРТ: ШАБЛОНЫ
    ============================================================ */
 
+/* --- Шапка листа шаблона: белый жирный текст на синем --- */
+function styleTemplateHeader(ws) {
+  const headerRow = ws.getRow(1);
+  headerRow.height = 30;
+  headerRow.eachCell((cell) => {
+    cell.font = { name: 'Calibri', size: 13, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4FA8' } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+  });
+}
+
 /* --- Шаблон операторов --- */
 $('#downloadOperatorsTemplateBtn')?.addEventListener('click', async () => {
   if (typeof ExcelJS === 'undefined') {
@@ -25,13 +36,7 @@ $('#downloadOperatorsTemplateBtn')?.addEventListener('click', async () => {
   ws.addRow(['Петров Пётр Петрович']);
 
   // Стилизация шапки
-  const headerRow = ws.getRow(1);
-  headerRow.height = 30;
-  headerRow.eachCell((cell) => {
-    cell.font = { name: 'Calibri', size: 13, bold: true, color: { argb: 'FFFFFFFF' } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0A4FA8' } };
-    cell.alignment = { vertical: 'middle', horizontal: 'center' };
-  });
+  styleTemplateHeader(ws);
 
   // Подсказка на втором листе
   const wsInfo = wb.addWorksheet('Инструкция');

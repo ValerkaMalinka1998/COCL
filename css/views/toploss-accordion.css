@@ -7,7 +7,7 @@
   overflow-y: auto;
   padding: 4px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   background: var(--bg-input);
 }
 
@@ -22,7 +22,7 @@
   justify-content: space-between;
   padding: 6px 10px;
   background: var(--bg-hover);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   margin-bottom: 4px;
   position: sticky;
   top: 0;
@@ -58,7 +58,7 @@
   padding: 6px 12px;
   background: var(--bg-card);
   border: 1px solid var(--border-hi);
-  border-radius: 16px;
+  border-radius: var(--r-lg);
   cursor: pointer;
   font-size: 12px;
   font-weight: 500;
@@ -78,7 +78,7 @@
   cursor: pointer;
 }
 .toploss-picker-item.checked {
-  background: rgba(232, 154, 0, 0.12);
+  background: rgba(var(--amber-rgb), 0.12);
   border-color: var(--accent-amber);
   color: var(--accent-amber);
   font-weight: 700;
@@ -100,7 +100,7 @@
 .tlp-toolbar { display: flex; gap: 10px; align-items: center; }
 .tlp-toolbar .settings-search { flex: 1; }
 .tlp-only {
-  height: 36px; padding: 0 14px; border-radius: 8px; font-size: 13px; cursor: pointer;
+  height: 36px; padding: 0 14px; border-radius: var(--r-sm); font-size: 13px; cursor: pointer;
   border: 1px solid var(--border); background: transparent; color: var(--text-second); white-space: nowrap;
 }
 .tlp-only:hover { border-color: var(--accent-cyan); color: var(--text-main); }
@@ -117,7 +117,7 @@
 .tlp-cats { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; padding-right: 4px; border-right: 1px solid var(--border); }
 .tlp-cat {
   display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: left;
-  padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text-second); cursor: pointer; font-size: 13px;
+  padding: 8px 10px; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--text-second); cursor: pointer; font-size: 13px;
 }
 .tlp-cat:hover { background: var(--bg-hover, rgba(128,128,128,.1)); }
 .tlp-cat.active { background: color-mix(in srgb, var(--accent-cyan) 12%, transparent); color: var(--text-main); font-weight: 600; }
@@ -128,16 +128,16 @@
 .tlp-group-name { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--text-dim); margin-bottom: 6px; }
 .tlp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; }
 .tlp-item {
-  display: flex; align-items: center; gap: 10px; text-align: left; padding: 9px 10px; border-radius: 8px; cursor: pointer;
+  display: flex; align-items: center; gap: 10px; text-align: left; padding: 9px 10px; border-radius: var(--r-sm); cursor: pointer;
   border: 1px solid var(--border); background: transparent; color: var(--text-main); font-size: 13px;
 }
 .tlp-item:hover { border-color: var(--accent-cyan); }
 .tlp-item.checked { border-color: var(--accent-cyan); background: color-mix(in srgb, var(--accent-cyan) 10%, transparent); }
 .tlp-check {
-  flex: none; width: 18px; height: 18px; border-radius: 5px; display: flex; align-items: center; justify-content: center;
+  flex: none; width: 18px; height: 18px; border-radius: var(--r-xs); display: flex; align-items: center; justify-content: center;
   border: 1.5px solid var(--border); color: transparent;
 }
-.tlp-item.checked .tlp-check { background: var(--accent-cyan); border-color: var(--accent-cyan); color: #fff; }
+.tlp-item.checked .tlp-check { background: var(--accent-cyan); border-color: var(--accent-cyan); color: var(--on-accent); }
 @media (max-width: 720px) {
   .tlp-main { grid-template-columns: 1fr; max-height: none; }
   .tlp-cats { flex-direction: row; flex-wrap: wrap; border-right: 0; }

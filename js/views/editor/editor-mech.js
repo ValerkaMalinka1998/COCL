@@ -203,7 +203,7 @@ function refreshEditorMechTable() {
   html += '</tbody></table>';
   wrap.innerHTML = html;
 
-  renderEditorMechPagination(standards.length, totalPages, startIdx, endIdx);
+  renderEditorPagination('mech', standards.length, totalPages, startIdx, endIdx);
 
   // --- Обработчики ---
   wrap.querySelectorAll('[data-open-view]').forEach(el => {
@@ -254,77 +254,4 @@ function updateMechSelectionUI(filtered) {
     tr.classList.toggle('is-selected', editorTableState.mechSelected.has(tr.dataset.stdId));
   });
   if (typeof updateEditorBulk === 'function') updateEditorBulk('mech');
-}
-
-/* --- Пагинация --- */
-function renderEditorMechPagination(total, totalPages, startIdx, endIdx) {
-  const bar = $('#editorMechPagination');
-  if (!bar) return;
-
-  if (totalPages <= 1) {
-    bar.innerHTML = `
-      <span class="pagination-info">Показано ${startIdx + 1}–${endIdx} из ${total}</span>
-      <div class="pagination-controls">
-        <select class="pagination-size" id="emPageSize">
-          <option value="10"  ${editorTableState.mechPageSize === 10 ? 'selected' : ''}>10</option>
-          <option value="20"  ${editorTableState.mechPageSize === 20 ? 'selected' : ''}>20</option>
-          <option value="50"  ${editorTableState.mechPageSize === 50 ? 'selected' : ''}>50</option>
-          <option value="100" ${editorTableState.mechPageSize === 100 ? 'selected' : ''}>100</option>
-        </select>
-      </div>
-    `;
-    bar.querySelector('#emPageSize')?.addEventListener('change', (e) => {
-      editorTableState.mechPageSize = parseInt(e.target.value, 10) || 20;
-      editorTableState.mechPage = 1;
-      refreshEditorMechTable();
-    });
-    return;
-  }
-
-  const cur = editorTableState.mechPage;
-  let html = `<span class="pagination-info">Показано ${startIdx + 1}–${endIdx} из ${total}</span>`;
-  html += '<div class="pagination-controls">';
-  html += `<button class="pagination-btn" ${cur === 1 ? 'disabled' : ''} data-page="${cur - 1}">←</button>`;
-
-  // страницы
-  const pages = [];
-  for (let i = 1; i <= totalPages; i++) {
-    if (i === 1 || i === totalPages || Math.abs(i - cur) <= 2) pages.push(i);
-    else if (pages[pages.length - 1] !== '...') pages.push('...');
-  }
-  pages.forEach(p => {
-    if (p === '...') html += '<span class="pagination-dots">…</span>';
-    else html += `<button class="pagination-btn ${p === cur ? 'active' : ''}" data-page="${p}">${p}</button>`;
-  });
-
-  html += `<button class="pagination-btn" ${cur === totalPages ? 'disabled' : ''} data-page="${cur + 1}">→</button>`;
-
-  // Размер страницы
-  html += `
-    <select class="pagination-size" id="emPageSize">
-      <option value="10"  ${editorTableState.mechPageSize === 10 ? 'selected' : ''}>10</option>
-      <option value="20"  ${editorTableState.mechPageSize === 20 ? 'selected' : ''}>20</option>
-      <option value="50"  ${editorTableState.mechPageSize === 50 ? 'selected' : ''}>50</option>
-      <option value="100" ${editorTableState.mechPageSize === 100 ? 'selected' : ''}>100</option>
-    </select>
-  `;
-  html += '</div>';
-  bar.innerHTML = html;
-
-  // Обработчики пагинации
-  bar.querySelectorAll('[data-page]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const p = parseInt(btn.dataset.page, 10);
-      if (!isNaN(p) && p >= 1 && p <= totalPages) {
-        editorTableState.mechPage = p;
-        refreshEditorMechTable();
-      }
-    });
-  });
-
-  bar.querySelector('#emPageSize')?.addEventListener('change', (e) => {
-    editorTableState.mechPageSize = parseInt(e.target.value, 10) || 20;
-    editorTableState.mechPage = 1;
-    refreshEditorMechTable();
-  });
 }

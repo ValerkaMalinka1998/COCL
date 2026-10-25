@@ -10,13 +10,14 @@
   width: 46px;
   height: 46px;
   margin-right: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid var(--border-hi);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--bg-card);
   color: var(--nav-text);
   cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
 }
-.nb-btn:hover, .nb-btn[aria-expanded="true"] { background: rgba(255, 255, 255, 0.16); }
+.nb-btn:hover, .nb-btn[aria-expanded="true"] { border-color: var(--blue-mid); box-shadow: var(--focus-ring); transform: scale(1.05); }
 .nb-btn:focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 2px; }
 .nb-cnt {
   position: absolute;
@@ -28,8 +29,8 @@
   min-width: 20px;
   height: 20px;
   padding: 0 5px;
-  border: 2px solid var(--blue-deep);
-  border-radius: 10px;
+  border: 2px solid var(--bg-card);
+  border-radius: var(--r-pill);
   background: var(--accent-red);
   color: var(--on-accent);
   font-size: 11px;
@@ -46,14 +47,17 @@
   width: 420px;
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 110px);
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: 0 18px 50px rgba(10, 31, 110, 0.25);
+  background: var(--glass-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-pop);
+  overflow: hidden;
 }
 .nb-pop.open { display: flex; }
 .nb-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px; }
-.nb-head h3 { flex: 1; margin: 0; font-size: 16px; color: var(--text-main); }
+.nb-head h3 { flex: 1; margin: 0; font-family: var(--font-display); font-size: 15px; font-weight: 600; color: var(--text-main); }
 .nb-all { border: 0; background: none; color: var(--accent-cyan); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
 .nb-tabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 10px; border-bottom: 1px solid var(--border); }
 .nb-tabs button {
@@ -83,7 +87,7 @@
   cursor: pointer;
 }
 .nb-it:hover, .nb-it:focus-visible { background: var(--bg-hover); outline: none; }
-.nb-ic { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; }
+.nb-ic { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: var(--r-md); }
 .nb-ic-chg { background: color-mix(in srgb, var(--accent-amber) 15%, transparent); color: var(--accent-amber); }
 .nb-ic-cmt { background: color-mix(in srgb, var(--accent-cyan) 14%, transparent); color: var(--accent-cyan); }
 .nb-ic-rep { background: color-mix(in srgb, var(--accent-purple) 14%, transparent); color: var(--accent-purple); }

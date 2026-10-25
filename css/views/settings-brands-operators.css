@@ -16,7 +16,7 @@
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   background: var(--bg-input);
   overflow: hidden;
 }
@@ -36,7 +36,7 @@
 }
 
 .operators-row:hover {
-  background: rgba(58, 166, 240, 0.04);
+  background: rgba(var(--cyan-rgb), 0.04);
 }
 .operators-row:hover::before {
   content: '';
@@ -72,7 +72,7 @@
   padding: 0;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   cursor: pointer;
   color: var(--text-second);
   transition: background 0.15s, color 0.15s, border-color 0.15s;
@@ -85,8 +85,8 @@
 }
 
 .operators-row-delete-btn:hover {
-  background: rgba(230, 36, 79, 0.1);
-  border-color: rgba(230, 36, 79, 0.4);
+  background: rgba(var(--red-rgb), 0.1);
+  border-color: rgba(var(--red-rgb), 0.4);
   color: var(--accent-red);
 }
 
@@ -95,7 +95,7 @@
 /* ============================================================ */
 
 .hl-match {
-  background: rgba(58, 166, 240, 0.15);
+  background: rgba(var(--cyan-rgb), 0.15);
   color: var(--accent-cyan);
   font-weight: 700;
   padding: 0 1px;

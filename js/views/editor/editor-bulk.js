@@ -28,12 +28,6 @@ function updateEditorBulk(kind) {
   if (!n) bar.querySelectorAll('.et-bulk-menu').forEach(m => { m.hidden = true; });
 }
 
-/* Выбранные строки (только те, что ещё есть в хранилище) */
-function bulkSelectedRows(kind) {
-  const info = bulkKindInfo(kind);
-  return info.get().filter(r => info.sel.has(r.id));
-}
-
 function bulkRefresh(kind) {
   if (kind === 'mech') refreshEditorMechTable(); else refreshEditorElecTable();
 }

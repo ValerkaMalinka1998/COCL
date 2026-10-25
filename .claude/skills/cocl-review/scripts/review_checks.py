@@ -31,7 +31,7 @@ def read(path):
     try:
         with open(path, encoding='utf-8', newline='') as f:
             return f.read()
-    except FileNotFoundError:
+    except (FileNotFoundError, UnicodeDecodeError):  # нет файла или двоичный (шрифт, картинка)
         return ''
 
 

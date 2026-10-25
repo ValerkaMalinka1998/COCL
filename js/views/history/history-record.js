@@ -187,21 +187,23 @@ function renderHistRecordPage() {
   const fails = items.filter(x => !x.missed && x.it.status === 'FAIL');
 
   box.innerHTML = `
-    <div class="card print-card hist-rp-head">
-      <button type="button" class="btn btn-secondary hist-noprint" data-hist-back>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-        ${histPage.from === 'history' ? 'История' : 'Назад'}
-      </button>
-      ${histIcon(data.kind, 22)}
-      <div class="hist-rp-tt">
-        <h2>${escapeHtml(data.title)}</h2>
-        <div class="hist-rp-meta">${meta.map(m => `<span>${m}</span>`).join('')}</div>
-        ${extra}
+    <div class="page-head">
+      <div class="ph-context hist-noprint">
+        <button type="button" class="btn btn-secondary" data-hist-back>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          ${histPage.from === 'history' ? 'История' : 'Назад'}
+        </button>
       </div>
-      <span class="hist-sp"></span>
-      <div class="hist-rp-nav hist-noprint">
-        ${nav.prev ? `<button type="button" class="btn btn-secondary" ${navAttr(nav.prev)} title="Предыдущая проверка">◀ ${escapeHtml(histNavLabel(nav.prev))}</button>` : ''}
-        ${nav.next ? `<button type="button" class="btn btn-secondary" ${navAttr(nav.next)} title="Следующая проверка">${escapeHtml(histNavLabel(nav.next))} ▶</button>` : ''}
+      <div class="ph-main">
+        <div class="ph-title">
+          <div class="hist-rp-title">${histIcon(data.kind, 22)}<h2 class="ph-h1">${escapeHtml(data.title)}</h2></div>
+          <div class="hist-rp-meta">${meta.map(m => `<span>${m}</span>`).join('')}</div>
+          ${extra}
+        </div>
+        <div class="ph-actions hist-noprint">
+          ${nav.prev ? `<button type="button" class="btn btn-secondary" ${navAttr(nav.prev)} title="Предыдущая проверка">◀ ${escapeHtml(histNavLabel(nav.prev))}</button>` : ''}
+          ${nav.next ? `<button type="button" class="btn btn-secondary" ${navAttr(nav.next)} title="Следующая проверка">${escapeHtml(histNavLabel(nav.next))} ▶</button>` : ''}
+        </div>
       </div>
     </div>
     <div class="hist-rp">

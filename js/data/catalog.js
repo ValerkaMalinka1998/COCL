@@ -160,41 +160,6 @@ function getElectronicParamsForLine(line) {
     .filter(p => p.line === line);
 }
 
-/* Получить параметры конкретной линии и машины */
-function getElectronicParamsForMachine(line, machine) {
-  return getElectronicParamsForLine(line)
-    .filter(p => p.machine === machine);
-}
-
-/* Бренды линии, у которых есть хотя бы один электронный параметр
-   с заполненной нормой (target+tolerance или normText). */
-function getElectronicBrandsForLine(line) {
-  const params = getElectronicParamsForLine(line).filter(p => p.active !== false);
-  const lineBrands = getBrandsForLine(line);
-  const result = new Set();
-
-  params.forEach(p => {
-    if (p.controlType === 'fixed') {
-      // Для «Фиксированный» (ОК/Не ОК) достаточно, чтобы normText был заполнен —
-      // но у него нет привязки к бренду. Значит, он доступен всем брендам линии.
-      if (p.normText && p.normText.trim()) {
-        lineBrands.forEach(b => result.add(b));
-      }
-    } else {
-      // value_input — только те бренды, для которых есть target+tolerance
-      (p.valuesByBrand || []).forEach(v => {
-        const hasTarget = v.target !== '' && v.target != null;
-        const hasTol = v.tolerance !== '' && v.tolerance != null;
-        if (hasTarget && hasTol && lineBrands.includes(v.brand)) {
-          result.add(v.brand);
-        }
-      });
-    }
-  });
-
-  return [...result].sort((a, b) => a.localeCompare(b, 'ru'));
-}
-
 /* Получить расписание для линии — массив { date, brand }, отсортированный по дате */
 function getElectronicBrandScheduleForLine(line) {
   const all = getElectronicBrandSchedule();
@@ -207,45 +172,6 @@ function getElectronicBrandForDate(line, dateStr) {
   const arr = getElectronicBrandScheduleForLine(line);
   const found = arr.find(x => x.date === dateStr);
   return found ? found.brand : null;
-}
-
-/* Установить запись расписания. Если brand пустой — удаляет запись. */
-function setElectronicBrandForDate(line, dateStr, brand) {
-  const all = getElectronicBrandSchedule();
-  if (!Array.isArray(all[line])) all[line] = [];
-
-  // Удаляем старую запись на эту дату
-  all[line] = all[line].filter(x => x.date !== dateStr);
-
-  // Добавляем новую, если бренд не пустой
-  if (brand && brand.trim()) {
-    all[line].push({ date: dateStr, brand: brand.trim() });
-  }
-
-  // Сортируем по дате
-  all[line].sort((a, b) => a.date.localeCompare(b.date));
-
-  setElectronicBrandSchedule(all);
-}
-
-/* Массово установить записи: массив { date, brand }. brand='' → удалить. */
-function setElectronicBrandScheduleBulk(line, entries) {
-  const all = getElectronicBrandSchedule();
-  if (!Array.isArray(all[line])) all[line] = [];
-
-  // Удаляем все даты, которые есть в entries
-  const datesToReplace = new Set(entries.map(e => e.date));
-  all[line] = all[line].filter(x => !datesToReplace.has(x.date));
-
-  // Добавляем новые
-  entries.forEach(e => {
-    if (e.brand && e.brand.trim()) {
-      all[line].push({ date: e.date, brand: e.brand.trim() });
-    }
-  });
-
-  all[line].sort((a, b) => a.date.localeCompare(b.date));
-  setElectronicBrandSchedule(all);
 }
 
 function setTopLosses(v) {
