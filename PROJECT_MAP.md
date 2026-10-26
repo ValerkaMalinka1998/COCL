@@ -227,7 +227,7 @@ JS — 70 модулей, 21442 строк, 766 функций · CSS — 40 ф�
 | js/views/settings/brands.js:7 | ОБЩИЙ СПИСОК БРЕНДОВ — справочник с фильтром по цеху | `getLinesForBrand`, `renderBrandsSettings`, `addBrandInline`, `renameBrand`, `deleteBrand` |
 | js/views/settings/brands.js:217 | ИМПОРТ/ЭКСПОРТ БРЕНДОВ | `parseBrandsExcel` |
 | js/views/settings/operators.js:7 | ОПЕРАТОРЫ — строки + inline + пагинация | `renderOperatorsSettings`, `highlightOperatorName`, `renderOperatorsPagination`, `changeOperatorsPage`, `sortOperatorsRus`, `openAddOperatorModal`, `closeAddOperatorModal` |
-| js/views/settings/triggers.js:7 | НАСТРОЙКИ: пользовательские триггеры Change Over | `renderCustomTriggersSettings`, `addCustomTriggerInline`, `updateCustomTrigger`, `deleteCustomTrigger`, `getAvailableLines`, `getBrandsForLine` |
+| js/views/settings/triggers.js:7 | НАСТРОЙКИ: пользовательские триггеры Change Over | `renderCustomTriggersSettings`, `addCustomTriggerInline`, `updateCustomTrigger`, `deleteCustomTrigger`, `getBrandsForLine` |
 | js/views/settings/opl-import.js:1 | (начало модуля) | `renderOplImportSettings`, `oplImportSyncPart` |
 | js/views/settings/photos.js:7 | КАРТОЧКА «ХРАНИЛИЩЕ ФОТО» | `renderPhotoStorageSettings` |
 | js/views/settings/photos.js:28 | ПРОВЕРКА ФОТОГРАФИЙ НА БИТЫЕ ССЫЛКИ | `checkPhotoExists`, `runPhotosCheck`, `renderPhotosCheckResult`, `buildPhotosCheckReport`, `closePhotosCheckModal` |

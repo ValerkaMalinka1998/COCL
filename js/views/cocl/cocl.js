@@ -153,13 +153,9 @@ function renderCoclSummary(record) {
 function fillLinesForOperator() {
   const el = $('#lineSelect');
   if (!el) return;
-  const available = getAvailableLines();
-  if (!available.length) {
-    el.innerHTML = '<option value="">— нет доступных линий (добавьте бренды в Настройках) —</option>';
-    return;
-  }
+  // Все линии: бренды нужны только для Change Over (у PMD их может не быть)
   el.innerHTML = '<option value="">— выберите —</option>' +
-    available.map(l => `<option>${escapeHtml(l)}</option>`).join('');
+    getLines().map(l => `<option>${escapeHtml(l)}</option>`).join('');
 }
 
 /* --- Установить линию в COCL (из модалки выбора) --- */

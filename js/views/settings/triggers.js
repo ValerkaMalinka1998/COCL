@@ -169,13 +169,6 @@ $('#customTriggersContainer')?.addEventListener('click', (e) => {
   }
 });
 
-/* Линии, у которых есть хотя бы один бренд */
-function getAvailableLines() {
-  const lines = getLines();
-  const lineBrands = getLineBrands();
-  return lines.filter(l => Array.isArray(lineBrands[l]) && lineBrands[l].length > 0);
-}
-
 /* Бренды для конкретной линии */
 function getBrandsForLine(line) {
   const lb = getLineBrands();
