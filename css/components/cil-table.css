@@ -8,7 +8,7 @@
   --cil-head-bg-2: var(--table-head-bg-2);
   --cil-head-today: var(--table-head-today);
   --cil-head-text: var(--table-head-text);
-  --cil-head-dim: var(--text-dim);
+  --cil-head-dim: var(--table-head-dim);
   --cil-zone-w: 76px;
   --cil-std-w: 350px;
   --cil-third-w: 124px;
@@ -120,7 +120,7 @@
   padding: 6px 4px 7px;
   background: var(--cil-head-bg-2);
 }
-.cil-table thead th.cil-c-std { padding-left: 12px; }
+.cil-table thead th.cil-c-std { padding-left: 12px; text-align: center !important; }
 .cil-table thead th.cil-today { background: var(--cil-head-today); }
 .cil-day { border-left: 1px solid var(--border); font-family: var(--font-display); font-weight: 600; letter-spacing: 0; }
 .cil-day-name { margin-right: 6px; color: var(--cil-head-dim); }
@@ -139,8 +139,7 @@
   border: 1px solid var(--border-hi);
   border-radius: 50%;
 }
-.cil-shift-day .cil-brig { color: var(--accent-cyan); }
-.cil-shift-night .cil-brig { color: var(--accent-purple); }
+.cil-brig { color: var(--table-head-text); border-color: currentColor; opacity: .85; }
 .cil-brig.now {
   color: var(--on-accent);
   background: var(--accent-cyan);
@@ -417,19 +416,20 @@ button.cil-tag:hover { filter: brightness(1.1); box-shadow: 0 0 0 1px currentCol
   width: 36px;
   height: 30px;
   padding: 0;
-  color: transparent;
-  background: transparent;
-  border: 1.5px dashed var(--border-hi);
+  color: color-mix(in srgb, var(--text-dim) 60%, transparent);
+  background: rgba(var(--cyan-rgb), .05);
+  border: 1.5px dashed color-mix(in srgb, var(--accent-cyan) 45%, var(--border-hi));
   border-radius: var(--r-pill);
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 .cil-plan:hover { color: var(--accent-cyan); border-color: var(--accent-cyan); }
-.cil-plan.on.cil-plan-day { color: var(--on-accent); background: var(--accent-cyan); border: 1.5px solid var(--accent-cyan); }
-.cil-plan.on.cil-plan-night { color: var(--on-accent); background: var(--accent-purple); border: 1.5px solid var(--accent-purple); }
-.cil-plan.locked { cursor: not-allowed; opacity: 0.45; }
-.cil-plan.locked:not(.on) { background: repeating-linear-gradient(45deg, transparent 0 4px, var(--border) 4px 5px); }
-.cil-table tbody td.cil-past { background: color-mix(in srgb, var(--text-dim) 6%, var(--bg-card)); }
+.cil-plan.on.cil-plan-day { color: var(--on-accent); background: var(--plan-day); border: 1.5px solid var(--plan-day); }
+.cil-plan.on.cil-plan-night { color: var(--on-accent); background: var(--plan-night); border: 1.5px solid var(--plan-night); }
+.cil-plan.locked { cursor: not-allowed; opacity: 0.8; }
+.cil-plan.locked:not(.on) { border-style: solid; border-color: var(--border-hi); background: repeating-linear-gradient(45deg, transparent 0 4px, var(--border-hi) 4px 5px); }
+.cil-plan.locked.on { opacity: 0.6; }
+.cil-table tbody td.cil-past { background: color-mix(in srgb, var(--text-dim) 10%, var(--bg-card)); }
 
 .cil-table thead th[data-sch-col-day] { cursor: pointer; }
 .cil-table thead th[data-sch-col-day]:hover .cil-brig { color: var(--accent-cyan); border-color: var(--accent-cyan); }

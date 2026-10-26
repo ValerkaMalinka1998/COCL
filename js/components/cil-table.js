@@ -89,7 +89,7 @@ function cilPointChip(value, i, total) {
   return `<span class="cil-pt">${total > 1 ? `<i>т.${i + 1}</i>` : ''}<b>${escapeHtml(value)}</b></span>`;
 }
 
-function cilNorm(row, brand, isElec) {
+function cilNorm(row, brand) {
   const visual = {
     visual: true,
     html: '<span class="cil-norm-visual" title="Значений нет — проверка ОК / Не ОК по описанию">' + CIL_ICONS.check + '<span>визуально</span></span>'
@@ -103,43 +103,28 @@ function cilNorm(row, brand, isElec) {
       : `<span class="cil-norm-miss" title="Для бренда ${escapeAttr(brand)} значений нет — сообщите аналитику">нет нормы для ${escapeHtml(brand)}</span>`
   });
 
-  if (isElec) {
-    const type = row.controlType || 'variable';
-    if (type === 'fixed') return visual;
-    const pick = pickBrandValues(row.valuesByBrand, brand);
-    if (pick.kind === 'missing' || pick.kind === 'nobrand') return noNorm(pick);
-    const entry = pick.item;
-    if (!entry) return { visual: false, html: '<span class="cil-dim">—</span>' };
-    if (type === 'interval' && typeof getEparamNormRange === 'function') {
-      const r = getEparamNormRange(entry);
-      values = [r ? `${r.min} … ${r.max}` : '—'];
-    } else {
-      values = [`${entry.target} ± ${entry.tolerance}`];
-    }
-  } else {
-    const ms = Array.isArray(row.measurements) ? row.measurements : [];
-    const filled = ms.filter(b => (b.points || []).some(p => String(p && p.value != null ? p.value : '').trim()));
-    // Вариабельный / интервал без единой точки — норма не задана, бренд тут ни при чём
-    const t0 = typeof migrateControlType === 'function' ? migrateControlType(row.controlType, ms) : row.controlType;
-    if (!filled.length && (t0 === 'variable' || t0 === 'interval')) {
-      return { visual: false, missing: true, html: '<span class="cil-norm-miss" title="В стандарте нет точек замера — сообщите аналитику">нет точек</span>' };
-    }
-    const pick = pickBrandValues(filled, brand);
-    if (pick.kind === 'missing' || pick.kind === 'nobrand') return noNorm(pick);
-    const block = pick.item;
-    values = (block && Array.isArray(block.points) ? block.points : [])
-      .map(p => String(p && p.value != null ? p.value : '').trim())
-      .filter(Boolean);
-    if (!values.length) return visual;
-    // Фиксированный с текстом вместо чисел («в одну линию», «согласно описанию») —
-    // это проверка на совпадение, замера нет
-    const type = typeof migrateControlType === 'function' ? migrateControlType(row.controlType, ms) : row.controlType;
-    if (type === 'fixed' && values.every(v => parseNorm(v) == null)) {
-      return {
-        visual: true,
-        html: `<span class="cil-norm-visual" title="${escapeAttr(values.join('; '))}">${CIL_ICONS.check}<span>визуально</span></span>`
-      };
-    }
+  const ms = Array.isArray(row.measurements) ? row.measurements : [];
+  const filled = ms.filter(b => (b.points || []).some(p => String(p && p.value != null ? p.value : '').trim()));
+  // Вариабельный / интервал без единой точки — норма не задана, бренд тут ни при чём
+  const t0 = typeof migrateControlType === 'function' ? migrateControlType(row.controlType, ms) : row.controlType;
+  if (!filled.length && (t0 === 'variable' || t0 === 'interval')) {
+    return { visual: false, missing: true, html: '<span class="cil-norm-miss" title="В стандарте нет точек замера — сообщите аналитику">нет точек</span>' };
+  }
+  const pick = pickBrandValues(filled, brand);
+  if (pick.kind === 'missing' || pick.kind === 'nobrand') return noNorm(pick);
+  const block = pick.item;
+  values = (block && Array.isArray(block.points) ? block.points : [])
+    .map(p => String(p && p.value != null ? p.value : '').trim())
+    .filter(Boolean);
+  if (!values.length) return visual;
+  // Фиксированный с текстом вместо чисел («в одну линию», «согласно описанию») —
+  // это проверка на совпадение, замера нет
+  const type = typeof migrateControlType === 'function' ? migrateControlType(row.controlType, ms) : row.controlType;
+  if (type === 'fixed' && values.every(v => parseNorm(v) == null)) {
+    return {
+      visual: true,
+      html: `<span class="cil-norm-visual" title="${escapeAttr(values.join('; '))}">${CIL_ICONS.check}<span>визуально</span></span>`
+    };
   }
 
   // Бренд значений виден в просмотре стандарта — в таблице его не показываем

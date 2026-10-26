@@ -30,6 +30,19 @@ function makeElectronicParamId() {
   return 'elec_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
 }
 
+/* Старая норма E-Param (valuesByBrand: target ± tolerance или min…max) → точки «92 ± 5» / «5 до 8» */
+function eparamLegacyMeasurements(list, type) {
+  return (Array.isArray(list) ? list : []).map(v => {
+    if (!v || typeof v !== 'object') return null;
+    const has = (x) => x !== '' && x != null;
+    let value = '';
+    if (type === 'interval' && has(v.min) && has(v.max)) value = `${v.min} до ${v.max}`;
+    else if (type === 'interval' && has(v.target)) value = `${Number(v.target) - (Number(v.tolerance) || 0)} до ${Number(v.target) + (Number(v.tolerance) || 0)}`;
+    else if (has(v.target)) value = has(v.tolerance) && Number(v.tolerance) ? `${v.target} ± ${v.tolerance}` : String(v.target);
+    return value || v.brand ? { brand: v.brand || '', points: [{ value }] } : null;
+  }).filter(Boolean);
+}
+
 /* Нормализация одного параметра (защита от старых данных) */
 function normalizeElectronicParam(p) {
   return {
@@ -50,12 +63,11 @@ function normalizeElectronicParam(p) {
     controlType: migrateControlType(p.controlType, null),
     normText: typeof p.normText === 'string' ? p.normText : '',
 
-    // Пустой бренд — «Остальные бренды»: оставляем, если у нормы есть значения
-    // (раньше такие нормы отбрасывались и стирались при сохранении любого E-Param)
-    valuesByBrand: Array.isArray(p.valuesByBrand)
-      ? p.valuesByBrand.filter(v => v && typeof v === 'object' &&
-          (v.brand || [v.target, v.tolerance, v.min, v.max].some(x => x !== '' && x != null)))
-      : [],
+    // Точки по брендам — тот же формат, что у механического стандарта.
+    // Старый параметр (valuesByBrand) переводится в точки при чтении; пустой бренд — «Остальные бренды»
+    measurements: Array.isArray(p.measurements)
+      ? normalizeMeasurements(p.measurements)
+      : eparamLegacyMeasurements(p.valuesByBrand, migrateControlType(p.controlType, null)),
 
     // --- Применяемость ---
     appliesTo: Array.isArray(p.appliesTo) ? p.appliesTo.filter(v =>

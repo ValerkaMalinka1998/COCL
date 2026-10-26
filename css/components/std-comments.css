@@ -95,7 +95,8 @@
   text-align: left;
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-dim);
+  color: var(--table-head-text);
+  background: var(--table-head-bg);
 }
 .stdc-table td { padding: 12px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
 .stdc-c-ic { width: 56px; }

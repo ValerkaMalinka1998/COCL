@@ -527,3 +527,7 @@
 @media (max-width: 640px) {
   .sch-scope { flex-wrap: wrap; max-width: 100%; margin-left: 0; }
 }
+
+/* Обозначения расписания: цвета смен — как у галочек в ячейках */
+#schMatrixLegend .lg-sw-day   { background: color-mix(in srgb, var(--plan-day) 22%, transparent); border-color: var(--plan-day); }
+#schMatrixLegend .lg-sw-night { background: color-mix(in srgb, var(--plan-night) 22%, transparent); border-color: var(--plan-night); }

@@ -18,8 +18,8 @@
 }
 
 .brands-table thead th {
-  background: var(--bg-hover);
-  color: var(--text-second);
+  background: var(--table-head-bg);
+  color: var(--table-head-text);
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
@@ -80,7 +80,7 @@
 
 .bt-th-actions {
   min-width: 100px;
-  background: var(--bg-hover);
+  background: var(--table-head-bg);
 }
 
 .bt-add-point-btn {
@@ -199,3 +199,7 @@
 
 /* Значение не подходит типу контроля */
 .bt-point-input.bt-point-bad { border-color: var(--accent-red); color: var(--accent-red); }
+
+/* Кнопки в синей шапке таблицы брендов */
+.brands-table thead .bt-remove-point,
+.brands-table thead .bt-add-point-btn { color: var(--table-head-text); }

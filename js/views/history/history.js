@@ -124,7 +124,10 @@ function renderHistory() {
   $('#histCustomRange')?.classList.toggle('hist-hidden', histState.period !== 'custom');
   $$('#histBrigadeChips [data-hist-brigade]').forEach(b => b.classList.toggle('on', b.dataset.histBrigade === (histState.brigade || '')));
   const pill = $('#histLinePillCode');
-  if (pill) pill.textContent = histState.line || 'Все линии';
+  if (pill) {
+    const ctx = histState.line ? getBlockForLine(histState.line) : null;
+    pill.textContent = histState.line ? histState.line + (ctx ? ' · ' + ctx.workshop.name : '') : 'Все линии';
+  }
   $('#histFilterPanel')?.classList.toggle('hist-hidden', !histState.fOpen);
   $('#histFiltersBtn')?.setAttribute('aria-expanded', String(!!histState.fOpen));
 

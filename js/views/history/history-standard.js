@@ -48,7 +48,7 @@ function histStdBack() {
 function histStdData() {
   const row = histFindRow(histStd.id);
   if (!row) return null;
-  const isElec = !('measurements' in row) && ('paramName' in row || 'valuesByBrand' in row);
+  const isElec = 'paramName' in row;
   const cur = getCurrentShiftPeriod();
   const entries = (histStdEntries(histStd.line).get(histStd.id) || [])
     .map(e => ({ ...e, s: histShift(e.h), pts: histItemPoints(e.h, e.it) }));
@@ -124,7 +124,7 @@ function renderStandardHistory() {
   const stale = !last || daysAgo(last.s.date) >= HIST_STD_MISS_DAYS;
 
   const sub = [histStd.line, row.machine, row.nodePart, row.node,
-    controlTypeLabel(isElec ? row.controlType : migrateControlType(row.controlType, row.measurements)),
+    controlTypeLabel(migrateControlType(row.controlType, row.measurements)),
     nPoints ? nPoints + ' ' + cilPointsWord(nPoints) : ''].filter(Boolean);
 
 

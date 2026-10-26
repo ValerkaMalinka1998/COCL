@@ -15,30 +15,10 @@
 const epPageState = {
   isNew: false,     // параметр ещё не сохранён
   data: null,       // рабочая копия параметра
+  original: null,   // параметр как сохранён (для проверки «старых» значений точек)
   dirty: false,     // есть несохранённые правки
   readOnly: false   // режим просмотра: поля заблокированы, кнопка «Редактировать»
 };
-
-/* Диапазон нормы бренда: для интервала — min/max, иначе target ± tolerance */
-function getEparamNormRange(entry) {
-  if (!entry) return null;
-  const hasMinMax = entry.min !== '' && entry.min != null && entry.max !== '' && entry.max != null;
-  if (hasMinMax) return { min: Number(entry.min), max: Number(entry.max) };
-  const t = Number(entry.target), tol = Number(entry.tolerance);
-  if (isNaN(t) || isNaN(tol)) return null;
-  return { min: t - tol, max: t + tol };
-}
-
-/* Подпись нормы бренда для оператора */
-function getEparamNormLabel(entry, controlType) {
-  if (!entry) return '— норма не задана —';
-  const brand = entry.brand || REST_BRANDS_LABEL;
-  if (controlType === 'interval') {
-    const r = getEparamNormRange(entry);
-    return r ? `${brand}: ${r.min} … ${r.max}` : `${brand}: —`;
-  }
-  return `${brand}: ${entry.target} ± ${entry.tolerance}`;
-}
 
 /* Открыть страницу: id — параметр (mode 'view' — просмотр, иначе редактирование),
    без id — новый параметр линии редактора */
@@ -58,16 +38,7 @@ function openEparamPage(id, mode) {
     epPageState.isNew = true;
     epPageState.readOnly = false;
   }
-  // Для интервала показываем «от / до» — восстанавливаем их из target ± tolerance
-  // Строка без бренда = «Остальные бренды»: в форме — значение '*'
-  p.valuesByBrand = p.valuesByBrand.map(v => {
-    const r = getEparamNormRange(v);
-    return { ...v, brand: v.brand || '*', min: r ? r.min : '', max: r ? r.max : '' };
-  });
-  if (!p.valuesByBrand.length && p.controlType !== 'fixed') {
-    p.valuesByBrand = [{ brand: '', target: '', tolerance: '', min: '', max: '' }];
-  }
-
+  epPageState.original = epPageState.isNew ? null : JSON.parse(JSON.stringify(p));
   epPageState.data = p;
   epPageState.dirty = false;
   switchEparamTab('main');
@@ -83,6 +54,7 @@ function closeEparamPage(force) {
   if (!force && epPageState.dirty &&
       !confirm('Выйти без сохранения? Изменения не будут сохранены.')) return;
   epPageState.data = null;
+  epPageState.original = null;
   epPageState.isNew = false;
   epPageState.dirty = false;
   epPageState.readOnly = false;
@@ -227,115 +199,27 @@ function renderEparamMainFields(p) {
   `;
 }
 
-/* Блок «Норма»: текст для fixed, таблица брендов для variable / interval */
+/* Блоки «Что считается «ОК»» и «Контроль правильности» — как у механического стандарта:
+   таблица брендов × точек; в точке число/норма по типу контроля или метка словами */
 function renderEparamNorm(p) {
   const wrap = $('#epNormBlock');
   if (!wrap) return;
-
-  if (p.controlType === 'fixed') {
-    wrap.innerHTML = `
-      <div class="sv-content-block">
-        <div class="sv-content-block-title">Что считается «ОК»</div>
-        <textarea id="epf_normText" rows="3" class="sv-content-textarea"
-                  placeholder="Например: индикатор горит зелёным, ошибок на панели нет">${escapeHtml(p.normText || '')}</textarea>
-      </div>
-    `;
-    return;
-  }
-
-  const isInterval = p.controlType === 'interval';
-  const lineBrands = getBrandsForLine(p.line);
-  const rows = p.valuesByBrand.length ? p.valuesByBrand : [];
-
-  // Бренд, уже выбранный в другой строке, повторно выбрать нельзя
-  const usedBrands = (value) => new Set(rows.map(r => r.brand).filter(b => b && b !== value));
-  const brandSelect = (value) => {
-    const used = usedBrands(value);
-    const opts = ['<option value="">— бренд —</option>']
-      .concat(used.has('*') ? [] : [`<option value="*"${value === '*' ? ' selected' : ''}>${REST_BRANDS_LABEL}</option>`])
-      .concat(value && value !== '*' && !lineBrands.includes(value)
-        ? [`<option value="${escapeAttr(value)}" selected>${escapeHtml(value)}</option>`]
-        : [])
-      .concat(lineBrands.filter(b => !used.has(b)).map(b =>
-        `<option value="${escapeAttr(b)}"${b === value ? ' selected' : ''}>${escapeHtml(b)}</option>`));
-    return `<select data-ep-brand>${opts.join('')}</select>`;
-  };
-
-  const head = isInterval
-    ? '<th>Бренд</th><th>От</th><th>До</th><th></th>'
-    : '<th>Бренд</th><th>Норма</th><th>Допуск ±</th><th>Диапазон</th><th></th>';
-
-  const body = rows.map((r, idx) => {
-    const removeBtn = `
-      <button type="button" class="ep-row-remove" data-ep-remove="${idx}" title="Удалить бренд">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>`;
-    if (isInterval) {
-      return `
-        <tr data-ep-row="${idx}">
-          <td>${brandSelect(r.brand)}</td>
-          <td><input type="number" step="any" data-ep-min value="${escapeAttr(r.min ?? '')}" placeholder="от"></td>
-          <td><input type="number" step="any" data-ep-max value="${escapeAttr(r.max ?? '')}" placeholder="до"></td>
-          <td class="ep-row-actions">${removeBtn}</td>
-        </tr>`;
-    }
-    const range = getEparamNormRange(r);
-    const rangeText = (r.target !== '' && r.tolerance !== '' && range) ? `${range.min} … ${range.max}` : '—';
-    return `
-      <tr data-ep-row="${idx}">
-        <td>${brandSelect(r.brand)}</td>
-        <td><input type="number" step="any" data-ep-target value="${escapeAttr(r.target ?? '')}" placeholder="норма"></td>
-        <td><input type="number" step="any" min="0" data-ep-tolerance value="${escapeAttr(r.tolerance ?? '')}" placeholder="±"></td>
-        <td class="ep-range" data-ep-range>${escapeHtml(rangeText)}</td>
-        <td class="ep-row-actions">${removeBtn}</td>
-      </tr>`;
-  }).join('');
-
-  const emptyRow = `<tr><td colspan="${isInterval ? 4 : 5}" class="ep-table-empty">Добавьте бренд, для которого задана норма</td></tr>`;
-
+  const control = epPageState.readOnly
+    ? renderSvBrandBlocksView(p)
+    : `<div id="epf_brandBlocksContainer" data-type-id="epf_controlType" data-add-id="epf_addBrandBlockBtn"></div>
+       <button type="button" class="btn btn-secondary btn-sm" id="epf_addBrandBlockBtn" style="margin-top:8px">+ Добавить бренд</button>`;
   wrap.innerHTML = `
     <div class="sv-content-block">
-      <div class="sv-content-block-title">${isInterval ? 'Интервал по брендам' : 'Норма и допуск по брендам'}</div>
-      ${lineBrands.length ? '' : '<p class="ep-hint">У линии нет брендов — добавьте их в «Настройки → Бренды для каждой линии».</p>'}
-      <div class="ep-table-wrap">
-        <table class="ep-table">
-          <thead><tr>${head}</tr></thead>
-          <tbody>${body || emptyRow}</tbody>
-        </table>
-      </div>
-      <button type="button" class="btn btn-secondary btn-sm ep-add-row" id="epf_addBrandRow">+ Добавить бренд</button>
+      <div class="sv-content-block-title">Что считается «ОК»</div>
+      <textarea id="epf_normText" rows="3" class="sv-content-textarea"
+                placeholder="Например: индикатор горит зелёным, ошибок на панели нет">${escapeHtml(p.normText || '')}</textarea>
     </div>
-  `;
-}
-
-/* Снять строки таблицы брендов из DOM в рабочую копию */
-function syncEparamRowsFromDom() {
-  const p = epPageState.data;
-  if (!p) return;
-  const tbody = $('#epNormBlock tbody');
-  if (!tbody) return;
-  const rows = [];
-  tbody.querySelectorAll('tr[data-ep-row]').forEach(tr => {
-    const val = (sel) => {
-      const el = tr.querySelector(sel);
-      return el ? el.value.trim() : '';
-    };
-    rows.push({
-      brand: val('[data-ep-brand]'),
-      target: val('[data-ep-target]'),
-      tolerance: val('[data-ep-tolerance]'),
-      min: val('[data-ep-min]'),
-      max: val('[data-ep-max]')
-    });
-  });
-  // Строки одного типа хранят только свои поля — остальные сохраняем из прошлой копии
-  p.valuesByBrand = rows.map((r, i) => {
-    const prev = p.valuesByBrand[i] || {};
-    if (p.controlType === 'interval') return { ...prev, brand: r.brand, min: r.min, max: r.max };
-    return { ...prev, brand: r.brand, target: r.target, tolerance: r.tolerance };
-  });
+    <div class="sv-content-block">
+      <div class="sv-content-block-title">Контроль правильности</div>
+      <div style="margin-bottom:8px"><span class="sv-chip sv-chip-cyan">${escapeHtml(controlTypeLabel(p.controlType))}</span></div>
+      ${control}
+    </div>`;
+  if (!epPageState.readOnly) bindSvControlEvents(p, $('#epf_brandBlocksContainer'));
 }
 
 /* Связанные объекты */
@@ -424,15 +308,6 @@ $('#tab-eparam-edit')?.addEventListener('input', (e) => {
   }
   if (t.id === 'epf_normText') p.normText = t.value;
   if (t.id === 'epf_durationSec') p.durationSec = Math.max(0, parseInt(t.value, 10) || 0);
-  // Живой пересчёт диапазона «норма ± допуск»
-  const tr = t.closest('tr[data-ep-row]');
-  if (tr && tr.querySelector('[data-ep-range]')) {
-    const target = tr.querySelector('[data-ep-target]')?.value;
-    const tol = tr.querySelector('[data-ep-tolerance]')?.value;
-    const r = getEparamNormRange({ target, tolerance: tol });
-    tr.querySelector('[data-ep-range]').textContent =
-      (target !== '' && tol !== '' && r) ? `${r.min} … ${r.max}` : '—';
-  }
 });
 
 $('#tab-eparam-edit')?.addEventListener('change', (e) => {
@@ -440,32 +315,13 @@ $('#tab-eparam-edit')?.addEventListener('change', (e) => {
   if (!p) return;
   epPageState.dirty = true;
   const t = e.target;
-  if (t.matches && t.matches('[data-ep-brand]')) { syncEparamRowsFromDom(); renderEparamNorm(p); return; }
   if (t.id === 'epf_machine') p.machine = t.value;
   if (t.id === 'epf_nodePart') p.nodePart = t.value;
   if (t.id === 'epf_active') p.active = t.checked;
   if (t.id === 'epf_controlType') {
-    syncEparamRowsFromDom();
     p.controlType = t.value;
-    // При смене типа переносим норму: «норма ± допуск» ↔ «от … до»
-    const empty = (v) => v === '' || v == null;
-    p.valuesByBrand = p.valuesByBrand.map(r => {
-      if (p.controlType === 'interval' && empty(r.min) && empty(r.max) &&
-          !empty(r.target) && !empty(r.tolerance)) {
-        const range = getEparamNormRange({ target: r.target, tolerance: r.tolerance });
-        return range ? { ...r, min: range.min, max: range.max } : r;
-      }
-      if (p.controlType === 'variable' && empty(r.target) && empty(r.tolerance) &&
-          !empty(r.min) && !empty(r.max)) {
-        const min = Number(r.min), max = Number(r.max);
-        return { ...r, target: (min + max) / 2, tolerance: (max - min) / 2 };
-      }
-      return r;
-    });
-    if (p.controlType !== 'fixed' && !p.valuesByBrand.length) {
-      p.valuesByBrand = [{ brand: '', target: '', tolerance: '', min: '', max: '' }];
-    }
-    renderEparamNorm(p);
+    const chip = $('#epNormBlock .sv-chip');
+    if (chip) chip.textContent = controlTypeLabel(p.controlType);
   }
   if (t.closest('#epf_appliesToGroup')) {
     t.closest('label')?.classList.toggle('checked', t.checked);
@@ -477,21 +333,8 @@ $('#tab-eparam-edit')?.addEventListener('click', (e) => {
   const p = epPageState.data;
   if (!p) return;
 
-  if (e.target.closest('#epf_addBrandRow')) {
-    syncEparamRowsFromDom();
-    p.valuesByBrand.push({ brand: '', target: '', tolerance: '', min: '', max: '' });
-    epPageState.dirty = true;
-    renderEparamNorm(p);
-    return;
-  }
-  const removeBtn = e.target.closest('[data-ep-remove]');
-  if (removeBtn) {
-    syncEparamRowsFromDom();
-    p.valuesByBrand.splice(Number(removeBtn.dataset.epRemove), 1);
-    epPageState.dirty = true;
-    renderEparamNorm(p);
-    return;
-  }
+  // Таблица точек: добавление / удаление брендов и точек меняет параметр
+  if (e.target.closest('#epf_brandBlocksContainer, #epf_addBrandBlockBtn')) epPageState.dirty = true;
   if (e.target.closest('#epf_addMachineBtn')) {
     openQuickAddMachineModal({
       line: p.line,
@@ -560,7 +403,10 @@ $('#epPageEditBtn')?.addEventListener('click', () => {
 $('#epPageSaveBtn')?.addEventListener('click', () => {
   const p = epPageState.data;
   if (!p) return;
-  syncEparamRowsFromDom();
+  const box = $('#epf_brandBlocksContainer');
+  const measurements = (box ? getSvTableState(box) : (p.measurements || []))
+    .map(m => ({ brand: m.brand, points: m.points.map(pt => ({ value: String(pt.value || '').trim() })) }))
+    .filter(m => m.brand || m.points.some(pt => pt.value));
 
   const paramName = (p.paramName || '').trim();
   const machine = (p.machine || '').trim();
@@ -570,45 +416,22 @@ $('#epPageSaveBtn')?.addEventListener('click', () => {
   if (!machine)   return showToast('Выберите машину', true);
   if (isSmd && !p.nodePart) return showToast('Выберите часть линии', true);
 
-  let valuesByBrand = [];
-  if (p.controlType === 'fixed') {
-    if (!(p.normText || '').trim()) return showToast('Опишите, что считается «ОК»', true);
-    // Уже сохранённый текст нормы не трогали — не блокируем сохранение данными из прошлого
-    const stored = epPageState.isNew ? null : getElectronicParams().find(x => x.id === p.id);
-    const normErr = (stored && stored.controlType === 'fixed' && (stored.normText || '') === p.normText) ? '' : normTypeError('fixed', p.normText);
-    if (normErr) return showToast(normErr, true);
-  } else {
-    const filled = p.valuesByBrand.filter(r =>
-      r.brand || r.target !== '' || r.tolerance !== '' || r.min !== '' || r.max !== '');
-    for (const r of filled) {
-      if (!r.brand) return showToast('Выберите бренд в каждой строке нормы', true);
-      if (p.controlType === 'interval') {
-        if (r.min === '' || r.max === '' || !Number.isFinite(Number(r.min)) || !Number.isFinite(Number(r.max))) {
-          return showToast(`Бренд ${r.brand === '*' ? REST_BRANDS_LABEL : r.brand}: укажите числа «от» и «до»`, true);
-        }
-        if (Number(r.min) > Number(r.max)) return showToast(`Бренд ${r.brand === '*' ? REST_BRANDS_LABEL : r.brand}: «от» больше, чем «до»`, true);
-      } else {
-        if (r.target === '' || r.tolerance === '' || !Number.isFinite(Number(r.target)) || !Number.isFinite(Number(r.tolerance))) {
-          return showToast(`Бренд ${r.brand === '*' ? REST_BRANDS_LABEL : r.brand}: укажите числа нормы и допуска`, true);
-        }
-        if (Number(r.tolerance) < 0) return showToast(`Бренд ${r.brand === '*' ? REST_BRANDS_LABEL : r.brand}: допуск не может быть отрицательным`, true);
-      }
+  // Те же правила, что у механического стандарта: тип ↔ значение, один бренд — одна строка
+  const hasPoints = measurements.some(m => m.points.some(pt => pt.value));
+  if (p.controlType === 'fixed' && !hasPoints && !(p.normText || '').trim()) {
+    return showToast('Опишите, что считается «ОК», или задайте точки', true);
+  }
+  if ((p.controlType === 'variable' || p.controlType === 'interval') && !hasPoints) {
+    return showToast('Заполните хотя бы одну точку контроля', true);
+  }
+  const brands = measurements.map(m => m.brand || '');
+  const dupBrand = brands.find((x, i) => brands.indexOf(x) !== i);
+  if (dupBrand !== undefined) return showToast(`Бренд «${dupBrand || REST_BRANDS_LABEL}» добавлен дважды — оставьте одну строку`, true);
+  for (const m of measurements) {
+    for (const pt of m.points) {
+      const err = svPointTypeError(p.controlType, pt.value, epPageState.original);
+      if (err) return showToast(err, true);
     }
-    if (!filled.length) return showToast('Добавьте хотя бы один бренд с нормой', true);
-    const brands = filled.map(r => r.brand);
-    const dupBrand = brands.find((b, i) => brands.indexOf(b) !== i);
-    if (dupBrand) return showToast(`Бренд ${dupBrand === '*' ? REST_BRANDS_LABEL : dupBrand} указан дважды`, true);
-
-    // Интервал хранится и как min/max, и как target ± tolerance —
-    // так его понимают проверка, Чек-лист и экспорт в Excel.
-    valuesByBrand = filled.map(r => {
-      const brand = r.brand === '*' ? '' : r.brand;   // «Остальные бренды»
-      if (p.controlType === 'interval') {
-        const min = Number(r.min), max = Number(r.max);
-        return { brand, min, max, target: (min + max) / 2, tolerance: (max - min) / 2 };
-      }
-      return { brand, target: Number(r.target), tolerance: Number(r.tolerance) };
-    });
   }
 
   const all = getElectronicParams().map(normalizeElectronicParam);
@@ -630,8 +453,8 @@ $('#epPageSaveBtn')?.addEventListener('click', () => {
     paramName,
     durationSec: Math.max(0, Number(p.durationSec) || 0),
     controlType: p.controlType,
-    normText: p.controlType === 'fixed' ? p.normText.trim() : '',
-    valuesByBrand,
+    normText: (p.normText || '').trim(),
+    measurements,
     appliesTo: p.appliesTo || [],
     triggers: p.triggers || [],
     topLosses: p.topLosses || [],

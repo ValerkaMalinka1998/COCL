@@ -73,13 +73,14 @@ function renderSchAddList() {
   } else {
     allItems = getElectronicParamsForLine(schState.line)
       .filter(p => p.active !== false)
+      .filter(p => !linePartFilter(schState.line, schState.part) || p.nodePart === schState.part)
       .map(p => ({
         id: p.id,
         title: p.paramName || '—',
         oplNumber: '',
         machine: p.machine || '',
         node: '',
-        nodePart: '',
+        nodePart: p.nodePart || '',
         inSchedule: isSchRowMember(p),
         group: p.machine || '— без машины —'
       }));

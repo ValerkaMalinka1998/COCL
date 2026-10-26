@@ -58,8 +58,8 @@ function updateClLinePill() {
 function updateClPartSwitchVisibility() {
   const el = $('#clPartSwitch');
   if (!el) return;
-  // Maker / Packer — только для механики на линиях SMD
-  el.style.display = (clState.mode === 'mech' && lineHasParts(clState.line)) ? 'inline-flex' : 'none';
+  // Maker / Packer — только на линиях SMD
+  el.style.display = lineHasParts(clState.line) ? 'inline-flex' : 'none';
 }
 
 function updateClCheckButtons() {
@@ -188,7 +188,8 @@ function renderClMatrix() {
   } else {
     rows = getElectronicParamsForLine(clState.line)
       .filter(p => p.active !== false || checkedIds.has(p.id))
-      .filter(p => isMember(p) || inValidation(p) || checkedIds.has(p.id));
+      .filter(p => isMember(p) || inValidation(p) || checkedIds.has(p.id))
+      .filter(p => !linePartFilter(clState.line, clState.part) || p.nodePart === clState.part);
   }
 
   // Стандарты на валидации — последними
@@ -306,14 +307,12 @@ function renderClMatrix() {
 /* Счётчики «сделано / надо» текущей смены на кнопках Maker / Packer */
 function updateClPartCounts(dateByDayIdx, hist, isMember, checkedIds) {
   const btns = document.querySelectorAll('#clPartSwitch .editor-part-switch-btn');
-  const isElec = clState.mode !== 'mech';
-  const all = isElec ? [] : getStandards()
-    .filter(s => s.line === clState.line)
+  const all = (clState.mode !== 'mech' ? getElectronicParamsForLine(clState.line) : getStandards().filter(s => s.line === clState.line))
     .filter(s => s.active !== false || checkedIds.has(s.id))
     .filter(s => isMember(s) || checkedIds.has(s.id));
   btns.forEach(btn => {
     let cnt = btn.querySelector('.cil-part-cnt');
-    if (isElec || clState.weekOffset !== 0) { if (cnt) cnt.remove(); return; }
+    if (clState.weekOffset !== 0) { if (cnt) cnt.remove(); return; }
     const part = btn.dataset.part || '';
     let done = 0, need = 0;
     all.filter(s => !part || s.nodePart === part).forEach(s => {
@@ -425,7 +424,7 @@ function renderClRow(row, num, zone, cells, hist, isElec) {
   const freq = getClRowFreq(row);
   const title = row.title || row.paramName || '—';
   const machine = row.machine || '—';
-  const norm = cilNorm(row, clState.brand, isElec);
+  const norm = cilNorm(row, clState.brand);
   const icon = norm.visual ? CIL_ICONS.eye : CIL_ICONS.ruler;
   const devBadge = hist.last[row.id] === 'FAIL'
     ? `<span class="cil-tag cil-tag-dev" title="Последняя проверка — с отклонением">${CIL_ICONS.warn}Отклонение в прошлую проверку</span>` : '';
@@ -715,7 +714,7 @@ function quickSetClCell(rowId, dateStr, shift, status) {
 /* Сколько проверок запланировано на текущую смену в выбранном режиме (и части линии) */
 function clShiftPlannedCount() {
   return clBoardSummary(clState.mode === 'mech' ? 'mech' : 'elec')
-    .filter(g => clState.mode !== 'mech' || !linePartFilter(clState.line, clState.part) || g.part === clState.part)
+    .filter(g => !linePartFilter(clState.line, clState.part) || g.part === clState.part)
     .reduce((s, g) => s + g.planned, 0);
 }
 

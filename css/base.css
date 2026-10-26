@@ -112,6 +112,8 @@
 
   /* Стекло, градиенты, фон */
   --grad-primary: linear-gradient(135deg, #2563eb, #5b4ff0);
+  --plan-day:   #0e9a89;   /* галочка «день» в расписании: бирюзовая, не сливается с синей шапкой */
+  --plan-night: #4a3fc9;
   --on-primary:   #ffffff;
   --glass-card:   rgba(255, 255, 255, 0.72);
   --glass-strong: rgba(255, 255, 255, 0.9);
@@ -129,10 +131,11 @@
   --seg-on-shadow: 0 6px 16px -8px rgba(76, 64, 160, 0.45);
 
   /* Шапки таблиц (непрозрачные — под ними прокручиваются строки) */
-  --table-head-bg:    #f4f3fc;
-  --table-head-bg-2:  #faf9ff;
-  --table-head-today: #e9e8fd;
-  --table-head-text:  #48476a;
+  --table-head-bg:    linear-gradient(135deg, #6694ee, #7aa2f1);
+  --table-head-bg-2:  linear-gradient(135deg, #7aa2f1, #8fb1f3);
+  --table-head-today: linear-gradient(135deg, #4d80e6, #6290ec);
+  --table-head-text:  #0b1f4d;
+  --table-head-dim:   rgba(11, 31, 77, .65);
 
   /* Скругления */
   --r-xs:   6px;
@@ -217,6 +220,8 @@
   --header-strip: linear-gradient(90deg, #38bdf8, #a78bfa 50%, #2dd4bf);
 
   --grad-primary: linear-gradient(135deg, #60a5fa, #a78bfa);
+  --plan-day:   #2dd4bf;
+  --plan-night: #a193ff;
   --on-primary:   #0b0a25;
   --glass-card:   rgba(28, 28, 64, 0.55);
   --glass-strong: rgba(24, 24, 56, 0.88);
@@ -231,10 +236,11 @@
   --seg-on-bg:     rgba(255, 255, 255, 0.14);
   --seg-on-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
 
-  --table-head-bg:    #1d1d46;
-  --table-head-bg-2:  #19193e;
-  --table-head-today: #27275e;
-  --table-head-text:  #b6b5dc;
+  --table-head-bg:    linear-gradient(135deg, #131f3a, #182847);
+  --table-head-bg-2:  linear-gradient(135deg, #0f1a31, #142340);
+  --table-head-today: linear-gradient(135deg, #1f3560, #264070);
+  --table-head-text:  #b8cdf5;
+  --table-head-dim:   rgba(184, 205, 245, .6);
 
   --scroll-track: transparent;
   --scroll-thumb: rgba(255, 255, 255, 0.18);

@@ -109,18 +109,15 @@ function histIsElecItem(h, it) {
 /* Нормы точек пункта (по бренду записи): [{ label, range }] */
 function histItemNorms(h, it) {
   const brand = h.brandTo || h.brandActual || '';
-  if (histIsElecItem(h, it)) {
-    const p = getElectronicParams().find(x => x.id === it.standardId);
-    const list = p && Array.isArray(p.valuesByBrand) ? p.valuesByBrand : [];
-    let e = list.find(v => v.brand === brand) || list[0];
-    if (!e && it.target != null) e = { target: it.target, tolerance: it.tolerance };
-    if (!e || !Number.isFinite(Number(e.target))) return [];
-    const t = Number(e.target), tol = Number(e.tolerance) || 0;
-    const label = tol ? `${fmtNum(t)} ± ${fmtNum(tol)}` : fmtNum(t);
-    return [{ label, range: { min: t - tol, max: t + tol } }];
-  }
-  const st = getStandards().find(s => s.id === it.standardId);
+  const isElec = histIsElecItem(h, it);
+  const raw = isElec ? getElectronicParams().find(x => x.id === it.standardId) : null;
+  const st = isElec ? (raw && normalizeElectronicParam(raw)) : getStandards().find(s => s.id === it.standardId);
   const blocks = st && Array.isArray(st.measurements) ? st.measurements : [];
+  // Старая запись E-Param удалённого параметра: норма лежит в самой записи
+  if (isElec && !blocks.length && Number.isFinite(Number(it.target))) {
+    const t = Number(it.target), tol = Number(it.tolerance) || 0;
+    return [{ label: tol ? `${fmtNum(t)} ± ${fmtNum(tol)}` : fmtNum(t), range: { min: t - tol, max: t + tol } }];
+  }
   const block = blocks.find(b => b.brand === brand) || blocks.find(b => !b.brand) || blocks[0];
   const pts = block && Array.isArray(block.points) ? block.points : [];
   return pts.map(p => ({ label: String(p.value || ''), range: parseNorm(p.value) }));
@@ -196,7 +193,7 @@ function histStdEntries(line, hist = getHistory()) {
 
 /* Найти строку стандарта или E-Param по id */
 function histFindRow(id) {
-  return getStandards().find(s => s.id === id) || getElectronicParams().find(p => p.id === id) || null;
+  return getStandards().find(s => s.id === id) || (getElectronicParams().map(normalizeElectronicParam).find(p => p.id === id)) || null;
 }
 
 /* Понедельник недели даты */

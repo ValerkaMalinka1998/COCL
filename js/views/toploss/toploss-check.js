@@ -16,17 +16,7 @@ const tlCheck = {
 };
 
 /* Точки строки для ввода: [{ label, normText, range }] или null (ОК / Не ОК) */
-function tlCheckPoints(row, isElec, brand) {
-  if (isElec) {
-    if (row.controlType === 'fixed') return null;
-    const list = Array.isArray(row.valuesByBrand) ? row.valuesByBrand : [];
-    const e = list.find(v => brand && v.brand === brand) || list.find(v => !v.brand) || list[0];
-    if (!e) return null;
-    const r = getEparamNormRange(e);
-    if (!r) return null;
-    const text = row.controlType === 'interval' ? `${r.min} … ${r.max}` : `${e.target} ± ${e.tolerance}`;
-    return [{ label: `норма ${text}${e.brand ? ' · ' + e.brand : ''}`, range: r }];
-  }
+function tlCheckPoints(row, brand) {
   const ms = Array.isArray(row.measurements) ? row.measurements : [];
   const block = ms.find(b => brand && b.brand === brand) || ms.find(b => !b.brand) || ms[0];
   const pts = (block && Array.isArray(block.points) ? block.points : [])
@@ -40,7 +30,7 @@ function tlCheckPoints(row, isElec, brand) {
   return parsed.map((x, i) => ({ label: `т.${i + 1} · ${x.v}`, range: x.r, mark: x.mark }));
 }
 
-/* Подпись поля: «Т.1 · норма 5 до 8» (E-Param — «норма 92 ± 5 · бренд») */
+/* Подпись поля: «Т.1 · норма 5 до 8»  */
 function tlPointLabelHtml(p) {
   const m = /^т\.(\d+) · (.*)$/.exec(p.label);
   if (!m) return escapeHtml(p.label);
@@ -83,7 +73,7 @@ function buildTopLossChecklist(lossIds) {
   const period = getCurrentShiftPeriod();
   tlCheck.brand = getElectronicBrandForDate(line, period.date) || '';
   tlCheck.lossIds = lossIds.slice();
-  tlCheck.rows = rows.map(r => ({ ...r, points: tlCheckPoints(r.row, r.isElec, tlCheck.brand) }));
+  tlCheck.rows = rows.map(r => ({ ...r, points: tlCheckPoints(r.row, tlCheck.brand) }));
   tlCheck.answers = {};
   tlCheck.active = tlCheck.rows[0].row.id;
 
@@ -249,7 +239,7 @@ function saveTopLossCheck() {
       node: row.node || '',
       nodePart: row.nodePart || '',
       title: isElec ? row.paramName : row.title,
-      controlType: isElec ? row.controlType : migrateControlType(row.controlType, row.measurements),
+      controlType: migrateControlType(row.controlType, row.measurements),
       norm: normText,
       answer,
       value: points && points.length === 1 ? values[0] : null,

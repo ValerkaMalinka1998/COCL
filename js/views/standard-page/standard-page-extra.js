@@ -596,8 +596,7 @@ $('#svFullSaveBtn')?.addEventListener('click', () => {
 /* Ошибка формата точки для типа контроля. Старые значения сохранённого стандарта, которые
    не трогали (тип прежний), пропускаем — иначе правка названия блокировалась бы данными
    из прошлого. Новые и изменённые значения проверяются. */
-function svPointTypeError(type, value) {
-  const orig = svFullState.originalData;
+function svPointTypeError(type, value, orig = svFullState.originalData) {
   if (orig && migrateControlType(orig.controlType, orig.measurements) === type) {
     const old = (orig.measurements || []).flatMap(m => (m.points || []).map(p => String(p.value || '').trim()));
     if (old.includes(String(value || '').trim())) return '';
@@ -605,16 +604,19 @@ function svPointTypeError(type, value) {
   return normTypeError(type, value);
 }
 function markSvPointTypes() {
-  const type = $('#svf_controlType')?.value;
-  document.querySelectorAll('#svf_brandBlocksContainer .bt-point-input').forEach(inp => {
-    const err = svPointTypeError(type, inp.value);
-    inp.classList.toggle('bt-point-bad', !!err);
-    inp.title = err;
+  [['svf_brandBlocksContainer', 'svf_controlType', () => svFullState.originalData],
+   ['epf_brandBlocksContainer', 'epf_controlType', () => epPageState.original]].forEach(([boxId, typeId, orig]) => {
+    const type = document.getElementById(typeId)?.value;
+    document.querySelectorAll('#' + boxId + ' .bt-point-input').forEach(inp => {
+      const err = svPointTypeError(type, inp.value, orig());
+      inp.classList.toggle('bt-point-bad', !!err);
+      inp.title = err;
+    });
   });
 }
 document.addEventListener('input', (e) => {
   if (e.target.classList && e.target.classList.contains('bt-point-input')) markSvPointTypes();
 });
 document.addEventListener('change', (e) => {
-  if (e.target.id === 'svf_controlType') markSvPointTypes();
+  if (e.target.id === 'svf_controlType' || e.target.id === 'epf_controlType') markSvPointTypes();
 });

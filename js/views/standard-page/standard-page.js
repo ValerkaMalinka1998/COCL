@@ -512,7 +512,7 @@ function renderSvControlSection(st, isEdit) {
       <div style="margin-bottom:8px">
         <span class="sv-chip sv-chip-cyan">${escapeHtml(typeLabel)}</span>
       </div>
-      <div id="svf_brandBlocksContainer"></div>
+      <div id="svf_brandBlocksContainer" data-type-id="svf_controlType" data-add-id="svf_addBrandBlockBtn"></div>
       <button type="button" class="btn btn-secondary btn-sm" id="svf_addBrandBlockBtn" style="margin-top:8px">
         + Добавить бренд
       </button>
@@ -569,8 +569,7 @@ function renderSvBrandBlocksView(st) {
    ============================================================ */
 
 /* Отрисовать таблицу в контейнере #svf_brandBlocksContainer */
-function renderSvBrandsTable(measurements) {
-  const container = $('#svf_brandBlocksContainer');
+function renderSvBrandsTable(measurements, container = $('#svf_brandBlocksContainer')) {
   if (!container) return;
 
   const brands = getBrands();
@@ -615,7 +614,7 @@ function renderSvBrandsTable(measurements) {
         cells += `<td class="bt-td-value">
           <input type="text" class="bt-point-input"
                  data-row="${rowIndex}" data-col="${i}"
-                 value="${escapeAttr(val)}" placeholder="${escapeAttr((CONTROL_TYPE_HELP[$('#svf_controlType')?.value || svFullState.editingData?.controlType] || {}).placeholder || '0')}">
+                 value="${escapeAttr(val)}" placeholder="${escapeAttr((CONTROL_TYPE_HELP[svBoxType(container)] || {}).placeholder || '0')}">
         </td>`;
       }
 
@@ -654,9 +653,14 @@ function renderSvBrandsTable(measurements) {
   `;
 }
 
+/* Тип контроля, выбранный рядом с таблицей: свой select у стандарта и у E-Param (data-type-id) */
+function svBoxType(container) {
+  const sel = document.getElementById((container && container.dataset.typeId) || 'svf_controlType');
+  return (sel && sel.value) || svFullState.editingData?.controlType;
+}
+
 /* Прочитать state из DOM */
-function getSvTableState() {
-  const container = $('#svf_brandBlocksContainer');
+function getSvTableState(container = $('#svf_brandBlocksContainer')) {
   if (!container) return [];
   const state = [];
   container.querySelectorAll('.bt-row').forEach(row => {
@@ -671,34 +675,33 @@ function getSvTableState() {
 }
 
 /* Отрисовать state обратно в DOM */
-function renderSvBrandsTableFromState(state) {
+function renderSvBrandsTableFromState(state, container = $('#svf_brandBlocksContainer')) {
   const maxPoints = state.reduce((m, b) => Math.max(m, (b.points || []).length), 0);
   state.forEach(b => {
     while (b.points.length < maxPoints) b.points.push({ value: '' });
   });
-  renderSvBrandsTable(state);
-  bindSvControlEvents(svFullState.originalData);
+  renderSvBrandsTable(state, container);
+  bindSvControlEvents(null, container);
 }
 
 /* Обработчики событий в таблице контроля */
-function bindSvControlEvents(st) {
-  const container = $('#svf_brandBlocksContainer');
+function bindSvControlEvents(st, container = $('#svf_brandBlocksContainer')) {
   if (!container) return;
 
   // Если таблица ещё не отрисована — отрисовываем из st.measurements,
   // НО не выходим: ниже должны привязаться обработчики (в т.ч. «+ Добавить бренд»).
   if (!container.querySelector('.bt-row') && !container.querySelector('.bt-empty')) {
-    renderSvBrandsTable(st.measurements || []);
+    renderSvBrandsTable((st && st.measurements) || [], container);
   }
 
   // --- Удаление бренда ---
   container.querySelectorAll('[data-remove-brand]').forEach(btn => {
     btn.addEventListener('click', () => {
       const rowIndex = parseInt(btn.dataset.removeBrand, 10);
-      const state = getSvTableState();
+      const state = getSvTableState(container);
       if (!confirm('Удалить бренд со всеми его точками?')) return;
       state.splice(rowIndex, 1);
-      renderSvBrandsTableFromState(state);
+      renderSvBrandsTableFromState(state, container);
     });
   });
 
@@ -706,32 +709,32 @@ function bindSvControlEvents(st) {
   container.querySelectorAll('[data-remove-point-col]').forEach(btn => {
     btn.addEventListener('click', () => {
       const colIndex = parseInt(btn.dataset.removePointCol, 10);
-      const state = getSvTableState();
+      const state = getSvTableState(container);
       if (!confirm(`Удалить точку ${colIndex + 1} у всех брендов?`)) return;
       state.forEach(b => b.points.splice(colIndex, 1));
-      renderSvBrandsTableFromState(state);
+      renderSvBrandsTableFromState(state, container);
     });
   });
 
   // --- Добавление колонки точки ---
   container.querySelectorAll('[data-add-point-col]').forEach(btn => {
     btn.addEventListener('click', () => {
-      const state = getSvTableState();
+      const state = getSvTableState(container);
       if (!state.length) {
         state.push({ brand: '', points: [{ value: '' }] });
       } else {
         state.forEach(b => b.points.push({ value: '' }));
       }
-      renderSvBrandsTableFromState(state);
+      renderSvBrandsTableFromState(state, container);
     });
   });
 
   // --- Кнопка «+ Добавить бренд» ---
-  const addBrandBtn = $('#svf_addBrandBlockBtn');
+  const addBrandBtn = document.getElementById(container.dataset.addId || 'svf_addBrandBlockBtn');
   if (addBrandBtn && !addBrandBtn.dataset.bound) {
     addBrandBtn.dataset.bound = '1';
     addBrandBtn.addEventListener('click', () => {
-      const state = getSvTableState();
+      const state = getSvTableState(container);
       const maxPoints = state.reduce((m, b) => Math.max(m, (b.points || []).length), 0);
       const pointsCount = Math.max(maxPoints, 1);
       const newPoints = [];
@@ -741,12 +744,12 @@ function bindSvControlEvents(st) {
       const free = used.has('') ? getBrands().find(b => !used.has(b)) : '';
       if (free === undefined) return showToast('Все бренды уже добавлены', true);
       state.push({ brand: free, points: newPoints });
-      renderSvBrandsTableFromState(state);
+      renderSvBrandsTableFromState(state, container);
     });
   }
 
   // --- Смена бренда в строке: пересобрать списки, чтобы бренд не повторялся ---
   container.querySelectorAll('.bt-brand-select').forEach(sel => {
-    sel.addEventListener('change', () => renderSvBrandsTableFromState(getSvTableState()));
+    sel.addEventListener('change', () => renderSvBrandsTableFromState(getSvTableState(container), container));
   });
 }

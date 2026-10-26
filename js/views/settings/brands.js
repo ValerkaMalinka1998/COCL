@@ -128,7 +128,7 @@ function renameBrand(oldName, newName) {
   if (changed) setStandards(stds);
   const eps = getElectronicParams();
   let changedEp = 0;
-  eps.forEach(p => (p.valuesByBrand || []).forEach(v => {
+  eps.forEach(p => [...(p.valuesByBrand || []), ...(p.measurements || [])].forEach(v => {
     if (v.brand === oldName) { v.brand = newName; changedEp++; }
   }));
   if (changedEp) setElectronicParams(eps);

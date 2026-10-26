@@ -57,7 +57,7 @@ document.addEventListener('change', (e) => {
   const box = document.getElementById(id === 'svf_controlType' ? 'svf_typeHint' : 'epf_typeHint');
   if (box) box.innerHTML = controlTypeHintHtml(e.target.value);
   const ph = (CONTROL_TYPE_HELP[e.target.value] || {}).placeholder || '0';
-  document.querySelectorAll('#svf_brandBlocksContainer .bt-point-input').forEach(inp => { inp.placeholder = ph; });
+  document.querySelectorAll('#svf_brandBlocksContainer .bt-point-input, #epf_brandBlocksContainer .bt-point-input').forEach(inp => { inp.placeholder = ph; });
 });
 
 /* Формат даты для отображения */

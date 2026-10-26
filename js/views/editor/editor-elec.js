@@ -188,9 +188,8 @@ function updateElecSelectionUI(filtered) {
    «Значения»  — сверху строки сами повторяют «Параметры» (Параметр · Машина,
                  «Остальные бренды», тип), ниже — дополнительные бренды;
    «Списки»    — скрытый лист-источник списков; «Инструкция».
-   Норма: вариабельный — Номинал и Допуск, интервал — От и До,
-   фиксированный — текст «Норма ОК» на листе «Параметры».
-   Импорт понимает и старый формат (колонка «Значения по брендам»).
+   Норма — точки Т1…Т10 по брендам, как у стандартов (листы «Стандарты» / «Точки»).
+   Импорт понимает и старые форматы («Номинал / Допуск / От / До», колонка «Значения по брендам»).
    ============================================================ */
 
 const EP_SHEET = { main: 'Параметры', vals: 'Значения' };
@@ -200,7 +199,7 @@ const EP_COLS = [
   { key: 'machine',  title: 'Машина',                    width: 11, hint: 'из списка машин линии; новую можно вписать' },
   { key: 'name',     title: 'Параметр',                  width: 32, hint: 'название, уникально на машине' },
   { key: 'type',     title: 'Тип контроля',              width: 22, hint: 'из списка: Фиксированный / Вариабельный / Контролируемый интервал' },
-  { key: 'normText', title: 'Норма «ОК» (фиксированный)', width: 28, hint: 'только для фиксированного: что считается «ОК»' },
+  { key: 'normText', title: 'Что считается «ОК»',        width: 28, hint: 'описание: что считается «ОК» (для фиксированного без точек — обязательно)' },
   { key: 'work',     title: 'Работа',                    width: 9,  hint: 'Run / Stop / CIL — из списка' },
   { key: 'duration', title: 'Время на проверку, сек',    width: 12, hint: 'целое число секунд' },
   { key: 'applies',  title: 'CL относится к',            width: 20, hint: 'ChangeOver, CL_TO, CL_Conversion — через запятую' },
@@ -209,7 +208,7 @@ const EP_COLS = [
 ];
 const EP_COL = {};
 EP_COLS.forEach((c, i) => { EP_COL[c.key] = i + 1; });
-const EP_VAL_HEAD = ['Параметр (Параметр · Машина)', 'Бренд', 'Тип контроля', 'Номинал', 'Допуск', 'От', 'До'];
+const EP_VAL_HEAD = ['Параметр (Параметр · Машина)', 'Бренд', 'Тип контроля'].concat(Array.from({ length: XL_PTS }, (_, i) => `Т${i + 1}`));
 
 function epKey(p) { return `${p.paramName || ''} · ${p.machine || ''}`; }
 
@@ -218,22 +217,12 @@ function epRowFromParam(p, line) {
   const type = migrateControlType(p.controlType, null);
   return [
     p.line || line, p.nodePart || '', p.machine || '', p.paramName || '',
-    XL_TYPES[type] || '', type === 'fixed' ? (p.normText || '') : '',
+    XL_TYPES[type] || '', p.normText || '',
     normWork(p.work), Number(p.durationSec) || '',
     Array.isArray(p.appliesTo) ? p.appliesTo.join(', ') : '',
     p.active !== false ? 'Да' : 'Нет',
     (Array.isArray(p.topLosses) ? p.topLosses : []).map(id => findLossById(id)?.name).filter(Boolean).join(', ')
   ];
-}
-
-/* Значения нормы бренда в колонки Номинал | Допуск | От | До */
-function epValueCells(v, type) {
-  if (!v) return [];
-  if (type === 'interval') {
-    const r = getEparamNormRange(v);
-    return ['', '', r ? r.min : '', r ? r.max : ''];
-  }
-  return [v.target ?? '', v.tolerance ?? '', '', ''];
 }
 
 function buildEparamWorkbook(params, line, title, extraInfo) {
@@ -261,27 +250,29 @@ function buildEparamWorkbook(params, line, title, extraInfo) {
   // --- «Значения» ---
   const wv = wb.addWorksheet(EP_SHEET.vals);
   wv.addRow(EP_VAL_HEAD);
-  wv.columns.forEach((col, i) => { col.width = [30, 22, 22, 12, 12, 12, 12][i] || 12; });
+  wv.columns.forEach((col, i) => { col.width = [30, 22, 22][i] || 13; });
   const extra = [];
   const typeOf = (p) => migrateControlType(p.controlType, null);
+  const ptsOf = (block) => (Array.isArray(block && block.points) ? block.points : [])
+    .map(pt => String(pt && pt.value != null ? pt.value : '').trim()).slice(0, XL_PTS);
   for (let r = 2; r <= xlLastStdRow; r++) {
     const p = params[r - 2];
-    const list = p && typeOf(p) !== 'fixed' ? (p.valuesByBrand || []) : [];
-    const main = list.find(v => !v.brand) || list[0] || null;
-    list.filter(v => v !== main).forEach(v => extra.push({ p, v }));
+    const list = p && Array.isArray(p.measurements) ? p.measurements.filter(m => ptsOf(m).length) : [];
+    const main = list.find(m => !m.brand) || list[0] || null;
+    list.filter(m => m !== main).forEach(m => extra.push({ p, v: m }));
     const nameRef = xlRef(EP_SHEET.main, 'D' + r), machRef = xlRef(EP_SHEET.main, 'C' + r);
     wv.getCell(r, 1).value = { formula: `IF(${nameRef}="","",${nameRef}&" · "&${machRef})`, result: p ? epKey(p) : '' };
     wv.getCell(r, 2).value = main && main.brand
       ? main.brand
       : { formula: `IF(A${r}="","","${REST_BRANDS_LABEL}")`, result: p ? REST_BRANDS_LABEL : '' };
     wv.getCell(r, 3).value = { formula: `IF(A${r}="","",${xlRef(EP_SHEET.main, 'E' + r)})`, result: p ? XL_TYPES[typeOf(p)] || '' : '' };
-    epValueCells(main, p && typeOf(p)).forEach((x, i) => { wv.getCell(r, 4 + i).value = x === '' ? null : x; });
+    ptsOf(main).forEach((x, i) => { wv.getCell(r, 4 + i).value = x; });
   }
   xlsxHeadStyle(wv, 1, 30);
   xlsxBodyStyle(wv, 2, xlLastStdRow, EP_VAL_HEAD.length);
   for (let r = 2; r <= xlLastStdRow; r++) { xlAutoCell(wv.getCell(r, 1)); xlAutoCell(wv.getCell(r, 3)); }
   const sep = xlLastStdRow + 1;
-  wv.getCell(sep, 1).value = XL_EXTRA_HEAD.replace('впишите точки', 'впишите норму');
+  wv.getCell(sep, 1).value = XL_EXTRA_HEAD;
   wv.mergeCells(sep, 1, sep, EP_VAL_HEAD.length);
   wv.getRow(sep).height = 26;
   wv.getCell(sep, 1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
@@ -295,7 +286,7 @@ function buildEparamWorkbook(params, line, title, extraInfo) {
       formula: `IF(A${r}="","",IFERROR(INDEX(${xlRef(EP_SHEET.main, `$E$2:$E$${xlLastStdRow}`)},MATCH(A${r},${xlRef(XL_SHEET.lists, `$A$2:$A$${xlLastStdRow}`)},0)),""))`,
       result: x ? XL_TYPES[typeOf(x.p)] || '' : ''
     };
-    if (x) epValueCells(x.v, typeOf(x.p)).forEach((c, i) => { wv.getCell(r, 4 + i).value = c === '' ? null : c; });
+    if (x) ptsOf(x.v).forEach((c, i) => { wv.getCell(r, 4 + i).value = c; });
     xlList(wv.getCell(r, 1), `$A$2:$A$${xlLastStdRow}`, true);
     xlList(wv.getCell(r, 2), lists.brandsRange, false);
   }
@@ -316,13 +307,14 @@ function buildEparamWorkbook(params, line, title, extraInfo) {
   EP_COLS.forEach(c => { if (c.hint) info.push([`  • ${c.title} — ${c.hint}`]); });
   info.push(
     [''],
-    ['ЛИСТ «ЗНАЧЕНИЯ» — нормы по брендам (для вариабельного и интервала).'],
+    ['ЛИСТ «ЗНАЧЕНИЯ» — точки по брендам, как лист «Точки» у стандартов.'],
     ['  • Верхние строки заполняются САМИ: добавили параметр на лист «Параметры» — здесь в той же строке'],
-    [`    появились «Параметр · Машина», бренд «${REST_BRANDS_LABEL}» и тип (серые ячейки). Впишите норму.`],
-    ['  • Вариабельный — Номинал и Допуск (92 и 5 → 87…97). Интервал — От и До (5 и 8).'],
+    [`    появились «Параметр · Машина», бренд «${REST_BRANDS_LABEL}» и тип (серые ячейки). Впишите точки Т1, Т2, …`],
+    ['  • Значение точки по типу контроля: фиксированный — число (92) или метка словами («в одну линию»);'],
+    ['    вариабельный — «92 ± 5»; интервал — «5 до 8». Точку-метку словами можно в любом типе: оператор отметит ОК / Не ОК.'],
     ['  • Отдельная норма для бренда — ниже, в блоке «ДОПОЛНИТЕЛЬНЫЕ БРЕНДЫ»: выберите параметр и бренд из списка.'],
-    ['  • Фиксированный тип норм по брендам не имеет — заполните «Норма «ОК»» на листе «Параметры».'],
-    ['  • Неверная норма (не числа, «От» больше «До») при импорте не пропустится — параметр попадёт в отчёт.'],
+    ['  • Фиксированный без точек — проверка ОК / Не ОК по тексту «Что считается «ОК»» на листе «Параметры».'],
+    ['  • Значение, не подходящее типу контроля, при импорте не пропустится — параметр попадёт в отчёт.'],
     ...(extraInfo || []).map(l => [l])
   );
   info.forEach(([t]) => wi.addRow([t]));
@@ -340,7 +332,7 @@ async function editorElecDownloadTemplate() {
     line, nodePart: lineHasParts(line) ? 'Maker' : '', machine: getMachinesForLine(line)[0] || 'SE',
     paramName: 'Давление в камере', controlType: 'variable', work: 'Run', durationSec: 30,
     appliesTo: ['ChangeOver'], active: true, topLosses: [],
-    valuesByBrand: [{ brand: '', target: 90, tolerance: 3 }, { brand: getBrandsForLine(line)[0] || 'A', target: 92, tolerance: 5 }]
+    measurements: [{ brand: '', points: [{ value: '90 ± 3' }, { value: 'в одну линию' }] }, { brand: getBrandsForLine(line)[0] || 'A', points: [{ value: '92 ± 5' }] }]
   };
   const wb = buildEparamWorkbook([example], line, `Шаблон импорта электронных параметров — линия ${line}`, [
     '', 'В шаблоне одна строка-пример: замените её своими данными.',
@@ -423,7 +415,7 @@ async function parseElectronicParamsExcel(file, targetLine) {
       id: makeElectronicParamId(), active: f.active.toLowerCase() !== 'нет',
       line: targetLine, machine: f.machine, nodePart: lineHasParts(targetLine) ? f.nodePart : '', paramName: f.name,
       work: normWork(f.work), durationSec: Math.max(0, parseInt(f.duration, 10) || 0),
-      controlType: ct, normText: ct === 'fixed' ? f.normText : '',
+      controlType: ct, normText: f.normText,
       valuesByBrand: isOld ? parseValuesByBrand(f.values) : [],
       appliesTo: applies(f.applies), topLosses: lossIds(f.losses),
       frequency: { type: 'weekly', schedule: [], shifts: ['day', 'night'], daysOfWeek: [], dates: [] },
@@ -433,10 +425,12 @@ async function parseElectronicParamsExcel(file, targetLine) {
     candidates.push({ p, row: i });
   }
 
-  // --- «Значения» (новый формат) ---
+  // --- «Значения»: точки Т1…Т10 или старые Номинал / Допуск / От / До ---
+  const legacyBad = {};
   const wv = isOld ? null : wb.getWorksheet(EP_SHEET.vals);
   if (wv) {
-    const num = (row, c) => { const s = xlCellText(row, c).replace(',', '.'); return s === '' ? '' : Number(s); };
+    const pointsFmt = /^Т\d/i.test(xlCellText(wv.getRow(1), 4));
+    const lastCol = Math.max(wv.getRow(1).cellCount, 3 + XL_PTS);
     for (let i = 2; i <= wv.rowCount; i++) {
       const row = wv.getRow(i);
       const keyText = xlCellText(row, 1);
@@ -447,38 +441,40 @@ async function parseElectronicParamsExcel(file, targetLine) {
         const cut = keyText.lastIndexOf(' · ');
         p = index[`${(cut >= 0 ? keyText.slice(0, cut) : keyText).trim().toLowerCase()}|${cut >= 0 ? keyText.slice(cut + 3).trim() : ''}`] || null;
       }
-      if (!p || p.controlType === 'fixed') continue;
-      const [target, tolerance, min, max] = [4, 5, 6, 7].map(c => num(row, c));
-      if ([target, tolerance, min, max].every(x => x === '')) continue;
+      if (!p) continue;
       const brandText = xlIsBareFormula(row, 2) ? REST_BRANDS_LABEL : xlCellText(row, 2);
       const brand = !brandText || brandText === REST_BRANDS_LABEL ? '' : brandText;
-      const v = p.controlType === 'interval'
-        ? { brand, min, max, target: (min + max) / 2, tolerance: (max - min) / 2 }
-        : { brand, target, tolerance };
-      p.valuesByBrand = p.valuesByBrand.filter(x => (x.brand || '') !== brand).concat(v);
-      result.pointsImported++;
+      let points = [];
+      if (pointsFmt) {
+        for (let c = 4; c <= lastCol; c++) { const v = xlCellText(row, c); if (v) points.push({ value: v }); }
+      } else {
+        const num = (c) => { const s = xlCellText(row, c).replace(',', '.'); return s === '' ? '' : Number(s); };
+        const [target, tolerance, min, max] = [4, 5, 6, 7].map(num);
+        if ([target, tolerance, min, max].every(x => x === '')) continue;
+        const okN = (x) => x !== '' && Number.isFinite(x);
+        const isIv = p.controlType === 'interval';
+        const name = brand || REST_BRANDS_LABEL;
+        if (isIv ? !okN(min) || !okN(max) : !okN(target) || !okN(tolerance)) legacyBad[p.id] = name + ': значения — числа';
+        else if (isIv ? min > max : tolerance < 0) legacyBad[p.id] = name + ': ' + (isIv ? '«От» больше «До»' : 'допуск не может быть отрицательным');
+        else points = (eparamLegacyMeasurements([{ brand, target, tolerance, min, max }], p.controlType)[0] || {}).points || [];
+      }
+      if (!points.length) continue;
+      p.measurements = p.measurements.filter(m => (m.brand || '') !== brand).concat({ brand, points });
+      result.pointsImported += points.length;
     }
   }
 
-  // --- Проверка норм и сохранение ---
-  const okNum = (x) => x !== '' && Number.isFinite(Number(x));
+  // --- Проверка «тип контроля ↔ значение» и сохранение ---
   candidates.forEach(({ p, row }) => {
     const bad = [];
-    if (p.controlType === 'fixed') {
-      if (!p.normText.trim()) bad.push('для фиксированного укажите «Норма «ОК»»');
-      else if (normTypeError('fixed', p.normText)) bad.push(normTypeError('fixed', p.normText));
-    } else {
-      if (isOld) p.valuesByBrand.forEach(v => { if (p.controlType === 'interval' && okNum(v.target) && okNum(v.tolerance)) { v.min = v.target - v.tolerance; v.max = v.target + v.tolerance; } });
-      if (!p.valuesByBrand.length) bad.push('нет нормы ни для одного бренда (лист «Значения»)');
-      p.valuesByBrand.forEach(v => {
-        const b = v.brand || REST_BRANDS_LABEL;
-        if (p.controlType === 'interval') {
-          if (!okNum(v.min) || !okNum(v.max)) bad.push(`${b}: «От» и «До» — числа`);
-          else if (Number(v.min) > Number(v.max)) bad.push(`${b}: «От» больше «До»`);
-        } else if (!okNum(v.target) || !okNum(v.tolerance)) bad.push(`${b}: Номинал и Допуск — числа`);
-        else if (Number(v.tolerance) < 0) bad.push(`${b}: допуск не может быть отрицательным`);
-      });
-    }
+    if (legacyBad[p.id]) bad.push(legacyBad[p.id]);
+    const hasPts = p.measurements.some(m => m.points.some(pt => pt.value));
+    if (p.controlType === 'fixed' && !hasPts && !p.normText.trim()) bad.push('для фиксированного укажите «Что считается «ОК»» или точки');
+    if (p.controlType !== 'fixed' && !hasPts && !legacyBad[p.id]) bad.push('нет нормы ни для одного бренда (лист «Значения»)');
+    p.measurements.forEach(m => m.points.forEach((pt, pi) => {
+      const err = normTypeError(p.controlType, pt.value);
+      if (err) bad.push(`${m.brand || REST_BRANDS_LABEL}, т.${pi + 1}: ${err}`);
+    }));
     if (bad.length) {
       result.errors.push({ row, message: `${p.paramName}: ${bad.slice(0, 3).join('; ')}` });
       result.skipped++;

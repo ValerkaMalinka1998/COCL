@@ -28,7 +28,6 @@ function qcNum(v) {
 function getQcBrandPick() {
   const row = quickCheckState.row;
   if (!row) return { item: null, kind: 'none' };
-  if (quickCheckState.isElec) return pickBrandValues(row.valuesByBrand, quickCheckState.brand);
   const ms = (Array.isArray(row.measurements) ? row.measurements : [])
     .filter(b => (b.points || []).some(p => String(p && p.value != null ? p.value : '').trim()));
   return pickBrandValues(ms, quickCheckState.brand);
@@ -38,12 +37,6 @@ function getQcBrandPick() {
 function getQcFields() {
   const row = quickCheckState.row;
   if (!row) return [];
-  if (quickCheckState.isElec) {
-    const entry = pickBrandValues(row.valuesByBrand, quickCheckState.brand).item;
-    if (!entry) return [];
-    const ct = migrateControlType(row.controlType, row.measurements);
-    return [{ label: 'Значение', text: entry ? getEparamNormLabel(entry, ct) : '—', norm: getEparamNormRange(entry) }];
-  }
   const points = getRowMeasurementBlock(row, quickCheckState.brand)?.points || [];
   // Точка без числа (метка словами, isNormMark) — ОК / Не ОК; допустима в любом
   // типе контроля, числовые точки проверяются по норме
@@ -169,9 +162,9 @@ function openClCheckModal(rowId, dateStr, shift) {
   // --- Ввод ---
   const controlType = migrateControlType(row.controlType, row.measurements);
   // Фиксированный без чисел в точках (пусто или метки текстом) — ОК / Не ОК
-  const hasNumericMech = !isElec && Array.isArray(row.measurements) &&
+  const hasNumericMech = Array.isArray(row.measurements) &&
     row.measurements.some(b => b && !pointsAreMarksOnly(b.points));
-  const isOkFail = controlType === 'fixed' && (isElec || !hasNumericMech);
+  const isOkFail = controlType === 'fixed' && !hasNumericMech;
   quickCheckState.isOkFail = isOkFail;
 
   $('#qcAnswerOkNotOk').style.display = isOkFail ? '' : 'none';
@@ -179,7 +172,7 @@ function openClCheckModal(rowId, dateStr, shift) {
 
   if (isOkFail) {
     let normText = (row.normText || '').trim();
-    if (!isElec && !normText) {
+    if (!normText) {
       const withMarks = (row.measurements || []).filter(b => b && marksText(b.points));
       const mb = pickBrandValues(withMarks, brand).item;
       normText = mb ? marksText(mb.points) : '';
@@ -200,10 +193,10 @@ function openClCheckModal(rowId, dateStr, shift) {
     const src = draft?.answer || existing?.answer || '';
     String(src).split(',').forEach(v => saved.push(v.trim()));
     const prev = getQcPrevious(row);
-    $('#qcPointsTitle').textContent = isElec ? 'Значение' : (fields.length > 1 ? `Точки замера · ${fields.length}` : 'Точка замера');
+    $('#qcPointsTitle').textContent = fields.length > 1 ? `Точки замера · ${fields.length}` : 'Точка замера';
     $('#qcPointsList').innerHTML = fields.length ? fields.map((f, i) => `
       <label class="qcx-pt${f.mark ? ' qcx-pt-mark' : ''}" data-index="${i}">
-        <span class="qcx-pt-norm">${fields.length > 1 || !isElec ? `<b>${f.label}</b>` : ''}${escapeHtml(f.text)}<span class="qcx-pt-st" data-qc-status="${i}"></span></span>
+        <span class="qcx-pt-norm"><b>${f.label}</b>${escapeHtml(f.text)}<span class="qcx-pt-st" data-qc-status="${i}"></span></span>
         ${f.mark ? `<input type="hidden" class="qc-point-input" data-qc-point="${i}" value="${escapeAttr(saved[i] === 'ОК' || saved[i] === 'Не ОК' ? saved[i] : '')}">
         <span class="qcx-mark-btns">
           <button type="button" class="qcx-mark-btn qcx-mark-ok${saved[i] === 'ОК' ? ' on' : ''}" data-qc-mark="${i}" data-v="ОК">ОК</button>
@@ -335,13 +328,11 @@ function saveQuickCheck(goNext) {
     return;
   }
 
-  const isElec = quickCheckState.isElec === true;
   const date = quickCheckState.date;
   const shift = quickCheckState.shift;
   const brand = quickCheckState.brand || '';
   const controlType = migrateControlType(row.controlType, row.measurements);
-  const hasNumericMech = !isElec &&
-    Array.isArray(row.measurements) &&
+  const hasNumericMech = Array.isArray(row.measurements) &&
     row.measurements.some(b => b && !pointsAreMarksOnly(b.points));
   const comment = ($('#qcComment')?.value || '').trim();
 
@@ -349,7 +340,7 @@ function saveQuickCheck(goNext) {
   let answer = '';
   let value = null;
 
-  if (controlType === 'fixed' && (isElec || !hasNumericMech)) {
+  if (controlType === 'fixed' && !hasNumericMech) {
     const r = document.querySelector('input[name="qc_answer"]:checked');
     if (!r) {
       showToast('Выберите ОК или Не ОК', true);
@@ -357,31 +348,8 @@ function saveQuickCheck(goNext) {
     }
     status = r.value === 'OK' ? 'OK' : 'FAIL';
     answer = r.value === 'OK' ? 'ОК' : 'Не ОК';
-  } else if (isElec) {
-    // --- E-Param: одно числовое значение ---
-    const inp = document.querySelector('.qc-point-input');
-    if (!inp || inp.value === '') {
-      showToast('Введите значение', true);
-      return;
-    }
-    const num = qcNum(inp.value);
-    if (isNaN(num)) {
-      showToast('Введите число', true);
-      return;
-    }
-
-    // Ищем target/tolerance для бренда
-    const entry = pickBrandValues(row.valuesByBrand, brand).item;
-
-    let inRange = true;
-    const range = getEparamNormRange(entry);
-    if (range) inRange = num >= range.min && num <= range.max;
-
-    status = inRange ? 'OK' : 'FAIL';
-    answer = String(num);
-    value = num;
   } else {
-    // --- Мех: точки замера ---
+    // --- Точки замера (стандарт и E-Param) ---
     const inputs = document.querySelectorAll('.qc-point-input');
     if (!inputs.length) {
       showToast('Не найдены поля ввода точек', true);

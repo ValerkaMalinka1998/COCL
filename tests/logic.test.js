@@ -125,15 +125,24 @@ test('migrateControlType: старые типы → 3 канонических',
   assert.equal(mig(''), 'fixed');
 });
 
-test('E-Param: норма «Остальные бренды» (пустой бренд) не теряется при нормализации', () => {
+test('E-Param: старая норма (valuesByBrand) переходит в точки, «Остальные бренды» не теряются', () => {
   const p = plain(fn('normalizeElectronicParam')({
     paramName: 'Давление', controlType: 'variable',
     valuesByBrand: [{ brand: '', target: 90, tolerance: 3 }, { brand: 'Kent', target: 92, tolerance: 5 }, { brand: '', target: '', tolerance: '' }]
   }));
-  assert.deepEqual(p.valuesByBrand.map(v => v.brand), ['', 'Kent'], 'пустая строка без значений отбрасывается, общая норма остаётся');
-  const pick = plain(fn('pickBrandValues')(p.valuesByBrand, 'Winston'));
+  assert.deepEqual(p.measurements.map(m => m.brand), ['', 'Kent'], 'пустая строка без значений отбрасывается, общая норма остаётся');
+  assert.equal(p.measurements[1].points[0].value, '92 ± 5');
+  const pick = plain(fn('pickBrandValues')(p.measurements, 'Winston'));
   assert.equal(pick.kind, 'rest');
-  assert.equal(pick.item.target, 90);
+  assert.equal(pick.item.points[0].value, '90 ± 3');
+});
+
+test('E-Param: интервал переходит в «от до», сохранённые точки не трогаются', () => {
+  const norm = fn('normalizeElectronicParam');
+  const iv = plain(norm({ paramName: 'Т', controlType: 'interval', valuesByBrand: [{ brand: 'A', min: 5, max: 8, target: 6.5, tolerance: 1.5 }] }));
+  assert.equal(iv.measurements[0].points[0].value, '5 до 8');
+  const own = plain(norm({ paramName: 'Т', controlType: 'variable', measurements: [{ brand: '', points: [{ value: '92 ± 5' }, { value: 'в одну линию' }] }], valuesByBrand: [{ brand: 'X', target: 1, tolerance: 1 }] }));
+  assert.deepEqual(own.measurements[0].points.map(p => p.value), ['92 ± 5', 'в одну линию']);
 });
 
 /* === СМЕНЫ И НЕДЕЛИ === */

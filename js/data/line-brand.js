@@ -64,7 +64,7 @@ function lineBrandSourceText(info) {
 
 /* ------------------------------------------------------------
    Какие значения стандарта / E-Param проверять для бренда.
-   list — measurements (мех) или valuesByBrand (E-Param); строка
+   list — measurements (стандарт и E-Param); строка
    без бренда = «Остальные бренды».
    → { item, kind } где kind:
      'brand'   — своя строка бренда;

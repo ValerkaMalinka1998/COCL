@@ -215,15 +215,12 @@ function describeRowChange(kind, oldRow, newRow) {
   }
 
   // Точки / нормы по брендам — всегда существенны для листа линии
-  const norms = kind === 'elec'
-    ? clBrandsDiff(oldRow.valuesByBrand, newRow.valuesByBrand,
-        x => [x.target, x.tolerance, x.min, x.max].join('|'),
-        x => (x.target !== '' && x.target != null) ? `${x.target} ± ${x.tolerance}` : `${x.min} … ${x.max}`,
-        details)
-    : clBrandsDiff(oldRow.measurements, newRow.measurements,
-        x => (x.points || []).map(p => String(p.value || '').trim()).join('|'),
-        x => (x.points || []).map(p => String(p.value || '').trim()).filter(Boolean).join('; '),
-        details);
+  // У E-Param в старых снимках листа изменений точек нет — их выводит normalizeElectronicParam
+  const msOf = (r) => kind === 'elec' ? normalizeElectronicParam(r).measurements : r.measurements;
+  const norms = clBrandsDiff(msOf(oldRow), msOf(newRow),
+    x => (x.points || []).map(p => String(p.value || '').trim()).join('|'),
+    x => (x.points || []).map(p => String(p.value || '').trim()).filter(Boolean).join('; '),
+    details);
   parts.push(...norms);
   sheetParts.push(...norms);
 

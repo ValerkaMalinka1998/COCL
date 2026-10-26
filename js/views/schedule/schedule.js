@@ -140,6 +140,7 @@ function getFilteredScheduleRows() {
   } else {
     rows = getElectronicParamsForLine(schState.line)
       .filter(p => p.active !== false)
+      .filter(p => !linePartFilter(schState.line, schState.part) || p.nodePart === schState.part)
       .filter(isSchRowShown);
   }
 
@@ -221,9 +222,9 @@ function fillSchMachineFilter(rows) {
 /* --- Рендер матрицы расписания --- */
 function renderScheduleMatrix() {
   const wrap = $('#schMatrixWrap');
-  // Maker / Packer — только для механики на линиях SMD
+  // Maker / Packer — только на линиях SMD
   const partSw = $('#schPartSwitch');
-  if (partSw) partSw.style.display = (schState.mode === 'mech' && lineHasParts(schState.line)) ? '' : 'none';
+  if (partSw) partSw.style.display = lineHasParts(schState.line) ? '' : 'none';
   const toolbar = $('#schMatrixToolbar');
   if (!wrap) return;
 
@@ -245,6 +246,7 @@ function renderScheduleMatrix() {
         .filter(isSchRowShown)
     : getElectronicParamsForLine(schState.line)
         .filter(p => p.active !== false)
+        .filter(p => !linePartFilter(schState.line, schState.part) || p.nodePart === schState.part)
         .filter(isSchRowShown);
 
   schState.rows = rows;
@@ -548,7 +550,10 @@ function renderScheduleRow(row, dateByDayIdx, num, zone, isElec) {
 
   // 14 ячеек. Прошлое не меняется: прошедшая неделя целиком и
   // закончившиеся смены текущей недели заблокированы.
-  const curDate = getCurrentShiftPeriod().date;
+  const curPeriod = getCurrentShiftPeriod();
+  const curDate = curPeriod.date;
+  // Текущая смена — колонка подсвечена так же, как в Чек-листе CL
+  const cellCls = (dateStr, shift, isPast) => [isPast ? 'cil-past' : '', !isPastWeek && schState.weekOffset === 0 && dateStr === curDate && shift === curPeriod.shiftType ? 'cil-td-now' : ''].filter(Boolean).join(' ');
   CIL_DAYS.forEach(d => {
     const dateStr = dateByDayIdx[d.idx] || '';
     ['day', 'night'].forEach(shift => {
@@ -556,14 +561,14 @@ function renderScheduleRow(row, dateByDayIdx, num, zone, isElec) {
       const shiftName = shift === 'day' ? 'день' : 'ночь';
       if (isValCell(dateStr, shift)) {
         // Смена валидации: проверка обязательна, в расписании не снимается
-        html += `<td class="${cilTdClass(shift, dateStr === curDate && !isPastWeek && schState.weekOffset === 0, isPast ? 'cil-past' : '')}">
+        html += `<td class="${cilTdClass(shift, dateStr === curDate && !isPastWeek && schState.weekOffset === 0, cellCls(dateStr, shift, isPast))}">
           <span class="cil-plan cil-plan-${shift} on cil-plan-val" title="${escapeAttr(`${d.name} · ${shiftName} — валидация: проверка каждую смену`)}">${CIL_ICONS.check}</span>
         </td>`;
         return;
       }
       if (valWeek && !member) {
         // Пока идёт валидация, остальные смены задаются после утверждения
-        html += `<td class="${cilTdClass(shift, dateStr === curDate && !isPastWeek && schState.weekOffset === 0, isPast ? 'cil-past' : '')}">
+        html += `<td class="${cilTdClass(shift, dateStr === curDate && !isPastWeek && schState.weekOffset === 0, cellCls(dateStr, shift, isPast))}">
           <span class="cil-na" title="Смены по расписанию задаются после утверждения">—</span>
         </td>`;
         return;
@@ -572,7 +577,7 @@ function renderScheduleRow(row, dateByDayIdx, num, zone, isElec) {
       const tip = isPast
         ? `${d.name} · ${shiftName} — ${isPastWeek ? 'прошедшая неделя, только просмотр' : 'смена уже прошла'}`
         : `${d.name} · ${shiftName}`;
-      html += `<td class="${cilTdClass(shift, dateStr === curDate && !isPastWeek && schState.weekOffset === 0, isPast ? 'cil-past' : '')}">
+      html += `<td class="${cilTdClass(shift, dateStr === curDate && !isPastWeek && schState.weekOffset === 0, cellCls(dateStr, shift, isPast))}">
         <button type="button" class="cil-plan cil-plan-${shift} ${on ? 'on' : ''} ${isPast ? 'locked' : ''}"
           data-row-id="${id}" data-day="${d.idx}" data-shift="${shift}"${isPast ? ' data-locked="1"' : ''}
           title="${escapeAttr(tip)}">${on ? CIL_ICONS.check : CIL_ICONS.plus}</button>
