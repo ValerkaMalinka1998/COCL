@@ -405,10 +405,12 @@ test('бланк OPL: значение, время, дата', () => {
   assert.equal(clean('5 - 8'), '5 - 8', 'диапазон не ломается');
   assert.equal(fn('classifyNormValue')(clean('5 - 8')), 'interval');
   assert.equal(clean('метки совпадают'), 'метки совпадают');
+  assert.equal(clean('`-2 мм\t\t\t'), '-2 мм', 'текстовый префикс Excel и табы');
   const dur = fn('oplDurationSec');
   assert.equal(dur('30 сек'), 30);
   assert.equal(dur('1,5 мин'), 90);
   assert.equal(dur(''), 0);
+  assert.equal(dur(app('new Date(Date.UTC(1899, 11, 30, 0, 0, 30))')), 30, 'время Excel 0:00:30');
   const d = fn('oplDate');
   assert.equal(new Date(d('22.05.2026')).getDate(), 22);
   assert.equal(new Date(d(app('new Date(Date.UTC(2026, 4, 22))'))).getDate(), 22, 'полночь UTC из Excel — тот же день');

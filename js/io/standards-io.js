@@ -573,11 +573,12 @@ async function parseStandardsExcelV3(file, targetLine) {
 
 /* «- 65 kPa (±10 kPa)» → «-65 kPa ±10 kPa»: parseNorm не понимает скобки у допуска и пробел после минуса */
 function oplCleanValue(s) {
-  return String(s).replace(/\(\s*(±[^)]*)\)/g, ' $1').replace(/\s+/g, ' ').trim().replace(/^([-+]) (?=\d)/, '$1');
+  return String(s).replace(/^\s*[`']/, '').replace(/\(\s*(±[^)]*)\)/g, ' $1').replace(/\s+/g, ' ').trim().replace(/^([-+]) (?=\d)/, '$1');
 }
 
-/* «30 сек» → 30, «1,5 мин» → 90 */
+/* «30 сек» → 30, «1,5 мин» → 90, время Excel 0:00:30 (Date от 1899-12-30 UTC) → 30 */
 function oplDurationSec(s) {
+  if (s instanceof Date) return s.getUTCHours() * 3600 + s.getUTCMinutes() * 60 + s.getUTCSeconds();
   const n = parseFloat(String(s).replace(',', '.'));
   if (isNaN(n)) return 0;
   return Math.round(/мин/i.test(s) ? n * 60 : n);
@@ -607,13 +608,16 @@ function oplSheetToStandard(ws, line, part) {
   const find = (start, exact) => labels.find(l => exact ? l.low === start : l.low.startsWith(start));
   const cellUnder = (start, exact) => { const l = find(start, exact); return l ? ws.getCell(l.bottom + 1, l.col) : null; };
   const under = (start, exact) => { const c = cellUnder(start, exact); return c ? xlCellText(ws.getRow(c.row), c.col) : ''; };
-  if (!find('№ opl')) return null;
+  const numLabel = find('№ opl') ? '№ opl' : (find('№', true) ? '№' : null);   // в старых бланках — просто «№»
+  if (!numLabel) return null;
 
-  // Точки: номера — под «Точка замера», бренды — строка под «Значение» («Все сорта» = остальные бренды)
+  // Точки: номера — под «Точка замера», бренды — строка под «Значение» («Все сорта» = остальные бренды);
+  // в старых бланках «Значения» нет — бренды в строке «Точка замера», правее «Градуса»
   const measurements = [];
   const pt = find('точка замера'), vl = find('значение');
-  if (pt && vl) {
-    labels.filter(l => l.row === vl.bottom + 1 && l.col >= vl.col && l.col <= vl.right).forEach(b => {
+  if (pt) {
+    labels.filter(l => vl ? l.row === vl.bottom + 1 && l.col >= vl.col && l.col <= vl.right
+      : l.row === pt.row && l.col > pt.col && l.low !== 'градус').forEach(b => {
       const points = [];
       for (let r = pt.bottom + 1; /^\d+$/.test(xlCellText(ws.getRow(r), pt.col)); r++) {
         const v = oplCleanValue(xlCellText(ws.getRow(r), b.col));
@@ -633,7 +637,7 @@ function oplSheetToStandard(ws, line, part) {
   return {
     ...createEmptyStandard(),
     id: uid(),
-    oplNumber: under('№ opl'),
+    oplNumber: under(numLabel, numLabel === '№'),
     machine: (cut >= 0 ? machineNode.slice(0, cut) : machineNode).trim(),
     node: cut >= 0 ? machineNode.slice(cut + 1).trim() : '',
     title: under('название cl'),
@@ -641,11 +645,11 @@ function oplSheetToStandard(ws, line, part) {
     nodePart: part,
     controlType,
     problemDescription: under('описание проблемы'),
-    controlDescription: under('описание', true),
+    controlDescription: under('описание', true) || under('описание настройки', true),
     purpose: under('цель'),
     whyCreated: under('знаю почему'),
     tool: under('инструмент'),
-    durationSec: oplDurationSec(under('время на проверку')),
+    durationSec: oplDurationSec((cellUnder('время на проверку') || {}).value || ''),
     measurements,
     author: under('автор') || '—',
     createdAt: created,
@@ -661,7 +665,7 @@ async function parseOplJournalExcel(files, targetLine, nodePart) {
     .map(s => `${s.machine || ''}|${(s.oplNumber || '').toLowerCase()}`));
   const lineMachines = getLineMachines();
   if (!Array.isArray(lineMachines[targetLine])) lineMachines[targetLine] = [];
-  const result = { added: 0, skipped: 0, duplicates: [], empty: 0, emptyNoun: 'листов', errors: [], addedMachines: [], photos: 0 };
+  const result = { added: 0, skipped: 0, duplicates: [], empty: 0, emptyNoun: 'или скрытых листов', errors: [], addedMachines: [], photos: 0 };
   const added = [];
   const zip = new JSZip();
 
@@ -673,6 +677,7 @@ async function parseOplJournalExcel(files, targetLine, nodePart) {
       continue;
     }
     for (const ws of wb.worksheets) {
+      if (ws.state !== 'visible') { result.empty++; continue; }   // скрытые — шаблоны и старые версии бланков
       const where = wb.worksheets.length > 1 ? `${file.name} / ${ws.name}` : file.name;
       const std = oplSheetToStandard(ws, targetLine, part);
       if (!std || !(std.oplNumber || std.machine || std.title)) { result.empty++; continue; }   // не бланк или пустой шаблон
