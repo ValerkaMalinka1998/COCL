@@ -122,7 +122,7 @@ def storage_keys(js_files):
 
 
 def main():
-    commit = subprocess.run(['git', 'log', '-1', '--format=%h %s'], capture_output=True, text=True).stdout.strip()
+    commit = subprocess.run(['git', 'log', '-1', '--format=%h %s'], capture_output=True, text=True, encoding='utf-8').stdout.strip()
     jsf = js_order()
     mod_rows, sec_rows = [], []
     total_lines = total_funcs = 0
