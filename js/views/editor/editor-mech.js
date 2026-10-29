@@ -53,7 +53,9 @@ function editorAppliesMatch(appliesTo, type) {
 function editorRowSchedule(row, line) {
   try {
     const w = getRowForWeek(row, getSchWeekStart(0), line || row.line);
-    return { member: !!w.member, count: w.member ? (w.schedule || []).length : 0 };
+    // Идущая валидация стоит в расписании сама (как в Расписании CL и Чек-листе)
+    const onValidation = getClWeekDays(0).some(d => isValidationDay(row, d));
+    return { member: !!w.member || onValidation, count: w.member ? (w.schedule || []).length : 0, onValidation };
   } catch (e) {
     return { member: false, count: 0 };
   }
@@ -100,6 +102,7 @@ function etTypeNormHtml(row) {
 function etScheduleHtml(row, line) {
   const s = editorRowSchedule(row, line);
   if (!s.member) return '<span class="et-sch et-sch-out">не в расписании</span>';
+  if (s.onValidation && !s.count) return '<span class="et-sch et-sch-in" title="Идёт валидация: проверка в каждую смену срока">на валидации</span>';
   return `<span class="et-sch ${s.count ? 'et-sch-in' : 'et-sch-empty'}" title="${s.count ? '' : 'В расписании, но смены не отмечены'}">${s.count} / 14 смен</span><span class="et-sch-bar"><i style="width:${Math.round(s.count / 14 * 100)}%"></i></span>`;
 }
 
@@ -193,9 +196,9 @@ function refreshEditorMechTable() {
         <td class="et-c-ph">${photos ? `<span class="et-ph">${ET_ICONS.cam}${photos}</span>` : '<span class="et-dim">—</span>'}</td>
         <td class="et-c-st">${etStatusHtml(isActive)}</td>
         <td class="et-c-act"><div class="et-acts">
-          <button type="button" class="et-ib" data-edit="${id}" title="Редактировать">${ET_ICONS.edit}</button>
-          <button type="button" class="et-ib" data-copy="${id}" title="Копировать">${ET_ICONS.copy}</button>
-          <button type="button" class="et-ib et-ib-del" data-delete="${id}" title="Удалить">${ET_ICONS.del}</button>
+          <button type="button" class="et-ib" data-edit="${id}" title="Редактировать" data-need="edit">${ET_ICONS.edit}</button>
+          <button type="button" class="et-ib" data-copy="${id}" title="Копировать" data-need="edit">${ET_ICONS.copy}</button>
+          <button type="button" class="et-ib et-ib-del" data-delete="${id}" title="Удалить" data-need="edit">${ET_ICONS.del}</button>
         </div></td>
       </tr>`;
   });

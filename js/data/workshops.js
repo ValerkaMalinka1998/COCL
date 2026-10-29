@@ -149,6 +149,16 @@ function getLines() {
   return result;
 }
 
+/* Часть линии (Maker / Packer) машины — только SMD; нет записи = машина общая, видна в обеих частях */
+function getLineMachineParts() { return load(STORAGE_KEYS.lineMachineParts, {}); }
+function getMachinePart(line, machine) { return (getLineMachineParts()[line] || {})[machine] || ''; }
+function setMachinePart(line, machine, part) {
+  const all = getLineMachineParts();
+  const m = all[line] || (all[line] = {});
+  if (part) m[machine] = part; else delete m[machine];
+  save(STORAGE_KEYS.lineMachineParts, all);
+}
+
 /* Машины для линий */
 function getLineMachines() {
   return load(STORAGE_KEYS.lineMachines, {...DEFAULT_LINE_MACHINES});

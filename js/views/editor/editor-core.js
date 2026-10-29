@@ -347,8 +347,8 @@ $('#linePickerSearch')?.addEventListener('input', (e) => {
 });
 
 /* Чип линии — открывает модалку */
-$('#emLinePill')?.addEventListener('click', openLinePickerModal);
-$('#eeLinePill')?.addEventListener('click', openLinePickerModal);
+$('#emLinePill')?.addEventListener('click', () => openLinePickerModal(currentEditorLine || ''));
+$('#eeLinePill')?.addEventListener('click', () => openLinePickerModal(currentEditorLine || ''));
 
 /* Переключатель режима внутри панели */
 $('#emModeSwitch')?.addEventListener('click', (e) => {
@@ -400,7 +400,7 @@ bindPartSwitchHandlers('elPartCounters', 'el');
 document.addEventListener('click', (e) => {
   const crumb = e.target.closest('.editor-crumb[data-crumb="open-picker"]');
   if (crumb) {
-    openLinePickerModal();
+    openLinePickerModal(currentEditorLine || '');
   }
 });
 
@@ -633,26 +633,71 @@ document.addEventListener('click', (e) => {
 function copyStandardNew(id) {
   const st = getStandards().find(s => s.id === id);
   if (!st) return;
+  // Своё окно (не «Выбор линии»): только линии того же цеха — SMD-стандарт в PMD/FMD не нужен
+  const ws = getWorkshopIdForLine(st.line);
+  const groups = new Map();
+  getAllLinesWithContext().filter(x => x.workshopId === ws).forEach(x => {
+    const g = x.blockName ? `${x.areaName} · ${x.blockName}` : x.areaName;
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g).push(x.line);
+  });
+  if (!groups.size) groups.set('Линия вне структуры цехов', [st.line]);
+  $('#copyStdSrc').innerHTML = `<b>${escapeHtml(st.oplNumber || '')}</b> ${escapeHtml(st.title || '—')}
+    <span>${escapeHtml([st.line, st.machine, st.nodePart].filter(Boolean).join(' · '))}</span>`;
+  $('#copyStdLines').innerHTML = [...groups.entries()].map(([g, lines]) => `
+    <div class="copy-std-group"><div class="copy-std-group-name">${escapeHtml(g)}</div>
+      <div class="copy-std-chips">${lines.map(l => `<button type="button" class="copy-std-line${l === st.line ? ' is-cur' : ''}"
+        data-copy-to="${escapeAttr(l)}">${escapeHtml(l)}${l === st.line ? ' <small>эта линия</small>' : ''}</button>`).join('')}</div></div>`).join('');
+  copyStdSource = st;
+  openModal('#copyStdModal');
+}
+let copyStdSource = null;
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#copyStdModalClose')) { closeModal('#copyStdModal'); return; }
+  const b = e.target.closest('[data-copy-to]');
+  if (!b || !copyStdSource) return;
+  closeModal('#copyStdModal');
+  openStandardCopyPage(copyStdSource, b.dataset.copyTo);
+  copyStdSource = null;
+});
 
-  const copy = JSON.parse(JSON.stringify(st));
+function openStandardCopyPage(src, line) {
+  const same = line === src.line;
+  const copy = JSON.parse(JSON.stringify(src));
+  const now = new Date().toISOString();
   copy.id = uid();
-  copy.oplNumber = (st.oplNumber || '') + '-copy';
+  copy.line = line;
   copy.number = '';
-  // Копия — новый стандарт: в расписание его добавляют отдельно
+  copy.active = true;
+  copy.deactivationComment = '';
+  copy.deactivationHistory = [];
+  // На той же линии и машине OPL № должен отличаться; на другой линии номер остаётся
+  if (same) copy.oplNumber = (src.oplNumber || '') + '-copy';
+  if (!getMachinesForLine(line).includes(copy.machine)) copy.machine = '';
+  if (getWorkshopIdForLine(line) !== 'smd') copy.nodePart = '';
+  if (!same) {
+    copy.photos = [];   // фото лежат в photos/<линия>/<часть>/ — у другой линии их нет
+    if (getWorkshopIdForLine(line) !== getWorkshopIdForLine(src.line)) copy.topLosses = [];
+  }
+  // Копия — новый стандарт: в расписание его добавляют отдельно, валидацию ставим заново
   copy.inSchedule = false;
-  copy.validation = null;   // копия — новый стандарт, валидацию ставим заново
+  copy.validation = null;
   copy.frequency = { type: 'weekly', schedule: [], shifts: ['day', 'night'], daysOfWeek: [], dates: [], timeWindows: [] };
-  copy.createdAt = new Date().toISOString();
-  copy.updatedAt = new Date().toISOString();
+  copy.createdAt = now;
+  copy.updatedAt = now;
 
-  saveStandard(copy);
-  addChangeLogEntry('mech', copy, 'added', `Новый стандарт (копия ${st.oplNumber || st.title})`);
+  svFullState.standardId = copy.id;
+  svFullState.isNew = true;
+  svFullState.mode = 'edit';
+  svFullState.originalData = JSON.parse(JSON.stringify(copy));
+  svFullState.editingData = copy;
 
-  refreshEditorMechTable();
-  if (typeof updatePartCounters === 'function') updatePartCounters();
-
-  showToast('Стандарт скопирован');
-  openStandardFullView(copy.id, 'edit');
+  switchTab('standard-view');
+  switchSvFullTab('main');
+  renderStandardFullView();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  showToast(same ? 'Копия открыта — стандарт появится после «Сохранить»'
+    : `Копия для линии ${line} открыта — фото не копируются, добавьте их на странице`);
 }
 
 /* ============================================================

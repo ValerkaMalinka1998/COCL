@@ -308,13 +308,22 @@ function renderHistFeed(list) {
     byDay[byDay.length - 1].recs.push(h);
   });
 
-  byDay.forEach(({ date, recs }) => {
+  // Пропущенные смены линии (были в плане, проверок нет) — жёлтой строкой между показанными днями
+  const missed = histMissedShifts(shown.length ? shown[shown.length - 1] : null, shown[0]);
+  missed.forEach((shifts, date) => {
+    let d = byDay.find(x => x.date === date);
+    if (!d) { byDay.push(d = { date, recs: [] }); }
+    d.missed = shifts;
+  });
+  byDay.sort((x, y) => y.date.localeCompare(x.date));
+
+  byDay.forEach(({ date, recs, missed: miss }) => {
     const sum = days[date];
     const dt = histDayTitle(date);
     const full = histDayName(date) + ' ' + fmtShortDate(date);
     html += `<div class="hist-day">
       <b>${escapeHtml(dt)}</b>${dt !== full ? `<span>${escapeHtml(full)}</span>` : ''}
-      <span class="hist-day-sum">${sum.n} ${pluralRu(sum.n, 'проверка', 'проверки', 'проверок')} · ${sum.pts} ${pluralRu(sum.pts, 'пункт', 'пункта', 'пунктов')}${sum.fail ? ` · <b class="hist-c-fail">${sum.fail} откл.</b>` : ' · <b class="hist-c-ok">всё в норме</b>'}</span>    </div><div class="card hist-feed">`;
+      <span class="hist-day-sum">${sum ? `${sum.n} ${pluralRu(sum.n, 'проверка', 'проверки', 'проверок')} · ${sum.pts} ${pluralRu(sum.pts, 'пункт', 'пункта', 'пунктов')}${sum.fail ? ` · <b class="hist-c-fail">${sum.fail} откл.</b>` : ' · <b class="hist-c-ok">всё в норме</b>'}` : '<b class="hist-c-warn">проверок нет</b>'}</span>    </div><div class="card hist-feed">`;
 
     // Смены дня: блок на смену, итог смены — в шапке; смена без отклонений свёрнута
     const shifts = [];
@@ -339,6 +348,20 @@ function renderHistFeed(list) {
           + g.recs.map(histRecHtml).join('')
         : `<button type="button" class="hist-shh hist-shh-${g.shift}" data-hist-expand="${key}">${head}<span class="hist-fold-act">Показать ${c.n} ${pluralRu(c.n, 'проверку', 'проверки', 'проверок')}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></button>`;
     });
+    (miss || []).forEach(m => {
+      const key = 'miss:' + date + '|' + m.shift;
+      const isOpen = histState.open.includes(key);
+      html += `<button type="button" class="hist-shh hist-shh-missed" data-hist-miss="${key}" aria-expanded="${isOpen}"><b>${m.shift === 'night' ? 'Ночь' : 'День'}${m.letter ? ' · ' + escapeHtml(m.letter) : ''}</b>
+        <small>${m.shift === 'night' ? '21:00–09:00' : '09:00–21:00'}</small>
+        <b class="hist-c-warn">проверка пропущена</b><span>по плану ${m.planned}, не проверено ${m.list.length}</span>
+        <span class="hist-fold-act">${isOpen ? 'Скрыть' : 'Какие стандарты'}</span></button>`;
+      if (isOpen) {
+        html += `<ul class="hist-miss-list">${m.list.map(x => `<li>
+          ${x.isElec ? '<span class="hist-miss-kind">E-Param</span>' : x.row.oplNumber ? `<b>${escapeHtml(x.row.oplNumber)}</b>` : ''}
+          <span>${escapeHtml(x.row.title || x.row.paramName || '—')}</span>
+          <small>${escapeHtml([x.row.machine, x.row.nodePart].filter(Boolean).join(' · '))}${x.k === 'late' ? ' · закрыто позже' : ''}</small></li>`).join('')}</ul>`;
+      }
+    });
     html += '</div>';
   });
 
@@ -347,6 +370,37 @@ function renderHistFeed(list) {
   }
   box.innerHTML = html;
   histMarkPick();
+}
+
+/* Пропущенные смены выбранной линии между датами двух записей: Map дата → [{ shift, letter, planned, done }].
+   Смена пропущена, если по плану были проверки, а записей нет; срок — до конца смены (21:00 / 09:00). */
+function histMissedShifts(oldest, newest) {
+  const out = new Map();
+  if (!histState.line || histState.onlyDev || histState.pick || !oldest || !newest) return out;
+  // До сегодня (или конца выбранного периода): пропуск вчерашней смены — самый частый случай
+  const today = todayISO();
+  let to = histState.to && histState.to < today ? histState.to : today;
+  if (histShift(newest).date > to) to = histShift(newest).date;
+  let from = histShift(oldest).date;
+  const limit = addDaysISO(to, -62);   // не считаем покрытие глубже ~2 месяцев за раз
+  if (from < limit) from = limit;
+  const days = [];
+  for (let d = from; d <= to; d = addDaysISO(d, 1)) days.push(d);
+  const rows = clLineRows(histState.line);
+  const tally = clTallyIndex(histState.line, from, to, rows);
+  histCoverageDays(histState.line, days).forEach(day => {
+    ['day', 'night'].forEach(shift => {
+      const c = day.shifts[shift];
+      if (c.state !== 'missed') return;
+      if (histState.brigade && c.letter !== histState.brigade) return;
+      if (!out.has(day.date)) out.set(day.date, []);
+      // Какие стандарты не проверены в смене (закрытые позже — с пометкой)
+      const list = rows.map(({ row, isElec }) => ({ row, isElec, k: tally.get(`${day.date}|${shift}|${row.id}`) }))
+        .filter(x => x.k === 'missed' || x.k === 'late');
+      out.get(day.date).push({ shift, letter: c.letter, planned: c.planned, done: c.done, list });
+    });
+  });
+  return out;
 }
 
 /* Строка проверки: смена крупно, отклонения — чипами */
@@ -524,7 +578,7 @@ $('#tab-history')?.addEventListener('click', (e) => {
   if (t.closest('#histFiltersBtn')) { histState.fOpen = !histState.fOpen; return renderHistory(); }
   if (t.closest('#histLinePill')) {
     linePickerOnSelect = (line) => histSetLine(line);
-    return openLinePickerModal();
+    return openLinePickerModal(histState.line || '');
   }
   const scope = t.closest('[data-hist-scope]');
   if (scope) return histSetScope(scope.dataset.histScope, scope.dataset.histScopeArea);
@@ -539,6 +593,12 @@ $('#tab-history')?.addEventListener('click', (e) => {
   if (t.closest('[data-hist-shiftpage]')) {
     const [date, shift] = histState.pick.split('|');
     return openHistoryShift(histState.line, date, shift);
+  }
+  const miss = t.closest('[data-hist-miss]');
+  if (miss) {
+    const k = miss.dataset.histMiss;
+    histState.open = histState.open.includes(k) ? histState.open.filter(x => x !== k) : [...histState.open, k];
+    return renderHistory();
   }
   const fold = t.closest('[data-hist-expand]');
   if (fold) { histState.open.push(fold.dataset.histExpand); return renderHistory(); }

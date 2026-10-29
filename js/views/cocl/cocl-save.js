@@ -45,7 +45,7 @@ if (type === 'ChangeOver') {
 
   $$('#checklistContainer .cocl-acc-item').forEach(item => {
     const id = item.dataset.stdId;
-    const st = getStandards().find(s => s.id === id);
+    const st = coclFindItem(id);
     if (!st) return;
 
     let answer = '—';
@@ -112,6 +112,7 @@ if (type === 'ChangeOver') {
       node: st.node,
       nodePart: st.nodePart,
       title: st.title,
+      ...(st.isElec ? { kind: 'elec' } : {}),
       controlType: st.controlType,
       norm: mainValue,
       answer: answer,

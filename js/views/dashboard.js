@@ -237,10 +237,10 @@ function renderDashboardMain() {
 /* Меньше стольких проверок — доля отклонений не показательна */
 const DASH_MIN_CHECKS = 10;
 
-/* «N из M · P%», мало проверок — без процента */
+/* «N из M · P%»; когда проверок мало — только «N из M», без процента */
 function dashShareText(n, total) {
   if (!total) return '—';
-  return `${n} из ${total} · ${total < DASH_MIN_CHECKS ? 'мало проверок' : Math.round(n / total * 100) + '%'}`;
+  return `${n} из ${total}${total < DASH_MIN_CHECKS ? '' : ' · ' + Math.round(n / total * 100) + '%'}`;
 }
 
 /* Ячейки таблиц: выполнение (N из M + полоска) и отклонения («N из M · %») */

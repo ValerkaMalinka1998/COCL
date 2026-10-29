@@ -292,9 +292,11 @@ function makeCategoryId(name) {
 function setLineMachines(v) { save(STORAGE_KEYS.lineMachines, v); }
 
 /* Машины конкретной линии */
-function getMachinesForLine(line) {
+function getMachinesForLine(line, part) {
   const lm = getLineMachines();
-  return Array.isArray(lm[line]) ? lm[line] : [];
+  const list = Array.isArray(lm[line]) ? lm[line] : [];
+  // С частью линии (SMD): машины этой части и общие — без назначенной части
+  return part ? list.filter(m => [part, ''].includes(getMachinePart(line, m))) : list;
 }
 
 function getBrands() { return load(STORAGE_KEYS.brands, [...DEFAULT_BRANDS]); }

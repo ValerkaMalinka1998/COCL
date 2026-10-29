@@ -162,6 +162,8 @@ function fillLinesForOperator() {
 function setCoclLine(line) {
   const sel = $('#lineSelect');
   if (!sel) return;
+  // Итог прошлой проверки не должен оставаться на экране другой линии
+  if ($('#coclSummaryView')?.style.display === 'block') resetCheckForm();
   sel.value = line;
 
   const codeEl = $('#coclLinePillCode');
@@ -187,7 +189,7 @@ $('#coclLinePill')?.addEventListener('click', () => {
   linePickerOnSelect = (line) => {
     setCoclLine(line);
   };
-  openLinePickerModal();
+  openLinePickerModal($('#lineSelect')?.value || '');
 });
 
 /* Состояние вкладки: идёт ли проверка (до «Начать» — только список) */
@@ -532,6 +534,16 @@ function brandBlocksDiffer(blockA, blockB) {
   return pa.some((v, i) => v !== pb[i]);
 }
 
+/* Электронные параметры линии в виде строк проверки (как стандарты): title = название параметра */
+function coclElecItems(line) {
+  return getElectronicParams().map(normalizeElectronicParam).filter(p => !line || p.line === line)
+    .map(p => ({ ...p, title: p.paramName, oplNumber: '', node: '', isElec: true }));
+}
+/* Стандарт или E-Param по id — для списка и сохранения проверки */
+function coclFindItem(id) {
+  return getStandards().find(s => s.id === id) || coclElecItems().find(p => p.id === id) || null;
+}
+
 /** Триггеры стандарта: без триггеров — показывается; с триггерами — при совпадении */
 function standardMatchesTriggers(st, selectedTriggers) {
   if (!st.triggers || !st.triggers.length) return true;
@@ -547,7 +559,7 @@ function getCoclRelevant({ type, line, part, brandFrom, brandTo, triggers, loose
   const coBrands = type === 'ChangeOver' && brandTo;
   if (type === 'ChangeOver' && !brandTo && !loose) return [];
 
-  return getStandards().filter(st => {
+  return [...getStandards(), ...coclElecItems(line)].filter(st => {
     if (st.active === false) return false;
     if (!st.appliesTo || !st.appliesTo.includes(type)) return false;
     if (st.line !== line) return false;
@@ -694,7 +706,7 @@ function renderChecklist(items) {
 
     const meta = [st.oplNumber, st.node, block && block.brand ? 'бренд ' + block.brand : ''].filter(Boolean)
       .map(escapeHtml).join(' · ');
-    const eyeAttrs = `data-view-btn data-std-id="${escapeAttr(st.id)}"`;
+    const eyeAttrs = st.isElec ? 'hidden' : `data-view-btn data-std-id="${escapeAttr(st.id)}"`;
 
     // До начала проверки — строка списка с нормой
     if (!checking) {
@@ -994,6 +1006,14 @@ function updateProgress() {
 /** Начать проверку: условия фиксируются, список становится чек-листом */
 function buildChecklistView() {
   if ($('#buildChecklistBtn')?.disabled) return;
+  // Допуск: до начала проверки стандарты можно смотреть глазиком, проверять — после ознакомления
+  const relevant = getCoclRelevant({
+    type: $('#transitionType').value, line: $('#lineSelect').value, part: $('#partSelect').value,
+    brandFrom: $('#brandFrom').value, brandTo: $('#brandTo').value, triggers: getSelectedTriggers()
+  });
+  stdAckGate(relevant.map(st => ({ kind: st.isElec ? 'elec' : 'mech', row: st })), startCoclCheck);
+}
+function startCoclCheck() {
   coclState.checking = true;
   setCoclCheckingUi(true);
   updateChecklistForCheck();

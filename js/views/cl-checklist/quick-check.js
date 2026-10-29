@@ -152,7 +152,10 @@ function openClCheckModal(rowId, dateStr, shift) {
   ].filter(Boolean).join('');
 
   // --- Описание контроля ---
-  const how = isElec ? '' : (row.controlDescription || '').trim();
+  // У E-Param «Что считается ОК»: при ОК/Не ОК текст уже в норме, поэтому здесь только для числовых точек
+  const elecNumeric = isElec && (row.measurements || []).some(b => b && !pointsAreMarksOnly(b.points));
+  const how = isElec ? (elecNumeric ? (row.normText || '').trim() : '') : (row.controlDescription || '').trim();
+  $('#qcControlDescBlock summary').textContent = isElec ? 'Что считается «ОК»' : 'Описание контроля';
   const howBlock = $('#qcControlDescBlock');
   howBlock.style.display = how ? '' : 'none';
   howBlock.open = false;
@@ -203,7 +206,7 @@ function openClCheckModal(rowId, dateStr, shift) {
           <button type="button" class="qcx-mark-btn qcx-mark-fail${saved[i] === 'Не ОК' ? ' on' : ''}" data-qc-mark="${i}" data-v="Не ОК">Не ОК</button>
         </span>`
         : `<input type="text" inputmode="decimal" autocomplete="off" class="qc-point-input" data-qc-point="${i}" value="${escapeAttr(saved[i] || '')}">`}
-        ${f.norm ? `<span class="qcx-pt-range">${f.norm.min}…${f.norm.max}</span>` : ''}
+        ${f.norm && f.norm.min !== f.norm.max ? `<span class="qcx-pt-range">${f.norm.min}…${f.norm.max}</span>` : ''}
         ${prev && prev.values[i] ? (() => {
           const pv = qcNum(prev.values[i]);
           const bad = f.norm && !isNaN(pv) && (pv < f.norm.min || pv > f.norm.max);
@@ -231,6 +234,16 @@ function openClCheckModal(rowId, dateStr, shift) {
   }
 
   updateQcResult();
+
+  // Допуск: пока нет ознакомления с актуальной редакцией — только плашка вместо ввода
+  const ackKind = isElec ? 'elec' : 'mech';
+  const ack = getStdAckStatus(ackKind, row.id);
+  quickCheckState.gated = !isElec && ack.state !== 'ok';   // с E-Param не знакомятся
+  modal.classList.toggle('qcx-gated', quickCheckState.gated);
+  $('#qcAckGate').style.display = quickCheckState.gated ? '' : 'none';
+  $('#qcAckGateTitle').textContent = ack.state === 'again' ? 'Стандарт изменён — ознакомьтесь повторно' : 'Сначала ознакомьтесь со стандартом';
+  $('#qcAckGateChanges').innerHTML = ack.since.length && typeof stdAckChangesHtml === 'function' ? stdAckChangesHtml(ack.since) : '';
+  $('#qcAckOpenBtn').style.display = isElec ? 'none' : '';
   openModal(modal);
 
   const nextBtn = $('#quickCheckNextBtn');
@@ -323,6 +336,7 @@ function closeQuickCheckModal() {
 
 function saveQuickCheck(goNext) {
   const row = quickCheckState.row;
+  if (quickCheckState.gated) return showToast('Сначала ознакомьтесь со стандартом', true);
   if (!row) {
     showToast('Ошибка: стандарт не найден', true);
     return;
@@ -459,3 +473,19 @@ document.addEventListener('click', (e) => {
 
 /* Канонические категории Top Losses — у каждого цеха свой набор */
 const TOP_LOSS_CATEGORY_NAMES = ['Увеличенные остановки', 'Дефекты по качеству', 'Повышенные выбросы'];
+
+/* Допуск к проверке: открыть стандарт / подтвердить ознакомление */
+document.addEventListener('click', (e) => {
+  const row = quickCheckState.row;
+  if (!row) return;
+  if (e.target.closest('#qcAckOpenBtn')) openStandardView(row.id, { brand: quickCheckState.brand || '' });
+  if (e.target.closest('#qcAckConfirmBtn')) {
+    addStdAck(quickCheckState.isElec ? 'elec' : 'mech', row.id);
+    quickCheckState.gated = false;
+    $('#quickCheckModal').classList.remove('qcx-gated');
+    $('#qcAckGate').style.display = 'none';
+    showToast('Вы ознакомлены');
+    if (typeof updateNotifyBadge === 'function') updateNotifyBadge();
+    renderClMatrix();
+  }
+});

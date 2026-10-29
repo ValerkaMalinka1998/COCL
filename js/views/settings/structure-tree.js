@@ -173,7 +173,45 @@ function stDeleteBlock(blockId) {
 }
 
 /* --- Машины линии --- */
-function stAddMachine(line, raw) {
+/* Чип машины; move — в какую часть перенести одной кнопкой ('' — без кнопки) */
+function stMachineChipHtml(m, move) {
+  return `
+    <span class="st-chip st-chip-machine" data-st-machine="${escapeAttr(m)}">
+      <span class="st-chip-text" title="Нажмите, чтобы переименовать">${escapeHtml(m)}</span>
+      ${move ? `<button type="button" class="st-chip-part" data-st-machine-move="${escapeAttr(m)}" data-part="${move}" title="Перенести в ${move}">→ ${move}</button>` : ''}
+      <button type="button" class="st-chip-x" data-st-machine-remove="${escapeAttr(m)}" title="Удалить машину">${SETTINGS_ICON_X}</button>
+    </span>`;
+}
+
+/* SMD: машины в двух колонках Maker / Packer; старые без части — отдельно, пока их не разнесут */
+function stMachinePartsHtml(line, machines) {
+  const by = { Maker: [], Packer: [], '': [] };
+  machines.forEach(m => by[getMachinePart(line, m)].push(m));
+  const col = (part, other) => `
+    <div class="st-mp-col">
+      <div class="st-mp-head">${part} <span class="st-lc-count">${by[part].length}</span></div>
+      <div class="st-chip-set">${by[part].map(m => stMachineChipHtml(m, other)).join('') || '<span class="st-muted">Нет машин</span>'}</div>
+      <div class="settings-add-row st-add-row">
+        <input type="text" id="stMachineInput${part}" data-part="${part}" placeholder="Машина ${part}, Enter" autocomplete="off">
+      </div>
+    </div>`;
+  return `
+    ${by[''].length ? `
+      <div class="st-warn st-mp-undef">Укажите часть линии для машин:
+        <div class="st-chip-set">${by[''].map(m => `
+          <span class="st-chip st-chip-machine" data-st-machine="${escapeAttr(m)}">
+            <span class="st-chip-text">${escapeHtml(m)}</span>
+            <button type="button" class="st-chip-part" data-st-machine-move="${escapeAttr(m)}" data-part="Maker">Maker</button>
+            <button type="button" class="st-chip-part" data-st-machine-move="${escapeAttr(m)}" data-part="Packer">Packer</button>
+          </span>`).join('')}</div>
+        <div class="st-mp-all">Все сразу:
+          <button type="button" class="st-chip-part" data-st-machine-all="Maker">в Maker</button>
+          <button type="button" class="st-chip-part" data-st-machine-all="Packer">в Packer</button></div>
+      </div>` : ''}
+    <div class="st-mp">${col('Maker', 'Packer')}${col('Packer', 'Maker')}</div>`;
+}
+
+function stAddMachine(line, raw, part) {
   const name = (raw || '').trim();
   if (!name) { showToast('Введите название машины', true); return false; }
   const lm = getLineMachines();
@@ -184,6 +222,7 @@ function stAddMachine(line, raw) {
   }
   lm[line].push(name);
   setLineMachines(lm);
+  if (part) setMachinePart(line, name, part);
   stAfterChange();
   return true;
 }
@@ -200,6 +239,8 @@ function stRenameMachine(line, oldName, newName) {
   list[idx] = newName;
   lm[line] = list;
   setLineMachines(lm);
+  const part = getMachinePart(line, oldName);
+  if (part) { setMachinePart(line, oldName, ''); setMachinePart(line, newName, part); }
   // Стандарты и параметры линии переходят на новое имя
   const stds = getStandards().filter(s => s.line === line && s.machine === oldName);
   stds.forEach(s => { s.machine = newName; });
@@ -227,6 +268,7 @@ window.removeMachineFromLine = function(line, machine) {
   if (!Array.isArray(lm[line])) return;
   lm[line] = lm[line].filter(m => m !== machine);
   setLineMachines(lm);
+  setMachinePart(line, machine, '');
   stAfterChange();
   showToast('Машина удалена');
 };
@@ -462,15 +504,9 @@ function renderStructureLineCard() {
         <div class="st-lc-title">${escapeHtml(line)}</div>
       </div>
       <div class="st-lc-actions">
-        ${ctx ? `<button type="button" class="btn btn-secondary btn-sm" data-st-open-editor="${escapeAttr(line)}" title="Открыть стандарты линии">Стандарты</button>` : ''}
-        ${ctx ? `<button type="button" class="st-icon-btn st-icon-danger" data-st-line-delete="${escapeAttr(line)}" title="Убрать линию из структуры">${SETTINGS_ICON_DELETE}</button>` : ''}
+        ${ctx ? `<button type="button" class="btn btn-accent btn-sm" data-st-open-editor="${escapeAttr(line)}" title="Открыть стандарты линии">Стандарты линии</button>` : ''}
+        ${ctx ? `<button type="button" class="btn btn-danger-soft btn-sm btn-icon-text" data-st-line-delete="${escapeAttr(line)}" title="Убрать линию из структуры">${SETTINGS_ICON_DELETE}<span>Удалить линию</span></button>` : ''}
       </div>
-    </div>
-
-    <div class="st-lc-stats">
-      <div class="st-stat"><span class="st-stat-val">${u.mech}</span><span class="st-stat-label">мех. стандартов</span></div>
-      <div class="st-stat"><span class="st-stat-val">${u.elec}</span><span class="st-stat-label">E-Param</span></div>
-      <div class="st-stat"><span class="st-stat-val">${u.history}</span><span class="st-stat-label">проверок</span></div>
     </div>
 
     <div class="st-lc-section">
@@ -495,16 +531,13 @@ function renderStructureLineCard() {
 
     <div class="st-lc-section">
       <div class="st-lc-label">Машины <span class="st-lc-count">${machines.length}</span></div>
+      ${wsId === 'smd' ? stMachinePartsHtml(line, machines) : `
       <div class="st-chip-set">
-        ${machines.map(m => `
-          <span class="st-chip st-chip-machine" data-st-machine="${escapeAttr(m)}">
-            <span class="st-chip-text" title="Нажмите, чтобы переименовать">${escapeHtml(m)}</span>
-            <button type="button" class="st-chip-x" data-st-machine-remove="${escapeAttr(m)}" title="Удалить машину">${SETTINGS_ICON_X}</button>
-          </span>`).join('') || '<span class="st-muted">Машин пока нет</span>'}
+        ${machines.map(m => stMachineChipHtml(m, '')).join('') || '<span class="st-muted">Машин пока нет</span>'}
       </div>
       <div class="settings-add-row st-add-row">
         <input type="text" id="stMachineInput" placeholder="Новая машина, Enter" autocomplete="off">
-      </div>
+      </div>`}
     </div>
 
     <div class="st-lc-section">
@@ -617,6 +650,16 @@ $('#stLineCard')?.addEventListener('click', (e) => {
   }
   const brand = e.target.closest('[data-st-brand]');
   if (brand) return stToggleBrand(line, brand.dataset.stBrand);
+  const mv = e.target.closest('[data-st-machine-move]');
+  if (mv) {
+    setMachinePart(line, mv.dataset.stMachineMove, mv.dataset.part);
+    return stAfterChange();
+  }
+  const mvAll = e.target.closest('[data-st-machine-all]');
+  if (mvAll) {
+    getMachinesForLine(line).filter(m => !getMachinePart(line, m)).forEach(m => setMachinePart(line, m, mvAll.dataset.stMachineAll));
+    return stAfterChange();
+  }
   const rm = e.target.closest('[data-st-machine-remove]');
   if (rm) return window.removeMachineFromLine(line, rm.dataset.stMachineRemove);
   const mText = e.target.closest('.st-chip-machine .st-chip-text');
@@ -646,9 +689,10 @@ $('#stLineCard')?.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;
   const line = stState.line;
   if (!line) return;
-  if (e.target.id === 'stMachineInput') {
+  if (e.target.id.startsWith('stMachineInput')) {
     e.preventDefault();
-    if (stAddMachine(line, e.target.value)) $('#stMachineInput')?.focus();
+    const id = e.target.id;
+    if (stAddMachine(line, e.target.value, e.target.dataset.part || '')) $('#' + id)?.focus();
   }
   if (e.target.id === 'stBrandInput') {
     e.preventDefault();

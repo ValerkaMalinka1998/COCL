@@ -659,3 +659,15 @@
 .editor-recent-std-chip b { color: var(--accent-cyan); font-family: var(--font-mono, Consolas, monospace); white-space: nowrap; }
 .editor-recent-std-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .editor-recent-std-chip i { font-style: normal; font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+/* === ОКНО «КОПИРОВАТЬ СТАНДАРТ» === */
+.copy-std-modal { max-width: 560px; }
+.copy-std-src { padding: 10px 12px; margin-bottom: 12px; border-radius: var(--r-sm); background: rgba(var(--cyan-rgb), .08); font-size: 14px; }
+.copy-std-src span { display: block; margin-top: 2px; font-size: 12px; color: var(--text-dim); }
+.copy-std-hint { margin-bottom: 12px; font-size: 13px; color: var(--text-second); }
+.copy-std-group { margin-bottom: 10px; }
+.copy-std-group-name { margin-bottom: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--text-dim); }
+.copy-std-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.copy-std-line { padding: 8px 14px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg-card); color: var(--text-main); font: inherit; font-weight: 700; cursor: pointer; }
+.copy-std-line:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+.copy-std-line.is-cur { border-color: var(--accent-cyan); }
+.copy-std-line small { font-weight: 500; color: var(--text-dim); }

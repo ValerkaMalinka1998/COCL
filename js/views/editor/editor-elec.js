@@ -111,8 +111,8 @@ function refreshEditorElecTable() {
         <td class="et-c-sch">${etScheduleHtml(p, line)}</td>
         <td class="et-c-st">${etStatusHtml(isActive)}</td>
         <td class="et-c-act"><div class="et-acts">
-          <button type="button" class="et-ib" data-edit-elec="${id}" title="Редактировать">${ET_ICONS.edit}</button>
-          <button type="button" class="et-ib et-ib-del" data-delete-elec="${id}" title="Удалить">${ET_ICONS.del}</button>
+          <button type="button" class="et-ib" data-edit-elec="${id}" title="Редактировать" data-need="edit">${ET_ICONS.edit}</button>
+          <button type="button" class="et-ib et-ib-del" data-delete-elec="${id}" title="Удалить" data-need="edit">${ET_ICONS.del}</button>
         </div></td>
       </tr>`;
   });

@@ -28,7 +28,10 @@ const MODULES = [
   'js/data/line-brand.js',
   'js/data/ack.js',
   'js/data/shifts.js',
+  'js/data/user.js',
+  'js/data/proposals.js',
   'js/views/settings/shifts.js',
+  'js/io/excel-common.js',
   'js/io/standards-io.js'
 ];
 
@@ -76,6 +79,7 @@ test('parseNorm: форматы нормы', () => {
   assert.deepEqual(plain(parseNorm('5 до 8')), { min: 5, max: 8 });
   assert.deepEqual(plain(parseNorm('5.5 - 8.5')), { min: 5.5, max: 8.5 });
   assert.deepEqual(plain(parseNorm('-65 до -55')), { min: -65, max: -55 });
+  assert.deepEqual(plain(parseNorm('7,8 мм')), { min: 7.8, max: 7.8 });
   assert.deepEqual(plain(parseNorm('92')), { min: 92, max: 92 });
   assert.deepEqual(plain(parseNorm('0 бар')), { min: 0, max: 0 });
   assert.equal(parseNorm(''), null);
@@ -452,4 +456,45 @@ test('saveStandard / removeStandard / addHistoryRecord трогают тольк
   fn('clearHistory')();
   assert.deepEqual(plain(fn('getHistory')()), []);
   app("localStorage.removeItem(STORAGE_KEYS.standards); localStorage.removeItem(STORAGE_KEYS.history)");
+});
+
+test('normalizeOplNumber: единый вид OPL-N', () => {
+  const n = fn('normalizeOplNumber');
+  assert.equal(n('1'), 'OPL-1');
+  assert.equal(n(' 4.2.1 '), 'OPL-4.2.1');
+  assert.equal(n('OPL3'), 'OPL-3');
+  assert.equal(n('opl 5'), 'OPL-5');
+  assert.equal(n('OPL-7'), 'OPL-7');
+  assert.equal(n('4,2'), 'OPL-4.2');
+  assert.equal(n('A-12'), 'A-12');
+});
+
+test('pruneHistoryBefore: удаляет только записи раньше даты', () => {
+  app(`setHistory([{ id: 'a', date: '2025-01-01' }, { id: 'b', timestamp: '2026-05-01T10:00:00Z' }, { id: 'c', date: '2026-10-01' }])`);
+  assert.equal(fn('pruneHistoryBefore')('2025-10-30'), 1);
+  assert.deepEqual(plain(app('getHistory().map(h => h.id)')), ['b', 'c']);
+});
+
+test('шаблоны чек-листа: сохранить, заменить, удалить', () => {
+  app(`saveScheduleTemplate({ id: 't1', name: 'Лето', line: 'SD01', mode: 'mech', rows: { s1: { schedule: [{ day: 1, shift: 'day' }] } } })`);
+  app(`saveScheduleTemplate({ id: 't1', name: 'Лето 2', line: 'SD01', mode: 'mech', rows: {} })`);
+  assert.deepEqual(plain(app('getScheduleTemplates().map(t => t.name)')), ['Лето 2']);
+  app(`removeScheduleTemplate('t1')`);
+  assert.equal(app('getScheduleTemplates().length'), 0);
+});
+
+test('роли: оператор только предлагает; предложение не меняет стандарт до решения', () => {
+  app(`localStorage.setItem('cl_current_role', 'operator')`);
+  assert.equal(fn('canDo')('edit'), false);
+  assert.equal(fn('canOpenTab')('schedule'), false);
+  assert.equal(fn('canOpenTab')('history'), true);
+  const before = app('getStandards().length');
+  app(`addStdProposal({ id: 'np1', line: 'SD01', title: 'Новый' }, null)`);
+  assert.equal(app('getStandards().length'), before);
+  assert.equal(app('getStdProposals().filter(p => p.status === "pending").length'), 1);
+  app(`decideStdProposal(getStdProposals()[0].id, 'rejected', 'нет')`);
+  assert.equal(app('getStdProposals()[0].status'), 'rejected');
+  app(`localStorage.setItem('cl_current_role', 'analyst')`);
+  assert.equal(fn('canDo')('edit'), true);
+  app(`localStorage.removeItem('cl_current_role')`);
 });

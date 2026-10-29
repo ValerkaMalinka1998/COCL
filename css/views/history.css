@@ -348,3 +348,10 @@ button.hist-mh.is-pick { outline: 2px solid var(--accent-cyan); outline-offset: 
 @media (max-width: 640px) {
   .hist-seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 }
+
+.hist-shh-missed { --k: var(--accent-amber); background: rgba(var(--amber-rgb), .12); box-shadow: inset 3px 0 0 var(--accent-amber); }
+.hist-miss-list { margin: 0; padding: 6px 14px 10px 30px; list-style: none; background: rgba(var(--amber-rgb), .05); }
+.hist-miss-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; padding: 4px 0; font-size: 13px; border-bottom: 1px dashed var(--border); }
+.hist-miss-list li:last-child { border-bottom: 0; }
+.hist-miss-list small { color: var(--text-dim); }
+.hist-miss-kind { font-size: 11px; font-weight: 700; color: var(--accent-purple); }

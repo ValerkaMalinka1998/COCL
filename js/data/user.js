@@ -13,3 +13,44 @@ function getCurrentUser() {
   } catch (e) {}
   return '';
 }
+
+/* === РОЛЬ И ЗОНА (временно, до SSO: хранится у этого компьютера) === */
+const ROLES = { admin: 'Администратор', analyst: 'Аналитик', operator: 'Оператор' };
+const ROLE_HINTS = {
+  admin: 'Всё, включая Настройки',
+  analyst: 'Стандарты, расписание, настройки; решает по предложениям операторов',
+  operator: 'Проверки, история, дашборд; стандарты — просмотр и предложения аналитику'
+};
+function getCurrentRole() {
+  try { const v = localStorage.getItem('cl_current_role'); if (ROLES[v]) return v; } catch (e) {}
+  return 'admin';
+}
+function setCurrentRole(r) { try { localStorage.setItem('cl_current_role', ROLES[r] ? r : 'admin'); } catch (e) {} }
+
+/* Цех / участок пользователя: { ws, areaId }; пусто — всё производство */
+function getCurrentScope() {
+  try { const v = JSON.parse(localStorage.getItem('cl_current_scope') || '{}'); return v && typeof v === 'object' ? v : {}; }
+  catch (e) { return {}; }
+}
+function setCurrentScope(s) { try { localStorage.setItem('cl_current_scope', JSON.stringify(s || {})); } catch (e) {} }
+
+/* Линия в зоне пользователя (для уведомлений и предложений) */
+function lineInUserScope(line) {
+  const sc = getCurrentScope();
+  if (!sc.ws) return true;
+  const ctx = getBlockForLine(line);
+  if (!ctx || ctx.workshop.id !== sc.ws) return false;
+  return !sc.areaId || ctx.area.id === sc.areaId;
+}
+
+/* Права роли: edit — менять стандарты, расписание, настройки сразу; propose — только предлагать */
+function canDo(action) {
+  const r = getCurrentRole();
+  if (action === 'edit') return r !== 'operator';
+  if (action === 'propose') return r === 'operator';
+  if (action === 'admin') return r === 'admin';   // удаление истории и подобное необратимое
+  return true;
+}
+function canOpenTab(tab) {
+  return canDo('edit') || !['schedule', 'settings'].includes(tab);
+}

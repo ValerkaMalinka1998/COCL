@@ -407,7 +407,7 @@ async function parseStandardsExcelV3(file, targetLine) {
     const lineFromExcel = get('line');
     const nodePart = get('nodePart');
     const machine = get('machine');
-    const oplNumber = get('opl');
+    const oplNumber = normalizeOplNumber(get('opl'));
     const node = get('node');
     const title = get('title');
     const typeText = get('type');
@@ -638,7 +638,7 @@ function oplSheetToStandard(ws, line, part) {
   return {
     ...createEmptyStandard(),
     id: uid(),
-    oplNumber: under(numLabel, numLabel === '№'),
+    oplNumber: normalizeOplNumber(under(numLabel, numLabel === '№')),
     machine: (cut >= 0 ? machineNode.slice(0, cut) : machineNode).trim(),
     node: cut >= 0 ? machineNode.slice(cut + 1).trim() : '',
     title: under('название cl'),
@@ -707,7 +707,7 @@ async function parseOplJournalExcel(files, targetLine, nodePart) {
         || (a.range.tl.nativeCol - b.range.tl.nativeCol)).forEach((img, i) => {
         const media = wb.getImage(img.imageId);
         if (!media) return;
-        const name = `OPL${std.oplNumber}_${std.machine}_${i + 1}.${media.extension}`.replace(/[\\/:*?"<>|\s]+/g, '_');
+        const name = `${std.machine}-${std.oplNumber.replace('-', '')}_${i + 1}.${media.extension}`.replace(/[\\/:*?"<>|\s]+/g, '_');
         zip.file(`photos/${targetLine}/${part}/${name}`, media.buffer);
         std.photos.push(name);
         result.photos++;

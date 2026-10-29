@@ -141,6 +141,8 @@ function openClBrandOverrideDialog() {
 }
 
 function updateClPanelCount() {
+  // Счётчики Maker/Packer прошлой линии/режима не должны оставаться, если стандартов нет
+  document.querySelectorAll('#clPartSwitch .cil-part-cnt').forEach(c => c.remove());
   const el = $('#clPanelCount');
   if (!el) return;
   if (!clState.line) {
@@ -200,7 +202,8 @@ function renderClMatrix() {
   updateClPanelCount();
 
   if (!rows.length) {
-    wrap.innerHTML = `
+    // Навигация по неделям остаётся и на пустой неделе — иначе не вернуться назад
+    wrap.innerHTML = `<div class="cil-toolbar">${clWeekNavHtml()}</div>
       <div class="sch-empty">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
@@ -209,9 +212,10 @@ function renderClMatrix() {
           <line x1="3" y1="10" x2="21" y2="10"/>
         </svg>
         <div class="sch-empty-title">На линии нет стандартов в расписании</div>
-        <div class="sch-empty-sub">Обратитесь к аналитику — он должен добавить стандарты в «Расписание CL».</div>
+        <div class="sch-empty-sub">${clState.weekOffset ? 'На этой неделе проверок по расписанию не было.' : 'Обратитесь к аналитику — он должен добавить стандарты в «Расписание CL».'}</div>
       </div>
     `;
+    bindClWeekNav();
     updateClCheckButtons();
     return;
   }
@@ -247,22 +251,9 @@ function renderClMatrix() {
 
   // Панель недели + легенда
   const isCurrentWeek = clState.weekOffset === 0;
-  const weekNo = cilIsoWeek(weekDays[0]);
   let html = `
     <div class="cil-toolbar">
-      <div class="cil-week">
-        <button type="button" class="cil-week-btn" id="clWeekPrev" title="Предыдущая неделя">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
-        <div class="cil-week-label">
-          <span class="cil-week-title">Нед. ${weekNo} · ${escapeHtml(fmtShortDate(weekDays[0]))} – ${escapeHtml(fmtShortDate(weekDays[6]))}</span>
-          <span class="cil-week-sub">${isCurrentWeek ? 'текущая неделя' : (clState.weekOffset < 0 ? 'прошедшая неделя' : 'будущая неделя')}</span>
-        </div>
-        <button type="button" class="cil-week-btn" id="clWeekNext" title="Следующая неделя">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-        </button>
-        ${!isCurrentWeek ? '<button type="button" class="cil-week-today" id="clWeekToday">Сегодня</button>' : ''}
-      </div>
+      ${clWeekNavHtml()}
       ${isCurrentWeek ? `<button type="button" class="cil-onlyshift${clState.onlyShift ? ' on' : ''}" id="clOnlyShiftBtn"
         title="Показать только то, что нужно проверить в текущую смену">
         <i></i>Только эта смена</button>` : ''}
@@ -405,7 +396,36 @@ function clRowCells(row, dateByDayIdx, hist) {
   return cells;
 }
 
+/* Панель недели: ← неделя → · «Сегодня» · архив по дате (проверенные чек-листы прошлых недель) */
+function clWeekNavHtml() {
+  const weekDays = getClWeekDays(clState.weekOffset);
+  const isCurrentWeek = clState.weekOffset === 0;
+  return `
+      <div class="cil-week">
+        <button type="button" class="cil-week-btn" id="clWeekPrev" title="Предыдущая неделя">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="cil-week-label">
+          <span class="cil-week-title">Нед. ${cilIsoWeek(weekDays[0])} · ${escapeHtml(fmtShortDate(weekDays[0]))} – ${escapeHtml(fmtShortDate(weekDays[6]))}</span>
+          <span class="cil-week-sub">${isCurrentWeek ? 'текущая неделя' : (clState.weekOffset < 0 ? 'прошедшая неделя' : 'будущая неделя')}</span>
+        </div>
+        <button type="button" class="cil-week-btn" id="clWeekNext" title="Следующая неделя">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+        ${!isCurrentWeek ? '<button type="button" class="cil-week-today" id="clWeekToday">Сегодня</button>' : ''}
+        <label class="cil-week-archive" title="Архив: открыть проверенный чек-лист любой недели по дате">Архив
+          <input type="date" id="clWeekPick" value="${escapeAttr(weekDays[0])}" max="${escapeAttr(todayISO())}"></label>
+      </div>`;
+}
+
 function bindClWeekNav() {
+  $('#clWeekPick')?.addEventListener('change', (e) => {
+    if (!e.target.value) return;
+    const dow = new Date(e.target.value + 'T12:00:00').getDay();
+    const mon = addDaysISO(e.target.value, -((dow + 6) % 7));
+    clState.weekOffset = Math.round((new Date(mon + 'T12:00:00') - new Date(getClWeekDays(0)[0] + 'T12:00:00')) / (7 * 864e5));
+    renderClMatrix();
+  });
   $('#clWeekPrev')?.addEventListener('click', () => {
     clState.weekOffset--;
     renderClMatrix();
@@ -434,8 +454,10 @@ function renderClRow(row, num, zone, cells, hist, isElec) {
 
   // «Изм.»: стандарт изменён после ознакомления на этом компьютере (или с ним ещё не знакомились)
   const ack = getStdAckStatus(isElec ? 'elec' : 'mech', row.id);
-  const chgBadge = ack.editions.length && ack.state !== 'ok'
-    ? `<span class="cil-tag cil-tag-chg" title="Стандарт изменён — откройте и ознакомьтесь">${CIL_ICONS.warn}Изм.</span>` : '';
+  const chgBadge = isElec || ack.state === 'ok' ? ''
+    : ack.editions.length
+      ? `<span class="cil-tag cil-tag-chg" title="Стандарт изменён — ознакомьтесь перед проверкой">${CIL_ICONS.warn}Изм.</span>`
+      : `<span class="cil-tag cil-tag-chg" title="Ознакомьтесь со стандартом перед проверкой">${CIL_ICONS.warn}Ознакомиться</span>`;
   const valOn = isOnValidation(row);
   const dur = cilDurChip(cilRowDurationSec(row), 'cil-tag cil-tag-dur');
   let html = `<tr class="cil-row${valOn ? ' cil-row-val' : ''}" data-row-id="${escapeAttr(row.id)}">
@@ -808,6 +830,7 @@ function saveClDraftToHistory() {
       if (idx !== -1) record.items[idx] = newItem;
       else record.items.push(newItem);
     });
+    record.timestamp = new Date().toISOString(); // Maker и Packer — одна запись смены: время последней проверки
     if (!touched.includes(record)) touched.push(record);
   });
 
@@ -824,7 +847,7 @@ function saveClDraftToHistory() {
 
 document.addEventListener('click', (e) => {
   if (e.target.closest('#clLinePill')) {
-    if (typeof openLinePickerModal === 'function') openLinePickerModal();
+    if (typeof openLinePickerModal === 'function') openLinePickerModal(clState.line || '');
   }
 });
 

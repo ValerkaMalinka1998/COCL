@@ -80,3 +80,12 @@
 .clb-open-title { margin: 16px 0 6px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-dim); }
 .clb-open { margin: 0; padding-left: 18px; font-size: 13px; color: var(--text-second); line-height: 1.6; }
 .clb-open li.clb-bad { color: var(--accent-red); }
+
+/* === КНОПКА «ЗАКОНЧИТЬ ПРОВЕРКУ» === */
+.cl-stop-btn { padding: 10px 22px; font-size: 15px; font-weight: 800; letter-spacing: .2px; animation: clStopPulse 2.4s ease-in-out infinite; }
+@keyframes clStopPulse { 50% { box-shadow: 0 0 0 6px rgba(var(--purple-rgb), .18); } }
+@media (prefers-reduced-motion: reduce) { .cl-stop-btn { animation: none; } }
+
+/* Архив недель: переход по дате */
+.cil-week-archive { display: inline-flex; align-items: center; gap: 6px; margin-left: 6px; font-size: 12px; font-weight: 700; color: var(--text-second); }
+.cil-week-archive input { padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg-input); color: var(--text-main); font: inherit; font-weight: 500; }
