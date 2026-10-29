@@ -186,7 +186,7 @@ function updateElecSelectionUI(filtered) {
    Тот же подход, что у стандартов (js/io/standards-io.js):
    «Параметры» — строка на параметр, выпадающие списки;
    «Значения»  — сверху строки сами повторяют «Параметры» (Параметр · Машина,
-                 «Остальные бренды», тип), ниже — дополнительные бренды;
+                 «Все бренды», тип), ниже — дополнительные бренды;
    «Списки»    — скрытый лист-источник списков; «Инструкция».
    Норма — точки Т1…Т10 по брендам, как у стандартов (листы «Стандарты» / «Точки»).
    Импорт понимает и старые форматы («Номинал / Допуск / От / До», колонка «Значения по брендам»).
@@ -443,7 +443,7 @@ async function parseElectronicParamsExcel(file, targetLine) {
       }
       if (!p) continue;
       const brandText = xlIsBareFormula(row, 2) ? REST_BRANDS_LABEL : xlCellText(row, 2);
-      const brand = !brandText || brandText === REST_BRANDS_LABEL ? '' : brandText;
+      const brand = !brandText || isRestBrandLabel(brandText) ? '' : brandText;
       let points = [];
       if (pointsFmt) {
         for (let c = 4; c <= lastCol; c++) { const v = xlCellText(row, c); if (v) points.push({ value: v }); }

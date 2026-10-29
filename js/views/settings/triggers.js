@@ -25,7 +25,8 @@ function renderCustomTriggersSettings() {
     .filter(t => ws === 'all' || t.workshop === ws)
     .filter(t => !q || t.label.toLowerCase().includes(q));
 
-  const PARTS = [['', 'Любая часть'], ['Maker', 'Maker'], ['Packer', 'Packer']];
+  // Часть линии нужна только триггерам SMD; «любой части» нет (у старых триггеров ни одна кнопка не нажата)
+  const PARTS = [['Maker', 'Maker'], ['Packer', 'Packer']];
   const partSeg = (t) => PARTS.map(([v, l]) => `
     <button type="button" class="settings-seg-btn ${(t.part || '') === v ? 'active' : ''}" data-ct-part="${escapeAttr(v)}" data-ct-id="${escapeAttr(t.id)}">${l}</button>`).join('');
 
@@ -58,9 +59,11 @@ function renderCustomTriggersSettings() {
     <div class="settings-add-row">
       <input type="text" id="newTriggerInput" placeholder="Новый триггер, например «Смена фильтра», Enter" autocomplete="off">
       <span class="settings-seg">${wsSeg}</span>
+      ${addWs === 'smd' ? `<span class="settings-seg" title="Для какой части линии">${PARTS.map(([v, l]) => `
+        <button type="button" class="settings-seg-btn ${(settingsState.triggersAddPart || 'Maker') === v ? 'active' : ''}" data-ct-add-part="${v}">${l}</button>`).join('')}</span>` : ''}
       <button type="button" class="btn btn-primary btn-sm" id="newTriggerBtn">Добавить</button>
     </div>
-    <div class="settings-list">
+    <div class="settings-list settings-list-scroll">
       ${rows || `<div class="st-empty">${q ? 'Ничего не найдено' : 'Триггеров пока нет'}</div>`}
     </div>`;
 }
@@ -75,7 +78,7 @@ function addCustomTriggerInline() {
     return showToast('Такой триггер в этом цехе уже есть', true);
   }
   const stamp = Date.now() + '_' + Math.random().toString(36).slice(2, 6);
-  list.push({ id: 'ct_' + stamp, label, value: 'ct_' + stamp, part: '', workshop });
+  list.push({ id: 'ct_' + stamp, label, value: 'ct_' + stamp, part: workshop === 'smd' ? (settingsState.triggersAddPart || 'Maker') : '', workshop });
   setCustomTriggers(list);
   renderCustomTriggersSettings();
   updateSettingsNavCounts();
@@ -147,6 +150,15 @@ $('#customTriggersContainer')?.addEventListener('click', (e) => {
     settingsState.triggersWs = f.dataset.ctFilter;
     if (f.dataset.ctFilter !== 'all') settingsState.triggersAddWs = f.dataset.ctFilter;
     return renderCustomTriggersSettings();
+  }
+  const ap = e.target.closest('[data-ct-add-part]');
+  if (ap) {
+    settingsState.triggersAddPart = ap.dataset.ctAddPart;
+    const v = $('#newTriggerInput')?.value || '';
+    renderCustomTriggersSettings();
+    const inp = $('#newTriggerInput');
+    if (inp) { inp.value = v; inp.focus(); }
+    return;
   }
   const aw = e.target.closest('[data-ct-add-ws]');
   if (aw) {

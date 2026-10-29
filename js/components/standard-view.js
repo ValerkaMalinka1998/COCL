@@ -129,7 +129,7 @@ function renderStandardViewContent(st, brand, co) {
     .filter(b => b && Array.isArray(b.points) && b.points.length);
   const maxPts = blocks.reduce((m, b) => Math.max(m, b.points.length), 0);
 
-  // Какой блок выделить: бренд из контекста, иначе «Остальные бренды»
+  // Какой блок выделить: бренд из контекста, иначе «Все бренды»
   const hl = blocks.find(b => b.brand === brand) ? brand
     : (blocks.find(b => !b.brand) ? '' : null);
 

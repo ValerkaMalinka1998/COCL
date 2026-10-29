@@ -70,8 +70,8 @@ function renderTopLossesSettings() {
           <span class="tl-set-cat-name">${escapeHtml(cat.name)}</span>
           <span class="st-count">${(cat.items || []).length} ${pluralizeLosses((cat.items || []).length)}${stdCount ? ' · ' + stdCount + ' ' + pluralizeStandards(stdCount) : ''}</span>
         </div>
-        <div class="tl-set-cat-list">${rows || `<div class="st-muted tl-set-empty">${q ? 'Нет совпадений' : 'Потерь пока нет'}</div>`}</div>
         <input type="text" class="tl-set-add" data-tl-add="${escapeAttr(cat.id)}" placeholder="+ Новая потеря, Enter" autocomplete="off">
+        <div class="tl-set-cat-list">${rows || `<div class="st-muted tl-set-empty">${q ? 'Нет совпадений' : 'Потерь пока нет'}</div>`}</div>
       </div>`;
   };
 

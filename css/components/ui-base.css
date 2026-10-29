@@ -232,8 +232,7 @@ tr:hover td { background: var(--bg-hover); }
   position: fixed;
   inset: 0;
   background: var(--overlay);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  /* без backdrop-filter: размытие всего экрана тормозило открытие окон на слабых ПК */
   /* z-index устанавливается динамически через JS
      (см. openModal / closeModal в app.js) */
   align-items: center;
@@ -241,11 +240,9 @@ tr:hover td { background: var(--bg-hover); }
   padding: 20px;
 }
 .modal-overlay.active { display: flex; }
-/* Модалка — матовое стекло (размытие — только у шапки, меню и модалок) */
+/* Модалка — почти непрозрачное стекло; backdrop-filter убран (тормозил на слабых ПК) */
 .modal {
   background: var(--glass-strong);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
   border-radius: var(--r-xl);
   max-width: 500px;

@@ -92,7 +92,8 @@ function load(key, fallback) {
   } catch(e) { return fallback; }
 }
 function save(key, value) {
-  if (loadCache) loadCache.delete(key);
+  // Новый объект, а не delete: сбрасывает и производные кэши (нормализованные стандарты, конфиг смен)
+  if (loadCache) loadCache = new Map();
   localStorage.setItem(key, JSON.stringify(value));
 }
 function getOperators() { return load(STORAGE_KEYS.operators, []); }

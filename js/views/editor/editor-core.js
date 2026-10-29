@@ -496,7 +496,7 @@ function renderEditorPagination(kind, total, totalPages, startIdx, endIdx) {
    ============================================================ */
 
 /* Фильтры мех-таблицы */
-['emFilterNode', 'emFilterType', 'emFilterSchedule', 'emFilterActive', 'emFilterValidation'
+['emFilterMachine', 'emFilterNode', 'emFilterType', 'emFilterSchedule', 'emFilterActive', 'emFilterValidation'
 ].forEach(id => {
   document.getElementById(id)?.addEventListener('change', () => {
     editorTableState.mechPage = 1;
@@ -512,7 +512,7 @@ $('#emFilterSearch')?.addEventListener('input', () => {
 $('#emFilterResetBtn')?.addEventListener('click', resetMechFilters);
 
 /* Фильтры электронной таблицы */
-['eeFilterControlType', 'eeFilterType', 'eeFilterSchedule', 'eeFilterActive', 'eeFilterValidation'
+['eeFilterMachine', 'eeFilterControlType', 'eeFilterType', 'eeFilterSchedule', 'eeFilterActive', 'eeFilterValidation'
 ].forEach(id => {
   document.getElementById(id)?.addEventListener('change', () => {
     editorTableState.elecPage = 1;
@@ -586,9 +586,9 @@ function fillEditorFilters() {
   const mech = line ? getStandards().filter(s => s.line === line) : [];
   const elec = line ? getElectronicParamsForLine(line) : [];
 
-  /* --- Машины линии — чипы с количеством --- */
-  renderEditorMachineChips('em', mech);
-  renderEditorMachineChips('ee', elec);
+  /* --- Машины линии — список с количеством --- */
+  fillEditorMachineSelect('em', mech);
+  fillEditorMachineSelect('ee', elec);
 
   /* --- Узел — из стандартов линии --- */
   const sel = document.getElementById('emFilterNode');
@@ -601,43 +601,20 @@ function fillEditorFilters() {
   }
 }
 
-/* Чипы машин линии над таблицей; выбранная машина хранится в скрытом поле */
-function renderEditorMachineChips(prefix, rows) {
-  const box = document.getElementById(`${prefix}MachineChips`);
-  const input = document.getElementById(`${prefix}FilterMachine`);
-  if (!box || !input) return;
+/* Список машин линии в фильтрах таблицы (как остальные фильтры) */
+function fillEditorMachineSelect(prefix, rows) {
+  const sel = document.getElementById(`${prefix}FilterMachine`);
+  if (!sel) return;
   const counts = {};
   rows.forEach(r => { if (r.machine) counts[r.machine] = (counts[r.machine] || 0) + 1; });
   // Машины без стандартов не показываем: фильтр по ним всегда пуст
   const machines = Object.keys(counts).sort((a, b) => a.localeCompare(b, 'ru', { numeric: true }));
-  if (input.value && !machines.includes(input.value)) input.value = '';
-  if (machines.length < 2) {
-    box.innerHTML = '';
-    return;
-  }
-  box.innerHTML = '<span class="et-flabel">Машина</span>' + machines.map(m => `
-    <button type="button" class="et-fchip ${input.value === m ? 'on' : ''}" data-machine="${escapeAttr(m)}">
-      ${escapeHtml(m)}<span class="et-fchip-n">${counts[m]}</span>
-    </button>`).join('');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Машина: все</option>' +
+    machines.map(m => `<option value="${escapeAttr(m)}">${escapeHtml(m)} (${counts[m]})</option>`).join('');
+  sel.value = machines.includes(cur) ? cur : '';
+  sel.hidden = machines.length < 2;
 }
-
-/* Клик по чипу машины — выбрать / снять */
-['em', 'ee'].forEach(prefix => {
-  document.getElementById(`${prefix}MachineChips`)?.addEventListener('click', (e) => {
-    const chip = e.target.closest('[data-machine]');
-    if (!chip) return;
-    const input = document.getElementById(`${prefix}FilterMachine`);
-    input.value = input.value === chip.dataset.machine ? '' : chip.dataset.machine;
-    fillEditorFilters();
-    if (prefix === 'em') {
-      editorTableState.mechPage = 1;
-      refreshEditorMechTable();
-    } else {
-      editorTableState.elecPage = 1;
-      refreshEditorElecTable();
-    }
-  });
-});
 
 /* Меню «Excel»: импорт, шаблон, экспорт */
 document.addEventListener('click', (e) => {

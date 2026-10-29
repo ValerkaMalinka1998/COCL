@@ -405,37 +405,6 @@
   border: 0;
   outline: none;
 }
-.et-fchips { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.et-fchips:empty { display: none; }
-.et-flabel {
-  margin-right: 2px;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: var(--text-dim);
-}
-.et-fchip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-second);
-  background: var(--bg-card);
-  border: 1px solid var(--border-hi);
-  border-radius: 999px;
-  cursor: pointer;
-}
-.et-fchip:hover { border-color: var(--accent-cyan); color: var(--text-main); }
-.et-fchip.on {
-  color: var(--accent-cyan);
-  background: color-mix(in srgb, var(--accent-cyan) 10%, var(--bg-card));
-  border-color: var(--accent-cyan);
-}
-.et-fchip-n { font-size: 11px; color: var(--text-dim); }
 .et-fsel {
   width: auto;
   max-width: 200px;

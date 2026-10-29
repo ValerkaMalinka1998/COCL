@@ -280,6 +280,16 @@ test('существенные правки: одно правило для ли
   assert.equal(off.sheet, true, 'деактивация → в лист линии');
 });
 
+test('ознакомление — только если правка попала в лист линии; «Все бренды» понимает старые подписи', () => {
+  const major = fn('stdAckIsMajor');
+  assert.equal(major({ action: 'changed', details: [{ label: 'триггеры' }], sheet: false }), false);
+  assert.equal(major({ action: 'changed', details: [{ label: 'норма (X)' }], sheet: false }), false, 'только лист стандарта');
+  assert.equal(major({ action: 'changed', details: [{ label: 'фото' }] }), true);
+  const rest = fn('isRestBrandLabel');
+  for (const t of ['Все бренды', 'Остальные бренды', ' все сорта ']) assert.equal(rest(t), true, t);
+  assert.equal(rest('Marlboro'), false);
+});
+
 /* === ДОЛГ ПРОВЕРОК И ПРОСТОЙ === */
 // Ср 21.10 и Пт 23.10 — день по расписанию; «сейчас» — Пт 23.10, 10:00 (дневная смена)
 const debtRow = { id: 'd1', line: 'SD12', inSchedule: true, work: 'Run',

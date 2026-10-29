@@ -4,7 +4,7 @@
    и выпадающие списки (работают в любом Excel без предупреждений):
    «Стандарты» — строка на стандарт, списки машин, частей, типов;
    «Точки»     — сверху строки сами повторяют «Стандарты» (OPL · Машина,
-                 «Остальные бренды», тип), ниже — дополнительные бренды:
+                 «Все бренды», тип), ниже — дополнительные бренды:
                  стандарт и бренд выбираются из списка;
    «Списки»    — скрытый лист-источник выпадающих списков;
    «Инструкция».
@@ -176,7 +176,7 @@ function buildStdSheet(wb, standards, line, lists) {
   return ws;
 }
 
-/* Лист «Точки». Строка r сверху = строка r «Стандартов»: ключ, бренд «Остальные
+/* Лист «Точки». Строка r сверху = строка r «Стандартов»: ключ, бренд «Все
    бренды» и тип подставляются формулами. Ниже — дополнительные бренды. */
 function buildPointsSheet(wb, standards, lists) {
   const ws = wb.addWorksheet(XL_SHEET.pts);
@@ -191,7 +191,7 @@ function buildPointsSheet(wb, standards, lists) {
   for (let r = 2; r <= xlLastStdRow; r++) {
     const st = standards[r - 2];
     const blocks = st && Array.isArray(st.measurements) ? st.measurements.filter(b => ptsOf(b).length) : [];
-    // В верхнюю строку — «Остальные бренды»; нет такого блока — первый бренд
+    // В верхнюю строку — «Все бренды»; нет такого блока — первый бренд
     const main = blocks.find(b => !b.brand) || blocks[0] || null;
     blocks.filter(b => b !== main).forEach(b => extra.push({ st, block: b }));
 
@@ -487,7 +487,7 @@ async function parseStandardsExcelV3(file, targetLine) {
       if (v) points.push({ value: v });
     }
     if (!points.length) return;
-    const brand = !brandRaw || brandRaw === REST_BRANDS_LABEL ? '' : brandRaw;
+    const brand = !brandRaw || isRestBrandLabel(brandRaw) ? '' : brandRaw;
     const block = std.measurements.find(b => (b.brand || '') === brand);
     if (block) block.points = points;
     else std.measurements.push({ brand, points });
@@ -611,7 +611,7 @@ function oplSheetToStandard(ws, line, part) {
   const numLabel = find('№ opl') ? '№ opl' : (find('№', true) ? '№' : null);   // в старых бланках — просто «№»
   if (!numLabel) return null;
 
-  // Точки: номера — под «Точка замера», бренды — строка под «Значение» («Все сорта» = остальные бренды);
+  // Точки: номера — под «Точка замера», бренды — строка под «Значение» («Все бренды» = общая норма; старое «Все сорта» понимаем);
   // в старых бланках «Значения» нет — бренды в строке «Точка замера», правее «Градуса»
   const measurements = [];
   const pt = find('точка замера'), vl = find('значение');
@@ -623,7 +623,7 @@ function oplSheetToStandard(ws, line, part) {
         const v = oplCleanValue(xlCellText(ws.getRow(r), b.col));
         if (v) points.push({ value: v });
       }
-      const rest = /^все (сорта|бренды)$/.test(b.low) || b.text === REST_BRANDS_LABEL;
+      const rest = isRestBrandLabel(b.low);
       if (points.length) measurements.push({ brand: rest ? '' : b.text, points });
     });
   }

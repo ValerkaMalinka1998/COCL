@@ -14,7 +14,6 @@
 const linePickerState = {
   workshopId: null
 };
-
 function resetLinePickerState() {
   linePickerState.workshopId = null;
 }

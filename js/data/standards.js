@@ -309,7 +309,10 @@ function normalizeStandard(st) {
 
 function getStandards() {
   const raw = load(STORAGE_KEYS.standards, []);
-  return raw.map(normalizeStandard);
+  if (!loadCache) return raw.map(normalizeStandard);
+  // В withLoadCache нормализуем один раз на отрисовку; копия массива — вызывающий может сортировать
+  if (!loadCache.has('norm:standards')) loadCache.set('norm:standards', raw.map(normalizeStandard));
+  return loadCache.get('norm:standards').slice();
 }
 function setStandards(v) { save(STORAGE_KEYS.standards, v); }
 

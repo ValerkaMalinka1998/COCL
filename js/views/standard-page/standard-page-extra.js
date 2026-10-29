@@ -504,7 +504,7 @@ $('#svFullSaveBtn')?.addEventListener('click', () => {
   const brandKeys = measurements.map(m => m.brand || '');
   const dupBrand = brandKeys.find((b, i) => brandKeys.indexOf(b) !== i);
   if (dupBrand !== undefined) {
-    return showToast(`Бренд «${dupBrand || 'Остальные бренды'}» добавлен дважды — оставьте одну строку`, true);
+    return showToast(`Бренд «${dupBrand || REST_BRANDS_LABEL}» добавлен дважды — оставьте одну строку`, true);
   }
   // Вариабельный и интервал без точек проверить нечем
   const hasPoints = measurements.some(m =>

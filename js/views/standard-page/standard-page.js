@@ -221,10 +221,6 @@ function renderSvFullCrumbs(st) {
   }
 
   const parts = [];
-  // ID
-  if (st.oplNumber) {
-    parts.push(`<span class="sv-full-crumb-id">${escapeHtml(st.oplNumber)}</span>`);
-  }
   // Цех
   parts.push(`<span class="sv-full-crumb">${escapeHtml(ctx.workshop.name)}</span>`);
   // Участок + блок
@@ -238,10 +234,20 @@ function renderSvFullCrumbs(st) {
   // Линия
   parts.push(`<span class="sv-full-crumb-sep">›</span>`);
   parts.push(`<span class="sv-full-crumb-current">${escapeHtml(st.line || '—')}</span>`);
+  // Часть линии (Maker / Packer) — только SMD
+  if (st.nodePart && lineHasParts(st.line)) {
+    parts.push(`<span class="sv-full-crumb-sep">›</span>`);
+    parts.push(`<span class="sv-full-crumb-current">${escapeHtml(st.nodePart)}</span>`);
+  }
   // Машина
   if (st.machine) {
     parts.push(`<span class="sv-full-crumb-sep">›</span>`);
     parts.push(`<span class="sv-full-crumb-current">${escapeHtml(st.machine)}</span>`);
+  }
+  // OPL — последний шаг
+  if (st.oplNumber) {
+    parts.push(`<span class="sv-full-crumb-sep">›</span>`);
+    parts.push(`<span class="sv-full-crumb-id">OPL ${escapeHtml(st.oplNumber)}</span>`);
   }
 
   el.innerHTML = parts.join(' ');
@@ -620,7 +626,7 @@ function renderSvBrandsTable(measurements, container = $('#svf_brandBlocksContai
 
       // Бренд, уже занятый другой строкой, повторно выбрать нельзя
       const usedElsewhere = new Set(state.filter((_, i) => i !== rowIndex).map(x => x.brand || ''));
-      const brandOptions = (usedElsewhere.has('') ? [] : ['<option value="">Остальные бренды</option>'])
+      const brandOptions = (usedElsewhere.has('') ? [] : [`<option value="">${REST_BRANDS_LABEL}</option>`])
         .concat(brands.filter(b => !usedElsewhere.has(b) || b === block.brand).map(b => {
           const selected = (b === block.brand) ? ' selected' : '';
           return `<option value="${escapeHtml(b)}"${selected}>${escapeHtml(b)}</option>`;
@@ -739,7 +745,7 @@ function bindSvControlEvents(st, container = $('#svf_brandBlocksContainer')) {
       const pointsCount = Math.max(maxPoints, 1);
       const newPoints = [];
       for (let i = 0; i < pointsCount; i++) newPoints.push({ value: '' });
-      // Новая строка — с первым ещё не занятым брендом («Остальные бренды» — тоже один раз)
+      // Новая строка — с первым ещё не занятым брендом («Все бренды» — тоже один раз)
       const used = new Set(state.map(b => b.brand || ''));
       const free = used.has('') ? getBrands().find(b => !used.has(b)) : '';
       if (free === undefined) return showToast('Все бренды уже добавлены', true);

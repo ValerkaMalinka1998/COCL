@@ -65,10 +65,10 @@ function lineBrandSourceText(info) {
 /* ------------------------------------------------------------
    Какие значения стандарта / E-Param проверять для бренда.
    list — measurements (стандарт и E-Param); строка
-   без бренда = «Остальные бренды».
+   без бренда = «Все бренды».
    → { item, kind } где kind:
      'brand'   — своя строка бренда;
-     'rest'    — «Остальные бренды»;
+     'rest'    — «Все бренды»;
      'single'  — у стандарта одна строка, бренд не важен;
      'missing' — для этого бренда значений нет;
      'nobrand' — бренд линии не задан, а значения разные по брендам;
@@ -76,7 +76,12 @@ function lineBrandSourceText(info) {
    Первый бренд по списку больше НЕ подставляется — иначе оператор
    молча сверяется с чужой нормой.
    ------------------------------------------------------------ */
-const REST_BRANDS_LABEL = 'Остальные бренды';
+const REST_BRANDS_LABEL = 'Все бренды';
+
+/* Подпись «всех брендов» в Excel: понимаем и старые файлы («Остальные бренды», «Все сорта») */
+function isRestBrandLabel(text) {
+  return /^(все бренды|остальные бренды|все сорта)$/.test(String(text || '').trim().toLowerCase());
+}
 
 function pickBrandValues(list, brand) {
   const arr = (Array.isArray(list) ? list : []).filter(Boolean);

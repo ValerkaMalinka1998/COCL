@@ -92,7 +92,7 @@
 .nb-ic-cmt { background: color-mix(in srgb, var(--accent-cyan) 14%, transparent); color: var(--accent-cyan); }
 .nb-ic-rep { background: color-mix(in srgb, var(--accent-purple) 14%, transparent); color: var(--accent-purple); }
 .nb-ic-val { background: color-mix(in srgb, var(--accent-val) 14%, transparent); color: var(--accent-val); }
-.nb-ic-new { background: color-mix(in srgb, var(--accent-green) 14%, transparent); color: var(--accent-green); }
+.nb-ic-new, .nb-ic-vdone { background: color-mix(in srgb, var(--accent-green) 14%, transparent); color: var(--accent-green); }
 .nb-txt { min-width: 0; }
 .nb-t { display: block; font-size: 13.5px; line-height: 1.4; color: var(--text-main); }
 .nb-q {

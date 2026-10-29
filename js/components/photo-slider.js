@@ -20,7 +20,7 @@ function photoSliderHtml(st, opts = {}) {
 
   const img = (name, i, cls) => `
     <button type="button" class="${cls}" data-psl-go="${i}" title="${escapeAttr(name)}">
-      <img src="${escapeAttr(getPhotoPath(st, name))}" alt="${escapeAttr(name)}" loading="lazy"
+      <img src="${escapeAttr(getPhotoPath(st, name))}" alt="${escapeAttr(name)}" loading="lazy" decoding="async"
            onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
       <span class="psl-miss" style="display:none">нет файла<small>${escapeHtml(name)}</small></span>
     </button>`;

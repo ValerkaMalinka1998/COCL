@@ -64,7 +64,7 @@ function normalizeElectronicParam(p) {
     normText: typeof p.normText === 'string' ? p.normText : '',
 
     // Точки по брендам — тот же формат, что у механического стандарта.
-    // Старый параметр (valuesByBrand) переводится в точки при чтении; пустой бренд — «Остальные бренды»
+    // Старый параметр (valuesByBrand) переводится в точки при чтении; пустой бренд — «Все бренды»
     measurements: Array.isArray(p.measurements)
       ? normalizeMeasurements(p.measurements)
       : eparamLegacyMeasurements(p.valuesByBrand, migrateControlType(p.controlType, null)),

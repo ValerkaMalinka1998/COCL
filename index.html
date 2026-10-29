@@ -582,8 +582,7 @@
       <div class="et-bulk-bar" id="editorMechBulk" hidden></div>
       <div class="et-filterbar">
         <label class="et-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="emFilterSearch" placeholder="Поиск: OPL, название, узел…" autocomplete="off"></label>
-        <div class="et-fchips" id="emMachineChips"></div>
-        <input type="hidden" id="emFilterMachine">
+        <select class="et-fsel" id="emFilterMachine" title="Машина" hidden><option value="">Машина: все</option></select>
         <input type="hidden" id="emFilterPart">
         <select class="et-fsel" id="emFilterNode" title="Узел"><option value="">Узел: все</option></select>
         <select class="et-fsel" id="emFilterType" title="CL относится к">
@@ -730,8 +729,7 @@
       <div class="et-bulk-bar" id="editorElecBulk" hidden></div>
       <div class="et-filterbar">
         <label class="et-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="eeFilterSearch" placeholder="Поиск: параметр, машина…" autocomplete="off"></label>
-        <div class="et-fchips" id="eeMachineChips"></div>
-        <input type="hidden" id="eeFilterMachine">
+        <select class="et-fsel" id="eeFilterMachine" title="Машина" hidden><option value="">Машина: все</option></select>
         <input type="hidden" id="eeFilterPart">
         <select class="et-fsel" id="eeFilterControlType" title="Тип контроля">
           <option value="">Тип: все</option>
@@ -1257,6 +1255,8 @@
   <div id="histMainView">
     <div class="page-head">
       <div class="ph-context">
+        <div class="hist-seg" id="histWsSeg"></div>
+        <select class="et-fsel" id="histAreaSel" title="Участок" hidden></select>
         <button type="button" class="editor-line-pill" id="histLinePill" title="Выбрать линию">
           <span class="editor-line-pill-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
@@ -1266,6 +1266,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </span>
         </button>
+        <div class="editor-crumbs" id="histCrumbs"></div>
       </div>
       <div class="ph-main">
         <div class="ph-title">
@@ -1767,7 +1768,7 @@
         <p class="settings-hint">
           Бланк стандарта из журнала (Excel, один лист — один стандарт) превращается в стандарт выбранной линии:
           № OPL, машина и узел, название, автор, время на проверку, инструмент, «Описание», «Описание контроля»,
-          «Цель», «Знаю почему», точки по брендам («Все сорта» — остальные бренды). Тип контроля определяется по значениям.
+          «Цель», «Знаю почему», точки по брендам («Все бренды» — общая норма для брендов без своей строки). Тип контроля определяется по значениям.
           Можно выбрать сразу несколько файлов. Уже существующие OPL № на машине пропускаются.
         </p>
         <p class="settings-hint">
