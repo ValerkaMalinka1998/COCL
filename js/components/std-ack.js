@@ -143,3 +143,53 @@ document.addEventListener('click', e => {
   renderStdAck(kind, { id: st.id });
   if (typeof updateNotifyBadge === 'function') updateNotifyBadge();
 });
+
+/* === ДОПУСК К ПРОВЕРКЕ: CL при переходах, TOP Losses ===
+   items: [{ kind: 'mech'|'elec', row }]. Все ознакомлены — сразу onStart(); иначе окно со списком. */
+const ackGateState = { items: [], onStart: null };
+
+function stdAckGate(items, onStart) {
+  // С E-Param не знакомятся — только механические стандарты
+  const need = items.filter(x => x.kind === 'mech' && getStdAckStatus(x.kind, x.row.id).state !== 'ok');
+  if (!need.length) return onStart();
+  ackGateState.items = need;
+  ackGateState.onStart = onStart;
+  renderAckGate();
+  openModal('#ackGateModal');
+}
+
+function renderAckGate() {
+  let left = 0;
+  $('#ackGateList').innerHTML = ackGateState.items.map(({ kind, row }) => {
+    const s = getStdAckStatus(kind, row.id);
+    const ok = s.state === 'ok';
+    if (!ok) left++;
+    return `<div class="ack-gate-row${ok ? ' is-ok' : ''}">
+      <div class="ack-gate-name">${kind === 'elec' ? '<span class="ack-gate-kind">E-Param</span>' : row.oplNumber ? `<b>${escapeHtml(row.oplNumber)}</b> ` : ''}${escapeHtml(row.title || row.paramName || '—')}
+        <small>${escapeHtml([row.machine, row.nodePart].filter(Boolean).join(' · '))}${s.state === 'again' ? ' · изменён' : ''}</small></div>
+      ${kind === 'mech' ? `<button type="button" class="btn btn-accent btn-sm" data-ack-gate-view="${escapeAttr(row.id)}">Открыть</button>` : ''}
+      ${ok ? '<span class="ack-gate-done">✓ ознакомлен</span>'
+        : `<button type="button" class="btn btn-primary btn-sm" data-ack-gate-mark="${escapeAttr(row.id)}" data-kind="${kind}">Ознакомлен</button>`}
+    </div>`;
+  }).join('');
+  $('#ackGateStart').disabled = left > 0;
+}
+
+document.addEventListener('click', e => {
+  if (e.target.closest('#ackGateClose') || e.target.closest('#ackGateCancel')) { closeModal('#ackGateModal'); return; }
+  const v = e.target.closest('[data-ack-gate-view]');
+  if (v) { openStandardView(v.dataset.ackGateView); return; }
+  const m = e.target.closest('[data-ack-gate-mark]');
+  if (m) {
+    addStdAck(m.dataset.kind, m.dataset.ackGateMark);
+    if (typeof updateNotifyBadge === 'function') updateNotifyBadge();
+    renderAckGate();
+    return;
+  }
+  if (e.target.closest('#ackGateStart') && !$('#ackGateStart').disabled) {
+    const go = ackGateState.onStart;
+    closeModal('#ackGateModal');
+    ackGateState.onStart = null;
+    if (go) go();
+  }
+});

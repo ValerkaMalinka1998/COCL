@@ -35,7 +35,10 @@ function renderBrandsSettings() {
   const noneCount = all.filter(b => wsOf(b) === '__none__').length;
   if (noneCount) chipItems.push({ id: '__none__', name: 'Без цеха', count: noneCount });
 
-  if (!brandsAddWs) brandsAddWs = (ws !== 'all' && ws !== '__none__') ? ws : (getWorkshops()[0]?.id || '');
+  // Цех нового бренда: выбран фильтром — берём его; на «Все» / «Без цеха» выбирается в строке добавления
+  const fixedWs = (ws !== 'all' && ws !== '__none__') ? ws : '';
+  if (fixedWs) brandsAddWs = fixedWs;
+  else if (!brandsAddWs) brandsAddWs = getWorkshops()[0]?.id || '';
 
   const shown = all
     .filter(b => ws === 'all' || wsOf(b) === ws)
@@ -44,24 +47,23 @@ function renderBrandsSettings() {
   const wsSeg = (active, attrName, brand) => getWorkshops().map(w => `
     <button type="button" class="settings-seg-btn ${active === w.id ? 'active' : ''}" ${attrName}="${escapeAttr(w.id)}"${brand != null ? ` data-brand="${escapeAttr(brand)}"` : ''}>${escapeHtml(w.name)}</button>`).join('');
 
-  // Компактная плитка бренда: название, линии, цех (короткий список), удалить.
-  // Плитки идут сеткой в прокручиваемой области — длинный справочник не растягивает страницу.
-  const wsSelect = (brand) => {
+  // Бренды — строками списка в прокручиваемой области: длинный справочник не растягивает страницу.
+  // Цех бренда не меняется: список цеха только у старых брендов «без цеха».
+  const wsCell = (brand) => {
     const cur = getBrandWorkshop(brand) || '';
-    return `<select class="brand-tile-ws" data-brand-ws-select="${escapeAttr(brand)}" title="Цех бренда">
-      ${cur ? '' : '<option value="" selected>без цеха</option>'}
-      ${getWorkshops().map(w => `<option value="${escapeAttr(w.id)}" ${cur === w.id ? 'selected' : ''}>${escapeHtml(w.name)}</option>`).join('')}
+    if (cur) return ws === 'all' ? `<span class="settings-ws-badge">${escapeHtml(getWorkshopName(cur))}</span>` : '';
+    return `<select class="settings-row-select" data-brand-ws-select="${escapeAttr(brand)}" title="Назначить цех (потом не меняется)">
+      <option value="" selected>без цеха</option>
+      ${getWorkshops().map(w => `<option value="${escapeAttr(w.id)}">${escapeHtml(w.name)}</option>`).join('')}
     </select>`;
   };
   const rows = shown.map(b => {
     const lines = getLinesForBrand(b);
     return `
-      <div class="brand-tile ${lines.length ? '' : 'brand-tile-unused'}" data-brand-row="${escapeAttr(b)}">
-        <div class="brand-tile-main">
-          <span class="brand-tile-name" data-brand-rename="${escapeAttr(b)}" title="Нажмите, чтобы переименовать">${settingsHighlight(b, q)}</span>
-          <span class="brand-tile-meta" title="${escapeAttr(lines.join(', ') || 'Ни на одной линии')}">${lines.length ? escapeHtml(lines.slice(0, 3).join(', ')) + (lines.length > 3 ? ` +${lines.length - 3}` : '') : 'нет линий'}</span>
-        </div>
-        ${wsSelect(b)}
+      <div class="settings-row" data-brand-row="${escapeAttr(b)}">
+        <span class="settings-row-name" data-brand-rename="${escapeAttr(b)}" title="Нажмите, чтобы переименовать">${settingsHighlight(b, q)}</span>
+        ${wsCell(b)}
+        <span class="settings-row-meta" title="${escapeAttr(lines.join(', ') || 'Ни на одной линии')}">${lines.length ? escapeHtml(lines.slice(0, 3).join(', ')) + (lines.length > 3 ? ` +${lines.length - 3}` : '') : 'нет линий'}</span>
         <button type="button" class="st-icon-btn st-icon-danger" data-brand-delete="${escapeAttr(b)}" title="Удалить бренд">${SETTINGS_ICON_DELETE}</button>
       </div>`;
   }).join('');
@@ -73,11 +75,13 @@ function renderBrandsSettings() {
     </div>
     <div class="settings-add-row">
       <input type="text" id="newBrandInlineInput" placeholder="Новый бренд, Enter" autocomplete="off">
-      <span class="settings-seg">${wsSeg(brandsAddWs, 'data-brand-add-ws')}</span>
+      ${fixedWs
+        ? `<span class="settings-row-meta">в цех <b>${escapeHtml(getWorkshopName(fixedWs))}</b></span>`
+        : `<span class="settings-seg">${wsSeg(brandsAddWs, 'data-brand-add-ws')}</span>`}
       <button type="button" class="btn btn-primary btn-sm" id="newBrandInlineBtn">Добавить</button>
     </div>
-    ${rows ? `<div class="brand-grid-meta">Показано ${shown.length} из ${all.length}</div>
-    <div class="brand-grid">${rows}</div>`
+    ${rows ? `<div class="settings-list-meta">Показано ${shown.length} из ${all.length}</div>
+    <div class="settings-list settings-list-scroll">${rows}</div>`
     : `<div class="settings-list"><div class="st-empty">${q ? `Ничего не найдено по «${escapeHtml(brandsQuery)}»` : 'Брендов в этом цехе пока нет'}</div></div>`}`;
 }
 
@@ -121,17 +125,21 @@ function renameBrand(oldName, newName) {
   setBrandWorkshops(map);
 
   let changed = 0;
-  const stds = getStandards();
-  stds.forEach(s => (s.measurements || []).forEach(m => {
-    if (m.brand === oldName) { m.brand = newName; changed++; }
-  }));
-  if (changed) setStandards(stds);
-  const eps = getElectronicParams();
+  const stds = getStandards().filter(s => {
+    let hit = false;
+    (s.measurements || []).forEach(m => { if (m.brand === oldName) { m.brand = newName; changed++; hit = true; } });
+    return hit;
+  });
+  saveStandards(stds);
   let changedEp = 0;
-  eps.forEach(p => [...(p.valuesByBrand || []), ...(p.measurements || [])].forEach(v => {
-    if (v.brand === oldName) { v.brand = newName; changedEp++; }
-  }));
-  if (changedEp) setElectronicParams(eps);
+  const eps = getElectronicParams().filter(p => {
+    let hit = false;
+    [...(p.valuesByBrand || []), ...(p.measurements || [])].forEach(v => {
+      if (v.brand === oldName) { v.brand = newName; changedEp++; hit = true; }
+    });
+    return hit;
+  });
+  saveElectronicParams(eps);
 
   renderBrandsSettings();
   if (typeof renderStructureSettings === 'function') renderStructureSettings();
@@ -205,7 +213,7 @@ $('#brandsList')?.addEventListener('click', (e) => {
   }
 });
 
-/* Цех бренда — выпадающий список на плитке */
+/* Цех бренда — выпадающий список в строке, только пока цех не задан */
 $('#brandsList')?.addEventListener('change', (e) => {
   const sel = e.target.closest('[data-brand-ws-select]');
   if (!sel || !sel.value) return;

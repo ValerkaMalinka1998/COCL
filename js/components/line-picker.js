@@ -12,11 +12,15 @@
    ============================================================ */
 
 const linePickerState = {
-  workshopId: null
+  workshopId: null,
+  current: null   // выбранная линия вкладки; null — последняя из «недавних»
 };
-
 function resetLinePickerState() {
   linePickerState.workshopId = null;
+  linePickerState.current = null;
+}
+function linePickerCurrent() {
+  return linePickerState.current != null ? linePickerState.current : (getRecentLines()[0] || '');
 }
 
 /* Группы линий цеха: [{ title, lines[] }]. Участок с блоками → «Участок · Блок».
@@ -42,7 +46,7 @@ function countLinePickerLines(w) {
 }
 
 /* --- Открытие / закрытие --- */
-function openLinePickerModal() {
+function openLinePickerModal(current) {
   const modal = $('#linePickerModal');
   if (!modal) return;
 
@@ -50,6 +54,7 @@ function openLinePickerModal() {
   if (search) search.value = '';
 
   resetLinePickerState();
+  if (typeof current === 'string') linePickerState.current = current;   // не событие клика
   renderLinePickerModal('');
   openModal(modal);
   setTimeout(() => { if (search) search.focus(); }, 100);
@@ -92,13 +97,13 @@ function renderLinePickerBrowse() {
 
   // Цех по умолчанию: где последняя использованная линия, иначе первый с линиями
   if (!workshops.some(w => w.id === linePickerState.workshopId)) {
-    const last = getRecentLines()[0];
+    const last = linePickerCurrent();
     const ctx = last ? getBlockForLine(last) : null;
     const fallback = workshops.find(w => countLinePickerLines(w) > 0) || workshops[0];
     linePickerState.workshopId = (ctx && ctx.workshop && ctx.workshop.id) || fallback.id;
   }
 
-  const lastLine = getRecentLines()[0] || '';
+  const lastLine = linePickerCurrent();
   const rail = workshops.map(w => {
     const n = countLinePickerLines(w);
     const on = w.id === linePickerState.workshopId;
@@ -154,7 +159,7 @@ function renderLinePickerSearch(q) {
     map.get(title).push(x.line);
   });
 
-  const lastLine = getRecentLines()[0] || '';
+  const lastLine = linePickerCurrent();
   return '<div class="line-picker-results">' +
     [...map.entries()].map(([title, lines]) => renderLinePickerGroup(title, lines, lastLine)).join('') +
     '</div>';

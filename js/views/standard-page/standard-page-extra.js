@@ -24,7 +24,7 @@ function renderSvFullPhotos(st, isEdit, index) {
       <textarea id="svf_newPhotoName" rows="2"
                 placeholder="Имена файлов — через запятую или с новой строки:&#10;max-1.jpg, max-2.jpg"
                 class="sv-photo-add-textarea"></textarea>
-      <button type="button" class="btn btn-secondary btn-sm" id="svf_addPhotoBtn">
+      <button type="button" class="btn btn-accent btn-sm" id="svf_addPhotoBtn">
         + Добавить
       </button>
     </div>
@@ -229,7 +229,7 @@ function renderSvFullExtra(st, isEdit) {
       <div class="sv-full-extra-chips" id="svf_triggersGroup">
         ${triggersHtml || '<span class="sv-full-extra-empty">Триггеры не заданы</span>'}
       </div>
-      <button type="button" class="btn btn-secondary btn-sm" id="svf_addTriggerBtn" style="margin-top:8px">
+      <button type="button" class="btn btn-accent btn-sm" id="svf_addTriggerBtn" style="margin-top:8px">
         + Добавить триггер
       </button>
     </div>
@@ -239,7 +239,7 @@ function renderSvFullExtra(st, isEdit) {
       <div class="sv-full-extra-chips" id="svf_topLossesSelected">
         ${lossChips || '<span class="sv-full-extra-empty">Потери не заданы</span>'}
       </div>
-      <button type="button" class="btn btn-secondary btn-sm" id="svf_addTopLossBtn" style="margin-top:8px">
+      <button type="button" class="btn btn-accent btn-sm" id="svf_addTopLossBtn" style="margin-top:8px">
         + Добавить потерю
       </button>
     </div>
@@ -392,7 +392,10 @@ $('#svMainFields')?.addEventListener('click', (e) => {
 $('#svMainFields')?.addEventListener('change', (e) => {
   const st = svFullState.editingData;
   if (!st) return;
-  if (e.target.id === 'svf_nodePart') st.nodePart = e.target.value;
+  if (e.target.id === 'svf_nodePart') {
+    st.nodePart = e.target.value;
+    st.machine = fillMachineSelect($('#svf_machine'), st.line, st.nodePart, st.machine);
+  }
   if (e.target.id === 'svf_machine') st.machine = e.target.value;
 });
 
@@ -409,6 +412,17 @@ $('#svFullEditBtn')?.addEventListener('click', () => {
 
   svFullState.originalData = JSON.parse(JSON.stringify(current));
   svFullState.editingData = JSON.parse(JSON.stringify(current));   // НОВОЕ
+  svFullState.proposalId = null;
+  svFullState.mode = 'edit';
+  renderStandardFullView();
+});
+
+/* Оператор: «Предложить изменения» — та же правка, но «Сохранить» отправляет аналитику */
+$('#svFullProposalBtn')?.addEventListener('click', () => {
+  const current = getStandards().find(s => s.id === svFullState.standardId);
+  if (!current) return;
+  svFullState.originalData = JSON.parse(JSON.stringify(current));
+  svFullState.editingData = JSON.parse(JSON.stringify(current));
   svFullState.mode = 'edit';
   renderStandardFullView();
 });
@@ -420,6 +434,7 @@ $('#svFullCancelBtn')?.addEventListener('click', () => {
     return;
   }
   if (!confirm('Отменить изменения?')) return;
+  svFullState.proposalId = null;   // рассмотрение предложения прервано — решения нет
   svFullState.mode = 'view';
   svFullState.editingData = null;
   renderStandardFullView();
@@ -504,7 +519,7 @@ $('#svFullSaveBtn')?.addEventListener('click', () => {
   const brandKeys = measurements.map(m => m.brand || '');
   const dupBrand = brandKeys.find((b, i) => brandKeys.indexOf(b) !== i);
   if (dupBrand !== undefined) {
-    return showToast(`Бренд «${dupBrand || 'Остальные бренды'}» добавлен дважды — оставьте одну строку`, true);
+    return showToast(`Бренд «${dupBrand || REST_BRANDS_LABEL}» добавлен дважды — оставьте одну строку`, true);
   }
   // Вариабельный и интервал без точек проверить нечем
   const hasPoints = measurements.some(m =>
@@ -565,13 +580,25 @@ $('#svFullSaveBtn')?.addEventListener('click', () => {
     if (!updated.author) updated.author = '—';
   }
 
-  // Сохраняем в массив
-  const idx = all.findIndex(s => s.id === id);
-  const before = idx !== -1 ? JSON.parse(JSON.stringify(all[idx])) : null;
-  if (idx !== -1) all[idx] = updated;
-  else all.push(updated);
+  const before = stOriginal ? JSON.parse(JSON.stringify(stOriginal)) : null;
 
-  setStandards(all);
+  // Оператор: стандарт не меняется — уходит аналитику на апрув (в лист истории — после решения)
+  if (!canDo('edit')) {
+    addStdProposal(updated, before);
+    svFullState.mode = 'view';
+    svFullState.editingData = null;
+    if (isNew) { closeStandardFullView(); } else renderStandardFullView();
+    showToast(isNew ? 'Новый стандарт отправлен аналитику на апрув' : 'Изменения отправлены аналитику на апрув');
+    if (typeof updateNotifyBadge === 'function') updateNotifyBadge();
+    return;
+  }
+  saveStandard(updated);
+  // Аналитик рассматривал предложение оператора — отмечаем решение
+  if (svFullState.proposalId) {
+    decideStdProposal(svFullState.proposalId, 'approved');
+    svFullState.proposalId = null;
+    if (typeof renderEditorProposals === 'function') renderEditorProposals();
+  }
   // Лист истории изменений: что поменялось → запись + уточнить причину
   const logId = logRowChange('mech', before, updated);
 

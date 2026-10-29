@@ -78,3 +78,13 @@ $('#quickAddMachineSaveBtn')?.addEventListener('click', () => {
   closeQuickAddMachineModal();
   showToast('Машина добавлена на линию ' + line);
 });
+
+/* Список машин в <select> под часть линии; возвращает выбранную машину ('' — если прежняя из другой части) */
+function fillMachineSelect(sel, line, part, current) {
+  if (!sel) return current;
+  const machines = getMachinesForLine(line, part);
+  const keep = machines.includes(current) ? current : '';
+  sel.innerHTML = ['<option value="">— выберите —</option>']
+    .concat(machines.map(m => `<option value="${escapeAttr(m)}"${m === keep ? ' selected' : ''}>${escapeHtml(m)}</option>`)).join('');
+  return keep;
+}

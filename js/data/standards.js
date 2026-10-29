@@ -148,7 +148,7 @@ function parseNorm(normStr) {
 
   // --- 3. НОВОЕ: одиночное число → точная норма (min = max = value) ---
   // Отрезаем всё, что не цифра/точка/минус — на случай "0 бар", "-65 kPa"
-  const cleanNum = s.replace(/[^\d.\-+]/g, '').replace(',', '.');
+  const cleanNum = s.replace(',', '.').replace(/[^\d.\-+]/g, '');
   const single = parseFloat(cleanNum);
   if (!isNaN(single) && cleanNum !== '' && cleanNum !== '-' && cleanNum !== '+') {
     return { min: single, max: single };
@@ -309,12 +309,44 @@ function normalizeStandard(st) {
 
 function getStandards() {
   const raw = load(STORAGE_KEYS.standards, []);
-  return raw.map(normalizeStandard);
+  if (!loadCache) return raw.map(normalizeStandard);
+  // В withLoadCache нормализуем один раз на отрисовку; копия массива — вызывающий может сортировать
+  if (!loadCache.has('norm:standards')) loadCache.set('norm:standards', raw.map(normalizeStandard));
+  return loadCache.get('norm:standards').slice();
 }
 function setStandards(v) { save(STORAGE_KEYS.standards, v); }
 
 function getHistory() { return load(STORAGE_KEYS.history, []); }
 function setHistory(v) { save(STORAGE_KEYS.history, v); }
+
+/* === ЗАПИСЬ ПО ОДНОЙ ЗАПИСИ ===
+   Вкладки пишут только через эти функции, а не через set*(весь массив):
+   в хабе eIWS каждая станет одним запросом к API (сервер принимает записи по одной). */
+
+// Заменяет записи с теми же id, новые добавляет в конец
+function upsertById(list, items) {
+  items.forEach(it => {
+    const idx = list.findIndex(x => x.id === it.id);
+    if (idx !== -1) list[idx] = it; else list.push(it);
+  });
+  return list;
+}
+
+function saveStandards(items) { if (items.length) setStandards(upsertById(getStandards(), items)); }
+function saveStandard(st) { saveStandards([st]); }
+function removeStandard(id) { setStandards(getStandards().filter(s => s.id !== id)); }
+
+function saveHistoryRecords(items) { if (items.length) setHistory(upsertById(getHistory(), items)); }
+function addHistoryRecord(rec) { saveHistoryRecords([rec]); }
+function clearHistory() { setHistory([]); }
+/* Срок хранения проверок — 12 месяцев; удаляет записи раньше даты, возвращает число удалённых */
+const HISTORY_KEEP_MONTHS = 12;
+function pruneHistoryBefore(dateISO) {
+  const all = getHistory();
+  const keep = all.filter(h => (h.date || String(h.timestamp || '').slice(0, 10)) >= dateISO);
+  if (keep.length !== all.length) setHistory(keep);
+  return all.length - keep.length;
+}
 
 /* ============================================================
    ВАЛИДАЦИЯ НОВОГО СТАНДАРТА / E-PARAM

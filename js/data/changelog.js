@@ -64,10 +64,14 @@ function addChangeLogEntry(kind, row, action, comment, extra) {
     auto: true,
     ...(extra || {})
   };
+  appendChangeLog(entry);
+  return entry.id;
+}
+
+function appendChangeLog(entry) {
   const all = getChangeLog();
   all.push(entry);
   setChangeLog(all);
-  return entry.id;
 }
 
 function updateChangeLogEntry(id, patch) {
@@ -93,8 +97,8 @@ function getChangeLogForLine(line, part) {
 
 /* Существенные правки — одно правило для листа линии, истории стандарта, ознакомления,
    метки «Изм.» и уведомлений: основной блок, описания, инструмент, время на проверку,
-   точки и бренды, фото, время проверки (Расписание), создание, удаление, деактивация
-   и восстановление. Доп. информация (CL относится к, «всегда в Change Over», триггеры,
+   точки и бренды, фото, создание, удаление, деактивация и восстановление.
+   Время проверки в Расписании CL считается само и в историю не пишется. Доп. информация (CL относится к, «всегда в Change Over», триггеры,
    Top Losses) в лист не идёт (entry.sheet === false) — остаётся в истории стандарта
    серой строкой «доп. информация» и изменением стандарта не считается. */
 const CL_SHEET_KEYS = {
@@ -130,7 +134,7 @@ function clBrandsDiff(oldList, newList, keyOf, showOf, details) {
   const show = showOf || keyOf;
   const map = (arr, fn) => {
     const m = {};
-    (arr || []).forEach(x => { m[x.brand || 'Остальные бренды'] = fn(x); });
+    (arr || []).forEach(x => { m[x.brand || REST_BRANDS_LABEL] = fn(x); });
     return m;
   };
   const a = map(oldList, keyOf), b = map(newList, keyOf);
@@ -250,15 +254,3 @@ function logRowChange(kind, oldRow, newRow) {
   return addChangeLogEntry(kind, newRow, d.action, d.text, extra);
 }
 
-/* Время проверки изменено в Расписании CL: запись «было → стало».
-   Существенно для листа линии. Возвращает id записи или null. */
-function clWindowsText(list) {
-  const t = (Array.isArray(list) ? list : []).map(w => `${w.from}–${w.to}`).join(', ');
-  return t || '—';
-}
-function logTimeWindowsChange(kind, row, oldWindows, newWindows) {
-  const a = clWindowsText(oldWindows), b = clWindowsText(newWindows);
-  if (a === b) return null;
-  return addChangeLogEntry(kind, row, 'changed', 'Изменено: время проверки',
-    { details: [{ label: 'время проверки', from: a, to: b }] });
-}

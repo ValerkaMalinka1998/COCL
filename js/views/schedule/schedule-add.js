@@ -283,7 +283,7 @@ $('#schAddCheckAll')?.addEventListener('change', (e) => {
 /* Чип линии — открыть модалку выбора */
 document.addEventListener('click', (e) => {
   if (e.target.closest('#schLinePill')) {
-    if (typeof openLinePickerModal === 'function') openLinePickerModal();
+    if (typeof openLinePickerModal === 'function') openLinePickerModal(schState.line || '');
   }
 });
 

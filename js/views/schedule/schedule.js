@@ -260,7 +260,20 @@ function renderScheduleMatrix() {
   // Пусто?
   if (!allRows.length) {
     if (toolbar) toolbar.style.display = 'none';
+    // Навигация по неделям остаётся и на пустой неделе — иначе не вернуться
+    const offE = schState.weekOffset || 0;
     wrap.innerHTML = `
+      <div class="cil-toolbar sch-cil-toolbar"><div class="cil-week">
+        <button type="button" class="cil-week-btn" id="schWeekPrev" title="Предыдущая неделя">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="cil-week-label"><span class="cil-week-title">Нед. ${cilIsoWeek(getSchWeekStart(offE))} · ${escapeHtml(getWeekLabel(offE))}</span></div>
+        <button type="button" class="cil-week-btn" id="schWeekNext" title="Следующая неделя">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+        <button type="button" class="sch-week-chip ${offE === 0 ? 'active' : ''}" data-sch-week="0">Эта</button>
+        <button type="button" class="sch-week-chip ${offE === 1 ? 'active' : ''}" data-sch-week="1">Следующая</button>
+      </div></div>
       <div class="sch-empty">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
@@ -282,6 +295,7 @@ function renderScheduleMatrix() {
       </div>
     `;
     $('#schAddStandardsBtnEmpty')?.addEventListener('click', openScheduleAddStandardsModal);
+    bindSchWeekNav();
     return;
   }
 
@@ -781,18 +795,6 @@ function saveSchedule() {
   if (weekOffset < 0) return showToast('Прошедшую неделю изменить нельзя', true);
   const weekLabel = getWeekLabel(weekOffset);
 
-  // Время проверки до сохранения — чтобы записать «было → стало» в историю
-  const twChanges = [];
-  Object.keys(schState.draft).forEach(id => {
-    const row = schState.rows.find(r => r.id === id);
-    if (!row) return;
-    twChanges.push({
-      id,
-      before: getRowForWeek(row, getSchWeekStart(weekOffset), schState.line).timeWindows,
-      after: autoTimeWindows(schState.draft[id].work, schState.draft[id].schedule)
-    });
-  });
-
   let msg;
   if (schState.saveScope === 'week') {
     saveScheduleWeekOverride(weekOffset);
@@ -803,14 +805,6 @@ function saveSchedule() {
       ? 'Сохранено: оставшиеся смены этой недели и шаблон со следующей недели'
       : `Шаблон сохранён с недели ${weekLabel}`;
   }
-
-  // История изменений: время проверки (в лист линии и в историю стандарта)
-  const twKind = schState.mode === 'mech' ? 'mech' : 'elec';
-  const twList = twKind === 'mech' ? getStandards() : getElectronicParams();
-  twChanges.forEach(c => {
-    const r = twList.find(x => x.id === c.id);
-    if (r) logTimeWindowsChange(twKind, r, c.before, c.after);
-  });
 
   schState.dirty = false;
   schState.draft = {};
@@ -874,13 +868,13 @@ function saveScheduleForward(weekOffset) {
   }
 
   const now = new Date().toISOString();
-  all.forEach(r => {
-    if (!states[r.id]) return;
+  const changed = all.filter(r => states[r.id]);
+  changed.forEach(r => {
     setRowTemplateFrom(r, from, states[r.id]);
     r.updatedAt = now;
   });
-  if (isMech) setStandards(all);
-  else setElectronicParams(all);
+  if (isMech) saveStandards(changed);
+  else saveElectronicParams(changed);
 }
 
 /* Сохранение правок для конкретной недели (не текущей) — не трогает

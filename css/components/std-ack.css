@@ -92,3 +92,14 @@
   .stda-plate { flex-wrap: wrap; }
   .stda-btn { width: 100%; justify-content: center; }
 }
+
+/* === ОКНО ДОПУСКА К ПРОВЕРКЕ === */
+.ack-gate-modal { max-width: 640px; }
+.ack-gate-hint { margin: 0 0 12px; font-size: 13px; color: var(--text-second); }
+.ack-gate-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.ack-gate-row:last-child { border-bottom: 0; }
+.ack-gate-name { flex: 1; min-width: 0; font-size: 13.5px; }
+.ack-gate-name small { display: block; color: var(--text-dim); font-size: 12px; }
+.ack-gate-kind { margin-right: 6px; font-size: 11px; font-weight: 700; color: var(--accent-purple); }
+.ack-gate-done { font-size: 12.5px; font-weight: 700; color: var(--accent-green); }
+.ack-gate-row.is-ok .ack-gate-name { opacity: .6; }

@@ -41,6 +41,10 @@
         <span class="bft-lap-cl" id="headerLapCl"></span>
       </div>
     </div>
+    <button type="button" class="role-chip" id="roleChip" title="Роль и цех / участок (временно, до входа через SSO)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span id="roleChipText">Администратор</span>
+    </button>
     <button type="button" class="nb-btn" id="notifyBtn" title="Уведомления" aria-label="Уведомления" aria-haspopup="true" aria-expanded="false">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       <span class="nb-cnt" id="notifyCount" style="display:none">0</span>
@@ -119,7 +123,7 @@
       <span class="nav-label">Стандарты CL</span>
     </a>
 
-    <a href="#schedule" data-tab="schedule" title="Расписание CL">
+    <a href="#schedule" data-tab="schedule" title="Расписание CL" data-need="edit">
       <span class="nav-icon">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
@@ -156,7 +160,7 @@
     <!-- Настройки — внизу меню -->
     <div class="sidebar-spacer"></div>
 
-    <a href="#settings" data-tab="settings" title="Настройки">
+    <a href="#settings" data-tab="settings" title="Настройки" data-need="edit">
       <span class="nav-icon">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="4" y1="21" x2="4" y2="14"/>
@@ -446,7 +450,7 @@
           <span>Начать проверку</span>
         </button>
 
-        <button class="btn btn-secondary btn-icon-text" id="clStopCheckBtn" type="button" style="display:none">
+        <button class="btn btn-primary btn-icon-text cl-stop-btn" id="clStopCheckBtn" type="button" style="display:none">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="6" y="6" width="12" height="12" rx="1"/>
           </svg>
@@ -532,6 +536,7 @@
               <span class="editor-part-switch-count" id="emCounterPacker">0/0</span>
             </button>
           </div>
+          <span id="editorProposalsSlot"></span>
           <button class="btn btn-success btn-icon-text" id="editorMechAddBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"/>
@@ -546,7 +551,7 @@
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
             <div class="et-excel-menu">
-          <button class="et-excel-item" id="editorMechUploadBtn" type="button">
+          <button class="et-excel-item" id="editorMechUploadBtn" type="button" data-need="edit">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="17 8 12 3 7 8"/>
@@ -582,8 +587,7 @@
       <div class="et-bulk-bar" id="editorMechBulk" hidden></div>
       <div class="et-filterbar">
         <label class="et-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="emFilterSearch" placeholder="Поиск: OPL, название, узел…" autocomplete="off"></label>
-        <div class="et-fchips" id="emMachineChips"></div>
-        <input type="hidden" id="emFilterMachine">
+        <select class="et-fsel" id="emFilterMachine" title="Машина" hidden><option value="">Машина: все</option></select>
         <input type="hidden" id="emFilterPart">
         <select class="et-fsel" id="emFilterNode" title="Узел"><option value="">Узел: все</option></select>
         <select class="et-fsel" id="emFilterType" title="CL относится к">
@@ -681,7 +685,7 @@
               <span class="editor-part-switch-count" id="eeCounterPacker">0/0</span>
             </button>
           </div>
-          <button class="btn btn-success btn-icon-text" id="editorElecAddBtn" type="button">
+          <button class="btn btn-success btn-icon-text" id="editorElecAddBtn" type="button" data-need="edit">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"/>
               <line x1="5" y1="12" x2="19" y2="12"/>
@@ -695,7 +699,7 @@
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
             <div class="et-excel-menu">
-          <button class="et-excel-item" id="editorElecUploadBtn" type="button">
+          <button class="et-excel-item" id="editorElecUploadBtn" type="button" data-need="edit">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="17 8 12 3 7 8"/>
@@ -730,8 +734,7 @@
       <div class="et-bulk-bar" id="editorElecBulk" hidden></div>
       <div class="et-filterbar">
         <label class="et-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="eeFilterSearch" placeholder="Поиск: параметр, машина…" autocomplete="off"></label>
-        <div class="et-fchips" id="eeMachineChips"></div>
-        <input type="hidden" id="eeFilterMachine">
+        <select class="et-fsel" id="eeFilterMachine" title="Машина" hidden><option value="">Машина: все</option></select>
         <input type="hidden" id="eeFilterPart">
         <select class="et-fsel" id="eeFilterControlType" title="Тип контроля">
           <option value="">Тип: все</option>
@@ -1174,6 +1177,13 @@
           </button>
         </div>
 
+        <button class="btn btn-accent btn-icon-text" id="schTemplatesBtn" type="button" title="Шаблоны чек-листа: сохранить неделю или применить готовый">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          </svg>
+          <span>Шаблоны</span>
+        </button>
+
         <button class="btn btn-secondary btn-icon-text" id="schDowntimeBtn" type="button">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"/>
@@ -1257,6 +1267,8 @@
   <div id="histMainView">
     <div class="page-head">
       <div class="ph-context">
+        <div class="hist-seg" id="histWsSeg"></div>
+        <select class="et-fsel" id="histAreaSel" title="Участок" hidden></select>
         <button type="button" class="editor-line-pill" id="histLinePill" title="Выбрать линию">
           <span class="editor-line-pill-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
@@ -1266,6 +1278,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
           </span>
         </button>
+        <div class="editor-crumbs" id="histCrumbs"></div>
       </div>
       <div class="ph-main">
         <div class="ph-title">
@@ -1307,7 +1320,11 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 <span>Экспорт CSV</span>
               </button>
-              <button class="et-excel-item hist-danger-item" id="clearHistoryBtn" type="button">
+              <button class="et-excel-item hist-danger-item" id="pruneHistoryBtn" type="button" data-need="admin">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span>Удалить старше 12 месяцев</span>
+              </button>
+              <button class="et-excel-item hist-danger-item" id="clearHistoryBtn" type="button" data-need="admin">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
                 <span>Очистить историю</span>
               </button>
@@ -1374,7 +1391,7 @@
       </div>
     </div>
     <div class="sv-full-header-actions">
-      <button type="button" class="sv-full-action-btn sv-full-action-save" id="epPageEditBtn" style="display:none">
+      <button type="button" class="sv-full-action-btn sv-full-action-save" id="epPageEditBtn" style="display:none" data-need="edit">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 20h9"/>
           <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>
@@ -1767,7 +1784,7 @@
         <p class="settings-hint">
           Бланк стандарта из журнала (Excel, один лист — один стандарт) превращается в стандарт выбранной линии:
           № OPL, машина и узел, название, автор, время на проверку, инструмент, «Описание», «Описание контроля»,
-          «Цель», «Знаю почему», точки по брендам («Все сорта» — остальные бренды). Тип контроля определяется по значениям.
+          «Цель», «Знаю почему», точки по брендам («Все бренды» — общая норма для брендов без своей строки). Тип контроля определяется по значениям.
           Можно выбрать сразу несколько файлов. Уже существующие OPL № на машине пропускаются.
         </p>
         <p class="settings-hint">
@@ -1975,6 +1992,17 @@
     </div>
     <div class="modal-body qcx-body">
 
+      <!-- Допуск: проверять можно после ознакомления со стандартом -->
+      <div class="qcx-ack-gate" id="qcAckGate" style="display:none">
+        <h4 id="qcAckGateTitle">Сначала ознакомьтесь со стандартом</h4>
+        <div id="qcAckGateChanges"></div>
+        <p>Откройте стандарт, прочитайте описание, точки и фото, затем подтвердите.</p>
+        <div class="qcx-ack-btns">
+          <button type="button" class="btn btn-secondary" id="qcAckOpenBtn">Открыть стандарт</button>
+          <button type="button" class="btn btn-primary" id="qcAckConfirmBtn">Я ознакомился</button>
+        </div>
+      </div>
+
       <!-- Уже проверено ранее -->
       <div class="qcx-existing" id="qcExistingInfo" style="display:none">
         Уже проверено: <strong id="qcExistingStatus">—</strong> — новое значение заменит старое.
@@ -2024,6 +2052,93 @@
         <span>Сохранить и далее</span>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
       </button>
+    </div>
+  </div>
+</div>
+<!-- ======================= МОДАЛЬНОЕ ОКНО: РОЛЬ И ЗОНА (временно, до SSO) ======================= -->
+<div class="modal-overlay" id="roleModal">
+  <div class="modal role-modal">
+    <div class="modal-header">
+      <h3>Роль и зона</h3>
+      <button class="modal-close" id="roleClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="role-hint">Временно, до входа через SSO: роль и цех / участок хранятся на этом компьютере.</div>
+      <div id="roleList"></div>
+      <div class="role-scope">
+        <label>Цех<select id="roleWs"></select></label>
+        <label>Участок<select id="roleArea"></select></label>
+      </div>
+      <div class="role-hint">Уведомления и предложения на апрув — только по линиям выбранного цеха / участка.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" id="roleSaveBtn" type="button">Применить</button>
+    </div>
+  </div>
+</div>
+<!-- ======================= МОДАЛЬНОЕ ОКНО: ПРЕДЛОЖЕНИЯ НА АПРУВ ======================= -->
+<div class="modal-overlay" id="proposalsModal">
+  <div class="modal proposals-modal">
+    <div class="modal-header">
+      <h3>Предложения операторов</h3>
+      <button class="modal-close" id="proposalsClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="role-hint">«Рассмотреть» откроет стандарт с предложенными правками — проверьте, при необходимости поправьте и нажмите «Утвердить и сохранить».</div>
+      <div id="proposalsList"></div>
+    </div>
+  </div>
+</div>
+<!-- ======================= МОДАЛЬНОЕ ОКНО: ШАБЛОНЫ ЧЕК-ЛИСТА ======================= -->
+<div class="modal-overlay" id="schTplModal">
+  <div class="modal sch-tpl-modal">
+    <div class="modal-header">
+      <div><h3>Шаблоны чек-листа</h3><div class="sch-tpl-sub" id="schTplSub"></div></div>
+      <button class="modal-close" id="schTplClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="sch-tpl-hint">Шаблон заполняет просматриваемую неделю. Дальше, как при ручной правке, выберите
+        «С этой недели и далее» или «Только эта неделя» и нажмите «Сохранить».</div>
+      <div id="schTplList"></div>
+      <div class="sch-tpl-new">
+        <label for="schTplName">Сохранить эту неделю как шаблон</label>
+        <div class="sch-tpl-new-row">
+          <input type="text" id="schTplName" placeholder="Например: Летний график" autocomplete="off">
+          <button type="button" class="btn btn-accent" id="schTplSaveBtn">Сохранить шаблон</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ======================= МОДАЛЬНОЕ ОКНО: ДОПУСК К ПРОВЕРКЕ (ОЗНАКОМЛЕНИЕ) ======================= -->
+<div class="modal-overlay" id="ackGateModal">
+  <div class="modal ack-gate-modal">
+    <div class="modal-header">
+      <h3>Сначала ознакомьтесь со стандартами</h3>
+      <button class="modal-close" id="ackGateClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="ack-gate-hint">Проверять можно только после ознакомления с актуальной редакцией. Откройте стандарт, прочитайте и подтвердите.</p>
+      <div id="ackGateList"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="ackGateCancel" type="button">Отмена</button>
+      <button class="btn btn-primary" id="ackGateStart" type="button" disabled>Начать проверку</button>
+    </div>
+  </div>
+</div>
+<!-- ======================= МОДАЛЬНОЕ ОКНО: КОПИРОВАТЬ СТАНДАРТ ======================= -->
+<div class="modal-overlay" id="copyStdModal">
+  <div class="modal copy-std-modal">
+    <div class="modal-header">
+      <h3>Копировать стандарт</h3>
+      <button class="modal-close" id="copyStdModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="copy-std-src" id="copyStdSrc"></div>
+      <div class="copy-std-hint">На какую линию скопировать? Только линии этого же цеха. Копия откроется для правки
+        и появится на линии после «Сохранить».</div>
+      <div id="copyStdLines"></div>
     </div>
   </div>
 </div>
@@ -2219,7 +2334,7 @@
 
         <div id="ebsDailyRows"></div>
 
-        <button class="btn btn-secondary btn-sm" id="ebsDailyAddRowBtn" type="button" style="margin-top:8px">
+        <button class="btn btn-accent btn-sm" id="ebsDailyAddRowBtn" type="button" style="margin-top:8px">
           + Добавить день
         </button>
       </div>
@@ -2477,11 +2592,15 @@
 <script src="js/data/line-brand.js"></script>
 <script src="js/data/comments.js"></script>
 <script src="js/data/ack.js"></script>
+<script src="js/data/shifts.js"></script>
+<script src="js/data/user.js"></script>
+<script src="js/data/proposals.js"></script>
 <script src="js/components/pickers.js"></script>
 <script src="js/components/validation.js"></script>
 <script src="js/components/std-comments.js"></script>
 <script src="js/components/std-ack.js"></script>
 <script src="js/components/notify.js"></script>
+<script src="js/components/role-switch.js"></script>
 <script src="js/components/line-picker.js"></script>
 <script src="js/components/photo-slider.js"></script>
 <script src="js/components/check-run.js"></script>
@@ -2511,6 +2630,7 @@
 <script src="js/views/history/history-export.js"></script>
 <script src="js/views/dashboard.js"></script>
 <script src="js/views/editor/editor-core.js"></script>
+<script src="js/views/editor/editor-proposals.js"></script>
 <script src="js/views/editor/editor-mech.js"></script>
 <script src="js/views/editor/editor-elec.js"></script>
 <script src="js/views/editor/editor-bulk.js"></script>
@@ -2521,6 +2641,7 @@
 <script src="js/views/schedule/schedule.js"></script>
 <script src="js/views/schedule/schedule-add.js"></script>
 <script src="js/views/schedule/schedule-downtime.js"></script>
+<script src="js/views/schedule/schedule-templates.js"></script>
 <script src="js/views/settings/settings-shell.js"></script>
 <script src="js/views/settings/structure-tree.js"></script>
 <script src="js/views/settings/shifts.js"></script>

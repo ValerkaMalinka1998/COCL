@@ -21,15 +21,18 @@ const STORAGE_KEYS = {
   workshops: 'cl_workshops_v1',   // ← НОВОЕ (заменяет blocks)
   blocks: 'cl_blocks_v1',         // оставлен для удаления при миграции
   lineMachines: 'cl_lineMachines_v1',
+  lineMachineParts: 'cl_lineMachineParts_v1', // часть линии машины (SMD): { линия: { машина: 'Maker'|'Packer' } }
   topLosses: 'cl_toplosses_v1',
   electronicShiftCfg: 'cl_electronic_shiftcfg_v1',
   electronicParams: 'cl_electronic_params_v1',
   electronicBrandSchedule: 'cl_electronic_brandschedule_v1',
   customTriggers: 'cl_custom_triggers_v1',
   scheduleWeeks: 'cl_schedule_weeks_v1',
+  scheduleTemplates: 'cl_schedule_templates_v1', // шаблоны чек-листа: [{ id, name, line, mode, rows: { id: { schedule, work } } }]
   changeLog: 'cl_change_log_v1',         // лист истории изменений стандартов
   stdComments: 'cl_std_comments_v1',     // комментарии к стандартам и E-Param
-  stdAck: 'cl_std_ack_v1',               // ознакомление с изменениями стандартов
+  stdAck: 'cl_std_ack_v1',
+  stdProposals: 'cl_std_proposals_v1',   // предложения оператора на апрув аналитику               // ознакомление с изменениями стандартов
   lineBrandEvents: 'cl_line_brand_events_v1', // текущий бренд линии: COCL / аналитик / оператор
   lineDowntime: 'cl_line_downtime_v1'         // простои линии: проверки CL не планируются
 };

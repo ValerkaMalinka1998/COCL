@@ -29,7 +29,7 @@ function openEparamPage(id, mode) {
     if (!found) return showToast('Параметр не найден', true);
     p = normalizeElectronicParam(found);
     epPageState.isNew = false;
-    epPageState.readOnly = mode === 'view';
+    epPageState.readOnly = mode === 'view' || !canDo('edit');
   } else {
     const line = localStorage.getItem('cl_editor_line');
     if (!line) return showToast('Сначала выберите линию', true);
@@ -140,7 +140,7 @@ function renderEparamMainFields(p) {
   const wrap = $('#epMainFields');
   if (!wrap) return;
 
-  const machines = getMachinesForLine(p.line);
+  const machines = getMachinesForLine(p.line, p.nodePart);
   const machineOpts = ['<option value="">— выберите —</option>']
     .concat(p.machine && !machines.includes(p.machine)
       ? [`<option value="${escapeAttr(p.machine)}" selected>${escapeHtml(p.machine)} (не в списке)</option>`]
@@ -170,7 +170,7 @@ function renderEparamMainFields(p) {
       <label class="required">Машина</label>
       <div class="sv-field-with-btn">
         <select id="epf_machine">${machineOpts}</select>
-        <button type="button" class="btn btn-secondary btn-sm" id="epf_addMachineBtn" title="Добавить машину в список линии">+</button>
+        <button type="button" class="btn btn-accent btn-sm" id="epf_addMachineBtn" title="Добавить машину в список линии">+</button>
       </div>
     </div>
     ${partHtml}
@@ -207,7 +207,7 @@ function renderEparamNorm(p) {
   const control = epPageState.readOnly
     ? renderSvBrandBlocksView(p)
     : `<div id="epf_brandBlocksContainer" data-type-id="epf_controlType" data-add-id="epf_addBrandBlockBtn"></div>
-       <button type="button" class="btn btn-secondary btn-sm" id="epf_addBrandBlockBtn" style="margin-top:8px">+ Добавить бренд</button>`;
+       <button type="button" class="btn btn-accent btn-sm" id="epf_addBrandBlockBtn" style="margin-top:8px">+ Добавить бренд</button>`;
   wrap.innerHTML = `
     <div class="sv-content-block">
       <div class="sv-content-block-title">Что считается «ОК»</div>
@@ -279,7 +279,7 @@ function renderEparamExtra(p) {
             <button type="button" class="ep-tl-remove" data-remove-toploss="${escapeAttr(id)}" title="Убрать">✕</button></span>` : '';
         }).join('') || '<span class="sv-full-extra-empty">Потери не выбраны</span>'}
       </div>
-      <button type="button" class="btn btn-secondary btn-sm" id="epf_addTopLossBtn" style="margin-top:8px">
+      <button type="button" class="btn btn-accent btn-sm" id="epf_addTopLossBtn" style="margin-top:8px">
         + Выбрать потери
       </button>
     </div>
@@ -288,7 +288,7 @@ function renderEparamExtra(p) {
       <div class="sv-full-extra-chips">
         ${triggersHtml || '<span class="sv-full-extra-empty">Триггеры не заданы</span>'}
       </div>
-      <button type="button" class="btn btn-secondary btn-sm" id="epf_addTriggerBtn" style="margin-top:8px">
+      <button type="button" class="btn btn-accent btn-sm" id="epf_addTriggerBtn" style="margin-top:8px">
         + Добавить триггер
       </button>
     </div>
@@ -316,7 +316,10 @@ $('#tab-eparam-edit')?.addEventListener('change', (e) => {
   epPageState.dirty = true;
   const t = e.target;
   if (t.id === 'epf_machine') p.machine = t.value;
-  if (t.id === 'epf_nodePart') p.nodePart = t.value;
+  if (t.id === 'epf_nodePart') {
+    p.nodePart = t.value;
+    p.machine = fillMachineSelect($('#epf_machine'), p.line, p.nodePart, p.machine);
+  }
   if (t.id === 'epf_active') p.active = t.checked;
   if (t.id === 'epf_controlType') {
     p.controlType = t.value;
@@ -464,10 +467,7 @@ $('#epPageSaveBtn')?.addEventListener('click', () => {
     updatedAt: now
   };
 
-  const idx = all.findIndex(x => x.id === p.id);
-  if (idx !== -1) all[idx] = obj;
-  else all.push(obj);
-  setElectronicParams(all);
+  saveElectronicParam(obj);
   const logId = logRowChange('elec', existing || null, obj);
 
   const wasNew = epPageState.isNew;

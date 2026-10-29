@@ -4,7 +4,7 @@
    и выпадающие списки (работают в любом Excel без предупреждений):
    «Стандарты» — строка на стандарт, списки машин, частей, типов;
    «Точки»     — сверху строки сами повторяют «Стандарты» (OPL · Машина,
-                 «Остальные бренды», тип), ниже — дополнительные бренды:
+                 «Все бренды», тип), ниже — дополнительные бренды:
                  стандарт и бренд выбираются из списка;
    «Списки»    — скрытый лист-источник выпадающих списков;
    «Инструкция».
@@ -176,7 +176,7 @@ function buildStdSheet(wb, standards, line, lists) {
   return ws;
 }
 
-/* Лист «Точки». Строка r сверху = строка r «Стандартов»: ключ, бренд «Остальные
+/* Лист «Точки». Строка r сверху = строка r «Стандартов»: ключ, бренд «Все
    бренды» и тип подставляются формулами. Ниже — дополнительные бренды. */
 function buildPointsSheet(wb, standards, lists) {
   const ws = wb.addWorksheet(XL_SHEET.pts);
@@ -191,7 +191,7 @@ function buildPointsSheet(wb, standards, lists) {
   for (let r = 2; r <= xlLastStdRow; r++) {
     const st = standards[r - 2];
     const blocks = st && Array.isArray(st.measurements) ? st.measurements.filter(b => ptsOf(b).length) : [];
-    // В верхнюю строку — «Остальные бренды»; нет такого блока — первый бренд
+    // В верхнюю строку — «Все бренды»; нет такого блока — первый бренд
     const main = blocks.find(b => !b.brand) || blocks[0] || null;
     blocks.filter(b => b !== main).forEach(b => extra.push({ st, block: b }));
 
@@ -384,6 +384,7 @@ async function parseStandardsExcelV3(file, targetLine) {
   const VALID_APPLIES = ['ChangeOver', 'CL_TO', 'CL_Conversion'];
 
   const existing = getStandards();
+  const added = [];
   const existingOplKeys = new Set(
     existing.filter(s => s.line === targetLine)
       .map(s => `${s.line}|${s.machine || ''}|${(s.oplNumber || '').toLowerCase()}`)
@@ -406,7 +407,7 @@ async function parseStandardsExcelV3(file, targetLine) {
     const lineFromExcel = get('line');
     const nodePart = get('nodePart');
     const machine = get('machine');
-    const oplNumber = get('opl');
+    const oplNumber = normalizeOplNumber(get('opl'));
     const node = get('node');
     const title = get('title');
     const typeText = get('type');
@@ -487,7 +488,7 @@ async function parseStandardsExcelV3(file, targetLine) {
       if (v) points.push({ value: v });
     }
     if (!points.length) return;
-    const brand = !brandRaw || brandRaw === REST_BRANDS_LABEL ? '' : brandRaw;
+    const brand = !brandRaw || isRestBrandLabel(brandRaw) ? '' : brandRaw;
     const block = std.measurements.find(b => (b.brand || '') === brand);
     if (block) block.points = points;
     else std.measurements.push({ brand, points });
@@ -550,12 +551,12 @@ async function parseStandardsExcelV3(file, targetLine) {
       machinesForThisLine.push(std.machine);
       result.addedMachines.push(std.machine);
     }
-    existing.push(std);
+    added.push(std);
     addChangeLogEntry('mech', std, 'added', 'Новый стандарт (импорт из Excel)');
     result.added++;
   });
 
-  if (result.added > 0) setStandards(existing);
+  saveStandards(added);
   if (result.addedMachines.length > 0) {
     setLineMachines(lineMachines);
     if (typeof renderStructureSettings === 'function') renderStructureSettings();
@@ -611,7 +612,7 @@ function oplSheetToStandard(ws, line, part) {
   const numLabel = find('№ opl') ? '№ opl' : (find('№', true) ? '№' : null);   // в старых бланках — просто «№»
   if (!numLabel) return null;
 
-  // Точки: номера — под «Точка замера», бренды — строка под «Значение» («Все сорта» = остальные бренды);
+  // Точки: номера — под «Точка замера», бренды — строка под «Значение» («Все бренды» = общая норма; старое «Все сорта» понимаем);
   // в старых бланках «Значения» нет — бренды в строке «Точка замера», правее «Градуса»
   const measurements = [];
   const pt = find('точка замера'), vl = find('значение');
@@ -623,7 +624,7 @@ function oplSheetToStandard(ws, line, part) {
         const v = oplCleanValue(xlCellText(ws.getRow(r), b.col));
         if (v) points.push({ value: v });
       }
-      const rest = /^все (сорта|бренды)$/.test(b.low) || b.text === REST_BRANDS_LABEL;
+      const rest = isRestBrandLabel(b.low);
       if (points.length) measurements.push({ brand: rest ? '' : b.text, points });
     });
   }
@@ -637,7 +638,7 @@ function oplSheetToStandard(ws, line, part) {
   return {
     ...createEmptyStandard(),
     id: uid(),
-    oplNumber: under(numLabel, numLabel === '№'),
+    oplNumber: normalizeOplNumber(under(numLabel, numLabel === '№')),
     machine: (cut >= 0 ? machineNode.slice(0, cut) : machineNode).trim(),
     node: cut >= 0 ? machineNode.slice(cut + 1).trim() : '',
     title: under('название cl'),
@@ -706,7 +707,7 @@ async function parseOplJournalExcel(files, targetLine, nodePart) {
         || (a.range.tl.nativeCol - b.range.tl.nativeCol)).forEach((img, i) => {
         const media = wb.getImage(img.imageId);
         if (!media) return;
-        const name = `OPL${std.oplNumber}_${std.machine}_${i + 1}.${media.extension}`.replace(/[\\/:*?"<>|\s]+/g, '_');
+        const name = `${std.machine}-${std.oplNumber.replace('-', '')}_${i + 1}.${media.extension}`.replace(/[\\/:*?"<>|\s]+/g, '_');
         zip.file(`photos/${targetLine}/${part}/${name}`, media.buffer);
         std.photos.push(name);
         result.photos++;
@@ -715,7 +716,6 @@ async function parseOplJournalExcel(files, targetLine, nodePart) {
         lineMachines[targetLine].push(std.machine);
         result.addedMachines.push(std.machine);
       }
-      all.push(std);
       added.push(std);
     }
   }
@@ -724,7 +724,7 @@ async function parseOplJournalExcel(files, targetLine, nodePart) {
   const zipBlob = result.photos > 0 ? await zip.generateAsync({ type: 'blob' }) : null;
   result.added = added.length;
   if (added.length) {
-    setStandards(all);
+    saveStandards(added);
     added.forEach(std => addChangeLogEntry('mech', std, 'added', 'Новый стандарт (импорт бланка OPL)'));
   }
   if (result.addedMachines.length > 0) setLineMachines(lineMachines);

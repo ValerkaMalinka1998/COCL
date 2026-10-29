@@ -12,8 +12,8 @@ const BULK_APPLIES = [
 
 function bulkKindInfo(kind) {
   return kind === 'mech'
-    ? { sel: editorTableState.mechSelected, get: getStandards, set: setStandards, bar: '#editorMechBulk' }
-    : { sel: editorTableState.elecSelected, get: getElectronicParams, set: setElectronicParams, bar: '#editorElecBulk' };
+    ? { sel: editorTableState.mechSelected, get: getStandards, save: saveStandards, bar: '#editorMechBulk' }
+    : { sel: editorTableState.elecSelected, get: getElectronicParams, save: saveElectronicParams, bar: '#editorElecBulk' };
 }
 
 /* Показать / скрыть панель и обновить счётчик */
@@ -35,20 +35,18 @@ function bulkRefresh(kind) {
 /* В Расписание CL: с текущей недели, смены аналитик отметит там сам */
 function bulkAddToSchedule(kind) {
   const info = bulkKindInfo(kind);
-  const all = info.get();
   const ws = getSchWeekStart(0);
-  let added = 0;
-  all.forEach(row => {
-    if (!info.sel.has(row.id) || row.active === false) return;
-    if (getRowForWeek(row, ws, row.line).member) return;
+  const rows = info.get().filter(row => info.sel.has(row.id) && row.active !== false
+    && !getRowForWeek(row, ws, row.line).member);
+  rows.forEach(row => {
     const t = getRowTemplateForWeek(row, ws);
     setRowTemplateFrom(row, ws, { ...t, inSchedule: true });
     row.inSchedule = true;
     row.updatedAt = new Date().toISOString();
-    added++;
   });
+  const added = rows.length;
   if (!added) return showToast('Выбранные строки уже в расписании (или неактивны)', true);
-  info.set(all);
+  info.save(rows);
   showToast(`В расписание добавлено: ${added}. Смены отметьте в «Расписании CL»`);
   bulkRefresh(kind);
 }
@@ -56,20 +54,18 @@ function bulkAddToSchedule(kind) {
 /* «CL относится к»: добавить или убрать один тип у всех выбранных */
 function bulkSetApplies(kind, type, on) {
   const info = bulkKindInfo(kind);
-  const all = info.get();
-  let changed = 0;
-  all.forEach(row => {
-    if (!info.sel.has(row.id)) return;
+  const rows = info.get().filter(row => info.sel.has(row.id)
+    && (Array.isArray(row.appliesTo) ? row.appliesTo : []).includes(type) !== on);
+  rows.forEach(row => {
     const list = Array.isArray(row.appliesTo) ? row.appliesTo : [];
-    if (list.includes(type) === on) return;
     const before = JSON.parse(JSON.stringify(row));
     row.appliesTo = on ? [...list, type] : list.filter(x => x !== type);
     row.updatedAt = new Date().toISOString();
     logRowChange(kind === 'mech' ? 'mech' : 'elec', before, row);
-    changed++;
   });
+  const changed = rows.length;
   if (!changed) return showToast('Ничего не изменилось', true);
-  info.set(all);
+  info.save(rows);
   const label = (BULK_APPLIES.find(a => a[0] === type) || [])[1] || type;
   showToast(`${on ? 'Добавлено' : 'Убрано'} «${label}»: ${changed}`);
   bulkRefresh(kind);

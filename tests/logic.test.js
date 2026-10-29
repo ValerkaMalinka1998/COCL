@@ -27,7 +27,11 @@ const MODULES = [
   'js/data/changelog.js',
   'js/data/line-brand.js',
   'js/data/ack.js',
+  'js/data/shifts.js',
+  'js/data/user.js',
+  'js/data/proposals.js',
   'js/views/settings/shifts.js',
+  'js/io/excel-common.js',
   'js/io/standards-io.js'
 ];
 
@@ -75,6 +79,7 @@ test('parseNorm: форматы нормы', () => {
   assert.deepEqual(plain(parseNorm('5 до 8')), { min: 5, max: 8 });
   assert.deepEqual(plain(parseNorm('5.5 - 8.5')), { min: 5.5, max: 8.5 });
   assert.deepEqual(plain(parseNorm('-65 до -55')), { min: -65, max: -55 });
+  assert.deepEqual(plain(parseNorm('7,8 мм')), { min: 7.8, max: 7.8 });
   assert.deepEqual(plain(parseNorm('92')), { min: 92, max: 92 });
   assert.deepEqual(plain(parseNorm('0 бар')), { min: 0, max: 0 });
   assert.equal(parseNorm(''), null);
@@ -280,6 +285,16 @@ test('существенные правки: одно правило для ли
   assert.equal(off.sheet, true, 'деактивация → в лист линии');
 });
 
+test('ознакомление — только если правка попала в лист линии; «Все бренды» понимает старые подписи', () => {
+  const major = fn('stdAckIsMajor');
+  assert.equal(major({ action: 'changed', details: [{ label: 'триггеры' }], sheet: false }), false);
+  assert.equal(major({ action: 'changed', details: [{ label: 'норма (X)' }], sheet: false }), false, 'только лист стандарта');
+  assert.equal(major({ action: 'changed', details: [{ label: 'фото' }] }), true);
+  const rest = fn('isRestBrandLabel');
+  for (const t of ['Все бренды', 'Остальные бренды', ' все сорта ']) assert.equal(rest(t), true, t);
+  assert.equal(rest('Marlboro'), false);
+});
+
 /* === ДОЛГ ПРОВЕРОК И ПРОСТОЙ === */
 // Ср 21.10 и Пт 23.10 — день по расписанию; «сейчас» — Пт 23.10, 10:00 (дневная смена)
 const debtRow = { id: 'd1', line: 'SD12', inSchedule: true, work: 'Run',
@@ -424,4 +439,62 @@ test('бланк OPL: значение, время, дата', () => {
   assert.equal(new Date(d('22.05.2026')).getDate(), 22);
   assert.equal(new Date(d(app('new Date(Date.UTC(2026, 4, 22))'))).getDate(), 22, 'полночь UTC из Excel — тот же день');
   assert.equal(d('нет'), null);
+});
+
+/* === ЗАПИСЬ ПО ОДНОЙ ЗАПИСИ === */
+test('saveStandard / removeStandard / addHistoryRecord трогают только свою запись', () => {
+  app("localStorage.removeItem(STORAGE_KEYS.standards); localStorage.removeItem(STORAGE_KEYS.history)");
+  fn('saveStandards')([{ id: 'a', title: 'A' }, { id: 'b', title: 'B' }]);
+  fn('saveStandard')({ id: 'a', title: 'A2' });
+  assert.deepEqual(plain(fn('getStandards')().map(s => [s.id, s.title])), [['a', 'A2'], ['b', 'B']], 'замена на месте, порядок сохранён');
+  fn('removeStandard')('a');
+  assert.deepEqual(plain(fn('getStandards')().map(s => s.id)), ['b']);
+  fn('addHistoryRecord')({ id: 'h1' });
+  fn('addHistoryRecord')({ id: 'h2' });
+  fn('saveHistoryRecords')([{ id: 'h1', x: 1 }]);
+  assert.deepEqual(plain(fn('getHistory')()), [{ id: 'h1', x: 1 }, { id: 'h2' }]);
+  fn('clearHistory')();
+  assert.deepEqual(plain(fn('getHistory')()), []);
+  app("localStorage.removeItem(STORAGE_KEYS.standards); localStorage.removeItem(STORAGE_KEYS.history)");
+});
+
+test('normalizeOplNumber: единый вид OPL-N', () => {
+  const n = fn('normalizeOplNumber');
+  assert.equal(n('1'), 'OPL-1');
+  assert.equal(n(' 4.2.1 '), 'OPL-4.2.1');
+  assert.equal(n('OPL3'), 'OPL-3');
+  assert.equal(n('opl 5'), 'OPL-5');
+  assert.equal(n('OPL-7'), 'OPL-7');
+  assert.equal(n('4,2'), 'OPL-4.2');
+  assert.equal(n('A-12'), 'A-12');
+});
+
+test('pruneHistoryBefore: удаляет только записи раньше даты', () => {
+  app(`setHistory([{ id: 'a', date: '2025-01-01' }, { id: 'b', timestamp: '2026-05-01T10:00:00Z' }, { id: 'c', date: '2026-10-01' }])`);
+  assert.equal(fn('pruneHistoryBefore')('2025-10-30'), 1);
+  assert.deepEqual(plain(app('getHistory().map(h => h.id)')), ['b', 'c']);
+});
+
+test('шаблоны чек-листа: сохранить, заменить, удалить', () => {
+  app(`saveScheduleTemplate({ id: 't1', name: 'Лето', line: 'SD01', mode: 'mech', rows: { s1: { schedule: [{ day: 1, shift: 'day' }] } } })`);
+  app(`saveScheduleTemplate({ id: 't1', name: 'Лето 2', line: 'SD01', mode: 'mech', rows: {} })`);
+  assert.deepEqual(plain(app('getScheduleTemplates().map(t => t.name)')), ['Лето 2']);
+  app(`removeScheduleTemplate('t1')`);
+  assert.equal(app('getScheduleTemplates().length'), 0);
+});
+
+test('роли: оператор только предлагает; предложение не меняет стандарт до решения', () => {
+  app(`localStorage.setItem('cl_current_role', 'operator')`);
+  assert.equal(fn('canDo')('edit'), false);
+  assert.equal(fn('canOpenTab')('schedule'), false);
+  assert.equal(fn('canOpenTab')('history'), true);
+  const before = app('getStandards().length');
+  app(`addStdProposal({ id: 'np1', line: 'SD01', title: 'Новый' }, null)`);
+  assert.equal(app('getStandards().length'), before);
+  assert.equal(app('getStdProposals().filter(p => p.status === "pending").length'), 1);
+  app(`decideStdProposal(getStdProposals()[0].id, 'rejected', 'нет')`);
+  assert.equal(app('getStdProposals()[0].status'), 'rejected');
+  app(`localStorage.setItem('cl_current_role', 'analyst')`);
+  assert.equal(fn('canDo')('edit'), true);
+  app(`localStorage.removeItem('cl_current_role')`);
 });

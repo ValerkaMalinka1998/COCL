@@ -92,12 +92,11 @@ $('#deactivationSaveBtn')?.addEventListener('click', () => {
   if (!currentDeactivationStdId) return;
   const text = ($('#deactivationCommentText').value || '').trim();
 
-  const all = getStandards();
-  const st = all.find(s => s.id === currentDeactivationStdId);
+  const st = getStandards().find(s => s.id === currentDeactivationStdId);
   if (!st) return;
 
   st.deactivationComment = text;
-  setStandards(all);
+  saveStandard(st);
 
    refreshEditorMechTable();
   closeDeactivationCommentModal();
@@ -109,12 +108,11 @@ $('#deactivationClearBtn')?.addEventListener('click', () => {
   if (!currentDeactivationStdId) return;
   if (!confirm('Очистить комментарий к деактивации?')) return;
 
-  const all = getStandards();
-  const st = all.find(s => s.id === currentDeactivationStdId);
+  const st = getStandards().find(s => s.id === currentDeactivationStdId);
   if (!st) return;
 
   st.deactivationComment = '';
-  setStandards(all);
+  saveStandard(st);
 
   refreshEditorMechTable();
   closeDeactivationCommentModal();

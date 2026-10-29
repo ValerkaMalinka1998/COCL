@@ -3,7 +3,7 @@
 /* ============================================================ */
 /* События не хранятся отдельно — собираются из того, что уже есть:
    лист изменений (изменён / новый стандарт), замечания и ответы,
-   валидация (осталось ≤ 2 смен). Хранится только «прочитано»
+   валидация (идёт и решение аналитика). Хранится только «прочитано»
    (cl_notify_read — у этого компьютера, в бэкап не идёт).
    Пока нет автологина и сервера — видны события этого компьютера;
    фильтр по подразделению аналитика — после автологина (ROADMAP [10]). */
@@ -17,7 +17,10 @@ const NOTIFY_KINDS = {
   new: { group: 'std', icon: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>' },
   cmt: { group: 'cmt', icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>' },
   rep: { group: 'cmt', icon: '<polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>' },
-  val: { group: 'val', icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>' }
+  val: { group: 'val', icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>' },
+  vdone: { group: 'val', icon: '<polyline points="20 6 9 17 4 12"/>' },
+  prop: { group: 'std', icon: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>' },
+  propd: { group: 'std', icon: '<polyline points="20 6 9 17 4 12"/>' }
 };
 const NOTIFY_FILTERS = [
   { key: 'all', label: 'Все' }, { key: 'std', label: 'Стандарты' },
@@ -49,6 +52,10 @@ function notifyRefMeta(row) {
 
 /* Все события за NOTIFY_DAYS дней, новые сверху */
 function collectNotifications() {
+  // Ключи localStorage и нормализация стандартов разбираются один раз, а не на каждое событие
+  return withLoadCache(collectNotificationsRaw);
+}
+function collectNotificationsRaw() {
   const since = Date.now() - NOTIFY_DAYS * 864e5;
   const fresh = (iso) => iso && new Date(iso).getTime() >= since;
   const out = [];
@@ -64,7 +71,7 @@ function collectNotifications() {
         html: `<b>${kind === 'elec' ? 'Новый параметр' : 'Новый стандарт'}</b> «${name}»`, meta: notifyRefMeta(row) });
     } else if (stdAckIsMajor(e)) {
       out.push({ id: 'chg:' + e.id, type: 'chg', at: e.date, kind, refId: e.refId, tab: 'ack',
-        html: `<b>${kind === 'elec' ? 'Изменён параметр' : 'Изменён стандарт'}</b> «${name}» — ознакомьтесь`, meta: notifyRefMeta(row) });
+        html: `<b>${kind === 'elec' ? 'Изменён параметр' : 'Изменён стандарт'}</b> «${name}» ${kind === 'elec' ? '' : ' — ознакомьтесь'}`, meta: notifyRefMeta(row) });
     }
   });
 
@@ -91,16 +98,41 @@ function collectNotifications() {
     ...getElectronicParams().map(r => ['elec', r])
   ];
   valRows.forEach(([kind, row]) => {
-    if (!isOnValidation(row)) return;
-    const left = validationShiftsLeft(row);
-    if (left > 2) return;
     const v = row.validation || {};
-    out.push({ id: `val:${row.id}:${v.until}:${v.untilShift || ''}`, type: 'val', at: now, kind, refId: row.id, tab: 'main',
-      html: `<b>Валидация заканчивается</b>: «${escapeHtml(notifyRefTitle(kind, row))}» — осталось ${left} ${pluralRu(left, 'смена', 'смены', 'смен')}`,
-      meta: [notifyRefMeta(row), 'решение: утвердить или продлить'].filter(Boolean).join(' · ') });
+    const name = escapeHtml(notifyRefTitle(kind, row));
+    const status = validationStatus(row);
+    if (status === 'active') {
+      const left = validationShiftsLeft(row);
+      const soon = left <= 2;
+      out.push({ id: `val:${row.id}:${v.until}:${v.untilShift || ''}`, type: 'val', at: now, kind, refId: row.id, tab: 'main',
+        html: `<b>${soon ? 'Валидация заканчивается' : 'На валидации'}</b>: «${name}» — осталось ${left} ${pluralRu(left, 'смена', 'смены', 'смен')}`,
+        meta: [notifyRefMeta(row), soon ? 'решение: утвердить или продлить' : ''].filter(Boolean).join(' · ') });
+    } else if ((status === 'approved' || status === 'rejected') && fresh(v.decidedAt)) {
+      out.push({ id: `vdone:${row.id}:${v.decidedAt}`, type: 'vdone', at: v.decidedAt, kind, refId: row.id, tab: 'main',
+        html: `<b>Валидация пройдена</b>: «${name}» — ${status === 'rejected' ? 'отклонён' : 'утверждён'}`, meta: notifyRefMeta(row) });
+    }
   });
 
-  return out.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  // Предложения: аналитику — ждут решения, оператору — решение по ним
+  getStdProposals().forEach(p => {
+    const name = escapeHtml(p.title || '—');
+    if (p.status === 'pending' && canDo('edit')) {
+      out.push({ id: 'prop:' + p.id, type: 'prop', at: p.createdAt, kind: 'prop', refId: p.id, tab: 'main', line: p.line,
+        html: `<b>${p.refId ? 'Предложена правка' : 'Предложен новый стандарт'}</b> «${name}» — на апрув`, meta: [p.line, p.author].filter(Boolean).join(' · ') });
+    } else if (p.status !== 'pending' && canDo('propose') && fresh(p.decidedAt)) {
+      out.push({ id: 'propd:' + p.id, type: 'propd', at: p.decidedAt, kind: 'prop', refId: p.id, tab: 'main', line: p.line,
+        html: `<b>${p.status === 'approved' ? 'Предложение принято' : 'Предложение отклонено'}</b>: «${name}»`,
+        quote: p.comment || '', meta: p.line });
+    }
+  });
+
+  // Только линии своего цеха / участка (роль и зона — Шапка → Роль)
+  const inScope = (i) => {
+    if (i.line) return lineInUserScope(i.line);
+    const row = notifyRef(i.kind, i.refId);
+    return !row || lineInUserScope(row.line);
+  };
+  return out.filter(inScope).sort((a, b) => String(b.at).localeCompare(String(a.at)));
 }
 
 function notifyDayLabel(iso) {
@@ -183,6 +215,12 @@ function closeNotifyPanel() {
 /* Переход к объекту уведомления: страница стандарта / параметра на нужной вкладке */
 function openNotifyTarget(item) {
   closeNotifyPanel();
+  if (item.kind === 'prop') {
+    if (item.type === 'prop') { switchTab('editor'); return openProposalsModal(); }
+    const p = getStdProposals().find(x => x.id === item.refId);
+    if (p && p.status === 'approved' && getStandards().some(s => s.id === p.data.id)) openStandardFullView(p.data.id, 'view');
+    return;
+  }
   if (item.kind === 'elec') {
     if (!getElectronicParams().some(p => p.id === item.refId)) return showToast('Параметр не найден', true);
     openEparamPage(item.refId);

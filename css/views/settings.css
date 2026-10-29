@@ -503,22 +503,6 @@
   color: var(--text-main);
 }
 .st-lc-actions { display: flex; gap: 6px; align-items: center; }
-.st-lc-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 14px;
-}
-.st-stat {
-  display: flex;
-  flex-direction: column;
-  padding: 8px 10px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-}
-.st-stat-val { font-size: 18px; font-weight: 800; color: var(--text-main); }
-.st-stat-label { font-size: 11px; color: var(--text-dim); }
 .st-lc-section {
   padding-top: 12px;
   margin-top: 12px;
@@ -627,11 +611,12 @@ button.st-chip:hover { border-color: var(--border-hi); color: var(--text-main); 
   border-bottom: 1px solid var(--border);
 }
 .tl-set-cat-name { font-size: 14px; font-weight: 800; color: var(--text-main); }
-.tl-set-cat-list { flex: 1; }
+.tl-set-cat-list { max-height: 300px; overflow-y: auto; }
 .tl-set-row { min-height: 40px; }
 .tl-set-row .settings-row-name { font-size: 13px; }
 .tl-set-empty { padding: 14px; }
-.tl-set-add {
+.tl-set-cat input.tl-set-add[type="text"] {
+  box-sizing: border-box;
   margin: 8px;
   width: calc(100% - 16px);
   padding: 7px 10px;
@@ -702,50 +687,11 @@ button.st-chip:hover { border-color: var(--border-hi); color: var(--text-main); 
 .st-chip[hidden] { display: none; }
 
 /* ============================================================ */
-/* === БРЕНДЫ: сетка плиток =================================== */
+/* === СПРАВОЧНИКИ: длинный список с прокруткой ================ */
 /* ============================================================ */
-.brand-grid-meta { margin-bottom: 6px; font-size: 11px; color: var(--text-dim); }
-.brand-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 8px;
-  max-height: 60vh;
-  overflow-y: auto;
-  padding: 2px 4px 2px 0;
-  align-content: start;
-}
-.brand-tile {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  padding: 8px 6px 8px 12px;
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  transition: border-color 0.12s;
-}
-.brand-tile:hover { border-color: var(--border-hi); }
-.brand-tile-unused { border-style: dashed; }
-.brand-tile-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.brand-tile-name {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-main);
-  cursor: text;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.brand-tile-name:hover { color: var(--accent-cyan); }
-.brand-tile-meta {
-  font-size: 11px;
-  color: var(--text-dim);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.brand-tile-ws {
+.settings-list-meta { margin-bottom: 6px; font-size: 11px; color: var(--text-dim); }
+.settings-list-scroll { max-height: 60vh; overflow-y: auto; }
+.settings-row-select {
   flex-shrink: 0;
   width: auto;
   padding: 3px 6px;
@@ -753,7 +699,6 @@ button.st-chip:hover { border-color: var(--border-hi); color: var(--text-main); 
   font-weight: 700;
   border-radius: var(--r-sm);
 }
-.brand-tile .st-icon-btn { width: 26px; height: 26px; }
 
 /* ============================================================ */
 /* === СМЕНЫ: цикл смен и календарь ========================= */
@@ -898,3 +843,20 @@ button.st-chip:hover { border-color: var(--border-hi); color: var(--text-main); 
 .st-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .st-legend-chip { cursor: default; pointer-events: none; margin: 0 2px; }
 .st-legend-chip + .st-legend-chip { margin-left: 10px; }
+
+/* Часть линии машины (SMD) на чипе машины */
+.st-chip-part { margin-left: 6px; padding: 1px 7px; border: 1px solid var(--border); border-radius: var(--r-pill); background: transparent; color: var(--text-dim); font-size: 10px; font-weight: 700; cursor: pointer; }
+.st-chip-part:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+.st-mp { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.st-mp-col { padding: 10px; border: 1px solid var(--border); border-radius: var(--r-sm); }
+.st-mp-head { margin-bottom: 8px; font-size: 12px; font-weight: 800; color: var(--text-main); }
+.st-mp-undef { margin-bottom: 10px; }
+.st-mp-undef .st-chip-set { margin: 6px 0; }
+.st-mp-all { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+@media (max-width: 700px) { .st-mp { grid-template-columns: 1fr; } }
+/* Карточка линии: кнопки шапки переносятся, а не вылезают за край; колонки машин — не уже 240px */
+.st-lc-head { flex-wrap: wrap; gap: 8px; }
+.st-lc-actions { flex-wrap: wrap; }
+.st-mp { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.st-chip-part { white-space: nowrap; }
+.st-brand-filter { border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg-input); color: var(--text-main); }

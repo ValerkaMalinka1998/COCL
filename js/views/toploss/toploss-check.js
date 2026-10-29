@@ -69,9 +69,15 @@ function buildTopLossChecklist(lossIds) {
   if (!lossIds || !lossIds.length) return showToast('Выберите потерю', true);
   const rows = tlCollectRows(lossIds, line);
   if (!rows.length) return showToast('По выбранным потерям нет активных стандартов на линии ' + line, true);
+  stdAckGate(rows.map(r => ({ kind: r.isElec ? 'elec' : 'mech', row: r.row })), () => startTopLossChecklist(lossIds, line, rows));
+}
+
+function startTopLossChecklist(lossIds, line, rows) {
 
   const period = getCurrentShiftPeriod();
-  tlCheck.brand = getElectronicBrandForDate(line, period.date) || '';
+  // Бренд — как в Чек-листе CL: текущий бренд линии (смена сорта / выбор аналитика), иначе по расписанию брендов
+  const now = getLineBrandNow(line);
+  tlCheck.brand = (now && now.brand) || getElectronicBrandForDate(line, period.date) || '';
   tlCheck.lossIds = lossIds.slice();
   tlCheck.rows = rows.map(r => ({ ...r, points: tlCheckPoints(r.row, tlCheck.brand) }));
   tlCheck.answers = {};
@@ -262,9 +268,7 @@ function saveTopLossCheck() {
     topLosses: tlCheck.lossIds.slice(),
     items
   };
-  const hist = getHistory();
-  hist.push(record);
-  setHistory(hist);
+  addHistoryRecord(record);
   updateNavHistoryCounter();
   showToast('Проверка сохранена');
 

@@ -70,10 +70,13 @@ function fmtISODate(dateStr) {
 
 /* Конфиг смен для расчёта дат: JSON разбирается заново, только когда строка в хранилище
    изменилась (дашборд и матрицы зовут это тысячи раз). Только чтение — не мутировать. */
-let shiftCfgMemo = { raw: undefined, cfg: null };
+let shiftCfgMemo = { raw: undefined, cfg: null, render: null, byDate: new Map() };
 function shiftCfgCached() {
+  // Внутри withLoadCache хранилище не меняется — строку сверяем один раз на отрисовку
+  if (loadCache && shiftCfgMemo.render === loadCache) return shiftCfgMemo.cfg;
   const raw = localStorage.getItem(STORAGE_KEYS.electronicShiftCfg);
-  if (raw !== shiftCfgMemo.raw) shiftCfgMemo = { raw, cfg: getElectronicShiftConfig() };
+  if (raw !== shiftCfgMemo.raw) shiftCfgMemo = { raw, cfg: getElectronicShiftConfig(), render: null, byDate: new Map() };
+  shiftCfgMemo.render = loadCache;
   return shiftCfgMemo.cfg;
 }
 
@@ -101,10 +104,11 @@ function getNightShiftForDate(date) {
 }
 
 function getShiftsForDate(date) {
-  return {
-    day:   getDayShiftForDate(date),
-    night: getNightShiftForDate(date)
-  };
+  if (typeof date !== 'string') return { day: getDayShiftForDate(date), night: getNightShiftForDate(date) };
+  // Буквы смен по дате кэшируются до смены конфига (shiftCfgCached сбрасывает byDate); копия — объект могут менять
+  const memo = shiftCfgCached() && shiftCfgMemo.byDate;
+  if (!memo.has(date)) memo.set(date, { day: getDayShiftForDate(date), night: getNightShiftForDate(date) });
+  return { ...memo.get(date) };
 }
 
 /* Текущий период смены: тип + ДАТА НАЧАЛА смены.

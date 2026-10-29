@@ -2,8 +2,8 @@
 /* === ОЗНАКОМЛЕНИЕ СО СТАНДАРТОМ / E-PARAM =================== */
 /* ============================================================ */
 /* Знакомятся со стандартом целиком, в любую смену, без срока.
-   Редакция = 1 + число существенных изменений из листа изменений:
-   точки и нормы, бренды, описания, фото (как в листе линии + фото).
+   Редакция = 1 + число изменений, попавших в общий лист линии (CL_SHEET_KEYS):
+   точки и нормы, бренды, описания, фото. Правки только листа стандарта — нет.
    После новой редакции прежняя отметка устаревает — нужно повторно.
    Отметка: { id, kind, refId, edition, changeId, at, shiftDate,
               shiftType, shiftLetter, who }.
@@ -19,11 +19,9 @@ function getStdAck() {
 }
 function setStdAck(v) { save(STORAGE_KEYS.stdAck, v); }
 
+/* Повторное ознакомление — только если правка попала в общий лист линии (sheet !== false) */
 function stdAckIsMajor(e) {
-  if (e.action !== 'changed') return false;
-  if (e.sheet !== false) return true;
-  const det = Array.isArray(e.details) ? e.details : [];
-  return det.some(d => !STD_ACK_MINOR_LABELS.includes(d.label));
+  return e.action === 'changed' && e.sheet !== false;
 }
 
 /* Существенные изменения по порядку: [{ ...entry, edition }] (edition 2, 3, …) */

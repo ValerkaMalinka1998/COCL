@@ -232,8 +232,7 @@ tr:hover td { background: var(--bg-hover); }
   position: fixed;
   inset: 0;
   background: var(--overlay);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  /* без backdrop-filter: размытие всего экрана тормозило открытие окон на слабых ПК */
   /* z-index устанавливается динамически через JS
      (см. openModal / closeModal в app.js) */
   align-items: center;
@@ -241,11 +240,9 @@ tr:hover td { background: var(--bg-hover); }
   padding: 20px;
 }
 .modal-overlay.active { display: flex; }
-/* Модалка — матовое стекло (размытие — только у шапки, меню и модалок) */
+/* Модалка — почти непрозрачное стекло; backdrop-filter убран (тормозил на слабых ПК) */
 .modal {
   background: var(--glass-strong);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
   border-radius: var(--r-xl);
   max-width: 500px;
@@ -391,3 +388,32 @@ button[data-tl-open-ep]:hover {
   background: color-mix(in srgb, var(--accent-purple) 20%, transparent);
   border-color: var(--accent-purple);
 }
+
+/* === ВТОРОСТЕПЕННЫЕ ДЕЙСТВИЯ: заметные, но не главные === */
+.btn-accent { background: rgba(var(--cyan-rgb), .12); color: var(--accent-cyan); border: 1px solid rgba(var(--cyan-rgb), .55); font-weight: 700; }
+.btn-accent:hover { background: rgba(var(--cyan-rgb), .2); border-color: var(--accent-cyan); transform: translateY(-1px); }
+.btn-danger-soft { background: rgba(var(--red-rgb), .1); color: var(--accent-red); border: 1px solid rgba(var(--red-rgb), .5); font-weight: 700; }
+.btn-danger-soft:hover { background: rgba(var(--red-rgb), .18); border-color: var(--accent-red); }
+.btn-danger-soft svg { width: 15px; height: 15px; }
+
+/* === РОЛИ (временно, до SSO): оператору недоступное прячем === */
+body[data-role="operator"] [data-need="edit"],
+body[data-role="operator"] .et-c-check,
+body:not([data-role="admin"]) [data-need="admin"] { display: none !important; }
+.role-chip { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; margin-right: 8px; border: 1px solid var(--border); border-radius: var(--r-pill); background: var(--bg-card); color: var(--text-second); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.role-chip:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+body[data-role="operator"] .role-chip { border-color: rgba(var(--purple-rgb), .5); color: var(--accent-purple); }
+.role-modal, .proposals-modal { max-width: 600px; }
+.role-hint { margin: 0 0 12px; font-size: 12.5px; color: var(--text-dim); }
+.role-opt { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; margin-bottom: 6px; border: 1px solid var(--border); border-radius: var(--r-sm); cursor: pointer; }
+.role-opt small { display: block; font-size: 12px; color: var(--text-dim); }
+.role-opt:has(input:checked) { border-color: var(--accent-cyan); background: rgba(var(--cyan-rgb), .08); }
+.role-scope { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0 8px; }
+.role-scope label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; color: var(--text-second); }
+.role-scope select { padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg-input); color: var(--text-main); font: inherit; }
+.prop-row { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.prop-main { flex: 1; min-width: 0; font-size: 13.5px; }
+.prop-main small { display: block; font-size: 12px; color: var(--text-dim); }
+.prop-main .prop-warn { color: var(--accent-amber); }
+.prop-kind { display: inline-block; margin-right: 6px; padding: 1px 8px; border-radius: var(--r-pill); background: rgba(var(--cyan-rgb), .12); color: var(--accent-cyan); font-size: 11px; font-weight: 700; }
+.prop-kind.is-new { background: rgba(var(--green-rgb), .12); color: var(--accent-green); }

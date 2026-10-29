@@ -68,6 +68,23 @@ function dashLines() {
   return getAllLinesWithContext().filter(x => !dashboardWorkshop || x.workshopId === dashboardWorkshop);
 }
 
+/* Итоги CL линии на одну отрисовку: период, прошлый период и 6 недель динамики берут
+   один расчёт (от самой ранней нужной даты до сегодня), а не считают долги заново */
+let dashTallyMemo = null;
+function dashLineTally(line, from, rows, to) {
+  const hit = dashTallyMemo && dashTallyMemo.get(line);
+  if (hit && hit.from <= from) return hit.tally;
+  const weeksFrom = getClWeekDays(-5)[0];
+  const start = from < weeksFrom ? from : weeksFrom;
+  const tally = clTallyIndex(line, start, to, rows);
+  if (dashTallyMemo) dashTallyMemo.set(line, { from: start, tally });
+  return tally;
+}
+function dashWithTally(fn) {
+  dashTallyMemo = new Map();
+  try { withLoadCache(fn); } finally { dashTallyMemo = null; }
+}
+
 /* Показатели Чек-листа CL линии за смены: выполнение и пропуски */
 function dashClMetrics(line, slots, includeCurrent) {
   const rows = clLineRows(line);
@@ -76,7 +93,7 @@ function dashClMetrics(line, slots, includeCurrent) {
   const m = { planned: 0, done: 0, fail: 0, late: 0, missed: [], hasPlan: false, groups: {}, letters: {} };
   if (!slots.length) return m;
   const dates = slots.map(s => s.date).sort();
-  const tally = clTallyIndex(line, dates[0], dates[dates.length - 1], rows);
+  const tally = dashLineTally(line, dates[0], rows, cur.date);
   slots.forEach(s => {
     const isNow = s.date === cur.date && s.shift === cur.shiftType;
     if (!isNow && !isShiftPast(s.date, s.shift)) return;
@@ -180,7 +197,7 @@ function dashWeeks(lines) {
    РЕНДЕР: ГЛАВНЫЙ ЭКРАН
    ============================================================ */
 /* Отрисовка только читает данные — история и стандарты разбираются из JSON один раз */
-function renderDashboard() { withLoadCache(renderDashboardMain); }
+function renderDashboard() { dashWithTally(renderDashboardMain); }
 function renderDashboardMain() {
   const box = $('#dashboardContent');
   if (!box) return;
@@ -220,10 +237,10 @@ function renderDashboardMain() {
 /* Меньше стольких проверок — доля отклонений не показательна */
 const DASH_MIN_CHECKS = 10;
 
-/* «N из M · P%», мало проверок — без процента */
+/* «N из M · P%»; когда проверок мало — только «N из M», без процента */
 function dashShareText(n, total) {
   if (!total) return '—';
-  return `${n} из ${total} · ${total < DASH_MIN_CHECKS ? 'мало проверок' : Math.round(n / total * 100) + '%'}`;
+  return `${n} из ${total}${total < DASH_MIN_CHECKS ? '' : ' · ' + Math.round(n / total * 100) + '%'}`;
 }
 
 /* Ячейки таблиц: выполнение (N из M + полоска) и отклонения («N из M · %») */
@@ -499,7 +516,7 @@ function dashLineSideHtml(line, machines, sum) {
     </button>`).join('') || '<div class="dash-empty">Стандартов нет</div>'}`;
 }
 
-function renderDashboardLine() { withLoadCache(renderDashboardLineMain); }
+function renderDashboardLine() { dashWithTally(renderDashboardLineMain); }
 function renderDashboardLineMain() {
   const box = $('#dashboardContent');
   const line = dashState.line;

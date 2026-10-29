@@ -111,8 +111,8 @@ function refreshEditorElecTable() {
         <td class="et-c-sch">${etScheduleHtml(p, line)}</td>
         <td class="et-c-st">${etStatusHtml(isActive)}</td>
         <td class="et-c-act"><div class="et-acts">
-          <button type="button" class="et-ib" data-edit-elec="${id}" title="Редактировать">${ET_ICONS.edit}</button>
-          <button type="button" class="et-ib et-ib-del" data-delete-elec="${id}" title="Удалить">${ET_ICONS.del}</button>
+          <button type="button" class="et-ib" data-edit-elec="${id}" title="Редактировать" data-need="edit">${ET_ICONS.edit}</button>
+          <button type="button" class="et-ib et-ib-del" data-delete-elec="${id}" title="Удалить" data-need="edit">${ET_ICONS.del}</button>
         </div></td>
       </tr>`;
   });
@@ -134,7 +134,7 @@ function refreshEditorElecTable() {
       const p = getElectronicParams().find(x => x.id === id);
       if (!p) return;
       if (!confirm(`Удалить параметр "${p.paramName}"?`)) return;
-      setElectronicParams(getElectronicParams().filter(x => x.id !== id));
+      removeElectronicParam(id);
       const logId = addChangeLogEntry('elec', p, 'removed', 'Параметр удалён');
       editorTableState.elecSelected.delete(id);
       fillEditorFilters();
@@ -186,7 +186,7 @@ function updateElecSelectionUI(filtered) {
    Тот же подход, что у стандартов (js/io/standards-io.js):
    «Параметры» — строка на параметр, выпадающие списки;
    «Значения»  — сверху строки сами повторяют «Параметры» (Параметр · Машина,
-                 «Остальные бренды», тип), ниже — дополнительные бренды;
+                 «Все бренды», тип), ниже — дополнительные бренды;
    «Списки»    — скрытый лист-источник списков; «Инструкция».
    Норма — точки Т1…Т10 по брендам, как у стандартов (листы «Стандарты» / «Точки»).
    Импорт понимает и старые форматы («Номинал / Допуск / От / До», колонка «Значения по брендам»).
@@ -383,6 +383,7 @@ async function parseElectronicParamsExcel(file, targetLine) {
   const result = { added: 0, skipped: 0, duplicates: [], empty: 0, errors: [], addedMachines: [], pointsImported: 0, noun: 'параметров', pointsNoun: 'норм по брендам' };
   const isOld = xlCellText(ws.getRow(1), 1) === 'Параметр';
   const all = getElectronicParams();
+  const added = [];
   const known = new Set(all.filter(p => p.line === targetLine).map(p => `${(p.paramName || '').toLowerCase()}|${p.machine || ''}`));
   const lineMachines = getLineMachines();
   if (!Array.isArray(lineMachines[targetLine])) lineMachines[targetLine] = [];
@@ -443,7 +444,7 @@ async function parseElectronicParamsExcel(file, targetLine) {
       }
       if (!p) continue;
       const brandText = xlIsBareFormula(row, 2) ? REST_BRANDS_LABEL : xlCellText(row, 2);
-      const brand = !brandText || brandText === REST_BRANDS_LABEL ? '' : brandText;
+      const brand = !brandText || isRestBrandLabel(brandText) ? '' : brandText;
       let points = [];
       if (pointsFmt) {
         for (let c = 4; c <= lastCol; c++) { const v = xlCellText(row, c); if (v) points.push({ value: v }); }
@@ -484,12 +485,12 @@ async function parseElectronicParamsExcel(file, targetLine) {
       lineMachines[targetLine].push(p.machine);
       result.addedMachines.push(p.machine);
     }
-    all.push(p);
+    added.push(p);
     addChangeLogEntry('elec', p, 'added', 'Новый параметр (импорт из Excel)');
     result.added++;
   });
 
-  if (result.added) setElectronicParams(all);
+  saveElectronicParams(added);
   if (result.addedMachines.length) setLineMachines(lineMachines);
   return result;
 }

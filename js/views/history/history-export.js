@@ -597,9 +597,24 @@ function downloadBlob(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+$('#pruneHistoryBtn').addEventListener('click', () => {
+  if (!canDo('admin')) return showToast('Доступно только администратору', true);
+  const d = new Date();
+  d.setMonth(d.getMonth() - HISTORY_KEEP_MONTHS);
+  const before = todayISO(d);
+  const n = getHistory().filter(h => (h.date || String(h.timestamp || '').slice(0, 10)) < before).length;
+  if (!n) return showToast(`Проверок старше ${fmtISODate(before)} нет`);
+  if (!confirm(`Удалить ${n} ${pluralRu(n, 'проверку', 'проверки', 'проверок')} раньше ${fmtISODate(before)}? Это необратимо — сначала скачайте бэкап (Настройки → Данные).`)) return;
+  pruneHistoryBefore(before);
+  updateNavHistoryCounter();
+  renderHistory();
+  showToast('Старые проверки удалены');
+});
+
 $('#clearHistoryBtn').addEventListener('click', () => {
+  if (!canDo('admin')) return showToast('Доступно только администратору', true);
   if (!confirm('Удалить всю историю проверок? Это необратимо.')) return;
-  setHistory([]);
+  clearHistory();
   updateNavHistoryCounter();
   renderHistory();
   showToast('История очищена');

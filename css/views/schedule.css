@@ -531,3 +531,15 @@
 /* Обозначения расписания: цвета смен — как у галочек в ячейках */
 #schMatrixLegend .lg-sw-day   { background: color-mix(in srgb, var(--plan-day) 22%, transparent); border-color: var(--plan-day); }
 #schMatrixLegend .lg-sw-night { background: color-mix(in srgb, var(--plan-night) 22%, transparent); border-color: var(--plan-night); }
+
+/* === ШАБЛОНЫ ЧЕК-ЛИСТА === */
+.sch-tpl-modal { max-width: 620px; }
+.sch-tpl-sub { margin-top: 2px; font-size: 12px; color: var(--text-dim); }
+.sch-tpl-hint { margin-bottom: 12px; padding: 10px 12px; border-radius: var(--r-sm); background: rgba(var(--cyan-rgb), .08); font-size: 13px; color: var(--text-second); }
+.sch-tpl-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.sch-tpl-name { flex: 1; min-width: 0; }
+.sch-tpl-name small { display: block; font-size: 12px; color: var(--text-dim); }
+.sch-tpl-new { margin-top: 14px; }
+.sch-tpl-new label { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 700; color: var(--text-second); }
+.sch-tpl-new-row { display: flex; gap: 8px; }
+.sch-tpl-new-row input { flex: 1; min-width: 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--bg-input); color: var(--text-main); font: inherit; }

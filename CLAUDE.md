@@ -51,6 +51,10 @@
   (дашборд), оборачивать в `withLoadCache(fn)` — ключ разбирается один раз; полученные
   объекты внутри не менять. Конфиг смен — через `shiftCfgCached()` в `dates.js`.
 - Библиотеки: только `js/exceljs.min.js` и `js/jszip.min.js` (локально). Новые — только по согласованию.
+- **Перенос в хаб eIWS** (конец 2026): хаб — Django + Bootstrap 5 + jQuery, сервер и SSO
+  делает команда хаба. Слой `js/data/` станет запросами к их REST-API (`/eiws/cil/api/...` —
+  образец), чтения — предзагрузкой в память. Подробности и что узнали — `Handoff.md`, сессия 23.
+  Сохранённые страницы хаба — `_files/` (в .gitignore, не коммитить: там CSRF-токен).
 - Фото: `photos/<line>/<Maker|Packer>/<file>`, в стандарте хранится только имя
   файла, путь собирает `getPhotoPath()`. Папки `photos/` в репозитории нет — у
   каждого пользователя своя копия, отсутствующие фото это норма.
@@ -128,6 +132,12 @@
 1. **Хранилище.** Ключи — в `STORAGE_KEYS`. Менять ключ или формат данных только с
    миграцией: у пользователей на заводе реальные данные в `localStorage`, потерять
    их нельзя. При сохранении расписания не терять `frequency.timeWindows`.
+   **Запись — по одной записи** через функции `js/data/`: `saveStandard(s)`, `removeStandard`,
+   `addHistoryRecord`, `saveHistoryRecords`, `saveElectronicParam(s)`, `removeElectronicParam`,
+   `appendChangeLog`. Вкладки не вызывают `setStandards` / `setHistory` / `setElectronicParams`
+   целым массивом (это только для миграций внутри `js/data/`). Данные (не настройки вида)
+   во вкладках не читать из `localStorage` напрямую. Автор / оператор — только `getCurrentUser()`
+   (`js/data/user.js`).
 2. **Модалки** — только через `openModal` / `closeModal` (стек `modalStack`),
    никаких ручных `classList.add('active')`.
 3. **События.** Статичные id — `addEventListener` напрямую; динамически созданные

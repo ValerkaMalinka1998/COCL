@@ -75,7 +75,9 @@ function tlRecentShifts(n) {
 /* Последние n суток (завершённые смены): [{ date, shifts: [{date, shift}] }], от старой к новой */
 function tlRecentDays(n) {
   const days = [];
-  tlRecentShifts(n * 2 + 2).reverse().forEach(sh => {
+  // Текущая смена тоже: проверка, сделанная сейчас, видна сразу
+  const cur = getCurrentShiftPeriod();
+  [...tlRecentShifts(n * 2 + 1).reverse(), { date: cur.date, shift: cur.shiftType, isNow: true }].forEach(sh => {
     let d = days[days.length - 1];
     if (!d || d.date !== sh.date) { d = { date: sh.date, shifts: [] }; days.push(d); }
     d.shifts.push(sh);
@@ -92,22 +94,29 @@ function tlDayStatus(sts) {
   return 'na';
 }
 
-/* Индекс истории Чек-листа CL линии: «дата|смена|id» → статус */
+/* Индекс проверок линии (Чек-лист CL и TOP Losses): «дата|смена|id» → статус; отклонение важнее ОК */
 function tlHistoryIndex(line) {
   const idx = new Map();
+  const put = (k, st) => { if (st === 'OK' || st === 'FAIL') { if (idx.get(k) !== 'FAIL') idx.set(k, st); } else if (!idx.has(k)) idx.set(k, st); };
   getHistory().forEach(h => {
-    if (!(h.mode === 'cl' || h.mode === 'electronic') || h.line !== line) return;
-    (h.items || []).forEach(it => idx.set(`${h.date}|${h.shift}|${it.standardId}`, it.status));
+    if (h.line !== line) return;
+    if (h.mode === 'cl' || h.mode === 'electronic') {
+      (h.items || []).forEach(it => put(`${h.date}|${h.shift}|${it.standardId}`, it.status));
+    } else if (h.mode === 'toploss') {
+      const s = histShift(h);
+      (h.items || []).forEach(it => put(`${s.date}|${s.letter}|${it.standardId}`, it.status));
+    }
   });
   return idx;
 }
 
 /* Статусы строки по сменам: 'OK' | 'FAIL' | 'UNCHECKED' | 'missed' | 'na' */
 function tlRowShiftStatuses(row, shifts, line, hidx) {
-  return shifts.map(({ date, shift }) => {
+  return shifts.map(({ date, shift, isNow }) => {
     const letter = getShiftsForDate(date)[shift];
     const st = hidx.get(`${date}|${letter}|${row.id}`);
     if (st) return st;
+    if (isNow) return 'na';   // смена идёт — ещё не пропуск
     // В простой линии смена не планируется — не «пропуск»
     return isRowPlanned(row, line, date, shift) ? 'missed' : 'na';
   });
@@ -417,7 +426,7 @@ function renderTopLossDiag(cats, stats, hidx) {
       <span class="tl2-sum-i">Последняя проверка TOP Losses: <b>${last ? fmtShortDate(last.slice(0, 10)) : 'ещё не было'}</b></span>
     </div>
     <h3 class="tl2-sec">Стандарты, которые влияют на «${escapeHtml(loss.name)}»
-      <span>Квадраты — как проходила проверка в Чек-листе CL за последние 7 дней — один квадрат на день, слева направо от старого дня к новому</span></h3>
+      <span>Квадраты — как проходила проверка (Чек-лист CL и TOP Losses) за последние 7 дней, включая текущую смену — один квадрат на день, слева направо от старого дня к новому</span></h3>
     <div class="tl2-tools">
       <span class="tl2-seg">
         <button type="button" class="${tlState.kind === 'all' ? 'on' : ''}" data-tl-kind="all">Все ${s.count}</button>
@@ -441,7 +450,7 @@ function renderTopLossDiag(cats, stats, hidx) {
 
 $('#tlLinePill')?.addEventListener('click', () => {
   linePickerOnSelect = (line) => setTopLossLine(line);
-  openLinePickerModal();
+  openLinePickerModal(tlState.line || '');
 });
 
 /* Назад к выбору линии: сбрасываем линию, снова показывается экран выбора */
@@ -466,7 +475,7 @@ $('#tlSearch')?.addEventListener('input', (e) => {
 $('#tlSelectView')?.addEventListener('click', (e) => {
   if (e.target.closest('[data-tl-pick-line]')) {
     linePickerOnSelect = (line) => setTopLossLine(line);
-    return openLinePickerModal();
+    return openLinePickerModal(tlState.line || '');
   }
   const cat = e.target.closest('[data-tl-cat]');
   if (cat) {

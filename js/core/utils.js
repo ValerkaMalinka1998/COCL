@@ -92,8 +92,18 @@ function load(key, fallback) {
   } catch(e) { return fallback; }
 }
 function save(key, value) {
-  if (loadCache) loadCache.delete(key);
+  // Новый объект, а не delete: сбрасывает и производные кэши (нормализованные стандарты, конфиг смен)
+  if (loadCache) loadCache = new Map();
   localStorage.setItem(key, JSON.stringify(value));
 }
 function getOperators() { return load(STORAGE_KEYS.operators, []); }
 function setOperators(v) { save(STORAGE_KEYS.operators, v); }
+
+/* Числовые точки проверок (Чек-лист, CL при переходах, TOP Losses): только цифры, запятая, точка, минус.
+   Захват на document — срабатывает раньше обработчиков самих полей. */
+document.addEventListener('input', (e) => {
+  const t = e.target;
+  if (!t.matches || !t.matches('input[type="text"].qc-point-input, input[type="text"].checklist-point-input, input[type="text"][data-tl-val]')) return;
+  const clean = t.value.replace(/[^\d.,\-]/g, '');
+  if (clean !== t.value) t.value = clean;
+}, true);

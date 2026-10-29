@@ -8,6 +8,13 @@
    ИМПОРТ/ЭКСПОРТ: ШАБЛОНЫ
    ============================================================ */
 
+/* Единый вид номера: «1», «4.2.1», «OPL1», «opl 3» → «OPL-1», «OPL-4.2.1», «OPL-3» */
+function normalizeOplNumber(v) {
+  const s = String(v == null ? '' : v).trim().replace(/,/g, '.');
+  const m = s.match(/^(?:opl[\s_-]*)?(\d+(?:\.\d+)*)$/i);
+  return m ? 'OPL-' + m[1] : s;
+}
+
 /* --- Шапка листа шаблона: белый жирный текст на синем --- */
 function styleTemplateHeader(ws) {
   const headerRow = ws.getRow(1);

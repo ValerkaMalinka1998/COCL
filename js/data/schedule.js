@@ -221,3 +221,14 @@ function isShiftPast(dateStr, shift, now = new Date()) {
   if (dateStr > cur.date) return false;
   return shift === 'day' && cur.shiftType === 'night';
 }
+
+/* === ШАБЛОНЫ ЧЕК-ЛИСТА ===
+   Снимок недели расписания линии (какие строки и в какие смены), чтобы потом
+   применить его к любой неделе. Шаблон только заполняет черновик недели —
+   сохраняется он обычным «Сохранить» (с этой недели и далее / только эта неделя). */
+function getScheduleTemplates() {
+  const v = load(STORAGE_KEYS.scheduleTemplates, []);
+  return Array.isArray(v) ? v : [];
+}
+function saveScheduleTemplate(t) { save(STORAGE_KEYS.scheduleTemplates, upsertById(getScheduleTemplates(), [t])); }
+function removeScheduleTemplate(id) { save(STORAGE_KEYS.scheduleTemplates, getScheduleTemplates().filter(t => t.id !== id)); }

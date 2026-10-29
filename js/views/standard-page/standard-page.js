@@ -30,7 +30,8 @@ function openStandardFullView(id, mode, push = true) {
   addRecentStandard(id);
   svFullState.standardId = id;
   svFullState.isNew = false;
-  svFullState.mode = mode === 'edit' ? 'edit' : 'view';
+  svFullState.proposalId = null;
+  svFullState.mode = mode === 'edit' && canDo('edit') ? 'edit' : 'view';
   svFullState.originalData = JSON.parse(JSON.stringify(st));
 
   // ВАЖНО: если открываем сразу в режиме редактирования —
@@ -96,6 +97,7 @@ function openStandardCreatePage() {
 
   svFullState.standardId = st.id;
   svFullState.isNew = true;
+  svFullState.proposalId = null;
   svFullState.mode = 'edit';
   svFullState.originalData = JSON.parse(JSON.stringify(st));
   svFullState.editingData = st;
@@ -170,6 +172,8 @@ function renderStandardFullView() {
   const linkBtn = $('#svFullLinkBtn');
   if (linkBtn) linkBtn.style.display = svFullState.isNew ? 'none' : 'inline-flex';
 
+  const saveLbl = saveBtn && saveBtn.querySelector('span');
+  if (saveLbl) saveLbl.textContent = canDo('edit') ? (svFullState.proposalId ? 'Утвердить и сохранить' : 'Сохранить') : 'Отправить аналитику';
   if (isEdit) {
     if (viewBtn) viewBtn.style.display = 'none';
     if (editBtn) editBtn.style.display = 'none';
@@ -178,8 +182,9 @@ function renderStandardFullView() {
     if (cancelBtn) cancelBtn.style.display = 'inline-flex';
   } else {
     if (viewBtn) viewBtn.style.display = 'inline-flex';
-    if (editBtn) editBtn.style.display = 'inline-flex';
-    if (proposalBtn) proposalBtn.style.display = 'none';   // позже
+    // Оператор не правит сам — предлагает изменения аналитику
+    if (editBtn) editBtn.style.display = canDo('edit') ? 'inline-flex' : 'none';
+    if (proposalBtn) proposalBtn.style.display = canDo('propose') ? 'inline-flex' : 'none';
     if (saveBtn) saveBtn.style.display = 'none';
     if (cancelBtn) cancelBtn.style.display = 'none';
   }
@@ -221,10 +226,6 @@ function renderSvFullCrumbs(st) {
   }
 
   const parts = [];
-  // ID
-  if (st.oplNumber) {
-    parts.push(`<span class="sv-full-crumb-id">${escapeHtml(st.oplNumber)}</span>`);
-  }
   // Цех
   parts.push(`<span class="sv-full-crumb">${escapeHtml(ctx.workshop.name)}</span>`);
   // Участок + блок
@@ -238,10 +239,20 @@ function renderSvFullCrumbs(st) {
   // Линия
   parts.push(`<span class="sv-full-crumb-sep">›</span>`);
   parts.push(`<span class="sv-full-crumb-current">${escapeHtml(st.line || '—')}</span>`);
+  // Часть линии (Maker / Packer) — только SMD
+  if (st.nodePart && lineHasParts(st.line)) {
+    parts.push(`<span class="sv-full-crumb-sep">›</span>`);
+    parts.push(`<span class="sv-full-crumb-current">${escapeHtml(st.nodePart)}</span>`);
+  }
   // Машина
   if (st.machine) {
     parts.push(`<span class="sv-full-crumb-sep">›</span>`);
     parts.push(`<span class="sv-full-crumb-current">${escapeHtml(st.machine)}</span>`);
+  }
+  // OPL — последний шаг
+  if (st.oplNumber) {
+    parts.push(`<span class="sv-full-crumb-sep">›</span>`);
+    parts.push(`<span class="sv-full-crumb-id">OPL ${escapeHtml(st.oplNumber)}</span>`);
   }
 
   el.innerHTML = parts.join(' ');
@@ -281,7 +292,7 @@ function renderSvMainFields(st, isEdit) {
   } else {
     // --- Режим редактирования ---
     // Заполняем машины
-    const machines = getMachinesForLine(st.line);
+    const machines = getMachinesForLine(st.line, st.nodePart);
     const machineOpts = ['<option value="">— выберите —</option>']
       .concat(machines.map(m => {
         const sel = (m === st.machine) ? ' selected' : '';
@@ -316,7 +327,7 @@ function renderSvMainFields(st, isEdit) {
         <label class="required">Машина</label>
         <div class="sv-field-with-btn">
           <select id="svf_machine">${machineOpts}</select>
-          <button type="button" class="btn btn-secondary btn-sm" id="svf_addMachineBtn" title="Добавить машину в список линии">+</button>
+          <button type="button" class="btn btn-accent btn-sm" id="svf_addMachineBtn" title="Добавить машину в список линии" data-need="edit">+</button>
         </div>
       </div>
       ${nodePartHtml}
@@ -513,7 +524,7 @@ function renderSvControlSection(st, isEdit) {
         <span class="sv-chip sv-chip-cyan">${escapeHtml(typeLabel)}</span>
       </div>
       <div id="svf_brandBlocksContainer" data-type-id="svf_controlType" data-add-id="svf_addBrandBlockBtn"></div>
-      <button type="button" class="btn btn-secondary btn-sm" id="svf_addBrandBlockBtn" style="margin-top:8px">
+      <button type="button" class="btn btn-accent btn-sm" id="svf_addBrandBlockBtn" style="margin-top:8px">
         + Добавить бренд
       </button>
     </div>
@@ -620,7 +631,7 @@ function renderSvBrandsTable(measurements, container = $('#svf_brandBlocksContai
 
       // Бренд, уже занятый другой строкой, повторно выбрать нельзя
       const usedElsewhere = new Set(state.filter((_, i) => i !== rowIndex).map(x => x.brand || ''));
-      const brandOptions = (usedElsewhere.has('') ? [] : ['<option value="">Остальные бренды</option>'])
+      const brandOptions = (usedElsewhere.has('') ? [] : [`<option value="">${REST_BRANDS_LABEL}</option>`])
         .concat(brands.filter(b => !usedElsewhere.has(b) || b === block.brand).map(b => {
           const selected = (b === block.brand) ? ' selected' : '';
           return `<option value="${escapeHtml(b)}"${selected}>${escapeHtml(b)}</option>`;
@@ -739,7 +750,7 @@ function bindSvControlEvents(st, container = $('#svf_brandBlocksContainer')) {
       const pointsCount = Math.max(maxPoints, 1);
       const newPoints = [];
       for (let i = 0; i < pointsCount; i++) newPoints.push({ value: '' });
-      // Новая строка — с первым ещё не занятым брендом («Остальные бренды» — тоже один раз)
+      // Новая строка — с первым ещё не занятым брендом («Все бренды» — тоже один раз)
       const used = new Set(state.map(b => b.brand || ''));
       const free = used.has('') ? getBrands().find(b => !used.has(b)) : '';
       if (free === undefined) return showToast('Все бренды уже добавлены', true);

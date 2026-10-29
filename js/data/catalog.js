@@ -24,6 +24,10 @@ function getElectronicParams() {
 function setElectronicParams(v) {
   save(STORAGE_KEYS.electronicParams, v);
 }
+// По одной записи — см. «ЗАПИСЬ ПО ОДНОЙ ЗАПИСИ» в standards.js
+function saveElectronicParams(items) { if (items.length) setElectronicParams(upsertById(getElectronicParams(), items)); }
+function saveElectronicParam(p) { saveElectronicParams([p]); }
+function removeElectronicParam(id) { setElectronicParams(getElectronicParams().filter(x => x.id !== id)); }
 
 /* Генерация ID для нового параметра */
 function makeElectronicParamId() {
@@ -64,7 +68,7 @@ function normalizeElectronicParam(p) {
     normText: typeof p.normText === 'string' ? p.normText : '',
 
     // Точки по брендам — тот же формат, что у механического стандарта.
-    // Старый параметр (valuesByBrand) переводится в точки при чтении; пустой бренд — «Остальные бренды»
+    // Старый параметр (valuesByBrand) переводится в точки при чтении; пустой бренд — «Все бренды»
     measurements: Array.isArray(p.measurements)
       ? normalizeMeasurements(p.measurements)
       : eparamLegacyMeasurements(p.valuesByBrand, migrateControlType(p.controlType, null)),
@@ -288,9 +292,11 @@ function makeCategoryId(name) {
 function setLineMachines(v) { save(STORAGE_KEYS.lineMachines, v); }
 
 /* Машины конкретной линии */
-function getMachinesForLine(line) {
+function getMachinesForLine(line, part) {
   const lm = getLineMachines();
-  return Array.isArray(lm[line]) ? lm[line] : [];
+  const list = Array.isArray(lm[line]) ? lm[line] : [];
+  // С частью линии (SMD): машины этой части и общие — без назначенной части
+  return part ? list.filter(m => [part, ''].includes(getMachinePart(line, m))) : list;
 }
 
 function getBrands() { return load(STORAGE_KEYS.brands, [...DEFAULT_BRANDS]); }

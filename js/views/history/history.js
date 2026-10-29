@@ -16,6 +16,7 @@ const histState = Object.assign({
   period: '7',           // shift | today | 7 | 30 | all | custom
   from: '', to: '',
   line: null,            // null — ещё не выбирали (берём линию Чек-листа CL)
+  ws: '', areaId: '',    // охват шире линии: весь цех / весь участок (линия тогда пустая)
   kinds: ['cl', 'electronic', 'toploss', 'cocl'],
   brigade: '',
   onlyDev: false,
@@ -29,8 +30,8 @@ delete histState.workshop;
 delete histState.machine;
 
 function saveHistFilters() {
-  const { period, from, to, line, kinds, brigade, onlyDev, cal } = histState;
-  try { localStorage.setItem(HIST_FILTERS_KEY, JSON.stringify({ period, from, to, line, kinds, brigade, onlyDev, cal })); }
+  const { period, from, to, line, ws, areaId, kinds, brigade, onlyDev, cal } = histState;
+  try { localStorage.setItem(HIST_FILTERS_KEY, JSON.stringify({ period, from, to, line, ws, areaId, kinds, brigade, onlyDev, cal })); }
   catch (e) { /* хранилище недоступно — фильтры просто не запомнятся */ }
 }
 
@@ -82,13 +83,23 @@ function histSearchMatch(h, q) {
       .some(v => v && String(v).toLowerCase().includes(q)));
 }
 
+/* Линии охвата «весь цех / весь участок»; null — охват не задан */
+function histScopeLines() {
+  if (!histState.ws) return null;
+  return new Set(getAllLinesWithContext()
+    .filter(x => x.workshopId === histState.ws && (!histState.areaId || x.areaId === histState.areaId))
+    .map(x => x.line));
+}
+
 /* Записи по фильтрам (используется и экспортом) */
 function getFilteredHistory() {
   const q = (histState.q || '').trim().toLowerCase();
   const kinds = new Set(histState.kinds || []);
+  const scope = histScopeLines();
   return getHistory()
     .filter(h => kinds.has(histKind(h)))
     .filter(h => !histState.line || h.line === histState.line)
+    .filter(h => !scope || scope.has(h.line))
     .filter(h => (histState.pick && histState.line) || histPeriodMatch(h))
     .filter(h => !histState.brigade || histShift(h).letter === histState.brigade)
     .filter(h => !histState.pick || !histState.line || histPickMatch(h))
@@ -115,7 +126,9 @@ function histShowView(name) {
   });
 }
 
-function renderHistory() {
+/* Отрисовка только читает данные — история и стандарты разбираются из JSON один раз */
+function renderHistory() { withLoadCache(renderHistoryMain); }
+function renderHistoryMain() {
   histShowView('histMainView');
 
   $$('#histViewSeg [data-hist-dev]').forEach(b => b.classList.toggle('on', (b.dataset.histDev === '1') === !!histState.onlyDev));
@@ -123,11 +136,7 @@ function renderHistory() {
   $$('#histKindChips [data-hist-kind]').forEach(b => b.classList.toggle('on', histState.kinds.includes(b.dataset.histKind)));
   $('#histCustomRange')?.classList.toggle('hist-hidden', histState.period !== 'custom');
   $$('#histBrigadeChips [data-hist-brigade]').forEach(b => b.classList.toggle('on', b.dataset.histBrigade === (histState.brigade || '')));
-  const pill = $('#histLinePillCode');
-  if (pill) {
-    const ctx = histState.line ? getBlockForLine(histState.line) : null;
-    pill.textContent = histState.line ? histState.line + (ctx ? ' · ' + ctx.workshop.name : '') : 'Все линии';
-  }
+  renderHistCrumbs();
   $('#histFilterPanel')?.classList.toggle('hist-hidden', !histState.fOpen);
   $('#histFiltersBtn')?.setAttribute('aria-expanded', String(!!histState.fOpen));
 
@@ -137,10 +146,60 @@ function renderHistory() {
   renderHistFeed(list);
 }
 
+/* Где мы: цех › участок › блок › линия. Охват (линия / участок / цех) — в плашке, предки в крошках кликабельны. */
+function histScopeCtx() {
+  if (histState.line) {
+    const c = getBlockForLine(histState.line);
+    return c ? { workshop: c.workshop, area: c.area, block: c.block } : null;
+  }
+  const w = histState.ws ? getWorkshop(histState.ws) : null;
+  if (!w) return null;
+  const area = histState.areaId ? (w.areas || []).find(a => a.id === histState.areaId) : null;
+  return { workshop: w, area: area || null, block: null };
+}
+
+function renderHistCrumbs() {
+  const ctx = histScopeCtx();
+  const pill = $('#histLinePillCode');
+  if (pill) pill.textContent = histState.line || 'Все линии';
+
+  // Цех: переключатель как на Дашборде; участок цеха — списком
+  const wsId = ctx ? ctx.workshop.id : '';
+  const seg = $('#histWsSeg');
+  if (seg) {
+    seg.innerHTML = [{ id: '', name: 'Все' }, ...getWorkshops()].map(w =>
+      `<button type="button" class="${w.id === wsId ? 'on' : ''}" data-hist-scope="${escapeAttr(w.id)}">${escapeHtml(w.name)}</button>`).join('');
+  }
+  const areaSel = $('#histAreaSel');
+  if (areaSel) {
+    const areas = ctx ? (ctx.workshop.areas || []) : [];
+    areaSel.innerHTML = '<option value="">Все участки</option>' +
+      areas.map(a => `<option value="${escapeAttr(a.id)}">${escapeHtml(a.name)}</option>`).join('');
+    areaSel.value = ctx && ctx.area ? ctx.area.id : '';
+    areaSel.hidden = !ctx;
+  }
+
+  const box = $('#histCrumbs');
+  if (!box) return;
+  if (!ctx || !histState.line) { box.innerHTML = ''; return; }
+  const sep = '<span class="editor-crumb-sep">›</span>';
+  const cur = (t) => `<span class="editor-crumb-current">${escapeHtml(t)}</span>`;
+  const btn = (t, attrs) => `<button type="button" class="editor-crumb" ${attrs}>${escapeHtml(t)}</button>`;
+  const parts = [btn(ctx.workshop.name, `data-hist-scope="${escapeAttr(ctx.workshop.id)}"`),
+    btn(ctx.area.name, `data-hist-scope="${escapeAttr(ctx.workshop.id)}" data-hist-scope-area="${escapeAttr(ctx.area.id)}"`)];
+  if (ctx.block) parts.push(cur(ctx.block.name));
+  parts.push(cur(histState.line));
+  box.innerHTML = parts.join(sep);
+}
+
 /* Активные фильтры (кроме периода и поиска — они видны в шапке): [ключ, подпись] */
 function histActiveFilters() {
   const out = [];
   if (histState.line) out.push(['line', 'Линия ' + histState.line]);
+  else {
+    const c = histScopeCtx();
+    if (c) out.push(['line', c.area ? 'Участок ' + c.area.name : 'Цех ' + c.workshop.name]);
+  }
   if (histState.brigade) out.push(['brigade', 'Смена ' + histState.brigade]);
   if (histState.kinds.length < Object.keys(HIST_KINDS).length) out.push(['kinds', histState.kinds.map(k => HIST_KINDS[k].short).join(', ')]);
   return out;
@@ -249,13 +308,22 @@ function renderHistFeed(list) {
     byDay[byDay.length - 1].recs.push(h);
   });
 
-  byDay.forEach(({ date, recs }) => {
+  // Пропущенные смены линии (были в плане, проверок нет) — жёлтой строкой между показанными днями
+  const missed = histMissedShifts(shown.length ? shown[shown.length - 1] : null, shown[0]);
+  missed.forEach((shifts, date) => {
+    let d = byDay.find(x => x.date === date);
+    if (!d) { byDay.push(d = { date, recs: [] }); }
+    d.missed = shifts;
+  });
+  byDay.sort((x, y) => y.date.localeCompare(x.date));
+
+  byDay.forEach(({ date, recs, missed: miss }) => {
     const sum = days[date];
     const dt = histDayTitle(date);
     const full = histDayName(date) + ' ' + fmtShortDate(date);
     html += `<div class="hist-day">
       <b>${escapeHtml(dt)}</b>${dt !== full ? `<span>${escapeHtml(full)}</span>` : ''}
-      <span class="hist-day-sum">${sum.n} ${pluralRu(sum.n, 'проверка', 'проверки', 'проверок')} · ${sum.pts} ${pluralRu(sum.pts, 'пункт', 'пункта', 'пунктов')}${sum.fail ? ` · <b class="hist-c-fail">${sum.fail} откл.</b>` : ' · <b class="hist-c-ok">всё в норме</b>'}</span>    </div><div class="card hist-feed">`;
+      <span class="hist-day-sum">${sum ? `${sum.n} ${pluralRu(sum.n, 'проверка', 'проверки', 'проверок')} · ${sum.pts} ${pluralRu(sum.pts, 'пункт', 'пункта', 'пунктов')}${sum.fail ? ` · <b class="hist-c-fail">${sum.fail} откл.</b>` : ' · <b class="hist-c-ok">всё в норме</b>'}` : '<b class="hist-c-warn">проверок нет</b>'}</span>    </div><div class="card hist-feed">`;
 
     // Смены дня: блок на смену, итог смены — в шапке; смена без отклонений свёрнута
     const shifts = [];
@@ -278,7 +346,21 @@ function renderHistFeed(list) {
       html += open
         ? `<div class="hist-shh hist-shh-${g.shift}">${head}${c.fail ? '<span class="hist-tag hist-tag-mj" title="Отклонения нужно записать в Machine Journal">Machine Journal</span>' : ''}</div>`
           + g.recs.map(histRecHtml).join('')
-        : `<button type="button" class="hist-shh hist-shh-${g.shift}" data-hist-expand="${key}">${head}<span class="hist-fold-act">Показать</span></button>`;
+        : `<button type="button" class="hist-shh hist-shh-${g.shift}" data-hist-expand="${key}">${head}<span class="hist-fold-act">Показать ${c.n} ${pluralRu(c.n, 'проверку', 'проверки', 'проверок')}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></button>`;
+    });
+    (miss || []).forEach(m => {
+      const key = 'miss:' + date + '|' + m.shift;
+      const isOpen = histState.open.includes(key);
+      html += `<button type="button" class="hist-shh hist-shh-missed" data-hist-miss="${key}" aria-expanded="${isOpen}"><b>${m.shift === 'night' ? 'Ночь' : 'День'}${m.letter ? ' · ' + escapeHtml(m.letter) : ''}</b>
+        <small>${m.shift === 'night' ? '21:00–09:00' : '09:00–21:00'}</small>
+        <b class="hist-c-warn">проверка пропущена</b><span>по плану ${m.planned}, не проверено ${m.list.length}</span>
+        <span class="hist-fold-act">${isOpen ? 'Скрыть' : 'Какие стандарты'}</span></button>`;
+      if (isOpen) {
+        html += `<ul class="hist-miss-list">${m.list.map(x => `<li>
+          ${x.isElec ? '<span class="hist-miss-kind">E-Param</span>' : x.row.oplNumber ? `<b>${escapeHtml(x.row.oplNumber)}</b>` : ''}
+          <span>${escapeHtml(x.row.title || x.row.paramName || '—')}</span>
+          <small>${escapeHtml([x.row.machine, x.row.nodePart].filter(Boolean).join(' · '))}${x.k === 'late' ? ' · закрыто позже' : ''}</small></li>`).join('')}</ul>`;
+      }
     });
     html += '</div>';
   });
@@ -288,6 +370,37 @@ function renderHistFeed(list) {
   }
   box.innerHTML = html;
   histMarkPick();
+}
+
+/* Пропущенные смены выбранной линии между датами двух записей: Map дата → [{ shift, letter, planned, done }].
+   Смена пропущена, если по плану были проверки, а записей нет; срок — до конца смены (21:00 / 09:00). */
+function histMissedShifts(oldest, newest) {
+  const out = new Map();
+  if (!histState.line || histState.onlyDev || histState.pick || !oldest || !newest) return out;
+  // До сегодня (или конца выбранного периода): пропуск вчерашней смены — самый частый случай
+  const today = todayISO();
+  let to = histState.to && histState.to < today ? histState.to : today;
+  if (histShift(newest).date > to) to = histShift(newest).date;
+  let from = histShift(oldest).date;
+  const limit = addDaysISO(to, -62);   // не считаем покрытие глубже ~2 месяцев за раз
+  if (from < limit) from = limit;
+  const days = [];
+  for (let d = from; d <= to; d = addDaysISO(d, 1)) days.push(d);
+  const rows = clLineRows(histState.line);
+  const tally = clTallyIndex(histState.line, from, to, rows);
+  histCoverageDays(histState.line, days).forEach(day => {
+    ['day', 'night'].forEach(shift => {
+      const c = day.shifts[shift];
+      if (c.state !== 'missed') return;
+      if (histState.brigade && c.letter !== histState.brigade) return;
+      if (!out.has(day.date)) out.set(day.date, []);
+      // Какие стандарты не проверены в смене (закрытые позже — с пометкой)
+      const list = rows.map(({ row, isElec }) => ({ row, isElec, k: tally.get(`${day.date}|${shift}|${row.id}`) }))
+        .filter(x => x.k === 'missed' || x.k === 'late');
+      out.get(day.date).push({ shift, letter: c.letter, planned: c.planned, done: c.done, list });
+    });
+  });
+  return out;
 }
 
 /* Строка проверки: смена крупно, отклонения — чипами */
@@ -465,8 +578,10 @@ $('#tab-history')?.addEventListener('click', (e) => {
   if (t.closest('#histFiltersBtn')) { histState.fOpen = !histState.fOpen; return renderHistory(); }
   if (t.closest('#histLinePill')) {
     linePickerOnSelect = (line) => histSetLine(line);
-    return openLinePickerModal();
+    return openLinePickerModal(histState.line || '');
   }
+  const scope = t.closest('[data-hist-scope]');
+  if (scope) return histSetScope(scope.dataset.histScope, scope.dataset.histScopeArea);
   const clr = t.closest('[data-hist-clear]');
   if (clr) {
     const k = clr.dataset.histClear;
@@ -479,6 +594,12 @@ $('#tab-history')?.addEventListener('click', (e) => {
     const [date, shift] = histState.pick.split('|');
     return openHistoryShift(histState.line, date, shift);
   }
+  const miss = t.closest('[data-hist-miss]');
+  if (miss) {
+    const k = miss.dataset.histMiss;
+    histState.open = histState.open.includes(k) ? histState.open.filter(x => x !== k) : [...histState.open, k];
+    return renderHistory();
+  }
   const fold = t.closest('[data-hist-expand]');
   if (fold) { histState.open.push(fold.dataset.histExpand); return renderHistory(); }
   const open = t.closest('[data-hist-open]');
@@ -488,11 +609,24 @@ $('#tab-history')?.addEventListener('click', (e) => {
 /* Линия истории ('' — все линии); silent — без перерисовки (её сделает вызывающий) */
 function histSetLine(line, silent) {
   histState.line = line || '';
+  histState.ws = '';
+  histState.areaId = '';
   histState.pick = '';
   histState.week = 0;
   histState.month = 0;
   if (!silent) histFilterChanged();
 }
+/* Охват шире линии: весь цех (ws) или участок цеха (ws + areaId); пустой ws — все линии */
+function histSetScope(ws, areaId) {
+  histSetLine('', true);
+  histState.ws = ws || '';
+  histState.areaId = ws ? (areaId || '') : '';
+  histFilterChanged();
+}
+$('#histAreaSel')?.addEventListener('change', (e) => {
+  const c = histScopeCtx();
+  if (c) histSetScope(c.workshop.id, e.target.value);
+});
 $('#dateFrom')?.addEventListener('change', (e) => { histState.from = e.target.value; histFilterChanged(); });
 $('#dateTo')?.addEventListener('change', (e) => { histState.to = e.target.value; histFilterChanged(); });
 

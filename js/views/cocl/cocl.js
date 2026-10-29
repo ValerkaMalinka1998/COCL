@@ -162,6 +162,8 @@ function fillLinesForOperator() {
 function setCoclLine(line) {
   const sel = $('#lineSelect');
   if (!sel) return;
+  // Итог прошлой проверки не должен оставаться на экране другой линии
+  if ($('#coclSummaryView')?.style.display === 'block') resetCheckForm();
   sel.value = line;
 
   const codeEl = $('#coclLinePillCode');
@@ -182,22 +184,12 @@ function clearCoclLine() {
   if (ctxEl) { ctxEl.style.display = 'none'; ctxEl.innerHTML = ''; }
 }
 
-/* Текущий пользователь (автовход). Пока автовхода нет — пусто, а вызывающий
-   код пишет «—». Когда появится SSO, он положит ФИО в 'cl_current_user'. */
-function getCurrentUser() {
-  try {
-    const v = localStorage.getItem('cl_current_user');
-    if (v && String(v).trim()) return String(v).trim();
-  } catch (e) {}
-  return '';
-}
-
 /* Кнопка-чип линии → модалка выбора линии */
 $('#coclLinePill')?.addEventListener('click', () => {
   linePickerOnSelect = (line) => {
     setCoclLine(line);
   };
-  openLinePickerModal();
+  openLinePickerModal($('#lineSelect')?.value || '');
 });
 
 /* Состояние вкладки: идёт ли проверка (до «Начать» — только список) */
@@ -411,7 +403,9 @@ function updateCoclStepStates() {
   });
 
   // На кнопках части: с текущим типом (если не выбран — все типы)
-  const partCount = {};
+  // Число на кнопке — с учётом брендов и триггеров; «есть ли стандарты у части» (partHas) —
+  // без них, иначе выбранные бренды без отличий блокируют обе части и выбор не вернуть
+  const partCount = {}, partHas = {};
   $$('[data-count-part]').forEach(el => {
     const p = el.dataset.countPart;
     const types = type ? [type] : ['ChangeOver', 'CL_TO', 'CL_Conversion'];
@@ -420,18 +414,20 @@ function updateCoclStepStates() {
     el.textContent = fmt(ids.size);
     el.classList.toggle('is-zero', line && ids.size === 0);
     partCount[p] = ids.size;
+    partHas[p] = types.reduce((s, tp) => s + getCoclRelevant({ line, type: tp, part: p, loose: true }).length, 0);
   });
 
-  // Пустую часть не выбрать; если стандарты есть только у одной части — выбираем её сами
+  // Часть без стандартов вообще не выбрать; если стандарты есть только у одной части — выбираем её сами
   const locked = coclState.checking;
-  $$('#coclPartSeg [data-part]').forEach(b => { b.disabled = !!(line && type && partCount[b.dataset.part] === 0); });
+  $$('#coclPartSeg [data-part]').forEach(b => { b.disabled = !!(line && type && partHas[b.dataset.part] === 0); });
   if (needsPart && type && !locked) {
-    const withStd = ['Maker', 'Packer'].filter(p => partCount[p] > 0);
+    const withStd = ['Maker', 'Packer'].filter(p => partHas[p] > 0);
+    // Стандартов нет ни у одной части — выбранную раньше часть сбрасываем
     const target = withStd.length === 1 && part !== withStd[0] ? withStd[0]
-      : (part && partCount[part] === 0 && withStd.length ? withStd[0] : '');
+      : (part && partHas[part] === 0 ? (withStd[0] || '__reset') : '');
     if (target) {
       const sel = $('#partSelect');
-      sel.value = target;
+      sel.value = target === '__reset' ? '' : target;
       sel.dispatchEvent(new Event('change'));
       return true;
     }
@@ -512,7 +508,7 @@ function getSelectedTriggers() {
 
 /**
  * Эффективный блок точек для бренда:
- * сначала блок конкретного бренда, иначе блок «Остальные бренды» (brand === '').
+ * сначала блок конкретного бренда, иначе блок «Все бренды» (brand === '').
  */
 function getEffectiveBrandBlock(blocks, brand) {
   if (!Array.isArray(blocks) || !blocks.length) return null;
@@ -538,6 +534,16 @@ function brandBlocksDiffer(blockA, blockB) {
   return pa.some((v, i) => v !== pb[i]);
 }
 
+/* Электронные параметры линии в виде строк проверки (как стандарты): title = название параметра */
+function coclElecItems(line) {
+  return getElectronicParams().map(normalizeElectronicParam).filter(p => !line || p.line === line)
+    .map(p => ({ ...p, title: p.paramName, oplNumber: '', node: '', isElec: true }));
+}
+/* Стандарт или E-Param по id — для списка и сохранения проверки */
+function coclFindItem(id) {
+  return getStandards().find(s => s.id === id) || coclElecItems().find(p => p.id === id) || null;
+}
+
 /** Триггеры стандарта: без триггеров — показывается; с триггерами — при совпадении */
 function standardMatchesTriggers(st, selectedTriggers) {
   if (!st.triggers || !st.triggers.length) return true;
@@ -553,7 +559,7 @@ function getCoclRelevant({ type, line, part, brandFrom, brandTo, triggers, loose
   const coBrands = type === 'ChangeOver' && brandTo;
   if (type === 'ChangeOver' && !brandTo && !loose) return [];
 
-  return getStandards().filter(st => {
+  return [...getStandards(), ...coclElecItems(line)].filter(st => {
     if (st.active === false) return false;
     if (!st.appliesTo || !st.appliesTo.includes(type)) return false;
     if (st.line !== line) return false;
@@ -592,6 +598,16 @@ function updateChecklist() {
   const btn = $('#buildChecklistBtn');
   const c = $('#checklistContainer');
   const needsPart = (line ? getWorkshopIdForLine(line) : null) === 'smd';
+
+  // На линии нет стандартов этого типа ни у одной части — выбирать часть незачем
+  if (line && type && needsPart && !part &&
+      ['Maker', 'Packer'].every(p => !getCoclRelevant({ type, line, part: p, loose: true }).length)) {
+    if (info) info.textContent = '';
+    if (btn) btn.disabled = true;
+    c.innerHTML = '<div class="cocl-empty cocl-empty-ok">На линии нет стандартов под этот тип проверки.</div>';
+    updateProgress();
+    return;
+  }
 
   // Чего не хватает для списка
   let waiting = '';
@@ -690,7 +706,7 @@ function renderChecklist(items) {
 
     const meta = [st.oplNumber, st.node, block && block.brand ? 'бренд ' + block.brand : ''].filter(Boolean)
       .map(escapeHtml).join(' · ');
-    const eyeAttrs = `data-view-btn data-std-id="${escapeAttr(st.id)}"`;
+    const eyeAttrs = st.isElec ? 'hidden' : `data-view-btn data-std-id="${escapeAttr(st.id)}"`;
 
     // До начала проверки — строка списка с нормой
     if (!checking) {
@@ -990,6 +1006,14 @@ function updateProgress() {
 /** Начать проверку: условия фиксируются, список становится чек-листом */
 function buildChecklistView() {
   if ($('#buildChecklistBtn')?.disabled) return;
+  // Допуск: до начала проверки стандарты можно смотреть глазиком, проверять — после ознакомления
+  const relevant = getCoclRelevant({
+    type: $('#transitionType').value, line: $('#lineSelect').value, part: $('#partSelect').value,
+    brandFrom: $('#brandFrom').value, brandTo: $('#brandTo').value, triggers: getSelectedTriggers()
+  });
+  stdAckGate(relevant.map(st => ({ kind: st.isElec ? 'elec' : 'mech', row: st })), startCoclCheck);
+}
+function startCoclCheck() {
   coclState.checking = true;
   setCoclCheckingUi(true);
   updateChecklistForCheck();

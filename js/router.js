@@ -16,6 +16,11 @@ function pageHasUnsaved(tabId) {
   if (tabId === 'eparam-edit') {
     return typeof epPageState !== 'undefined' && !!epPageState.data && epPageState.dirty === true;
   }
+  if (tabId === 'schedule') return typeof schState !== 'undefined' && schState.dirty === true;
+  // Чек-лист CL: отметки проверки, ещё не сохранённые кнопкой «Закончить проверку»
+  if (tabId === 'electronic') {
+    return typeof clState !== 'undefined' && !!clState.checkMode && Object.keys(clState.quickDraft || {}).length > 0;
+  }
   return false;
 }
 
@@ -24,9 +29,19 @@ function confirmLeavePage(nextTab) {
   const cur = document.querySelector('.tab.active');
   const curId = cur ? cur.id.replace('tab-', '') : '';
   if (!curId || curId === nextTab || !pageHasUnsaved(curId)) return true;
-  const what = curId === 'standard-view' ? 'Новый стандарт не будет создан.' : 'Изменения не будут сохранены.';
+  const what = curId === 'standard-view' ? 'Новый стандарт не будет создан.'
+    : curId === 'electronic' ? 'Отметки проверки не сохранятся.' : 'Изменения не будут сохранены.';
   if (!confirm('Выйти без сохранения? ' + what)) return false;
-  if (curId === 'standard-view') {
+  if (curId === 'schedule') {
+    schState.dirty = false;
+    schState.draft = {};
+    schState.removedFromSchedule = new Set();
+    schState.addedToSchedule = new Set();
+  } else if (curId === 'electronic') {
+    clState.checkMode = false;
+    clState.quickDraft = {};
+    if (typeof updateClCheckButtons === 'function') updateClCheckButtons();
+  } else if (curId === 'standard-view') {
     svFullState.standardId = null;
     svFullState.isNew = false;
     svFullState.mode = 'view';
@@ -42,7 +57,7 @@ function confirmLeavePage(nextTab) {
 }
 
 window.addEventListener('beforeunload', (e) => {
-  if (pageHasUnsaved('standard-view') || pageHasUnsaved('eparam-edit')) {
+  if (['standard-view', 'eparam-edit', 'schedule', 'electronic'].some(pageHasUnsaved)) {
     e.preventDefault();
     e.returnValue = '';
   }
@@ -56,6 +71,12 @@ function switchTab(tabName, pushHistory = true) {
     const cur = document.querySelector('.tab.active');
     if (!pushHistory && cur) history.pushState({ tab: cur.id.replace('tab-', '') }, '', '#' + cur.id.replace('tab-', ''));
     return;
+  }
+
+  // Роль: оператору Расписание CL и Настройки недоступны
+  if (typeof canOpenTab === 'function' && !canOpenTab(tabName)) {
+    showToast('Раздел доступен аналитику', true);
+    tabName = 'electronic';
   }
 
   // Проверяем, что вкладка существует
@@ -99,6 +120,7 @@ function switchTab(tabName, pushHistory = true) {
   }
   // Специальная логика для вкладок
 if (tabName === 'editor') {
+  if (typeof renderEditorProposals === 'function') renderEditorProposals();
   // Восстановить режим (мех или элек)
   const savedMode = localStorage.getItem('cl_editor_mode') || 'mech';
   if (typeof switchEditorModeInline === 'function') {

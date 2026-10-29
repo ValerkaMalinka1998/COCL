@@ -336,9 +336,7 @@ function saveChangeLogModal() {
 
   if (clogState.mode === 'new') {
     const line = localStorage.getItem('cl_editor_line') || '';
-    const all = getChangeLog();
-    all.push({ id: uid(), line, part: patch.part || '', author: '—', auto: false, ...patch });
-    setChangeLog(all);
+    appendChangeLog({ id: uid(), line, part: patch.part || '', author: '—', auto: false, ...patch });
     showToast('Запись добавлена');
   } else {
     const old = getChangeLog().find(x => x.id === clogState.editId);

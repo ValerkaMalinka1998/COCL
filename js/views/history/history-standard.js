@@ -9,7 +9,7 @@
 
 const histStd = { id: null, line: '', from: 'history', pager: { page: 1, size: 20 } };
 
-/* Пропуски по расписанию — за столько дней; меньше HIST_STD_FEW проверок — «мало проверок» */
+/* Пропуски по расписанию — за столько дней; меньше HIST_STD_FEW проверок — не красим красным */
 const HIST_STD_MISS_DAYS = 30;
 const HIST_STD_FEW = 5;
 
@@ -90,7 +90,7 @@ function histStdWhereHtml(checked) {
       return `<div class="hist-std-wr">
       <span>${escapeHtml(label(x.k))}</span>
       <span class="hist-std-wb"><i style="width:${Math.round(x.n / x.total * 100)}%"></i></span>
-      <span class="${x.n && !few ? 'hist-std-wbad' : 'hist-std-wdim'}">${x.n} из ${x.total}${few ? ' · мало проверок' : ''}</span>
+      <span class="${x.n && !few ? 'hist-std-wbad' : 'hist-std-wdim'}">${x.n} из ${x.total}</span>
     </div>`;
     }).join('')}
   </div>`;

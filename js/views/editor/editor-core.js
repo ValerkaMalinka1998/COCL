@@ -347,8 +347,8 @@ $('#linePickerSearch')?.addEventListener('input', (e) => {
 });
 
 /* Чип линии — открывает модалку */
-$('#emLinePill')?.addEventListener('click', openLinePickerModal);
-$('#eeLinePill')?.addEventListener('click', openLinePickerModal);
+$('#emLinePill')?.addEventListener('click', () => openLinePickerModal(currentEditorLine || ''));
+$('#eeLinePill')?.addEventListener('click', () => openLinePickerModal(currentEditorLine || ''));
 
 /* Переключатель режима внутри панели */
 $('#emModeSwitch')?.addEventListener('click', (e) => {
@@ -400,7 +400,7 @@ bindPartSwitchHandlers('elPartCounters', 'el');
 document.addEventListener('click', (e) => {
   const crumb = e.target.closest('.editor-crumb[data-crumb="open-picker"]');
   if (crumb) {
-    openLinePickerModal();
+    openLinePickerModal(currentEditorLine || '');
   }
 });
 
@@ -496,7 +496,7 @@ function renderEditorPagination(kind, total, totalPages, startIdx, endIdx) {
    ============================================================ */
 
 /* Фильтры мех-таблицы */
-['emFilterNode', 'emFilterType', 'emFilterSchedule', 'emFilterActive', 'emFilterValidation'
+['emFilterMachine', 'emFilterNode', 'emFilterType', 'emFilterSchedule', 'emFilterActive', 'emFilterValidation'
 ].forEach(id => {
   document.getElementById(id)?.addEventListener('change', () => {
     editorTableState.mechPage = 1;
@@ -512,7 +512,7 @@ $('#emFilterSearch')?.addEventListener('input', () => {
 $('#emFilterResetBtn')?.addEventListener('click', resetMechFilters);
 
 /* Фильтры электронной таблицы */
-['eeFilterControlType', 'eeFilterType', 'eeFilterSchedule', 'eeFilterActive', 'eeFilterValidation'
+['eeFilterMachine', 'eeFilterControlType', 'eeFilterType', 'eeFilterSchedule', 'eeFilterActive', 'eeFilterValidation'
 ].forEach(id => {
   document.getElementById(id)?.addEventListener('change', () => {
     editorTableState.elecPage = 1;
@@ -586,9 +586,9 @@ function fillEditorFilters() {
   const mech = line ? getStandards().filter(s => s.line === line) : [];
   const elec = line ? getElectronicParamsForLine(line) : [];
 
-  /* --- Машины линии — чипы с количеством --- */
-  renderEditorMachineChips('em', mech);
-  renderEditorMachineChips('ee', elec);
+  /* --- Машины линии — список с количеством --- */
+  fillEditorMachineSelect('em', mech);
+  fillEditorMachineSelect('ee', elec);
 
   /* --- Узел — из стандартов линии --- */
   const sel = document.getElementById('emFilterNode');
@@ -601,43 +601,20 @@ function fillEditorFilters() {
   }
 }
 
-/* Чипы машин линии над таблицей; выбранная машина хранится в скрытом поле */
-function renderEditorMachineChips(prefix, rows) {
-  const box = document.getElementById(`${prefix}MachineChips`);
-  const input = document.getElementById(`${prefix}FilterMachine`);
-  if (!box || !input) return;
+/* Список машин линии в фильтрах таблицы (как остальные фильтры) */
+function fillEditorMachineSelect(prefix, rows) {
+  const sel = document.getElementById(`${prefix}FilterMachine`);
+  if (!sel) return;
   const counts = {};
   rows.forEach(r => { if (r.machine) counts[r.machine] = (counts[r.machine] || 0) + 1; });
   // Машины без стандартов не показываем: фильтр по ним всегда пуст
   const machines = Object.keys(counts).sort((a, b) => a.localeCompare(b, 'ru', { numeric: true }));
-  if (input.value && !machines.includes(input.value)) input.value = '';
-  if (machines.length < 2) {
-    box.innerHTML = '';
-    return;
-  }
-  box.innerHTML = '<span class="et-flabel">Машина</span>' + machines.map(m => `
-    <button type="button" class="et-fchip ${input.value === m ? 'on' : ''}" data-machine="${escapeAttr(m)}">
-      ${escapeHtml(m)}<span class="et-fchip-n">${counts[m]}</span>
-    </button>`).join('');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Машина: все</option>' +
+    machines.map(m => `<option value="${escapeAttr(m)}">${escapeHtml(m)} (${counts[m]})</option>`).join('');
+  sel.value = machines.includes(cur) ? cur : '';
+  sel.hidden = machines.length < 2;
 }
-
-/* Клик по чипу машины — выбрать / снять */
-['em', 'ee'].forEach(prefix => {
-  document.getElementById(`${prefix}MachineChips`)?.addEventListener('click', (e) => {
-    const chip = e.target.closest('[data-machine]');
-    if (!chip) return;
-    const input = document.getElementById(`${prefix}FilterMachine`);
-    input.value = input.value === chip.dataset.machine ? '' : chip.dataset.machine;
-    fillEditorFilters();
-    if (prefix === 'em') {
-      editorTableState.mechPage = 1;
-      refreshEditorMechTable();
-    } else {
-      editorTableState.elecPage = 1;
-      refreshEditorElecTable();
-    }
-  });
-});
 
 /* Меню «Excel»: импорт, шаблон, экспорт */
 document.addEventListener('click', (e) => {
@@ -654,30 +631,73 @@ document.addEventListener('click', (e) => {
    ============================================================ */
 
 function copyStandardNew(id) {
-  const all = getStandards();
-  const st = all.find(s => s.id === id);
+  const st = getStandards().find(s => s.id === id);
   if (!st) return;
+  // Своё окно (не «Выбор линии»): только линии того же цеха — SMD-стандарт в PMD/FMD не нужен
+  const ws = getWorkshopIdForLine(st.line);
+  const groups = new Map();
+  getAllLinesWithContext().filter(x => x.workshopId === ws).forEach(x => {
+    const g = x.blockName ? `${x.areaName} · ${x.blockName}` : x.areaName;
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g).push(x.line);
+  });
+  if (!groups.size) groups.set('Линия вне структуры цехов', [st.line]);
+  $('#copyStdSrc').innerHTML = `<b>${escapeHtml(st.oplNumber || '')}</b> ${escapeHtml(st.title || '—')}
+    <span>${escapeHtml([st.line, st.machine, st.nodePart].filter(Boolean).join(' · '))}</span>`;
+  $('#copyStdLines').innerHTML = [...groups.entries()].map(([g, lines]) => `
+    <div class="copy-std-group"><div class="copy-std-group-name">${escapeHtml(g)}</div>
+      <div class="copy-std-chips">${lines.map(l => `<button type="button" class="copy-std-line${l === st.line ? ' is-cur' : ''}"
+        data-copy-to="${escapeAttr(l)}">${escapeHtml(l)}${l === st.line ? ' <small>эта линия</small>' : ''}</button>`).join('')}</div></div>`).join('');
+  copyStdSource = st;
+  openModal('#copyStdModal');
+}
+let copyStdSource = null;
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#copyStdModalClose')) { closeModal('#copyStdModal'); return; }
+  const b = e.target.closest('[data-copy-to]');
+  if (!b || !copyStdSource) return;
+  closeModal('#copyStdModal');
+  openStandardCopyPage(copyStdSource, b.dataset.copyTo);
+  copyStdSource = null;
+});
 
-  const copy = JSON.parse(JSON.stringify(st));
+function openStandardCopyPage(src, line) {
+  const same = line === src.line;
+  const copy = JSON.parse(JSON.stringify(src));
+  const now = new Date().toISOString();
   copy.id = uid();
-  copy.oplNumber = (st.oplNumber || '') + '-copy';
+  copy.line = line;
   copy.number = '';
-  // Копия — новый стандарт: в расписание его добавляют отдельно
+  copy.active = true;
+  copy.deactivationComment = '';
+  copy.deactivationHistory = [];
+  // На той же линии и машине OPL № должен отличаться; на другой линии номер остаётся
+  if (same) copy.oplNumber = (src.oplNumber || '') + '-copy';
+  if (!getMachinesForLine(line).includes(copy.machine)) copy.machine = '';
+  if (getWorkshopIdForLine(line) !== 'smd') copy.nodePart = '';
+  if (!same) {
+    copy.photos = [];   // фото лежат в photos/<линия>/<часть>/ — у другой линии их нет
+    if (getWorkshopIdForLine(line) !== getWorkshopIdForLine(src.line)) copy.topLosses = [];
+  }
+  // Копия — новый стандарт: в расписание его добавляют отдельно, валидацию ставим заново
   copy.inSchedule = false;
-  copy.validation = null;   // копия — новый стандарт, валидацию ставим заново
+  copy.validation = null;
   copy.frequency = { type: 'weekly', schedule: [], shifts: ['day', 'night'], daysOfWeek: [], dates: [], timeWindows: [] };
-  copy.createdAt = new Date().toISOString();
-  copy.updatedAt = new Date().toISOString();
+  copy.createdAt = now;
+  copy.updatedAt = now;
 
-  all.push(copy);
-  setStandards(all);
-  addChangeLogEntry('mech', copy, 'added', `Новый стандарт (копия ${st.oplNumber || st.title})`);
+  svFullState.standardId = copy.id;
+  svFullState.isNew = true;
+  svFullState.mode = 'edit';
+  svFullState.originalData = JSON.parse(JSON.stringify(copy));
+  svFullState.editingData = copy;
 
-  refreshEditorMechTable();
-  if (typeof updatePartCounters === 'function') updatePartCounters();
-
-  showToast('Стандарт скопирован');
-  openStandardFullView(copy.id, 'edit');
+  switchTab('standard-view');
+  switchSvFullTab('main');
+  renderStandardFullView();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  showToast(same ? 'Копия открыта — стандарт появится после «Сохранить»'
+    : `Копия для линии ${line} открыта — фото не копируются, добавьте их на странице`);
 }
 
 /* ============================================================
@@ -689,7 +709,7 @@ function deleteStandardNew(id) {
   if (!st) return;
   if (!confirm(`Удалить стандарт "${st.oplNumber || st.title}"?`)) return;
 
-  setStandards(getStandards().filter(s => s.id !== id));
+  removeStandard(id);
   const logId = addChangeLogEntry('mech', st, 'removed', 'Стандарт удалён');
 
   refreshEditorMechTable();
