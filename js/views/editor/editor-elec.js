@@ -134,7 +134,7 @@ function refreshEditorElecTable() {
       const p = getElectronicParams().find(x => x.id === id);
       if (!p) return;
       if (!confirm(`Удалить параметр "${p.paramName}"?`)) return;
-      setElectronicParams(getElectronicParams().filter(x => x.id !== id));
+      removeElectronicParam(id);
       const logId = addChangeLogEntry('elec', p, 'removed', 'Параметр удалён');
       editorTableState.elecSelected.delete(id);
       fillEditorFilters();
@@ -383,6 +383,7 @@ async function parseElectronicParamsExcel(file, targetLine) {
   const result = { added: 0, skipped: 0, duplicates: [], empty: 0, errors: [], addedMachines: [], pointsImported: 0, noun: 'параметров', pointsNoun: 'норм по брендам' };
   const isOld = xlCellText(ws.getRow(1), 1) === 'Параметр';
   const all = getElectronicParams();
+  const added = [];
   const known = new Set(all.filter(p => p.line === targetLine).map(p => `${(p.paramName || '').toLowerCase()}|${p.machine || ''}`));
   const lineMachines = getLineMachines();
   if (!Array.isArray(lineMachines[targetLine])) lineMachines[targetLine] = [];
@@ -484,12 +485,12 @@ async function parseElectronicParamsExcel(file, targetLine) {
       lineMachines[targetLine].push(p.machine);
       result.addedMachines.push(p.machine);
     }
-    all.push(p);
+    added.push(p);
     addChangeLogEntry('elec', p, 'added', 'Новый параметр (импорт из Excel)');
     result.added++;
   });
 
-  if (result.added) setElectronicParams(all);
+  saveElectronicParams(added);
   if (result.addedMachines.length) setLineMachines(lineMachines);
   return result;
 }

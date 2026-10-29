@@ -631,8 +631,7 @@ document.addEventListener('click', (e) => {
    ============================================================ */
 
 function copyStandardNew(id) {
-  const all = getStandards();
-  const st = all.find(s => s.id === id);
+  const st = getStandards().find(s => s.id === id);
   if (!st) return;
 
   const copy = JSON.parse(JSON.stringify(st));
@@ -646,8 +645,7 @@ function copyStandardNew(id) {
   copy.createdAt = new Date().toISOString();
   copy.updatedAt = new Date().toISOString();
 
-  all.push(copy);
-  setStandards(all);
+  saveStandard(copy);
   addChangeLogEntry('mech', copy, 'added', `Новый стандарт (копия ${st.oplNumber || st.title})`);
 
   refreshEditorMechTable();
@@ -666,7 +664,7 @@ function deleteStandardNew(id) {
   if (!st) return;
   if (!confirm(`Удалить стандарт "${st.oplNumber || st.title}"?`)) return;
 
-  setStandards(getStandards().filter(s => s.id !== id));
+  removeStandard(id);
   const logId = addChangeLogEntry('mech', st, 'removed', 'Стандарт удалён');
 
   refreshEditorMechTable();

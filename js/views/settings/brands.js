@@ -125,17 +125,21 @@ function renameBrand(oldName, newName) {
   setBrandWorkshops(map);
 
   let changed = 0;
-  const stds = getStandards();
-  stds.forEach(s => (s.measurements || []).forEach(m => {
-    if (m.brand === oldName) { m.brand = newName; changed++; }
-  }));
-  if (changed) setStandards(stds);
-  const eps = getElectronicParams();
+  const stds = getStandards().filter(s => {
+    let hit = false;
+    (s.measurements || []).forEach(m => { if (m.brand === oldName) { m.brand = newName; changed++; hit = true; } });
+    return hit;
+  });
+  saveStandards(stds);
   let changedEp = 0;
-  eps.forEach(p => [...(p.valuesByBrand || []), ...(p.measurements || [])].forEach(v => {
-    if (v.brand === oldName) { v.brand = newName; changedEp++; }
-  }));
-  if (changedEp) setElectronicParams(eps);
+  const eps = getElectronicParams().filter(p => {
+    let hit = false;
+    [...(p.valuesByBrand || []), ...(p.measurements || [])].forEach(v => {
+      if (v.brand === oldName) { v.brand = newName; changedEp++; hit = true; }
+    });
+    return hit;
+  });
+  saveElectronicParams(eps);
 
   renderBrandsSettings();
   if (typeof renderStructureSettings === 'function') renderStructureSettings();

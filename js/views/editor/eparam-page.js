@@ -464,10 +464,7 @@ $('#epPageSaveBtn')?.addEventListener('click', () => {
     updatedAt: now
   };
 
-  const idx = all.findIndex(x => x.id === p.id);
-  if (idx !== -1) all[idx] = obj;
-  else all.push(obj);
-  setElectronicParams(all);
+  saveElectronicParam(obj);
   const logId = logRowChange('elec', existing || null, obj);
 
   const wasNew = epPageState.isNew;

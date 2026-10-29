@@ -854,13 +854,13 @@ function saveScheduleForward(weekOffset) {
   }
 
   const now = new Date().toISOString();
-  all.forEach(r => {
-    if (!states[r.id]) return;
+  const changed = all.filter(r => states[r.id]);
+  changed.forEach(r => {
     setRowTemplateFrom(r, from, states[r.id]);
     r.updatedAt = now;
   });
-  if (isMech) setStandards(all);
-  else setElectronicParams(all);
+  if (isMech) saveStandards(changed);
+  else saveElectronicParams(changed);
 }
 
 /* Сохранение правок для конкретной недели (не текущей) — не трогает

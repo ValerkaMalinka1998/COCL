@@ -384,6 +384,7 @@ async function parseStandardsExcelV3(file, targetLine) {
   const VALID_APPLIES = ['ChangeOver', 'CL_TO', 'CL_Conversion'];
 
   const existing = getStandards();
+  const added = [];
   const existingOplKeys = new Set(
     existing.filter(s => s.line === targetLine)
       .map(s => `${s.line}|${s.machine || ''}|${(s.oplNumber || '').toLowerCase()}`)
@@ -550,12 +551,12 @@ async function parseStandardsExcelV3(file, targetLine) {
       machinesForThisLine.push(std.machine);
       result.addedMachines.push(std.machine);
     }
-    existing.push(std);
+    added.push(std);
     addChangeLogEntry('mech', std, 'added', 'Новый стандарт (импорт из Excel)');
     result.added++;
   });
 
-  if (result.added > 0) setStandards(existing);
+  saveStandards(added);
   if (result.addedMachines.length > 0) {
     setLineMachines(lineMachines);
     if (typeof renderStructureSettings === 'function') renderStructureSettings();
@@ -715,7 +716,6 @@ async function parseOplJournalExcel(files, targetLine, nodePart) {
         lineMachines[targetLine].push(std.machine);
         result.addedMachines.push(std.machine);
       }
-      all.push(std);
       added.push(std);
     }
   }
@@ -724,7 +724,7 @@ async function parseOplJournalExcel(files, targetLine, nodePart) {
   const zipBlob = result.photos > 0 ? await zip.generateAsync({ type: 'blob' }) : null;
   result.added = added.length;
   if (added.length) {
-    setStandards(all);
+    saveStandards(added);
     added.forEach(std => addChangeLogEntry('mech', std, 'added', 'Новый стандарт (импорт бланка OPL)'));
   }
   if (result.addedMachines.length > 0) setLineMachines(lineMachines);

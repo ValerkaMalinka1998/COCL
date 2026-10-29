@@ -27,6 +27,7 @@ const MODULES = [
   'js/data/changelog.js',
   'js/data/line-brand.js',
   'js/data/ack.js',
+  'js/data/shifts.js',
   'js/views/settings/shifts.js',
   'js/io/standards-io.js'
 ];
@@ -434,4 +435,21 @@ test('бланк OPL: значение, время, дата', () => {
   assert.equal(new Date(d('22.05.2026')).getDate(), 22);
   assert.equal(new Date(d(app('new Date(Date.UTC(2026, 4, 22))'))).getDate(), 22, 'полночь UTC из Excel — тот же день');
   assert.equal(d('нет'), null);
+});
+
+/* === ЗАПИСЬ ПО ОДНОЙ ЗАПИСИ === */
+test('saveStandard / removeStandard / addHistoryRecord трогают только свою запись', () => {
+  app("localStorage.removeItem(STORAGE_KEYS.standards); localStorage.removeItem(STORAGE_KEYS.history)");
+  fn('saveStandards')([{ id: 'a', title: 'A' }, { id: 'b', title: 'B' }]);
+  fn('saveStandard')({ id: 'a', title: 'A2' });
+  assert.deepEqual(plain(fn('getStandards')().map(s => [s.id, s.title])), [['a', 'A2'], ['b', 'B']], 'замена на месте, порядок сохранён');
+  fn('removeStandard')('a');
+  assert.deepEqual(plain(fn('getStandards')().map(s => s.id)), ['b']);
+  fn('addHistoryRecord')({ id: 'h1' });
+  fn('addHistoryRecord')({ id: 'h2' });
+  fn('saveHistoryRecords')([{ id: 'h1', x: 1 }]);
+  assert.deepEqual(plain(fn('getHistory')()), [{ id: 'h1', x: 1 }, { id: 'h2' }]);
+  fn('clearHistory')();
+  assert.deepEqual(plain(fn('getHistory')()), []);
+  app("localStorage.removeItem(STORAGE_KEYS.standards); localStorage.removeItem(STORAGE_KEYS.history)");
 });

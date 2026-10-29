@@ -201,14 +201,13 @@ function stRenameMachine(line, oldName, newName) {
   lm[line] = list;
   setLineMachines(lm);
   // Стандарты и параметры линии переходят на новое имя
-  const all = getStandards();
-  let n = 0;
-  all.forEach(s => { if (s.line === line && s.machine === oldName) { s.machine = newName; n++; } });
-  if (n) setStandards(all);
-  const eps = getElectronicParams();
-  let m = 0;
-  eps.forEach(p => { if (p.line === line && p.machine === oldName) { p.machine = newName; m++; } });
-  if (m) setElectronicParams(eps);
+  const stds = getStandards().filter(s => s.line === line && s.machine === oldName);
+  stds.forEach(s => { s.machine = newName; });
+  saveStandards(stds);
+  const eps = getElectronicParams().filter(p => p.line === line && p.machine === oldName);
+  eps.forEach(p => { p.machine = newName; });
+  saveElectronicParams(eps);
+  const n = stds.length, m = eps.length;
   stAfterChange();
   showToast(n + m ? `Машина переименована, обновлено записей: ${n + m}` : 'Машина переименована');
   return true;

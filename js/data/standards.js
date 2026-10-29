@@ -319,6 +319,27 @@ function setStandards(v) { save(STORAGE_KEYS.standards, v); }
 function getHistory() { return load(STORAGE_KEYS.history, []); }
 function setHistory(v) { save(STORAGE_KEYS.history, v); }
 
+/* === ЗАПИСЬ ПО ОДНОЙ ЗАПИСИ ===
+   Вкладки пишут только через эти функции, а не через set*(весь массив):
+   в хабе eIWS каждая станет одним запросом к API (сервер принимает записи по одной). */
+
+// Заменяет записи с теми же id, новые добавляет в конец
+function upsertById(list, items) {
+  items.forEach(it => {
+    const idx = list.findIndex(x => x.id === it.id);
+    if (idx !== -1) list[idx] = it; else list.push(it);
+  });
+  return list;
+}
+
+function saveStandards(items) { if (items.length) setStandards(upsertById(getStandards(), items)); }
+function saveStandard(st) { saveStandards([st]); }
+function removeStandard(id) { setStandards(getStandards().filter(s => s.id !== id)); }
+
+function saveHistoryRecords(items) { if (items.length) setHistory(upsertById(getHistory(), items)); }
+function addHistoryRecord(rec) { saveHistoryRecords([rec]); }
+function clearHistory() { setHistory([]); }
+
 /* ============================================================
    ВАЛИДАЦИЯ НОВОГО СТАНДАРТА / E-PARAM
    validation = { from, until, decidedAt, result }:

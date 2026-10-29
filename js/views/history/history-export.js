@@ -599,7 +599,7 @@ function downloadBlob(blob, filename) {
 
 $('#clearHistoryBtn').addEventListener('click', () => {
   if (!confirm('Удалить всю историю проверок? Это необратимо.')) return;
-  setHistory([]);
+  clearHistory();
   updateNavHistoryCounter();
   renderHistory();
   showToast('История очищена');

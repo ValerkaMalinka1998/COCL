@@ -64,10 +64,14 @@ function addChangeLogEntry(kind, row, action, comment, extra) {
     auto: true,
     ...(extra || {})
   };
+  appendChangeLog(entry);
+  return entry.id;
+}
+
+function appendChangeLog(entry) {
   const all = getChangeLog();
   all.push(entry);
   setChangeLog(all);
-  return entry.id;
 }
 
 function updateChangeLogEntry(id, patch) {

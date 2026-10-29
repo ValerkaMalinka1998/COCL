@@ -565,13 +565,8 @@ $('#svFullSaveBtn')?.addEventListener('click', () => {
     if (!updated.author) updated.author = '—';
   }
 
-  // Сохраняем в массив
-  const idx = all.findIndex(s => s.id === id);
-  const before = idx !== -1 ? JSON.parse(JSON.stringify(all[idx])) : null;
-  if (idx !== -1) all[idx] = updated;
-  else all.push(updated);
-
-  setStandards(all);
+  const before = stOriginal ? JSON.parse(JSON.stringify(stOriginal)) : null;
+  saveStandard(updated);
   // Лист истории изменений: что поменялось → запись + уточнить причину
   const logId = logRowChange('mech', before, updated);
 

@@ -262,9 +262,7 @@ function saveTopLossCheck() {
     topLosses: tlCheck.lossIds.slice(),
     items
   };
-  const hist = getHistory();
-  hist.push(record);
-  setHistory(hist);
+  addHistoryRecord(record);
   updateNavHistoryCounter();
   showToast('Проверка сохранена');
 

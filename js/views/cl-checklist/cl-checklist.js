@@ -773,6 +773,7 @@ function saveClDraftToHistory() {
   });
 
   const hist = getHistory();
+  const touched = [];
   let added = 0;
 
   Object.entries(groups).forEach(([gk, group]) => {
@@ -807,9 +808,10 @@ function saveClDraftToHistory() {
       if (idx !== -1) record.items[idx] = newItem;
       else record.items.push(newItem);
     });
+    if (!touched.includes(record)) touched.push(record);
   });
 
-  setHistory(hist);
+  saveHistoryRecords(touched);
   updateNavHistoryCounter();
 
   if (added > 0) showToast(`Создано записей: ${added}`);

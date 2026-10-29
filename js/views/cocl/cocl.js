@@ -182,16 +182,6 @@ function clearCoclLine() {
   if (ctxEl) { ctxEl.style.display = 'none'; ctxEl.innerHTML = ''; }
 }
 
-/* Текущий пользователь (автовход). Пока автовхода нет — пусто, а вызывающий
-   код пишет «—». Когда появится SSO, он положит ФИО в 'cl_current_user'. */
-function getCurrentUser() {
-  try {
-    const v = localStorage.getItem('cl_current_user');
-    if (v && String(v).trim()) return String(v).trim();
-  } catch (e) {}
-  return '';
-}
-
 /* Кнопка-чип линии → модалка выбора линии */
 $('#coclLinePill')?.addEventListener('click', () => {
   linePickerOnSelect = (line) => {

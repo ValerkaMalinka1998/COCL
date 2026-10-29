@@ -24,6 +24,10 @@ function getElectronicParams() {
 function setElectronicParams(v) {
   save(STORAGE_KEYS.electronicParams, v);
 }
+// По одной записи — см. «ЗАПИСЬ ПО ОДНОЙ ЗАПИСИ» в standards.js
+function saveElectronicParams(items) { if (items.length) setElectronicParams(upsertById(getElectronicParams(), items)); }
+function saveElectronicParam(p) { saveElectronicParams([p]); }
+function removeElectronicParam(id) { setElectronicParams(getElectronicParams().filter(x => x.id !== id)); }
 
 /* Генерация ID для нового параметра */
 function makeElectronicParamId() {

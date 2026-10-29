@@ -183,7 +183,7 @@ document.addEventListener('click', (e) => {
     row.active = false;
   }
   row.updatedAt = new Date().toISOString();
-  if (isElec) setElectronicParams(all); else setStandards(all);
+  if (isElec) saveElectronicParam(row); else saveStandard(row);
 
   // Лист истории изменений: решение по валидации
   let logId = null;
