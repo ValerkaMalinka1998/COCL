@@ -16,6 +16,7 @@ function schTplLineRows() {
 
 function openScheduleTemplates() {
   if (!schState.line) return showToast('Сначала выберите линию', true);
+  if (schLineForeign()) return isSchReadOnly();
   renderScheduleTemplates();
   openModal('#schTplModal');
 }

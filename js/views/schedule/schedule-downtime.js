@@ -10,6 +10,7 @@
 
 function openScheduleDowntimeModal() {
   if (!schState.line) return;
+  if (schLineForeign()) return isSchReadOnly();
   const cur = getCurrentShiftPeriod();
   $('#schDowntimeTitle').textContent = `Простой линии ${schState.line}`;
   $('#schDtFrom').value = cur.date;
@@ -67,6 +68,7 @@ function syncSchDowntimeForm() {
 }
 
 function saveSchDowntime() {
+  if (schLineForeign()) return isSchReadOnly();
   const r = readSchDowntimeForm();
   if (r.error) { showToast(r.error, true); return; }
   const list = getLineDowntimes(schState.line).slice();
@@ -110,6 +112,7 @@ function renderSchDowntimeList() {
 
 /* «Линия запущена»: простой заканчивается сменой перед текущей */
 function endSchDowntime(id) {
+  if (schLineForeign()) return isSchReadOnly();
   const cur = getCurrentShiftPeriod();
   const last = valShiftFromIndex(valShiftIndex(cur.date, cur.shiftType) - 1);
   const list = getLineDowntimes(schState.line).map(d => {
@@ -125,6 +128,7 @@ function endSchDowntime(id) {
 }
 
 function deleteSchDowntime(id) {
+  if (schLineForeign()) return isSchReadOnly();
   const d = getLineDowntimes(schState.line).find(x => x.id === id);
   if (!d || !confirm(`Удалить простой ${dtPeriodText(d)}? Пропуски за эти смены снова будут считаться.`)) return;
   setLineDowntimes(schState.line, getLineDowntimes(schState.line).filter(x => x.id !== id));
