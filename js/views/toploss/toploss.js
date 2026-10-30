@@ -203,7 +203,10 @@ function renderTopLossCategories() {
   const cats = getTopLossesForWorkshop(getWorkshopIdForLine(tlState.line));
   if (!cats.length) {
     side.innerHTML = '';
-    main.innerHTML = `<div class="tl2-empty">Для цеха ${escapeHtml(getWorkshopName(getWorkshopIdForLine(tlState.line)) || '')} потери не заданы. Добавьте их в Настройках → TOP Losses.</div>`;
+    const wsName = getWorkshopName(getWorkshopIdForLine(tlState.line));
+    main.innerHTML = wsName
+      ? `<div class="tl2-empty">Для цеха ${escapeHtml(wsName)} потери не заданы. Добавьте их в Настройках → TOP Losses.</div>`
+      : `<div class="tl2-empty">Линия ${escapeHtml(tlState.line)} не входит ни в один цех — потери для неё не определить. Перенесите линию в структуру: Настройки → Структура.</div>`;
     return;
   }
 

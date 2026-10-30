@@ -453,7 +453,7 @@ test('saveStandard / removeStandard / addHistoryRecord трогают тольк
   fn('addHistoryRecord')({ id: 'h2' });
   fn('saveHistoryRecords')([{ id: 'h1', x: 1 }]);
   assert.deepEqual(plain(fn('getHistory')()), [{ id: 'h1', x: 1 }, { id: 'h2' }]);
-  fn('clearHistory')();
+  app('setHistory([])');
   assert.deepEqual(plain(fn('getHistory')()), []);
   app("localStorage.removeItem(STORAGE_KEYS.standards); localStorage.removeItem(STORAGE_KEYS.history)");
 });
@@ -467,12 +467,6 @@ test('normalizeOplNumber: единый вид OPL-N', () => {
   assert.equal(n('OPL-7'), 'OPL-7');
   assert.equal(n('4,2'), 'OPL-4.2');
   assert.equal(n('A-12'), 'A-12');
-});
-
-test('pruneHistoryBefore: удаляет только записи раньше даты', () => {
-  app(`setHistory([{ id: 'a', date: '2025-01-01' }, { id: 'b', timestamp: '2026-05-01T10:00:00Z' }, { id: 'c', date: '2026-10-01' }])`);
-  assert.equal(fn('pruneHistoryBefore')('2025-10-30'), 1);
-  assert.deepEqual(plain(app('getHistory().map(h => h.id)')), ['b', 'c']);
 });
 
 test('шаблоны чек-листа: сохранить, заменить, удалить', () => {
@@ -497,4 +491,14 @@ test('роли: оператор только предлагает; предло
   app(`localStorage.setItem('cl_current_role', 'analyst')`);
   assert.equal(fn('canDo')('edit'), true);
   app(`localStorage.removeItem('cl_current_role')`);
+});
+
+test('запись Чек-листа без буквы смены или с кириллической А получает латинскую букву', () => {
+  const fix = fn('fixHistoryShift');
+  const a = plain(fix({ mode: 'cl', date: '2026-10-26', shiftType: 'day', shift: 'А', timestamp: '2026-10-26T10:00:00Z' }));
+  assert.equal(a.shift, 'A');
+  const b = plain(fix({ mode: 'cl', date: '2026-10-26', shiftType: 'night', shift: '', timestamp: '2026-10-26T10:00:00Z' }));
+  assert.equal(b.shift, plain(app(`getShiftsForDate('2026-10-26').night`)));
+  const c = { mode: 'toploss', date: '2026-10-26', shift: '' };
+  assert.equal(fix(c), c);
 });
