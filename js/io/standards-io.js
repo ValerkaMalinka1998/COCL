@@ -592,8 +592,15 @@ function oplDate(v) {
   return m ? new Date(+m[3], m[2] - 1, +m[1], 12).toISOString() : null;
 }
 
-/* Лист бланка → стандарт (без проверок); не бланк → null */
-function oplSheetToStandard(ws, line, part) {
+/* Имя бренда из бланка → как в справочнике брендов (регистр, лишние пробелы), иначе — как в бланке */
+function oplBrandName(text) {
+  const s = String(text).replace(/\s+/g, ' ').trim();
+  return getBrands().find(b => String(b).toLowerCase() === s.toLowerCase()) || s;
+}
+
+/* Лист бланка → стандарт (без проверок); не бланк → null.
+   issues — сюда пишутся противоречия бланка (бренд в двух колонках с разными значениями) */
+function oplSheetToStandard(ws, line, part, issues = []) {
   const ends = {};   // главная ячейка объединения → нижняя строка и правая колонка
   (ws.model.merges || []).forEach(m => {
     const [a, b] = m.split(':');
@@ -614,20 +621,32 @@ function oplSheetToStandard(ws, line, part) {
 
   // Точки: номера — под «Точка замера», бренды — строка под «Значение» («Все бренды» = общая норма; старое «Все сорта» понимаем);
   // в старых бланках «Значения» нет — бренды в строке «Точка замера», правее «Градуса»
-  const measurements = [];
+  // Один бренд в двух колонках (дважды «Все бренды») — один блок точек, а не два
+  const blocks = new Map();
   const pt = find('точка замера'), vl = find('значение');
   if (pt) {
+    // Номера точек: «1», «1.», «т.1» — подряд до первой пустой / не номера
+    const ptRows = [];
+    for (let r = pt.bottom + 1; /^(т\.?\s*)?\d+[.)]?$/i.test(xlCellText(ws.getRow(r), pt.col)); r++) ptRows.push(r);
     labels.filter(l => vl ? l.row === vl.bottom + 1 && l.col >= vl.col && l.col <= vl.right
       : l.row === pt.row && l.col > pt.col && l.low !== 'градус').forEach(b => {
-      const points = [];
-      for (let r = pt.bottom + 1; /^\d+$/.test(xlCellText(ws.getRow(r), pt.col)); r++) {
-        const v = oplCleanValue(xlCellText(ws.getRow(r), b.col));
-        if (v) points.push({ value: v });
-      }
-      const rest = isRestBrandLabel(b.low);
-      if (points.length) measurements.push({ brand: rest ? '' : b.text, points });
+      // Пустая ячейка не сдвигает номера: значение точки 2 остаётся у точки 2
+      const vals = ptRows.map(r => oplCleanValue(xlCellText(ws.getRow(r), b.col)));
+      while (vals.length && !vals[vals.length - 1]) vals.pop();
+      if (!vals.length) return;
+      const brand = isRestBrandLabel(b.low) ? '' : oplBrandName(b.text);
+      const prev = blocks.get(brand.toLowerCase());
+      if (!prev) { blocks.set(brand.toLowerCase(), { brand, vals }); return; }
+      vals.forEach((v, i) => {
+        if (!v || v === prev.vals[i]) return;
+        if (!prev.vals[i]) prev.vals[i] = v;
+        else issues.push(`«${brand || 'Все бренды'}» в двух колонках, т.${i + 1}: «${prev.vals[i]}» и «${v}»`);
+      });
     });
   }
+  const measurements = [...blocks.values()].map(b => ({
+    brand: b.brand, points: Array.from(b.vals, v => ({ value: v || '' }))
+  }));
   const kinds = measurements.flatMap(b => b.points)
     .map(p => isNormMark(p.value) ? null : classifyNormValue(p.value)).filter(Boolean);
   const controlType = kinds.includes('variable') ? 'variable' : (kinds.includes('interval') ? 'interval' : 'fixed');
@@ -663,7 +682,7 @@ async function parseOplJournalExcel(files, targetLine, nodePart) {
   const part = lineHasParts(targetLine) ? nodePart : '';
   const all = getStandards();
   const keys = new Set(all.filter(s => s.line === targetLine)
-    .map(s => `${s.machine || ''}|${(s.oplNumber || '').toLowerCase()}`));
+    .map(s => `${(s.machine || '').toLowerCase()}|${(s.oplNumber || '').toLowerCase()}`));
   const lineMachines = getLineMachines();
   if (!Array.isArray(lineMachines[targetLine])) lineMachines[targetLine] = [];
   const result = { added: 0, skipped: 0, duplicates: [], empty: 0, emptyNoun: 'или скрытых листов', errors: [], addedMachines: [], photos: 0 };
@@ -680,21 +699,25 @@ async function parseOplJournalExcel(files, targetLine, nodePart) {
     for (const ws of wb.worksheets) {
       if (ws.state !== 'visible') { result.empty++; continue; }   // скрытые — шаблоны и старые версии бланков
       const where = wb.worksheets.length > 1 ? `${file.name} / ${ws.name}` : file.name;
-      const std = oplSheetToStandard(ws, targetLine, part);
+      const issues = [];
+      const std = oplSheetToStandard(ws, targetLine, part, issues);
       if (!std || !(std.oplNumber || std.machine || std.title)) { result.empty++; continue; }   // не бланк или пустой шаблон
+      // «se» и «SE» — одна машина: берём написание, которое уже есть у линии
+      std.machine = lineMachines[targetLine].find(m => m.toLowerCase() === std.machine.toLowerCase()) || std.machine;
       const miss = [['№ OPL', std.oplNumber], ['машина', std.machine], ['узел', std.node], ['название CL', std.title]]
         .filter(([, v]) => !v).map(([k]) => k);
-      const bad = [];
+      const bad = [...issues];
+      const many = std.measurements.length > 1;
       std.measurements.forEach(b => b.points.forEach((p, i) => {
         const err = normTypeError(std.controlType, p.value);
-        if (err) bad.push(`т.${i + 1}: ${err}`);
+        if (err) bad.push(`${many ? (b.brand || 'Все бренды') + ', ' : ''}т.${i + 1}: ${err}`);
       }));
       if (miss.length || bad.length) {
         result.errors.push({ message: `${where}: ${miss.length ? 'не заполнено — ' + miss.join(', ') : bad.join('; ')}` });
         result.skipped++;
         continue;
       }
-      const key = `${std.machine}|${std.oplNumber.toLowerCase()}`;
+      const key = `${std.machine.toLowerCase()}|${std.oplNumber.toLowerCase()}`;
       if (keys.has(key)) {
         result.duplicates.push({ oplNumber: std.oplNumber, machine: std.machine });
         result.skipped++;

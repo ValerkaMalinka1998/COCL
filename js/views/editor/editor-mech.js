@@ -197,7 +197,7 @@ function refreshEditorMechTable() {
         <td class="et-c-st">${etStatusHtml(isActive)}</td>
         <td class="et-c-act"><div class="et-acts">
           <button type="button" class="et-ib" data-edit="${id}" title="Редактировать" data-need="edit">${ET_ICONS.edit}</button>
-          <button type="button" class="et-ib" data-copy="${id}" title="Копировать" data-need="edit">${ET_ICONS.copy}</button>
+          <button type="button" class="et-ib" data-copy="${id}" title="Копировать на линию своего участка" data-need="copy">${ET_ICONS.copy}</button>
           <button type="button" class="et-ib et-ib-del" data-delete="${id}" title="Удалить" data-need="edit">${ET_ICONS.del}</button>
         </div></td>
       </tr>`;

@@ -29,10 +29,11 @@ function openEparamPage(id, mode) {
     if (!found) return showToast('Параметр не найден', true);
     p = normalizeElectronicParam(found);
     epPageState.isNew = false;
-    epPageState.readOnly = mode === 'view' || !canDo('edit');
+    epPageState.readOnly = mode === 'view' || !canDo('edit', p.line);
   } else {
     const line = localStorage.getItem('cl_editor_line');
     if (!line) return showToast('Сначала выберите линию', true);
+    if (!canDo('edit', line)) return showToast(`Линия ${line} — не вашего участка`, true);
     p = normalizeElectronicParam({ line, controlType: 'variable' });
     p.createdAt = null;
     epPageState.isNew = true;
@@ -110,7 +111,7 @@ function applyEparamMode() {
   const show = (id, on) => { const el = $(id); if (el) el.style.display = on ? '' : 'none'; };
   show('#epPageSaveBtn', !ro);
   show('#epPageCancelBtn', !ro);
-  show('#epPageEditBtn', ro);
+  show('#epPageEditBtn', ro && canDo('edit', epPageState.data?.line));
 }
 
 /* История изменений ЭТОГО параметра — записи листа изменений (cl_change_log_v1).
@@ -444,6 +445,7 @@ $('#epPageSaveBtn')?.addEventListener('click', () => {
     x.machine === machine &&
     (x.paramName || '').toLowerCase() === paramName.toLowerCase());
   if (dup) return showToast(`Параметр «${paramName}» уже есть на машине ${machine}`, true);
+  if (!canDo('edit', p.line)) return showToast(`Линия ${p.line} — не вашего участка: сохранить нельзя`, true);
 
   const now = new Date().toISOString();
   const existing = all.find(x => x.id === p.id);

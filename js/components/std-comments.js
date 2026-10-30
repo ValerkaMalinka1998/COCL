@@ -11,9 +11,12 @@ const STD_COMMENTS_TARGETS = {
   elec: { wrap: '#epCommentsTableWrap', badge: '#epCommentsCount' }
 };
 
-/* Причины замечания: ключ хранится в записи, tone — цвет иконки */
+/* Причины замечания: ключ хранится в записи, tone — цвет иконки.
+   legacy — только для старых записей, в выборе не показывается */
 const STD_COMMENT_REASONS = [
-  { key: 'norm',  label: 'Норма не та',              tone: 'red',
+  { key: 'visual', label: 'Несоответствие визуальному контролю', tone: 'red',
+    icon: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>' },
+  { key: 'norm',  label: 'Норма не та',              tone: 'red', legacy: true,
     icon: '<path d="M3 12h4l3 8 4-16 3 8h4"/>' },
   { key: 'how',   label: 'Непонятно, как проверять', tone: 'amber',
     icon: '<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>' },
@@ -101,7 +104,7 @@ function renderStdComments(kind, row) {
     <div class="stdc-form" data-stdc-kind="${kind}">
       <div class="stdc-q">Что не так со стандартом?</div>
       <div class="stdc-reasons">
-        ${STD_COMMENT_REASONS.map(r => `
+        ${STD_COMMENT_REASONS.filter(r => !r.legacy).map(r => `
           <button type="button" class="stdc-reason-btn tone-${r.tone}" data-stdc-reason="${r.key}">
             ${stdcSvg(r.icon, 22)}<span>${r.label}</span>
           </button>`).join('')}

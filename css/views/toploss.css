@@ -384,7 +384,8 @@
   border: 1px solid var(--border-hi);
   border-radius: var(--r-md);
 }
-.tl2-search:focus-within { border-color: var(--accent-cyan); }
+.tl2-search:focus-within { border-color: var(--accent-cyan); box-shadow: var(--focus-ring); }
+.tl2-search input:focus { box-shadow: none; }
 .tl2-search input { flex: 1; min-width: 0; padding: 8px 0; font-size: 13px; background: transparent; border: 0; outline: none; }
 .tl2-side-scroll { flex: 1; min-height: 0; overflow-y: auto; padding-right: 2px; }
 
@@ -712,7 +713,8 @@
   padding: 10px 14px; border: 1.5px solid var(--border-hi); border-radius: var(--r-md);
   background: var(--bg-input); color: var(--text-dim);
 }
-.tl-pick-search:focus-within { border-color: var(--accent-cyan); }
+.tl-pick-search:focus-within { border-color: var(--accent-cyan); box-shadow: var(--focus-ring); }
+.tl-pick-search input:focus { box-shadow: none; }
 .tl-pick-search input { border: 0; outline: 0; flex: 1; font: inherit; font-size: 14px; background: transparent; color: var(--text-main); padding: 0; }
 .tl-pick-recent { display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 12px; font-size: 12px; color: var(--text-dim); }
 .tl-pick-chip {

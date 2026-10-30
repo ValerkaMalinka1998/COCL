@@ -80,7 +80,9 @@ const REST_BRANDS_LABEL = 'Все бренды';
 
 /* Подпись «всех брендов» в Excel: понимаем и старые файлы («Остальные бренды», «Все сорта») */
 function isRestBrandLabel(text) {
-  return /^(все бренды|остальные бренды|все сорта)$/.test(String(text || '').trim().toLowerCase());
+  // Двойные пробелы, перенос строки и «:» / «*» в конце подписи из Excel — та же подпись
+  const s = String(text || '').toLowerCase().replace(/\s+/g, ' ').trim().replace(/\s*[.:;*]+$/, '');
+  return /^(все бренды|остальные бренды|все сорта)$/.test(s);
 }
 
 function pickBrandValues(list, brand) {

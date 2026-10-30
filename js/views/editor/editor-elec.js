@@ -132,7 +132,7 @@ function refreshEditorElecTable() {
     btn.addEventListener('click', () => {
       const id = btn.dataset.deleteElec;
       const p = getElectronicParams().find(x => x.id === id);
-      if (!p) return;
+      if (!p || !canDo('edit', p.line)) return;
       if (!confirm(`Удалить параметр "${p.paramName}"?`)) return;
       removeElectronicParam(id);
       const logId = addChangeLogEntry('elec', p, 'removed', 'Параметр удалён');

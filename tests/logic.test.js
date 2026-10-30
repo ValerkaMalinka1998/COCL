@@ -169,6 +169,17 @@ test('getWeekDays: неделя Пн–Вс, воскресенье — в св�
   assert.equal(fn('addDaysISO')('2026-12-31', 1), '2027-01-01');
 });
 
+test('архив недель: «2026-W44» ↔ понедельник, год ISO на стыке лет', () => {
+  const v = fn('cilIsoWeekValue'), mon = fn('cilIsoWeekMonday');
+  assert.equal(v('2026-10-28'), '2026-W44');
+  assert.equal(mon('2026-W44'), '2026-10-26');
+  assert.equal(v('2027-01-01'), '2026-W53'); // пятница — ещё 53-я неделя 2026
+  assert.equal(mon('2026-W53'), '2026-12-28');
+  assert.equal(v('2024-12-30'), '2025-W01'); // понедельник — уже 1-я неделя 2025
+  assert.equal(mon('2025-W01'), '2024-12-30');
+  assert.equal(mon(''), '');
+});
+
 test('буквы смен: день и ночь разные, цикл повторяется', () => {
   const s = fn('getShiftsForDate');
   const cfg = plain(fn('getElectronicShiftConfig')());
@@ -439,6 +450,36 @@ test('бланк OPL: значение, время, дата', () => {
   assert.equal(new Date(d('22.05.2026')).getDate(), 22);
   assert.equal(new Date(d(app('new Date(Date.UTC(2026, 4, 22))'))).getDate(), 22, 'полночь UTC из Excel — тот же день');
   assert.equal(d('нет'), null);
+});
+
+test('бланк OPL: бренд в двух колонках — один блок, пустая ячейка не сдвигает точки', () => {
+  const ExcelJS = require('../js/exceljs.min.js');
+  const sheet = (c6) => {
+    const ws = new ExcelJS.Workbook().addWorksheet('2.1');
+    const put = (addr, v) => { ws.getCell(addr).value = v; };
+    put('A1', '№ OPL'); put('A2', 'OPL 1');
+    put('B1', 'Машина'); put('B2', 'SE/Узел передачи');
+    put('C1', 'Название CL'); put('C2', 'Зазор');
+    put('A4', 'Точка замера'); ws.mergeCells('A4:A5');
+    put('B4', 'Значение'); ws.mergeCells('B4:D4');
+    put('B5', 'Все бренды'); put('C5', 'Все  бренды:'); put('D5', 'a');
+    put('A6', 1); put('B6', '5 до 8'); put('C6', c6);
+    put('A7', 2); put('B7', '6 до 9'); put('D7', '7 до 9');
+    put('A8', '3.'); put('B8', '4 до 6');
+    return ws;
+  };
+  const issues = [];
+  const st = fn('oplSheetToStandard')(sheet('5 до 8'), 'SD01', 'Maker', issues);
+  assert.deepEqual(plain(st.measurements), [
+    { brand: '', points: [{ value: '5 до 8' }, { value: '6 до 9' }, { value: '4 до 6' }] },
+    { brand: 'A', points: [{ value: '' }, { value: '7 до 9' }] }
+  ]);
+  assert.equal(st.controlType, 'interval');
+  assert.deepEqual(issues, []);
+  const conflict = [];
+  fn('oplSheetToStandard')(sheet('1 до 2'), 'SD01', 'Maker', conflict);
+  assert.equal(conflict.length, 1);
+  assert.match(conflict[0], /Все бренды.*т\.1/);
 });
 
 /* === ЗАПИСЬ ПО ОДНОЙ ЗАПИСИ === */

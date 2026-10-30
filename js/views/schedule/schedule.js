@@ -99,8 +99,9 @@ function updateSchPanelCount() {
     return Array.isArray(f.schedule) && f.schedule.length > 0;
   }).length;
 
+  // Подпись не пустая: иначе шапка на пустой неделе ниже и навигация прыгает
   if (total === 0) {
-    el.textContent = '';
+    el.textContent = schState.mode === 'mech' ? 'на этой неделе стандартов нет' : 'на этой неделе параметров нет';
     return;
   }
 
@@ -259,15 +260,16 @@ function renderScheduleMatrix() {
 
   // Пусто?
   if (!allRows.length) {
-    if (toolbar) toolbar.style.display = 'none';
-    // Навигация по неделям остаётся и на пустой неделе — иначе не вернуться
+    // Навигация по неделям остаётся и на пустой неделе — иначе не вернуться;
+    // тулбар не прячем, чтобы стрелки не прыгали вверх
     const offE = schState.weekOffset || 0;
     wrap.innerHTML = `
       <div class="cil-toolbar sch-cil-toolbar"><div class="cil-week">
         <button type="button" class="cil-week-btn" id="schWeekPrev" title="Предыдущая неделя">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <div class="cil-week-label"><span class="cil-week-title">Нед. ${cilIsoWeek(getSchWeekStart(offE))} · ${escapeHtml(getWeekLabel(offE))}</span></div>
+        <div class="cil-week-label"><span class="cil-week-title">Нед. ${cilIsoWeek(getSchWeekStart(offE))} · ${escapeHtml(getWeekLabel(offE))}</span>
+          <span class="cil-week-sub">${offE === 0 ? 'Эта неделя' : offE === 1 ? 'Следующая неделя' : offE < 0 ? 'Прошедшая неделя' : 'Неделя через ' + offE}</span></div>
         <button type="button" class="cil-week-btn" id="schWeekNext" title="Следующая неделя">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>

@@ -182,6 +182,8 @@ function selectLine(line) {
 
 function updateEditorLineContext() {
   const line = localStorage.getItem('cl_editor_line') || '';
+  // Линия чужого участка: аналитику — только просмотр и копирование к себе (CSS прячет [data-need="edit"])
+  $('#tab-editor')?.toggleAttribute('data-line-ro', !!line && getCurrentRole() === 'analyst' && !canDo('edit', line));
 
   ['em', 'ee', 'el'].forEach(prefix => {
     const codeEl = $(`#${prefix}LinePillCode`);
@@ -547,7 +549,7 @@ $('#editorElecUploadInput')?.addEventListener('change', async (e) => {
   e.target.value = '';
   if (!file) return;
   const line = localStorage.getItem('cl_editor_line');
-  if (!line) return;
+  if (!line || !canDo('edit', line)) return;
   try {
     const result = await parseElectronicParamsExcel(file, line);
     showImportReport(result, 'editorElecTableWrap');
@@ -633,15 +635,17 @@ document.addEventListener('click', (e) => {
 function copyStandardNew(id) {
   const st = getStandards().find(s => s.id === id);
   if (!st) return;
-  // Своё окно (не «Выбор линии»): только линии того же цеха — SMD-стандарт в PMD/FMD не нужен
+  // Своё окно (не «Выбор линии»): только линии того же цеха — SMD-стандарт в PMD/FMD не нужен.
+  // Источник — любой участок (репликация), куда — только линии, которые пользователь может менять
   const ws = getWorkshopIdForLine(st.line);
   const groups = new Map();
-  getAllLinesWithContext().filter(x => x.workshopId === ws).forEach(x => {
+  getAllLinesWithContext().filter(x => x.workshopId === ws && canDo('edit', x.line)).forEach(x => {
     const g = x.blockName ? `${x.areaName} · ${x.blockName}` : x.areaName;
     if (!groups.has(g)) groups.set(g, []);
     groups.get(g).push(x.line);
   });
-  if (!groups.size) groups.set('Линия вне структуры цехов', [st.line]);
+  if (!groups.size && !ws && canDo('edit', st.line)) groups.set('Линия вне структуры цехов', [st.line]);
+  if (!groups.size) return showToast('В этом цехе нет линий вашего участка — копировать некуда', true);
   $('#copyStdSrc').innerHTML = `<b>${escapeHtml(st.oplNumber || '')}</b> ${escapeHtml(st.title || '—')}
     <span>${escapeHtml([st.line, st.machine, st.nodePart].filter(Boolean).join(' · '))}</span>`;
   $('#copyStdLines').innerHTML = [...groups.entries()].map(([g, lines]) => `
@@ -706,7 +710,7 @@ function openStandardCopyPage(src, line) {
 
 function deleteStandardNew(id) {
   const st = getStandards().find(s => s.id === id);
-  if (!st) return;
+  if (!st || !canDo('edit', st.line)) return;
   if (!confirm(`Удалить стандарт "${st.oplNumber || st.title}"?`)) return;
 
   removeStandard(id);
@@ -740,6 +744,7 @@ $('#editorMechUploadInput')?.addEventListener('change', async (e) => {
 
   const line = localStorage.getItem('cl_editor_line');
   if (!line) return showToast('Сначала выберите линию', true);
+  if (!canDo('edit', line)) return showToast(`Линия ${line} — не вашего участка`, true);
 
   try {
     const result = await parseStandardsExcelV3(file, line);

@@ -592,6 +592,7 @@ $('#svFullSaveBtn')?.addEventListener('click', () => {
     if (typeof updateNotifyBadge === 'function') updateNotifyBadge();
     return;
   }
+  if (!canDo('edit', updated.line)) return showToast(`Линия ${updated.line} — не вашего участка: сохранить нельзя`, true);
   saveStandard(updated);
   // Аналитик рассматривал предложение оператора — отмечаем решение
   if (svFullState.proposalId) {

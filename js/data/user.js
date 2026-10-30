@@ -43,10 +43,13 @@ function lineInUserScope(line) {
   return !sc.areaId || ctx.area.id === sc.areaId;
 }
 
-/* Права роли: edit — менять стандарты, расписание, настройки сразу; propose — только предлагать */
-function canDo(action) {
+/* Права роли: edit — менять стандарты, расписание, настройки сразу; propose — только предлагать.
+   line — для edit: аналитик меняет стандарты только своего участка (копировать к себе может
+   с любого — это право copy) */
+function canDo(action, line) {
   const r = getCurrentRole();
-  if (action === 'edit') return r !== 'operator';
+  if (action === 'edit') return r === 'admin' || (r === 'analyst' && (!line || lineInUserScope(line)));
+  if (action === 'copy') return r !== 'operator';
   if (action === 'propose') return r === 'operator';
   if (action === 'admin') return r === 'admin';   // Настройки
   return true;
