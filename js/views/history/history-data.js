@@ -57,7 +57,10 @@ function histIcon(kind, size = 18) {
 function histShift(h) {
   if ((h.mode === 'cl' || h.mode === 'electronic') && h.date) {
     const s = getShiftsForDate(h.date);
-    const shift = (s.night === h.shift && s.day !== h.shift) ? 'night' : 'day';
+    let shift;
+    if (h.shiftType === 'day' || h.shiftType === 'night') shift = h.shiftType;
+    else if (h.shift) shift = (s.night === h.shift && s.day !== h.shift) ? 'night' : 'day';
+    else shift = getCurrentShiftPeriod(new Date(h.timestamp)).shiftType;   // буква не записана — по времени сохранения
     return { date: h.date, shift, letter: h.shift || s[shift] };
   }
   if (h.date && (h.shiftType === 'day' || h.shiftType === 'night')) {
@@ -118,7 +121,10 @@ function histItemNorms(h, it) {
     const t = Number(it.target), tol = Number(it.tolerance) || 0;
     return [{ label: tol ? `${fmtNum(t)} ± ${fmtNum(tol)}` : fmtNum(t), range: { min: t - tol, max: t + tol } }];
   }
-  const block = blocks.find(b => b.brand === brand) || blocks.find(b => !b.brand) || blocks[0];
+  // Нормы на момент проверки (записаны в пункт) — позже стандарт могли изменить
+  if (Array.isArray(it.norms) && it.norms.length) return it.norms.map(v => ({ label: String(v || ''), range: parseNorm(v) }));
+  // Как в проверке: своя строка бренда → «Все бренды» → единственная; чужой бренд не подставляем
+  const block = pickBrandValues(blocks, brand).item;
   const pts = block && Array.isArray(block.points) ? block.points : [];
   return pts.map(p => ({ label: String(p.value || ''), range: parseNorm(p.value) }));
 }

@@ -766,6 +766,13 @@ function stopClCheck() {
   });
 }
 
+/* Нормы точек на момент проверки: история не должна перекрашиваться после правки стандарта */
+function clNormsSnapshot(row, brand) {
+  const block = pickBrandValues(row.measurements, brand).item;
+  const pts = block && Array.isArray(block.points) ? block.points : [];
+  return pts.map(p => String(p.value || ''));
+}
+
 function saveClDraftToHistory() {
   const drafts = Object.entries(clState.quickDraft);
   if (!drafts.length) return [];
@@ -787,6 +794,7 @@ function saveClDraftToHistory() {
       nodePart: row.nodePart || '',
       controlType: migrateControlType(row.controlType, row.measurements),
       kind: clState.mode === 'mech' ? 'mech' : 'elec',
+      norms: clNormsSnapshot(row, clState.brand),
       answer: val.answer,
       value: val.value,
       status: val.status,
@@ -815,6 +823,7 @@ function saveClDraftToHistory() {
         operator: '—',
         line: clState.line,
         shift: shiftLetter,
+        shiftType: group.shift,
         date: group.date,
         brandPlanned: clState.brandPlanned || null,
         brandActual: clState.brand || '',

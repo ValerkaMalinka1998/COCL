@@ -317,7 +317,19 @@ function getStandards() {
 }
 function setStandards(v) { save(STORAGE_KEYS.standards, v); }
 
-function getHistory() { return load(STORAGE_KEYS.history, []); }
+const CYR_SHIFT_LETTERS = { 'А': 'A', 'В': 'B', 'С': 'C' };
+/* Записи Чек-листа без буквы смены (или с кириллической А / В / С) приводим к виду «дата + латинская буква»,
+   иначе Чек-лист, История и Дашборд не находят их по смене */
+function fixHistoryShift(h) {
+  if (!h || !h.date || !(h.mode === 'cl' || h.mode === 'electronic')) return h;
+  const cyr = CYR_SHIFT_LETTERS[h.shift];
+  if (cyr) return { ...h, shift: cyr };
+  if (h.shift) return h;
+  const type = h.shiftType === 'day' || h.shiftType === 'night' ? h.shiftType : getCurrentShiftPeriod(new Date(h.timestamp)).shiftType;
+  const letter = getShiftsForDate(h.date)[type];
+  return letter ? { ...h, shift: letter, shiftType: type } : h;
+}
+function getHistory() { return load(STORAGE_KEYS.history, []).map(fixHistoryShift); }
 function setHistory(v) { save(STORAGE_KEYS.history, v); }
 
 /* === ЗАПИСЬ ПО ОДНОЙ ЗАПИСИ ===
@@ -339,15 +351,6 @@ function removeStandard(id) { setStandards(getStandards().filter(s => s.id !== i
 
 function saveHistoryRecords(items) { if (items.length) setHistory(upsertById(getHistory(), items)); }
 function addHistoryRecord(rec) { saveHistoryRecords([rec]); }
-function clearHistory() { setHistory([]); }
-/* Срок хранения проверок — 12 месяцев; удаляет записи раньше даты, возвращает число удалённых */
-const HISTORY_KEEP_MONTHS = 12;
-function pruneHistoryBefore(dateISO) {
-  const all = getHistory();
-  const keep = all.filter(h => (h.date || String(h.timestamp || '').slice(0, 10)) >= dateISO);
-  if (keep.length !== all.length) setHistory(keep);
-  return all.length - keep.length;
-}
 
 /* ============================================================
    ВАЛИДАЦИЯ НОВОГО СТАНДАРТА / E-PARAM
