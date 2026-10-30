@@ -160,7 +160,7 @@
     <!-- Настройки — внизу меню -->
     <div class="sidebar-spacer"></div>
 
-    <a href="#settings" data-tab="settings" title="Настройки" data-need="edit">
+    <a href="#settings" data-tab="settings" title="Настройки" data-need="admin">
       <span class="nav-icon">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="4" y1="21" x2="4" y2="14"/>
@@ -1306,7 +1306,7 @@
             Фильтры <b id="histFiltersCount" hidden></b>
           </button>
           <div class="et-excel" id="historyExcelMenu">
-            <button class="btn btn-secondary btn-icon-text et-excel-toggle" type="button" title="Экспорт и очистка истории">
+            <button class="btn btn-secondary btn-icon-text et-excel-toggle" type="button" title="Экспорт истории">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13l3 4M12 13l-3 4"/></svg>
               <span>Excel</span>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -1319,14 +1319,6 @@
               <button class="et-excel-item" id="exportCsvBtn" type="button">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 <span>Экспорт CSV</span>
-              </button>
-              <button class="et-excel-item hist-danger-item" id="pruneHistoryBtn" type="button" data-need="admin">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                <span>Удалить старше 12 месяцев</span>
-              </button>
-              <button class="et-excel-item hist-danger-item" id="clearHistoryBtn" type="button" data-need="admin">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-                <span>Очистить историю</span>
               </button>
             </div>
           </div>
@@ -1343,6 +1335,10 @@
         <div class="hist-f">
           <span class="hist-f-lbl">Смена</span>
           <div class="hist-kind-chips" id="histBrigadeChips"></div>
+        </div>
+        <div class="hist-f">
+          <span class="hist-f-lbl">Часть линии</span>
+          <div class="hist-kind-chips" id="histPartChips"></div>
         </div>
         <div class="hist-f">
           <span class="hist-f-lbl">Тип проверки</span>

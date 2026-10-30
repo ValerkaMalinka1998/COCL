@@ -18,7 +18,7 @@ function getCurrentUser() {
 const ROLES = { admin: 'Администратор', analyst: 'Аналитик', operator: 'Оператор' };
 const ROLE_HINTS = {
   admin: 'Всё, включая Настройки',
-  analyst: 'Стандарты, расписание, настройки; решает по предложениям операторов',
+  analyst: 'Стандарты и расписание; решает по предложениям операторов; без Настроек',
   operator: 'Проверки, история, дашборд; стандарты — просмотр и предложения аналитику'
 };
 function getCurrentRole() {
@@ -48,9 +48,11 @@ function canDo(action) {
   const r = getCurrentRole();
   if (action === 'edit') return r !== 'operator';
   if (action === 'propose') return r === 'operator';
-  if (action === 'admin') return r === 'admin';   // удаление истории и подобное необратимое
+  if (action === 'admin') return r === 'admin';   // Настройки
   return true;
 }
 function canOpenTab(tab) {
-  return canDo('edit') || !['schedule', 'settings'].includes(tab);
+  if (tab === 'settings') return canDo('admin');
+  if (tab === 'schedule') return canDo('edit');
+  return true;
 }

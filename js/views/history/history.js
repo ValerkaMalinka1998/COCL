@@ -19,6 +19,7 @@ const histState = Object.assign({
   ws: '', areaId: '',    // охват шире линии: весь цех / весь участок (линия тогда пустая)
   kinds: ['cl', 'electronic', 'toploss', 'cocl'],
   brigade: '',
+  part: '',              // Maker / Packer: показывать пункты только этой части
   onlyDev: false,
   cal: 'week'            // календарь линии: 'week' — 7 дней, 'month' — месяц
 }, loadHistFilters(), { q: '', limit: HIST_PAGE, scrollY: 0, week: 0, month: 0, pick: '', open: [], fOpen: false });
@@ -30,8 +31,8 @@ delete histState.workshop;
 delete histState.machine;
 
 function saveHistFilters() {
-  const { period, from, to, line, ws, areaId, kinds, brigade, onlyDev, cal } = histState;
-  try { localStorage.setItem(HIST_FILTERS_KEY, JSON.stringify({ period, from, to, line, ws, areaId, kinds, brigade, onlyDev, cal })); }
+  const { period, from, to, line, ws, areaId, kinds, brigade, part, onlyDev, cal } = histState;
+  try { localStorage.setItem(HIST_FILTERS_KEY, JSON.stringify({ period, from, to, line, ws, areaId, kinds, brigade, part, onlyDev, cal })); }
   catch (e) { /* хранилище недоступно — фильтры просто не запомнятся */ }
 }
 
@@ -48,6 +49,8 @@ function fillHistoryFilters() {
     `<button type="button" class="hist-chip${(cur || '') === id ? ' on' : ''}" ${attr}="${escapeAttr(id)}" style="--k:var(--accent-cyan)">${escapeHtml(name)}</button>`;
   const brBox = $('#histBrigadeChips');
   if (brBox) brBox.innerHTML = [['', 'Все'], ...['A', 'B', 'C', 'D'].map(b => [b, b])].map(pick('data-hist-brigade', histState.brigade)).join('');
+  const partBox = $('#histPartChips');
+  if (partBox) partBox.innerHTML = [['', 'Все'], ['Maker', 'Maker'], ['Packer', 'Packer']].map(pick('data-hist-part', histState.part)).join('');
   const chips = $('#histKindChips');
   if (chips) {
     chips.innerHTML = Object.entries(HIST_KINDS).map(([k, v]) =>
@@ -105,9 +108,25 @@ function getFilteredHistory() {
     .filter(h => !histState.pick || !histState.line || histPickMatch(h))
     .filter(h => !histState.onlyDev || (h.items || []).some(it => it.status === 'FAIL'))
     .filter(h => histSearchMatch(h, q))
+    .map(h => histPartOnly(h))
+    .filter(h => !histState.part || (h.items || []).length)
     .map(h => ({ h, key: histOrderKey(h) }))
     .sort((a, b) => b.key.localeCompare(a.key))
     .map(x => x.h);
+}
+
+/* Часть пункта проверки: записана в пункте, иначе — из стандарта / параметра; '' — не определить */
+function histItemPart(it) {
+  if (it.nodePart) return it.nodePart;
+  const st = getStandards().find(s => s.id === it.standardId) || getElectronicParams().find(p => p.id === it.standardId);
+  return st && st.nodePart || '';
+}
+
+/* Запись с пунктами только выбранной части (пункты без известной части остаются) */
+function histPartOnly(h) {
+  if (!histState.part || !Array.isArray(h.items)) return h;
+  const items = h.items.filter(it => { const p = histItemPart(it); return !p || p === histState.part; });
+  return items.length === h.items.length ? h : { ...h, items };
 }
 
 /* Выбранная в сетке недели смена: 'YYYY-MM-DD|day' */
@@ -135,6 +154,7 @@ function renderHistoryMain() {
   $$('#histPeriodSeg [data-hist-period]').forEach(b => b.classList.toggle('on', b.dataset.histPeriod === histState.period));
   $$('#histKindChips [data-hist-kind]').forEach(b => b.classList.toggle('on', histState.kinds.includes(b.dataset.histKind)));
   $('#histCustomRange')?.classList.toggle('hist-hidden', histState.period !== 'custom');
+  $$('#histPartChips [data-hist-part]').forEach(b => b.classList.toggle('on', b.dataset.histPart === (histState.part || '')));
   $$('#histBrigadeChips [data-hist-brigade]').forEach(b => b.classList.toggle('on', b.dataset.histBrigade === (histState.brigade || '')));
   renderHistCrumbs();
   $('#histFilterPanel')?.classList.toggle('hist-hidden', !histState.fOpen);
@@ -201,6 +221,7 @@ function histActiveFilters() {
     if (c) out.push(['line', c.area ? 'Участок ' + c.area.name : 'Цех ' + c.workshop.name]);
   }
   if (histState.brigade) out.push(['brigade', 'Смена ' + histState.brigade]);
+  if (histState.part) out.push(['part', 'Часть ' + histState.part]);
   if (histState.kinds.length < Object.keys(HIST_KINDS).length) out.push(['kinds', histState.kinds.map(k => HIST_KINDS[k].short).join(', ')]);
   return out;
 }
@@ -396,7 +417,8 @@ function histMissedShifts(oldest, newest) {
       if (!out.has(day.date)) out.set(day.date, []);
       // Какие стандарты не проверены в смене (закрытые позже — с пометкой)
       const list = rows.map(({ row, isElec }) => ({ row, isElec, k: tally.get(`${day.date}|${shift}|${row.id}`) }))
-        .filter(x => x.k === 'missed' || x.k === 'late');
+        .filter(x => x.k === 'missed' || x.k === 'late')
+        .filter(x => !histState.part || !x.row.nodePart || x.row.nodePart === histState.part);
       out.get(day.date).push({ shift, letter: c.letter, planned: c.planned, done: c.done, list });
     });
   });
@@ -575,6 +597,8 @@ $('#tab-history')?.addEventListener('click', (e) => {
   if (t.closest('[data-hist-unpick]')) { histState.pick = ''; return renderHistory(); }
   const br = t.closest('[data-hist-brigade]');
   if (br) { histState.brigade = br.dataset.histBrigade; return histFilterChanged(); }
+  const pt = t.closest('[data-hist-part]');
+  if (pt) { histState.part = pt.dataset.histPart; return histFilterChanged(); }
   if (t.closest('#histFiltersBtn')) { histState.fOpen = !histState.fOpen; return renderHistory(); }
   if (t.closest('#histLinePill')) {
     linePickerOnSelect = (line) => histSetLine(line);
@@ -587,6 +611,7 @@ $('#tab-history')?.addEventListener('click', (e) => {
     const k = clr.dataset.histClear;
     if (k === 'line' || k === 'all') histSetLine('', true);
     if (k === 'brigade' || k === 'all') histState.brigade = '';
+    if (k === 'part' || k === 'all') histState.part = '';
     if (k === 'kinds' || k === 'all') histState.kinds = Object.keys(HIST_KINDS);
     return histFilterChanged();
   }
