@@ -267,6 +267,8 @@ function dashDoneCell(done, planned) {
     : '<span class="hist-sub">нет плана</span>';
 }
 function dashFailCell(n, total) {
+  // Проверки были, отклонений нет — «нет» зелёным вместо «0 из N»
+  if (total && !n) return `<span class="hist-c-ok" title="Проверено пунктов: ${total}, отклонений нет">нет</span>`;
   return `<span class="${n && total >= DASH_MIN_CHECKS ? 'hist-c-fail' : total ? '' : 'hist-sub'}">${dashShareText(n, total)}</span>`;
 }
 
