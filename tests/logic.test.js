@@ -493,6 +493,12 @@ test('роли: оператор только предлагает; предло
   app(`localStorage.removeItem('cl_current_role')`);
 });
 
+test('normalizeStandard: у стандарта без topLosses (импорт) поле — пустой массив', () => {
+  const st = plain(fn('normalizeStandard')({ id: 'x', title: 'T', line: 'SD08' }));
+  assert.deepEqual(st.topLosses, []);
+  assert.deepEqual(plain(fn('normalizeStandard')({ id: 'y', topLosses: ['a'] })).topLosses, ['a']);
+});
+
 test('запись Чек-листа без буквы смены или с кириллической А получает латинскую букву', () => {
   const fix = fn('fixHistoryShift');
   const a = plain(fix({ mode: 'cl', date: '2026-10-26', shiftType: 'day', shift: 'А', timestamp: '2026-10-26T10:00:00Z' }));

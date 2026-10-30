@@ -289,6 +289,7 @@ function normalizeStandard(st) {
     measurements: normalizeMeasurements(st.measurements),
     appliesTo: normalizeAppliesTo(st.appliesTo),
     triggers: Array.isArray(st.triggers) ? st.triggers : [],
+    topLosses: Array.isArray(st.topLosses) ? st.topLosses : [],   // у импортированных стандартов поля не было — страница падала
     forceInChangeOver: st.forceInChangeOver === true,
     photos: Array.isArray(st.photos)
       ? st.photos.filter(p => typeof p === 'string' && p.trim() !== '')

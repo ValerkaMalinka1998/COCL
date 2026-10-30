@@ -123,7 +123,7 @@ function histItemNorms(h, it) {
   }
   // Нормы на момент проверки (записаны в пункт) — позже стандарт могли изменить
   if (Array.isArray(it.norms) && it.norms.length) return it.norms.map(v => ({ label: String(v || ''), range: parseNorm(v) }));
-  // Как в проверке: своя строка бренда → «Остальные бренды» → единственная; чужой бренд не подставляем
+  // Как в проверке: своя строка бренда → «Все бренды» → единственная; чужой бренд не подставляем
   const block = pickBrandValues(blocks, brand).item;
   const pts = block && Array.isArray(block.points) ? block.points : [];
   return pts.map(p => ({ label: String(p.value || ''), range: parseNorm(p.value) }));

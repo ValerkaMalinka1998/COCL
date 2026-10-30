@@ -353,7 +353,10 @@ function renderTriggerPickerList(query) {
   const all = getTriggersForWorkshop(triggerPickerState.workshopId, triggerPickerState.part);
 
   if (!all.length) {
-    list.innerHTML = '<div class="empty-state" style="padding:20px">Для этого цеха триггеры не заданы — добавьте их в Настройках.</div>';
+    const partOnly = triggerPickerState.part && getTriggersForWorkshop(triggerPickerState.workshopId).length;
+    list.innerHTML = partOnly
+      ? `<div class="empty-state" style="padding:20px">Для части ${escapeHtml(triggerPickerState.part)} триггеры не заданы — у цеха они есть только для другой части. Добавьте их в Настройках.</div>`
+      : '<div class="empty-state" style="padding:20px">Для этого цеха триггеры не заданы — добавьте их в Настройках.</div>';
     updateTriggerPickerCounter();
     return;
   }
