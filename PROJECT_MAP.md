@@ -1,8 +1,8 @@
 # Карта проекта COCL
 
-Сгенерировано 2026-10-30 по коммиту `a7f659d Дашборд: «нет» зелёным вместо «0 из N», когда проверки были, а отклонений нет` скриптом `.claude/skills/cocl-session-close/scripts/gen_project_map.py` — пересоздавайте после крупных правок.
+Сгенерировано 2026-10-31 по коммиту `1b8a14b Расписание CL: окно добавления в две колонки, новый шаблон с нуля; окно ознакомления; обязательные инструмент и время` скриптом `.claude/skills/cocl-session-close/scripts/gen_project_map.py` — пересоздавайте после крупных правок.
 
-JS — 76 модулей, 22284 строк, 832 функций · CSS — 40 файлов, 11171 строк.
+JS — 76 модулей, 22494 строк, 841 функций · CSS — 40 файлов, 11423 строк.
 Как искать: модуль по назначению → раздел в таблице ниже → `Grep` по имени функции в этом файле.
 
 ## JS-модули (в порядке подключения в index.html)
@@ -32,7 +32,7 @@ JS — 76 модулей, 22284 строк, 832 функций · CSS — 40 ф�
 | `js/components/pickers.js` | 439 | 14 | КОМПОНЕНТЫ: окна выбора |
 | `js/components/validation.js` | 213 | 7 | КОМПОНЕНТЫ: валидация нового стандарта / E-Param |
 | `js/components/std-comments.js` | 205 | 6 | КОМПОНЕНТЫ: вкладка «Комментарии» стандарта / E-Param |
-| `js/components/std-ack.js` | 196 | 7 | КОМПОНЕНТЫ: вкладка «Ознакомление» стандарта / E-Param |
+| `js/components/std-ack.js` | 235 | 8 | КОМПОНЕНТЫ: вкладка «Ознакомление» стандарта / E-Param |
 | `js/components/notify.js` | 269 | 14 | КОМПОНЕНТЫ: колокольчик уведомлений в шапке |
 | `js/components/role-switch.js` | 61 | 3 | КОМПОНЕНТЫ: роль и зона пользователя (временно, до входа через SSO) |
 | `js/components/line-picker.js` | 186 | 11 | КОМПОНЕНТЫ: выбор линии |
@@ -71,11 +71,11 @@ JS — 76 модулей, 22284 строк, 832 функций · CSS — 40 ф�
 | `js/views/editor/eparam-page.js` | 483 | 10 | СТРАНИЦА электронного параметра |
 | `js/views/editor/changelog-view.js` | 515 | 19 | СТАНДАРТЫ CL: ЛИСТ ИСТОРИИ ИЗМЕНЕНИЙ |
 | `js/views/standard-page/standard-page.js` | 770 | 21 | СТРАНИЦА стандарта: открытие, поля, точки |
-| `js/views/standard-page/standard-page-extra.js` | 651 | 10 | СТРАНИЦА стандарта: фото, связи, доп. информация, сохранение |
-| `js/views/schedule/schedule.js` | 939 | 29 | ВКЛАДКА «Расписание CL» |
-| `js/views/schedule/schedule-add.js` | 447 | 8 | РАСПИСАНИЕ CL: добавление стандартов |
+| `js/views/standard-page/standard-page-extra.js` | 653 | 10 | СТРАНИЦА стандарта: фото, связи, доп. информация, сохранение |
+| `js/views/schedule/schedule.js` | 964 | 29 | ВКЛАДКА «Расписание CL» |
+| `js/views/schedule/schedule-add.js` | 506 | 10 | РАСПИСАНИЕ CL: добавление стандартов |
 | `js/views/schedule/schedule-downtime.js` | 158 | 8 | РАСПИСАНИЕ CL: простой линии |
-| `js/views/schedule/schedule-templates.js` | 106 | 5 | РАСПИСАНИЕ CL: шаблоны чек-листа |
+| `js/views/schedule/schedule-templates.js` | 191 | 11 | РАСПИСАНИЕ CL: шаблоны чек-листа |
 | `js/views/settings/settings-shell.js` | 155 | 9 | НАСТРОЙКИ: каркас вкладки |
 | `js/views/settings/structure-tree.js` | 702 | 20 | НАСТРОЙКИ: структура производства — дерево и карточка линии |
 | `js/views/settings/shifts.js` | 156 | 5 | НАСТРОЙКИ: график смен |
@@ -122,7 +122,7 @@ JS — 76 модулей, 22284 строк, 832 функций · CSS — 40 ф�
 | js/components/pickers.js:314 | ВЫБОР ТРИГГЕРОВ CHANGE OVER — общая модалка | `openTriggerPickerModal`, `renderTriggerPickerList`, `updateTriggerPickerCounter`, `closeTriggerPickerModal`, `renderTriggerChipsEditable` |
 | js/components/validation.js:1 | (начало модуля) | `valShiftLabel`, `valPointLabel`, `valChipHtml`, `valEditBlockHtml`, `valReadEdit`, `valCheckStats`, `valBannerHtml` |
 | js/components/std-comments.js:1 | (начало модуля) | `stdReason`, `stdcSvg`, `stdCommentWhen`, `stdCommentRowHtml`, `renderStdComments`, `stdCommentsRefresh` |
-| js/components/std-ack.js:1 | (начало модуля) | `stdAckWhen`, `stdAckIcon`, `stdAckChangesHtml`, `stdAckPlateHtml`, `renderStdAck`, `stdAckGate`, `renderAckGate` |
+| js/components/std-ack.js:1 | (начало модуля) | `stdAckWhen`, `stdAckIcon`, `stdAckChangesHtml`, `stdAckPlateHtml`, `renderStdAck`, `stdAckGate`, `renderAckGate`, `renderAckGatePane` |
 | js/components/notify.js:1 | (начало модуля) | `getNotifyRead`, `setNotifyRead`, `notifyRef`, `notifyRefTitle`, `notifyRefMeta`, `collectNotifications`, `collectNotificationsRaw`, `notifyDayLabel`, `notifyTime`, `updateNotifyBadge`, `renderNotifyPanel`, `openNotifyPanel`, `closeNotifyPanel`, `openNotifyTarget` |
 | js/components/role-switch.js:1 | (начало модуля) | `applyRoleUi`, `openRoleModal`, `fillRoleAreas` |
 | js/components/line-picker.js:8 | ВЫБОР ЛИНИИ — двухпанельное окно (#linePickerModal) | `resetLinePickerState`, `linePickerCurrent`, `getLinePickerGroups`, `countLinePickerLines`, `openLinePickerModal`, `closeLinePickerModal`, `renderLinePickerModal`, `renderLinePickerRecent`, `renderLinePickerBrowse`, `renderLinePickerGroup`, `renderLinePickerSearch` |
@@ -222,12 +222,12 @@ JS — 76 модулей, 22284 строк, 832 функций · CSS — 40 ф�
 | js/views/standard-page/standard-page-extra.js:113 | Дополнительная информация (CL относится к, Триггеры, Top Los | `renderSvFullExtra` |
 | js/views/standard-page/standard-page-extra.js:312 | Заглушки для таблиц вкладок | `renderSvAckTable`, `renderSvHistoryTable`, `refreshSvHistory`, `renderSvCommentsTable` |
 | js/views/standard-page/standard-page-extra.js:344 | Переключение вкладок внутри просмотра | `switchSvFullTab` |
-| js/views/standard-page/standard-page-extra.js:623 | ПОДСВЕТКА ЗНАЧЕНИЙ, НЕ ПОДХОДЯЩИХ ТИПУ КОНТРОЛЯ | `svPointTypeError`, `markSvPointTypes` |
+| js/views/standard-page/standard-page-extra.js:625 | ПОДСВЕТКА ЗНАЧЕНИЙ, НЕ ПОДХОДЯЩИХ ТИПУ КОНТРОЛЯ | `svPointTypeError`, `markSvPointTypes` |
 | js/views/schedule/schedule.js:8 | РАСПИСАНИЕ CL — вкладка аналитика | `openScheduleTab`, `updateSchLinePill`, `updateSchPanelCount`, `isSchRowMember`, `isSchRowValidation`, `isSchRowShown`, `getFilteredScheduleRows`, `updateSchMatrixCounters`, `fillSchMachineFilter`, `renderScheduleMatrix`, `getSchRowFreq`, `getClRowFreq`, `getCheckedStandardIdsForWeek`, `ensureSchDraft` … +15 |
-| js/views/schedule/schedule-add.js:7 | РАСПИСАНИЕ CL — модалка добавления стандартов | `openScheduleAddStandardsModal`, `closeScheduleAddStandardsModal`, `renderSchAddList`, `toggleSchAddItem`, `updateSchAddCounter`, `updateSchAddCheckAllState`, `confirmScheduleAddStandards`, `selectLine` |
+| js/views/schedule/schedule-add.js:7 | РАСПИСАНИЕ CL — модалка добавления стандартов | `openScheduleAddStandardsModal`, `closeScheduleAddStandardsModal`, `getSchAddItems`, `renderSchAddMachines`, `renderSchAddList`, `toggleSchAddItem`, `updateSchAddCounter`, `updateSchAddCheckAllState`, `confirmScheduleAddStandards`, `selectLine` |
 | js/views/schedule/schedule-downtime.js:9 | ПРОСТОЙ — ОКНО | `openScheduleDowntimeModal`, `closeScheduleDowntimeModal`, `readSchDowntimeForm`, `syncSchDowntimeForm`, `saveSchDowntime` |
 | js/views/schedule/schedule-downtime.js:86 | ПРОСТОЙ — СПИСОК ЛИНИИ | `renderSchDowntimeList`, `endSchDowntime`, `deleteSchDowntime` |
-| js/views/schedule/schedule-templates.js:1 | (начало модуля) | `schTplLineRows`, `openScheduleTemplates`, `renderScheduleTemplates`, `saveWeekAsScheduleTemplate`, `applyScheduleTemplate` |
+| js/views/schedule/schedule-templates.js:1 | (начало модуля) | `schTplLineRows`, `openScheduleTemplates`, `renderScheduleTemplates`, `schTplSnapshotRows`, `saveWeekAsScheduleTemplate`, `applyScheduleTemplate`, `schTplChrome`, `schTplResetDraft`, `schTplEnter`, `schTplLeave`, `schTplCreate` |
 | js/views/settings/settings-shell.js:23 | ОТРИСОВКА ВСЕЙ ВКЛАДКИ | `renderSettings`, `getSavedSettingsPanel`, `showSettingsPanel`, `updateSettingsNavCounts` |
 | js/views/settings/settings-shell.js:79 | ОБЩИЕ ПОМОЩНИКИ РАЗДЕЛОВ | `settingsChipsHtml`, `settingsSearchHtml`, `settingsHighlight`, `startInlineEdit`, `settingsWorkshopChipItems` |
 | js/views/settings/structure-tree.js:20 | ДАННЫЕ | `stFindOwner`, `stDetachLine`, `stLineUsage`, `stOrphanLines`, `stAddLine`, `stMoveLine`, `stDeleteLine`, `stAddBlock`, `stRenameBlock`, `stDeleteBlock`, `stMachineChipHtml`, `stMachinePartsHtml`, `stAddMachine`, `stRenameMachine` … +4 |
@@ -277,7 +277,7 @@ JS — 76 модулей, 22284 строк, 832 функций · CSS — 40 ф�
 | `css/views/editor.css` | 675 | РЕДАКТОР: чипы типов (ChangeOver / CL_TO; РЕДАКТОР: единая панель + фильтры + табл; РЕДАКТОР: карточка таблицы; РЕДАКТОР: таблица стандартов; РЕДАКТОР: чипы типов и Maker/Packer; РЕДАКТОР: крошки … +8 |
 | `css/components/line-picker.css` | 319 | МОДАЛКА-ВЫБОР ЛИНИИ (двухпанельная) |
 | `css/views/editor-part-switch.css` | 70 | РЕДАКТОР: переключатель по части линии |
-| `css/views/schedule.css` | 546 | РАСПИСАНИЕ CL: матрица (с инфо-колонками; Тулбар над матрицей: фильтр+поиск слева,; Пустое состояние; Панель массовых операций; Адаптив; РАСПИСАНИЕ CL: модалка добавления станда … +4 |
+| `css/views/schedule.css` | 692 | РАСПИСАНИЕ CL: матрица (с инфо-колонками; Тулбар над матрицей: фильтр+поиск слева,; Пустое состояние; Панель массовых операций; Адаптив; РАСПИСАНИЕ CL: модалка добавления станда … +7 |
 | `css/views/cl-checklist.css` | 92 | ПРОВЕРКА CL: контекстная строка; Итог смены для доски; КНОПКА «ЗАКОНЧИТЬ ПРОВЕРКУ» |
 | `css/views/standard-page.css` | 909 | ПОЛНОЭКРАННЫЙ СТАНДАРТ (sv-full); Шапка; Вкладки внутри; Контент; Карточки; Поля «Основная информация» … +10 |
 | `css/views/eparam-page.css` | 25 | СТРАНИЦА ЭЛЕКТРОННОГО ПАРАМЕТРА |
@@ -289,11 +289,11 @@ JS — 76 модулей, 22284 строк, 832 функций · CSS — 40 ф�
 | `css/components/legend.css` | 26 | ЛЕГЕНДА ТАБЛИЦ |
 | `css/components/tab-head.css` | 155 | ШАПКА ВКЛАДКИ: цветная плашка с шагами; ШАПКА СТРАНИЦЫ «Аврора»: Чек-лист CL, Ра |
 | `css/components/photo-slider.css` | 177 | СЛАЙДЕР ФОТО СТАНДАРТА |
-| `css/components/standard-view.css` | 363 | ОКНО ПРОСМОТРА СТАНДАРТА (#standardViewM |
+| `css/components/standard-view.css` | 371 | ОКНО ПРОСМОТРА СТАНДАРТА (#standardViewM |
 | `css/views/quick-check.css` | 464 | БЫСТРАЯ ПРОВЕРКА (#quickCheckModal) — ме; ТОЧКА-МЕТКА: ОК / Не ОК вместо поля ввод |
 | `css/components/validation.css` | 182 | ВАЛИДАЦИЯ НОВОГО СТАНДАРТА / E-PARAM |
 | `css/components/std-comments.css` | 166 | КОММЕНТАРИИ К СТАНДАРТУ / E-PARAM |
-| `css/components/std-ack.css` | 106 | ОЗНАКОМЛЕНИЕ СО СТАНДАРТОМ; ОКНО ДОПУСКА К ПРОВЕРКЕ |
+| `css/components/std-ack.css` | 204 | ОЗНАКОМЛЕНИЕ СО СТАНДАРТОМ; ОКНО ДОПУСКА К ПРОВЕРКЕ |
 | `css/components/notify.css` | 118 | КОЛОКОЛЬЧИК УВЕДОМЛЕНИЙ |
 | `css/components/check-run.css` | 499 | ОКНО ПРОВЕРКИ: список слева — стандарт с; Левая панель: шапка; Левая панель: пункты; Левая панель: сохранение; Правая часть: выбранный стандарт; CL при переходах: во время проверки окно … +1 |
 | `css/brand.css` | 138 | БРЕНД BFT — Building the Future of Tobac; Шапка; Логотип; Смена, время и «круг смены»; Кнопка темы — шлем; Карточки и заголовки … +1 |
@@ -341,9 +341,9 @@ JS — 76 модулей, 22284 строк, 832 функций · CSS — 40 ф�
 | `cl_photos_broken_count` | js/views/settings/photos.js:200 |
 | `cl_recent_lines` | js/views/editor/editor-core.js:12 |
 | `cl_recent_standards` | js/views/editor/editor-core.js:46 |
-| `cl_schedule_line` | js/views/schedule/schedule.js:35 |
-| `cl_schedule_mode` | js/views/schedule/schedule.js:34 |
-| `cl_schedule_part` | js/views/schedule/schedule.js:36 |
+| `cl_schedule_line` | js/views/schedule/schedule.js:37 |
+| `cl_schedule_mode` | js/views/schedule/schedule.js:36 |
+| `cl_schedule_part` | js/views/schedule/schedule.js:38 |
 | `cl_schedule_templates_v1` | STORAGE_KEYS.scheduleTemplates (js/core/state.js) |
 | `cl_schedule_weeks_v1` | STORAGE_KEYS.scheduleWeeks (js/core/state.js) |
 | `cl_settings_panel` | js/views/settings/settings-shell.js:9 |
