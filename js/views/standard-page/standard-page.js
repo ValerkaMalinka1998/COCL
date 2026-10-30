@@ -339,7 +339,7 @@ function renderSvMainFields(st, isEdit) {
         <input type="text" id="svf_node" value="${escapeAttr(st.node || '')}">
       </div>
       <div class="sv-full-field-edit">
-        <label>Время на проверку (секунд)</label>
+        <label class="required">Время на проверку (секунд)</label>
         <input type="number" id="svf_durationSec" min="0" step="1"
                value="${escapeAttr(st.durationSec || 0)}"
                placeholder="60">
@@ -348,7 +348,7 @@ function renderSvMainFields(st, isEdit) {
         </p>
       </div>
       <div class="sv-full-field-edit">
-        <label>Инструмент</label>
+        <label class="required">Инструмент</label>
         <input type="text" id="svf_tool"
                value="${escapeAttr(st.tool || '')}"
                placeholder="Штангенциркуль, линейка...">

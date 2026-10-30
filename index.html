@@ -1184,6 +1184,13 @@
           <span>Шаблоны</span>
         </button>
 
+        <button class="btn btn-accent btn-icon-text" id="schNewTplBtn" type="button" data-need="edit" title="Набрать шаблон с нуля, не меняя просматриваемую неделю">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span>Новый шаблон</span>
+        </button>
+
         <button class="btn btn-secondary btn-icon-text" id="schDowntimeBtn" type="button" data-need="edit">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"/>
@@ -1225,6 +1232,21 @@
           Очистить всё
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- Режим «Новый шаблон»: название и сохранение (показывается из schedule-templates.js) -->
+  <div class="sch-tplbar" id="schTplBar" style="display:none">
+    <span class="sch-tplbar-badge">Режим шаблона</span>
+    <div class="sch-tplbar-field">
+      <label for="schTplNewName">Название шаблона</label>
+      <input type="text" id="schTplNewName" placeholder="Например: Лето, 2 смены" autocomplete="off">
+    </div>
+    <span class="sch-tplbar-note">Просматриваемая неделя и её правки не затрагиваются</span>
+    <div class="sch-tplbar-acts">
+      <button type="button" class="btn btn-secondary" id="schTplCancelBtn">Отмена</button>
+      <button type="button" class="btn btn-accent" id="schTplCreateMoreBtn">Сохранить и создать ещё</button>
+      <button type="button" class="btn btn-primary" id="schTplCreateBtn">Сохранить шаблон</button>
     </div>
   </div>
 
@@ -2108,16 +2130,24 @@
 </div>
 <!-- ======================= МОДАЛЬНОЕ ОКНО: ДОПУСК К ПРОВЕРКЕ (ОЗНАКОМЛЕНИЕ) ======================= -->
 <div class="modal-overlay" id="ackGateModal">
-  <div class="modal ack-gate-modal">
+  <div class="modal modal-wide ack-gate-modal">
     <div class="modal-header">
       <h3>Сначала ознакомьтесь со стандартами</h3>
       <button class="modal-close" id="ackGateClose">✕</button>
     </div>
-    <div class="modal-body">
-      <p class="ack-gate-hint">Проверять можно только после ознакомления с актуальной редакцией. Откройте стандарт, прочитайте и подтвердите.</p>
-      <div id="ackGateList"></div>
+    <div class="modal-body ack-gate-body">
+      <aside class="ack-gate-side">
+        <div class="ack-gate-prog">
+          <b id="ackGateProgText"></b>
+          <div class="ack-gate-bar"><i id="ackGateBar"></i></div>
+          <p class="ack-gate-hint">Проверять можно только после ознакомления с актуальной редакцией.</p>
+        </div>
+        <div class="ack-gate-list" id="ackGateList"></div>
+      </aside>
+      <div class="ack-gate-pane" id="ackGatePane"></div>
     </div>
     <div class="modal-footer">
+      <span class="ack-gate-left" id="ackGateLeft"></span>
       <button class="btn btn-secondary" id="ackGateCancel" type="button">Отмена</button>
       <button class="btn btn-primary" id="ackGateStart" type="button" disabled>Начать проверку</button>
     </div>
@@ -2450,24 +2480,30 @@
       <h3>Добавить стандарты в расписание</h3>
       <button class="modal-close" id="schAddStandardsClose">✕</button>
     </div>
-    <div class="modal-body">
+    <div class="modal-body sch-add-body">
 
-      <div class="field" style="margin-bottom:14px">
-        <div class="settings-search settings-search-wide"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="schAddStandardsSearch" placeholder="Поиск по OPL, машине, узлу, названию..." autocomplete="off"></div>
+      <aside class="sch-add-machines">
+        <div class="sch-add-side-title">Машины</div>
+        <div id="schAddMachines"></div>
+      </aside>
+
+      <div class="sch-add-main">
+        <div class="settings-search settings-search-wide"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" id="schAddStandardsSearch" placeholder="Поиск по OPL, узлу, названию..." autocomplete="off"></div>
+
+        <div class="sch-add-toolbar">
+          <span class="sch-add-main-title" id="schAddMainTitle">Все стандарты</span>
+          <label class="sch-add-check-all">
+            <input type="checkbox" id="schAddCheckAll">
+            <span>Выбрать все</span>
+          </label>
+        </div>
+
+        <div id="schAddStandardsList" class="sch-add-list"></div>
       </div>
-
-      <div class="sch-add-toolbar">
-        <label class="sch-add-check-all">
-          <input type="checkbox" id="schAddCheckAll">
-          <span>Выделить все видимые</span>
-        </label>
-        <span class="sch-add-counter" id="schAddCounter">Выбрано: 0</span>
-      </div>
-
-      <div id="schAddStandardsList" class="sch-add-list"></div>
 
     </div>
     <div class="modal-footer">
+      <span class="sch-add-counter" id="schAddCounter">Выбрано: 0</span>
       <button class="btn btn-secondary" id="schAddStandardsCancel">Отмена</button>
       <button class="btn btn-primary" id="schAddStandardsConfirm" disabled>Добавить 0</button>
     </div>

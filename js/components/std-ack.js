@@ -146,7 +146,7 @@ document.addEventListener('click', e => {
 
 /* === ДОПУСК К ПРОВЕРКЕ: CL при переходах, TOP Losses ===
    items: [{ kind: 'mech'|'elec', row }]. Все ознакомлены — сразу onStart(); иначе окно со списком. */
-const ackGateState = { items: [], onStart: null };
+const ackGateState = { items: [], onStart: null, cur: 0 };
 
 function stdAckGate(items, onStart) {
   // С E-Param не знакомятся — только механические стандарты
@@ -154,35 +154,74 @@ function stdAckGate(items, onStart) {
   if (!need.length) return onStart();
   ackGateState.items = need;
   ackGateState.onStart = onStart;
+  ackGateState.cur = 0;
   renderAckGate();
   openModal('#ackGateModal');
 }
 
+/* Слева список стандартов и прогресс, справа выбранный стандарт целиком */
 function renderAckGate() {
-  let left = 0;
-  $('#ackGateList').innerHTML = ackGateState.items.map(({ kind, row }) => {
-    const s = getStdAckStatus(kind, row.id);
-    const ok = s.state === 'ok';
-    if (!ok) left++;
-    return `<div class="ack-gate-row${ok ? ' is-ok' : ''}">
-      <div class="ack-gate-name">${kind === 'elec' ? '<span class="ack-gate-kind">E-Param</span>' : row.oplNumber ? `<b>${escapeHtml(row.oplNumber)}</b> ` : ''}${escapeHtml(row.title || row.paramName || '—')}
-        <small>${escapeHtml([row.machine, row.nodePart].filter(Boolean).join(' · '))}${s.state === 'again' ? ' · изменён' : ''}</small></div>
-      ${kind === 'mech' ? `<button type="button" class="btn btn-accent btn-sm" data-ack-gate-view="${escapeAttr(row.id)}">Открыть</button>` : ''}
-      ${ok ? '<span class="ack-gate-done">✓ ознакомлен</span>'
-        : `<button type="button" class="btn btn-primary btn-sm" data-ack-gate-mark="${escapeAttr(row.id)}" data-kind="${kind}">Ознакомлен</button>`}
-    </div>`;
-  }).join('');
+  const { items, cur } = ackGateState;
+  const stat = items.map(it => getStdAckStatus(it.kind, it.row.id));
+  const done = stat.filter(s => s.state === 'ok').length;
+  const left = items.length - done;
+
+  $('#ackGateProgText').textContent = `Ознакомлено ${done} из ${items.length}`;
+  $('#ackGateBar').style.width = `${done / items.length * 100}%`;
+  $('#ackGateLeft').textContent = left ? `Осталось: ${left}` : 'Всё прочитано';
   $('#ackGateStart').disabled = left > 0;
+
+  $('#ackGateList').innerHTML = items.map(({ row }, i) => {
+    const s = stat[i];
+    const tag = s.state === 'ok' ? ''
+      : `<span class="ack-gate-tag ${s.state === 'again' ? 'chg' : 'new'}">${s.state === 'again' ? 'Изменён' : 'Новый'}</span>`;
+    return `<button type="button" class="ack-gate-it${i === cur ? ' on' : ''}${s.state === 'ok' ? ' is-ok' : ''}${s.state === 'again' ? ' is-chg' : ''}" data-ack-gate-pick="${i}">
+      <span class="ack-gate-st">${s.state === 'ok' ? stdAckIcon(STD_ACK_ICONS.ok, 12, 3) : ''}</span>
+      <span class="ack-gate-it-body">
+        <span class="ack-gate-it-name">${escapeHtml(row.title || '—')}</span>
+        <span class="ack-gate-it-meta">${row.oplNumber ? `<span class="ack-gate-opl">OPL ${escapeHtml(row.oplNumber)}</span>` : ''}${tag}<span class="ack-gate-m">${escapeHtml([row.machine, row.nodePart].filter(Boolean).join(' · '))}</span></span>
+      </span>
+    </button>`;
+  }).join('');
+
+  renderAckGatePane(stat[cur]);
+}
+
+function renderAckGatePane(s) {
+  const pane = $('#ackGatePane');
+  const row = ackGateState.items[ackGateState.cur].row;
+  const st = getStandards().find(x => x.id === row.id) || row;
+  const brand = typeof getElectronicBrandForDate === 'function'
+    ? (getElectronicBrandForDate(st.line, getCurrentShiftPeriod().date) || '') : '';
+  const more = ackGateState.items.some((it, i) => i !== ackGateState.cur && getStdAckStatus(it.kind, it.row.id).state !== 'ok');
+
+  pane.innerHTML = `
+    <div class="ack-gate-scroll">
+      <h4 class="ack-gate-title">${escapeHtml(st.title || '—')}</h4>
+      ${s.state === 'again' ? `<div class="ack-gate-changes"><h5>Стандарт изменён с вашей редакции</h5>${stdAckChangesHtml(s.since)}</div>` : ''}
+      ${renderStandardViewContent(st, brand)}
+    </div>
+    <div class="ack-gate-actions">
+      ${s.state === 'ok'
+        ? `<span class="ack-gate-done">${stdAckIcon(STD_ACK_ICONS.ok, 16, 3)}Вы ознакомлены</span>`
+        : `<button type="button" class="btn btn-primary" data-ack-gate-mark="1">${more ? 'Ознакомлен, следующий →' : 'Ознакомлен'}</button>`}
+    </div>`;
+  bindPhotoSlider(pane, st);
 }
 
 document.addEventListener('click', e => {
   if (e.target.closest('#ackGateClose') || e.target.closest('#ackGateCancel')) { closeModal('#ackGateModal'); return; }
-  const v = e.target.closest('[data-ack-gate-view]');
-  if (v) { openStandardView(v.dataset.ackGateView); return; }
-  const m = e.target.closest('[data-ack-gate-mark]');
-  if (m) {
-    addStdAck(m.dataset.kind, m.dataset.ackGateMark);
+  const pick = e.target.closest('[data-ack-gate-pick]');
+  if (pick) { ackGateState.cur = +pick.dataset.ackGatePick; renderAckGate(); return; }
+  if (e.target.closest('[data-ack-gate-mark]')) {
+    const { items, cur } = ackGateState;
+    addStdAck(items[cur].kind, items[cur].row.id);
     if (typeof updateNotifyBadge === 'function') updateNotifyBadge();
+    // Дальше — к следующему неознакомленному; если все готовы, остаёмся
+    for (let k = 1; k <= items.length; k++) {
+      const j = (cur + k) % items.length;
+      if (getStdAckStatus(items[j].kind, items[j].row.id).state !== 'ok') { ackGateState.cur = j; break; }
+    }
     renderAckGate();
     return;
   }

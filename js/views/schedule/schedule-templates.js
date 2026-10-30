@@ -39,16 +39,22 @@ function renderScheduleTemplates() {
   if (inp) inp.value = '';
 }
 
-/* Снимок просматриваемой недели (с несохранёнными правками) */
-function saveWeekAsScheduleTemplate() {
-  const name = ($('#schTplName')?.value || '').trim();
-  if (!name) return showToast('Введите название шаблона', true);
+/* Строки, стоящие сейчас в матрице (неделя или шаблон), с их сменами и Run/Stop/CIL */
+function schTplSnapshotRows() {
   const rows = {};
   schTplLineRows().forEach(r => {
     if (!isSchRowMember(r)) return;
     const f = getSchRowFreq(r);
     rows[r.id] = { schedule: (f.schedule || []).map(x => ({ day: x.day, shift: x.shift })), work: f.work };
   });
+  return rows;
+}
+
+/* Снимок просматриваемой недели (с несохранёнными правками) */
+function saveWeekAsScheduleTemplate() {
+  const name = ($('#schTplName')?.value || '').trim();
+  if (!name) return showToast('Введите название шаблона', true);
+  const rows = schTplSnapshotRows();
   if (!Object.keys(rows).length) return showToast('На этой неделе в расписании ничего нет', true);
   saveScheduleTemplate({ id: uid(), name, line: schState.line, mode: schState.mode, rows, createdAt: new Date().toISOString() });
   showToast('Шаблон сохранён');
@@ -85,8 +91,87 @@ function applyScheduleTemplate(id) {
   showToast(`Шаблон «${t.name}» применён — выберите, на какие недели, и нажмите «Сохранить»`);
 }
 
+/* === НОВЫЙ ШАБЛОН С НУЛЯ ===
+   Режим на той же матрице: schState.tpl = { ids, stash }. Строки шаблона — ids,
+   смены лежат в schState.draft. Правки недели откладываются в stash и
+   возвращаются при выходе, так что просматриваемая неделя не меняется. */
+const SCH_TPL_LOCK = '#schModeSwitch, #schPartSwitch, #schLinePill, #schTemplatesBtn, #schNewTplBtn, #schDowntimeBtn, #schSaveBtn';
+
+function schTplChrome(on) {
+  $('#tab-schedule')?.classList.toggle('sch-tpl-mode', on);
+  const bar = $('#schTplBar');
+  if (bar) bar.style.display = on ? '' : 'none';
+  document.querySelectorAll(SCH_TPL_LOCK).forEach(el => { el.inert = on; });
+}
+
+function schTplResetDraft() {
+  schState.draft = {};
+  schState.removedFromSchedule = new Set();
+  schState.addedToSchedule = new Set();
+  schState.addedRows = [];
+  schState.dirty = false;
+}
+
+function schTplEnter() {
+  if (!schState.line) return showToast('Сначала выберите линию', true);
+  if (schLineForeign()) return isSchReadOnly();
+  schState.tpl = {
+    ids: new Set(),
+    stash: { draft: schState.draft, removed: schState.removedFromSchedule, added: schState.addedToSchedule, addedRows: schState.addedRows, dirty: schState.dirty }
+  };
+  schTplResetDraft();
+  $('#schTplNewName').value = '';
+  schTplChrome(true);
+  renderScheduleMatrix();
+  updateSchPanelCount();
+}
+
+function schTplLeave() {
+  const t = schState.tpl;
+  if (!t) return;
+  schState.tpl = null;
+  schState.draft = t.stash.draft;
+  schState.removedFromSchedule = t.stash.removed;
+  schState.addedToSchedule = t.stash.added;
+  schState.addedRows = t.stash.addedRows;
+  schState.dirty = t.stash.dirty;
+  schTplChrome(false);
+  updateSchSaveBtn();
+  renderScheduleMatrix();
+  updateSchPanelCount();
+}
+
+/* again — после сохранения остаться в режиме и начать следующий шаблон */
+function schTplCreate(again) {
+  if (!schState.tpl) return;
+  const name = ($('#schTplNewName').value || '').trim();
+  if (!name) return showToast('Введите название шаблона', true);
+  const rows = schTplSnapshotRows();
+  if (!Object.keys(rows).length) return showToast('Добавьте стандарты в шаблон', true);
+  if (!Object.values(rows).some(r => r.schedule.length)) return showToast('Отметьте смены хотя бы у одного стандарта', true);
+  saveScheduleTemplate({ id: uid(), name, line: schState.line, mode: schState.mode, rows, createdAt: new Date().toISOString() });
+  showToast(`Шаблон «${name}» сохранён`);
+  if (!again) return schTplLeave();
+  schState.tpl.ids = new Set();
+  schTplResetDraft();
+  $('#schTplNewName').value = '';
+  renderScheduleMatrix();
+  updateSchPanelCount();
+  $('#schTplNewName').focus();
+}
+
+$('#schNewTplBtn')?.addEventListener('click', () => schTplEnter());
+$('#schTplNewName')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); schTplCreate(false); }
+});
 $('#schTemplatesBtn')?.addEventListener('click', () => openScheduleTemplates());
 document.addEventListener('click', (e) => {
+  if (e.target.closest('#schTplCancelBtn')) {
+    if (schState.tpl && schState.tpl.ids.size && !confirm('Отменить создание шаблона? Набранное пропадёт.')) return;
+    return schTplLeave();
+  }
+  if (e.target.closest('#schTplCreateBtn')) return schTplCreate(false);
+  if (e.target.closest('#schTplCreateMoreBtn')) return schTplCreate(true);
   if (e.target.closest('#schTplClose')) return closeModal('#schTplModal');
   if (e.target.closest('#schTplSaveBtn')) return saveWeekAsScheduleTemplate();
   const ap = e.target.closest('[data-sch-tpl-apply]');

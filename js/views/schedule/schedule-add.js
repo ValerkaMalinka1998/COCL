@@ -12,7 +12,7 @@
 const schAddState = {
   selectedIds: new Set(),   // id, которые пользователь выделил для добавления
   query: '',
-  collapsedGroups: new Set()   // не используется, но на будущее
+  machine: null   // null — все машины
 };
 
 /* --- Открытие --- */
@@ -26,10 +26,13 @@ function openScheduleAddStandardsModal() {
   // Сбрасываем состояние
   schAddState.selectedIds = new Set();
   schAddState.query = '';
-  schAddState.collapsedGroups = new Set();
+  schAddState.machine = null;
 
+  modal.querySelector('.modal-header h3').textContent = schState.tpl
+    ? 'Добавить стандарты в шаблон' : 'Добавить стандарты в расписание';
   $('#schAddStandardsSearch').value = '';
   $('#schAddCheckAll').checked = false;
+  $('#schAddCheckAll').indeterminate = false;
 
   renderSchAddList();
   updateSchAddCounter();
@@ -45,14 +48,8 @@ function closeScheduleAddStandardsModal() {
   schAddState.query = '';
 }
 
-/* --- Рендер списка --- */
-function renderSchAddList() {
-  const list = $('#schAddStandardsList');
-  if (!list) return;
-
-  const q = (schAddState.query || '').trim().toLowerCase();
-
-  // Собираем все стандарты/параметры линии, кроме тех, что уже inSchedule
+/* --- Стандарты/параметры линии для окна --- */
+function getSchAddItems() {
   let allItems = [];
 
   if (schState.mode === 'mech') {
@@ -85,6 +82,45 @@ function renderSchAddList() {
         group: p.machine || '— без машины —'
       }));
   }
+  return allItems;
+}
+
+/* --- Левая колонка: машины --- */
+function renderSchAddMachines(items) {
+  const box = $('#schAddMachines');
+  if (!box) return;
+  const stat = {};
+  items.forEach(it => {
+    const s = stat[it.group] || (stat[it.group] = { free: 0, sel: 0 });
+    if (!it.inSchedule) s.free++;
+    if (schAddState.selectedIds.has(it.id)) s.sel++;
+  });
+  const names = Object.keys(stat).sort((a, b) => a.localeCompare(b, 'ru', { numeric: true }));
+  const btn = (key, label, free, sel) => `
+    <button type="button" class="sch-add-machine ${schAddState.machine === key ? 'active' : ''}" data-machine="${escapeAttr(key === null ? '' : key)}" data-all="${key === null ? 1 : 0}">
+      <span class="sch-add-machine-name">${escapeHtml(label)}</span>
+      ${sel ? `<span class="sch-add-machine-sel">${sel}</span>` : ''}
+      <span class="sch-add-machine-free">${free}</span>
+    </button>`;
+  box.innerHTML = btn(null, 'Все', items.filter(i => !i.inSchedule).length, schAddState.selectedIds.size)
+    + names.map(n => btn(n, n, stat[n].free, stat[n].sel)).join('');
+
+  const parts = names.filter(n => stat[n].sel).map(n => `${n}: ${stat[n].sel}`);
+  $('#schAddCounter').textContent = parts.length ? `Выбрано: ${parts.join(' · ')}` : 'Выбрано: 0';
+}
+
+/* --- Рендер списка --- */
+function renderSchAddList() {
+  const list = $('#schAddStandardsList');
+  if (!list) return;
+
+  const q = (schAddState.query || '').trim().toLowerCase();
+  const lineItems = getSchAddItems();
+  renderSchAddMachines(lineItems);
+
+  const m = schAddState.machine;
+  $('#schAddMainTitle').textContent = m === null ? 'Все стандарты' : `Стандарты ${m}`;
+  let allItems = m === null ? lineItems : lineItems.filter(it => it.group === m);
 
   // Фильтр поиска
   if (q) {
@@ -124,33 +160,31 @@ function renderSchAddList() {
       return oa.localeCompare(ob, 'ru', { numeric: true });
     });
 
-    const itemsHtml = items.map(it => {
-      const isAlready = it.inSchedule;
-      const isChecked = schAddState.selectedIds.has(it.id);
-      const subParts = [];
-      if (it.oplNumber) subParts.push(it.oplNumber);
-      if (it.node) subParts.push(it.node);
-      if (it.nodePart) subParts.push(it.nodePart);
-
-      return `
-        <label class="sch-add-item ${isAlready ? 'is-already' : ''}" data-item-id="${escapeAttr(it.id)}">
-          <input type="checkbox" ${isChecked ? 'checked' : ''} ${isAlready ? 'disabled' : ''}>
+    const rowHtml = it => `
+        <label class="sch-add-item ${it.inSchedule ? 'is-already' : ''}" data-item-id="${escapeAttr(it.id)}">
+          <input type="checkbox" ${schAddState.selectedIds.has(it.id) ? 'checked' : ''} ${it.inSchedule ? 'disabled' : ''}>
+          <span class="sch-add-item-opl">${escapeHtml(it.oplNumber)}</span>
           <div class="sch-add-item-info">
             <div class="sch-add-item-title">${escapeHtml(it.title)}</div>
-            <div class="sch-add-item-sub">${escapeHtml(subParts.join(' · ') || '—')}</div>
+            ${it.node ? `<div class="sch-add-item-sub">${escapeHtml(it.node)}</div>` : ''}
           </div>
-          ${isAlready ? '<span class="sch-add-item-already">уже добавлен</span>' : ''}
-        </label>
-      `;
-    }).join('');
+          ${it.nodePart ? `<span class="sch-add-item-part">${escapeHtml(it.nodePart)}</span>` : ''}
+          ${schState.mode === 'mech' ? `<button type="button" class="sch-add-item-view" data-sch-add-view="${escapeAttr(it.id)}" title="Открыть стандарт">${CIL_ICONS.eye}</button>` : ''}
+        </label>`;
+    const free = items.filter(it => !it.inSchedule);
+    const done = items.filter(it => it.inSchedule);
 
     html += `
       <div class="sch-add-group">
-        <div class="sch-add-group-head">
+        ${m === null ? `<div class="sch-add-group-head">
           <span class="sch-add-group-name">${escapeHtml(groupName)}</span>
-          <span class="sch-add-group-count">${items.length}</span>
-        </div>
-        ${itemsHtml}
+          <span class="sch-add-group-count">${free.length}</span>
+        </div>` : ''}
+        ${free.map(rowHtml).join('')}
+        ${done.length ? `<details class="sch-add-done">
+          <summary>${schState.tpl ? 'Уже в шаблоне' : 'Уже в расписании'} (${done.length})</summary>
+          ${done.map(rowHtml).join('')}
+        </details>` : ''}
       </div>
     `;
   });
@@ -158,6 +192,14 @@ function renderSchAddList() {
   list.innerHTML = html;
 
   // Обработчики
+  list.querySelectorAll('[data-sch-add-view]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();   // не переключать галочку строки
+      openStandardView(btn.dataset.schAddView);
+    });
+  });
+
   list.querySelectorAll('.sch-add-item').forEach(item => {
     const id = item.dataset.itemId;
     const cb = item.querySelector('input');
@@ -192,7 +234,7 @@ function toggleSchAddItem(id, checked) {
 /* --- Счётчик --- */
 function updateSchAddCounter() {
   const n = schAddState.selectedIds.size;
-  $('#schAddCounter').textContent = `Выбрано: ${n}`;
+  renderSchAddMachines(getSchAddItems());
 
   const btn = $('#schAddStandardsConfirm');
   if (btn) {
@@ -223,6 +265,15 @@ function confirmScheduleAddStandards() {
   if (!schAddState.selectedIds.size) return;
 
   const ids = [...schAddState.selectedIds];
+
+  if (schState.tpl) {   // режим «Новый шаблон»: расписание недели не трогаем
+    ids.forEach(id => schState.tpl.ids.add(id));
+    renderScheduleMatrix();
+    updateSchPanelCount();
+    closeScheduleAddStandardsModal();
+    showToast(`Добавлено в шаблон: ${ids.length}`);
+    return;
+  }
 
   if (!schState.addedToSchedule) schState.addedToSchedule = new Set();
   if (!schState.removedFromSchedule) schState.removedFromSchedule = new Set();
@@ -262,6 +313,14 @@ $('#schAddStandardsSearch')?.addEventListener('input', (e) => {
   // Сбрасываем "Выделить все"
   const cbAll = $('#schAddCheckAll');
   if (cbAll) { cbAll.checked = false; cbAll.indeterminate = false; }
+  renderSchAddList();
+  updateSchAddCheckAllState();
+});
+
+$('#schAddMachines')?.addEventListener('click', (e) => {
+  const b = e.target.closest('.sch-add-machine');
+  if (!b) return;
+  schAddState.machine = b.dataset.all === '1' ? null : b.dataset.machine;
   renderSchAddList();
   updateSchAddCheckAllState();
 });
