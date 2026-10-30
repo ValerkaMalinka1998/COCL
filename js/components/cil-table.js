@@ -159,7 +159,7 @@ function cilHeadHtml(dateByDayIdx, opts) {
     r1 += `<th class="cil-day ${isToday ? 'cil-today' : ''}" colspan="2"><span class="cil-day-name">${d.name}</span>${escapeHtml(dateStr ? fmtShortDate(dateStr) : '')}</th>`;
     ['day', 'night'].forEach(shift => {
       const isNow = isToday && shift === opts.activeShift;
-      const sub = opts.shiftSub ? opts.shiftSub(dateStr, shift) : (shift === 'day' ? 'день' : 'ночь');
+      const sub = opts.shiftSub ? opts.shiftSub(dateStr, shift, d.idx) : (shift === 'day' ? 'день' : 'ночь');
       const attrs = opts.colAttrs ? opts.colAttrs(dateStr, d.idx, shift) : '';
       r2 += `<th class="cil-shift cil-shift-${shift} ${isToday ? 'cil-today' : ''} ${isNow ? 'cil-shift-now' : ''}" ${attrs}>
         <span class="cil-brig ${isNow ? 'now' : ''}">${escapeHtml(brig[shift] || '—')}</span>

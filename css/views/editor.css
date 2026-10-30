@@ -395,7 +395,8 @@
   border: 1px solid var(--border-hi);
   border-radius: var(--r-md);
 }
-.et-search:focus-within { border-color: var(--accent-cyan); }
+.et-search:focus-within { border-color: var(--accent-cyan); box-shadow: var(--focus-ring); }
+.et-search input:focus { box-shadow: none; }
 .et-search input {
   flex: 1;
   min-width: 0;

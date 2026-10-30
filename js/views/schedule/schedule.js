@@ -25,7 +25,9 @@ const schState = {
   // Множество id, которые пользователь добавил в расписание (не сохраняя)
   addedToSchedule: new Set(),
   // Список добавленных "сырых" стандартов (объекты), чтобы показывать до сохранения
-  addedRows: []
+  addedRows: [],
+  // Режим «Новый шаблон»: { ids: Set строк шаблона, stash: отложенные правки недели } или null
+  tpl: null
 };
 
 /* --- Открытие вкладки --- */
@@ -46,6 +48,7 @@ function openScheduleTab() {
   schState.draft = {};
   schState.removedFromSchedule = new Set();
   schState.addedToSchedule = new Set();
+  if (schState.tpl) { schState.tpl = null; schTplChrome(false); }   // вышли из вкладки посреди шаблона
 
   // Обновляем UI переключателей
   document.querySelectorAll('#schModeSwitch .editor-mode-inline-btn').forEach(btn => {
@@ -74,6 +77,8 @@ function openScheduleTab() {
 function updateSchLinePill() {
   const codeEl = $('#schLinePillCode');
   if (!codeEl) return;
+  // Чужой участок: CSS прячет кнопки правки ([data-line-ro] [data-need="edit"])
+  $('#tab-schedule')?.toggleAttribute('data-line-ro', schLineForeign());
   if (schState.line) {
     const ctx = getBlockForLine(schState.line);
     const wsName = ctx ? ctx.workshop.name : '';
@@ -99,8 +104,9 @@ function updateSchPanelCount() {
     return Array.isArray(f.schedule) && f.schedule.length > 0;
   }).length;
 
+  // Подпись не пустая: иначе шапка на пустой неделе ниже и навигация прыгает
   if (total === 0) {
-    el.textContent = '';
+    el.textContent = schState.tpl ? 'в шаблоне пока ничего нет' : schState.mode === 'mech' ? 'на этой неделе стандартов нет' : 'на этой неделе параметров нет';
     return;
   }
 
@@ -112,6 +118,7 @@ function updateSchPanelCount() {
 /* Входит ли строка в расписание просматриваемой недели
    (шаблон недели → разовые правки → несохранённые добавления/удаления) */
 function isSchRowMember(row) {
+  if (schState.tpl) return schState.tpl.ids.has(row.id);   // режим «Новый шаблон»
   const removed = schState.removedFromSchedule || new Set();
   const added = schState.addedToSchedule || new Set();
   if (removed.has(row.id)) return false;
@@ -122,6 +129,7 @@ function isSchRowMember(row) {
 /* Идёт ли у строки валидация на просматриваемой неделе: такие стандарты
    стоят в расписании сами (каждая смена срока), последними строками */
 function isSchRowValidation(row) {
+  if (schState.tpl) return false;   // шаблон не привязан к неделе
   return getClWeekDays(schState.weekOffset || 0).some(d => isValidationDay(row, d));
 }
 function isSchRowShown(row) {
@@ -173,7 +181,7 @@ function getFilteredScheduleRows() {
 /* --- Обновить счётчики над матрицей расписания --- */
 function updateSchMatrixCounters(rows) {
   const lg = $('#schMatrixLegend');
-  if (lg) lg.innerHTML = legendHtml(['day', 'night', 'past', 'val']);
+  if (lg) lg.innerHTML = legendHtml(schState.tpl ? ['day', 'night'] : ['day', 'night', 'past', 'val']);
   const el = $('#schMatrixCounters');
   if (!el) return;
 
@@ -259,21 +267,22 @@ function renderScheduleMatrix() {
 
   // Пусто?
   if (!allRows.length) {
-    if (toolbar) toolbar.style.display = 'none';
-    // Навигация по неделям остаётся и на пустой неделе — иначе не вернуться
+    // Навигация по неделям остаётся и на пустой неделе — иначе не вернуться;
+    // тулбар не прячем, чтобы стрелки не прыгали вверх
     const offE = schState.weekOffset || 0;
     wrap.innerHTML = `
-      <div class="cil-toolbar sch-cil-toolbar"><div class="cil-week">
+      ${schState.tpl ? '' : `<div class="cil-toolbar sch-cil-toolbar"><div class="cil-week">
         <button type="button" class="cil-week-btn" id="schWeekPrev" title="Предыдущая неделя">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <div class="cil-week-label"><span class="cil-week-title">Нед. ${cilIsoWeek(getSchWeekStart(offE))} · ${escapeHtml(getWeekLabel(offE))}</span></div>
+        <div class="cil-week-label"><span class="cil-week-title">Нед. ${cilIsoWeek(getSchWeekStart(offE))} · ${escapeHtml(getWeekLabel(offE))}</span>
+          <span class="cil-week-sub">${offE === 0 ? 'Эта неделя' : offE === 1 ? 'Следующая неделя' : offE < 0 ? 'Прошедшая неделя' : 'Неделя через ' + offE}</span></div>
         <button type="button" class="cil-week-btn" id="schWeekNext" title="Следующая неделя">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
         <button type="button" class="sch-week-chip ${offE === 0 ? 'active' : ''}" data-sch-week="0">Эта</button>
         <button type="button" class="sch-week-chip ${offE === 1 ? 'active' : ''}" data-sch-week="1">Следующая</button>
-      </div></div>
+      </div></div>`}
       <div class="sch-empty">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
@@ -281,9 +290,9 @@ function renderScheduleMatrix() {
           <line x1="8" y1="2" x2="8" y2="6"/>
           <line x1="3" y1="10" x2="21" y2="10"/>
         </svg>
-        <div class="sch-empty-title">В расписании пока нет стандартов</div>
+        <div class="sch-empty-title">${schState.tpl ? 'В шаблоне пока нет стандартов' : 'В расписании пока нет стандартов'}</div>
         <div class="sch-empty-sub">
-          Добавьте стандарты, которые должны регулярно проверяться оператором.
+          ${schState.tpl ? 'Добавьте стандарты и отметьте смены, на которые они попадут.' : 'Добавьте стандарты, которые должны регулярно проверяться оператором.'}
         </div>
         <button type="button" class="btn btn-primary btn-icon-text" id="schAddStandardsBtnEmpty">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -306,25 +315,28 @@ function renderScheduleMatrix() {
   }
 
   const weekDays = getClWeekDays(schState.weekOffset);
-  const dateByDayIdx = cilDateByDayIdx(weekDays);
+  const tpl = !!schState.tpl;   // шаблон без дат: шапка по дням недели
+  const dateByDayIdx = tpl ? {} : cilDateByDayIdx(weekDays);
 
   // Навигация по неделям. Прошлое не меняется: прошедшая неделя — только
   // просмотр, на текущей нельзя планировать уже прошедшие смены.
   const off = schState.weekOffset || 0;
-  const isPastWeek = off < 0;
+  const foreign = schLineForeign();
+  const isPastWeek = !tpl && off < 0;
   const weekLabel = getWeekLabel(off);
   const weekKind = off === 0 ? 'Эта неделя'
     : off === 1 ? 'Следующая неделя'
     : off < 0 ? 'Прошедшая неделя'
     : 'Неделя через ' + off;
   let weekSub;
-  if (isPastWeek) weekSub = 'только просмотр — прошлое не меняется';
+  if (foreign) weekSub = 'линия не вашего участка — только просмотр';
+  else if (isPastWeek) weekSub = 'только просмотр — прошлое не меняется';
   else if (schState.saveScope === 'week') weekSub = 'изменения — только для этой недели';
   else if (off === 0) weekSub = 'изменения — на оставшиеся смены и в шаблон со следующей недели';
   else weekSub = 'изменения — в шаблон с этой недели и далее';
   if (hasScheduleWeekOverride(getSchWeekStart(off), schState.line)) weekSub += ' · есть разовые правки';
 
-  const scopeHtml = isPastWeek ? '' : `
+  const scopeHtml = isPastWeek || foreign ? '' : `
       <div class="sch-scope" role="group" aria-label="На какие недели действуют правки">
         <span class="sch-scope-label">Правки действуют</span>
         <button type="button" class="sch-scope-btn ${schState.saveScope !== 'week' ? 'active' : ''}" data-sch-scope="forward"
@@ -344,7 +356,7 @@ function renderScheduleMatrix() {
     perShiftSec[k] = (perShiftSec[k] || 0) + cilRowDurationSec(row);
   }));
 
-  let html = `
+  let html = tpl ? '' : `
     <div class="cil-toolbar sch-cil-toolbar">
       <div class="cil-week">
         <button type="button" class="cil-week-btn" id="schWeekPrev" title="Предыдущая неделя">
@@ -363,23 +375,23 @@ function renderScheduleMatrix() {
       ${lineBrandBarHtml(schState.line, 'schEditBrandBtn')}
       ${scopeHtml}
     </div>
-    <div class="sch-cil-hint">${escapeHtml(weekSub)}</div>
-    <div class="cil-scroll cil-scroll-page"><table class="cil-table cil-has-when ${isPastWeek ? 'cil-readonly' : ''}">`;
+    <div class="sch-cil-hint">${escapeHtml(weekSub)}</div>`;
+  if (tpl) html += '<div class="sch-cil-hint">Шаблон не привязан к датам: отметьте смены, а применить его можно к любой неделе.</div>';
+  html += `<div class="cil-scroll cil-scroll-page"><table class="cil-table cil-has-when ${isPastWeek || foreign ? 'cil-readonly' : ''}">`;
 
   html += cilHeadHtml(dateByDayIdx, {
-    activeDate: off === 0 ? cur.date : '',
+    activeDate: off === 0 && !tpl ? cur.date : '',
     activeShift: cur.shiftType,
     infoHeads: `<th class="cil-c-zone" rowspan="2">Машина<br>/ №</th>
       <th class="cil-c-std" rowspan="2">${isElec ? 'Параметр' : 'Стандарт'}</th>
       <th class="cil-c-when" rowspan="2">Когда</th>
       <th class="cil-c-cnt" rowspan="2">Смен</th>`,
-    shiftSub: (dateStr, shift) => {
-      const dayIdx = new Date(dateStr + 'T12:00:00').getDay();
+    shiftSub: (dateStr, shift, dayIdx) => {
       const n = perShift[`${dayIdx}|${shift}`] || 0;
       return `<span class="cil-shift-sub">${shift === 'day' ? 'день' : 'ночь'} · ${n}</span>${cilShiftTotalHtml(perShiftSec[`${dayIdx}|${shift}`])}`;
     },
     colAttrs: (dateStr, dayIdx, shift) => {
-      const locked = isPastWeek || isShiftPast(dateStr, shift);
+      const locked = isPastWeek || foreign || (!tpl && isShiftPast(dateStr, shift));
       return locked
         ? 'title="Смена прошла — только просмотр"'
         : `data-sch-col-day="${dayIdx}" data-sch-col-shift="${shift}" title="Отметить или снять эту смену у всех строк"`;
@@ -451,6 +463,9 @@ function getSchRowFreq(row) {
   const dr = schState.draft[row.id];
   if (dr) return { ...dr, timeWindows: autoTimeWindows(dr.work, dr.schedule) };
 
+  // Новый шаблон начинается с пустых смен
+  if (schState.tpl) return { ...base, schedule: [], timeWindows: [], work: normWork(row.work) };
+
   // Шаблон недели + разовые правки этой недели
   const w = getRowForWeek(row, getSchWeekStart(schState.weekOffset || 0), schState.line);
   return { ...base, schedule: w.schedule, timeWindows: w.timeWindows, work: w.work };
@@ -519,7 +534,8 @@ function renderScheduleRow(row, dateByDayIdx, num, zone, isElec) {
     ? normWork(freq.work)
     : normWork(row.work);
   const id = escapeAttr(row.id);
-  const isPastWeek = (schState.weekOffset || 0) < 0;
+  const isPastWeek = !schState.tpl && (schState.weekOffset || 0) < 0;
+  const foreign = schLineForeign();   // чужой участок: только просмотр
   const valWeek = isSchRowValidation(row);
   const valOn = valWeek && isOnValidation(row);
   const member = isSchRowMember(row);
@@ -533,13 +549,15 @@ function renderScheduleRow(row, dateByDayIdx, num, zone, isElec) {
   let html = `<tr class="cil-row${valOn ? ' cil-row-val' : ''}" data-row-id="${id}">
     <td class="cil-c-zone cil-z${zone}">${escapeHtml(machine)}<small>№ ${num}</small></td>
     <td class="cil-c-std"><div class="cil-std-box">
-      <div class="cil-std-title"><span class="cil-std-name">${escapeHtml(title)}</span>${valOn ? valChipHtml(row) : ''}</div>
+      <div class="cil-std-title">${schState.mode === 'mech'
+        ? `<button type="button" class="cil-std-name cil-std-link" data-sch-view="${id}" title="Открыть стандарт">${escapeHtml(title)}</button>`
+        : `<span class="cil-std-name">${escapeHtml(title)}</span>`}${valOn ? valChipHtml(row) : ''}</div>
       <div class="cil-std-sub">
         ${row.oplNumber ? `<span class="cil-opl">${escapeHtml(row.oplNumber)}</span>` : ''}
         ${row.node ? `<span class="cil-node">${CIL_ICONS.gear}${escapeHtml(row.node)}</span>` : ''}
         ${cilDurChip(cilRowDurationSec(row), 'cil-tag cil-tag-dur')}
       </div>
-      ${member ? `<button type="button" class="cil-row-del" data-remove-from-schedule="${id}" title="Убрать из расписания">
+      ${member && !foreign ? `<button type="button" class="cil-row-del" data-remove-from-schedule="${id}" title="Убрать из расписания">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>` : ''}
     </div></td>
@@ -550,7 +568,7 @@ function renderScheduleRow(row, dateByDayIdx, num, zone, isElec) {
     <td class="cil-c-cnt">
       <span class="cil-cnt-val">${n}<small> / 14</small></span>
       <span class="cil-cnt-bar"><i style="width:${Math.round(n / 14 * 100)}%"></i></span>
-      ${valOn && !isPastWeek ? `<div class="cil-quick val-quick" title="Валидация: ${valCount} ${pluralRu(valCount, 'смена', 'смены', 'смен')} на этой неделе">
+      ${foreign ? '' : valOn && !isPastWeek ? `<div class="cil-quick val-quick" title="Валидация: ${valCount} ${pluralRu(valCount, 'смена', 'смены', 'смен')} на этой неделе">
         <button type="button" data-val-act="extend" data-val-id="${id}" data-val-kind="${isElec ? 'elec' : 'mech'}" title="Продлить на 14 смен">+14</button>
         <button type="button" class="val-q-ok" data-val-act="approve" data-val-id="${id}" data-val-kind="${isElec ? 'elec' : 'mech'}" title="Утвердить стандарт">утв.</button>
         <button type="button" class="val-q-no" data-val-act="reject" data-val-id="${id}" data-val-kind="${isElec ? 'elec' : 'mech'}" title="Отклонить (деактивировать)">откл.</button>
@@ -571,7 +589,7 @@ function renderScheduleRow(row, dateByDayIdx, num, zone, isElec) {
   CIL_DAYS.forEach(d => {
     const dateStr = dateByDayIdx[d.idx] || '';
     ['day', 'night'].forEach(shift => {
-      const isPast = isPastWeek || (!!dateStr && isShiftPast(dateStr, shift));
+      const isPast = isPastWeek || foreign || (!!dateStr && isShiftPast(dateStr, shift));
       const shiftName = shift === 'day' ? 'день' : 'ночь';
       if (isValCell(dateStr, shift)) {
         // Смена валидации: проверка обязательна, в расписании не снимается
@@ -589,7 +607,7 @@ function renderScheduleRow(row, dateByDayIdx, num, zone, isElec) {
       }
       const on = isOn(d.idx, shift);
       const tip = isPast
-        ? `${d.name} · ${shiftName} — ${isPastWeek ? 'прошедшая неделя, только просмотр' : 'смена уже прошла'}`
+        ? `${d.name} · ${shiftName} — ${foreign ? 'чужой участок, только просмотр' : isPastWeek ? 'прошедшая неделя, только просмотр' : 'смена уже прошла'}`
         : `${d.name} · ${shiftName}`;
       html += `<td class="${cilTdClass(shift, dateStr === curDate && !isPastWeek && schState.weekOffset === 0, cellCls(dateStr, shift, isPast))}">
         <button type="button" class="cil-plan cil-plan-${shift} ${on ? 'on' : ''} ${isPast ? 'locked' : ''}"
@@ -602,8 +620,17 @@ function renderScheduleRow(row, dateByDayIdx, num, zone, isElec) {
   return html + '</tr>';
 }
 /* Прошедшую неделю можно только смотреть */
+/* Линия чужого участка: аналитику — только просмотр расписания */
+function schLineForeign() {
+  return !!schState.line && !canDo('edit', schState.line);
+}
+
 function isSchReadOnly() {
-  if ((schState.weekOffset || 0) < 0) {
+  if (schLineForeign()) {
+    showToast(`Линия ${schState.line} — не вашего участка: расписание только для просмотра`, true);
+    return true;
+  }
+  if (!schState.tpl && (schState.weekOffset || 0) < 0) {
     showToast('Прошедшая неделя — только просмотр', true);
     return true;
   }
@@ -617,6 +644,14 @@ function removeRowFromSchedule(rowId) {
 
   const removedRow = schState.rows.find(r => r.id === rowId);
   if (!removedRow) return;
+
+  if (schState.tpl) {   // шаблон: убрать без вопросов, строка ещё нигде не сохранена
+    schState.tpl.ids.delete(rowId);
+    delete schState.draft[rowId];
+    renderScheduleMatrix();
+    updateSchPanelCount();
+    return;
+  }
 
   const title = removedRow.title || removedRow.paramName || 'стандарт';
   if (!confirm(`Убрать из расписания: "${title}"?`)) return;
@@ -681,7 +716,8 @@ function schDropPastCells(row) {
 
 /* Можно ли менять смену (прошлое не меняется) */
 function schCellEditable(day, shift) {
-  if ((schState.weekOffset || 0) < 0) return false;
+  if (schState.tpl) return !schLineForeign();   // шаблон без дат: прошедших смен нет
+  if ((schState.weekOffset || 0) < 0 || schLineForeign()) return false;
   const weekDays = getClWeekDays(schState.weekOffset);
   const dateStr = cilDateByDayIdx(weekDays)[day];
   return !!dateStr && !isShiftPast(dateStr, shift);
@@ -698,6 +734,11 @@ function bindScheduleCells() {
   const wrap = $('#schMatrixWrap');
   if (!wrap) return;
 
+  // Клик по названию — просмотр стандарта (как в Чек-листе CL)
+  wrap.querySelectorAll('[data-sch-view]').forEach(btn => {
+    btn.addEventListener('click', () => openStandardView(btn.dataset.schView));
+  });
+
   wrap.querySelectorAll('.cil-plan').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -706,7 +747,9 @@ function bindScheduleCells() {
         return;
       }
       if (btn.dataset.locked === '1') {
-        if ((schState.weekOffset || 0) < 0) {
+        if (schLineForeign()) {
+          isSchReadOnly();
+        } else if ((schState.weekOffset || 0) < 0) {
           showToast('Прошедшая неделя — только просмотр', true);
         } else {
           showToast('Смена уже прошла. Чтобы она повторялась дальше — отметьте её на следующей неделе', true);
@@ -793,6 +836,7 @@ function saveSchedule() {
 
   const weekOffset = schState.weekOffset || 0;
   if (weekOffset < 0) return showToast('Прошедшую неделю изменить нельзя', true);
+  if (isSchReadOnly()) return;
   const weekLabel = getWeekLabel(weekOffset);
 
   let msg;

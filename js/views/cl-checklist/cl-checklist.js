@@ -322,15 +322,6 @@ function updateClPartCounts(dateByDayIdx, hist, isMember, checkedIds) {
   });
 }
 
-/* Номер недели ISO 8601 */
-function cilIsoWeek(dateStr) {
-  const d = new Date(dateStr + 'T12:00:00');
-  const day = (d.getDay() + 6) % 7;
-  d.setDate(d.getDate() - day + 3);
-  const firstThu = new Date(d.getFullYear(), 0, 4, 12);
-  return 1 + Math.round(((d - firstThu) / 86400000 - 3 + ((firstThu.getDay() + 6) % 7)) / 7);
-}
-
 /* История CL линии: результат по ключу «дата|смена|id» и последний статус стандарта */
 function clHistoryIndex() {
   const cell = new Map();
@@ -413,16 +404,15 @@ function clWeekNavHtml() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
         ${!isCurrentWeek ? '<button type="button" class="cil-week-today" id="clWeekToday">Сегодня</button>' : ''}
-        <label class="cil-week-archive" title="Архив: открыть проверенный чек-лист любой недели по дате">Архив
-          <input type="date" id="clWeekPick" value="${escapeAttr(weekDays[0])}" max="${escapeAttr(todayISO())}"></label>
+        <label class="cil-week-archive" title="Архив: открыть проверенный чек-лист любой недели — в календаре слева номера недель года">Архив
+          <input type="week" id="clWeekPick" value="${escapeAttr(cilIsoWeekValue(weekDays[0]))}" max="${escapeAttr(cilIsoWeekValue(todayISO()))}"></label>
       </div>`;
 }
 
 function bindClWeekNav() {
   $('#clWeekPick')?.addEventListener('change', (e) => {
-    if (!e.target.value) return;
-    const dow = new Date(e.target.value + 'T12:00:00').getDay();
-    const mon = addDaysISO(e.target.value, -((dow + 6) % 7));
+    const mon = cilIsoWeekMonday(e.target.value);
+    if (!mon) return;
     clState.weekOffset = Math.round((new Date(mon + 'T12:00:00') - new Date(getClWeekDays(0)[0] + 'T12:00:00')) / (7 * 864e5));
     renderClMatrix();
   });

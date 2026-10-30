@@ -444,21 +444,25 @@ function showImportReport(result, containerId) {
     html += '</div>';
   }
 
+  // Первые 10 — сразу, остальные — по «Показать ещё N» (без окна, раскрывается на месте)
+  const moreHtml = (n) => `<details class="import-more"><summary>Показать ещё ${n}</summary>`;
+
   if (result.duplicates.length > 0) {
+    const dupHtml = (d) => `<code>${escapeHtml(typeof d === 'string' ? d
+      : `${d.oplNumber || d.name || ''}${d.machine ? ' · ' + d.machine : ''}`)}</code>`;
     html += `<div style="margin-top:8px"><strong>Уже есть в приложении (пропущены):</strong> `;
-    html += result.duplicates.slice(0, 10).map(d => `<code>${escapeHtml(typeof d === 'string' ? d
-      : `${d.oplNumber || d.name || ''}${d.machine ? ' · ' + d.machine : ''}`)}</code>`).join(', ');
-    if (result.duplicates.length > 10) html += ` и ещё ${result.duplicates.length - 10}...`;
+    html += result.duplicates.slice(0, 10).map(dupHtml).join(', ');
+    if (result.duplicates.length > 10) html += moreHtml(result.duplicates.length - 10) + result.duplicates.slice(10).map(dupHtml).join(', ') + '</details>';
     html += '</div>';
   }
 
   if (result.errors.length > 0) {
+    const errHtml = (e) => `<li>${e.row != null ? `Строка ${e.row}: ` : ''}${escapeHtml(e.message)}</li>`;
     html += '<div style="margin-top:8px"><strong>Строки с ошибками:</strong><ul>';
-    result.errors.slice(0, 10).forEach(e => {
-      html += `<li>${e.row != null ? `Строка ${e.row}: ` : ''}${escapeHtml(e.message)}</li>`;
-    });
-    if (result.errors.length > 10) html += `<li>...и ещё ${result.errors.length - 10}</li>`;
-    html += '</ul></div>';
+    html += result.errors.slice(0, 10).map(errHtml).join('');
+    html += '</ul>';
+    if (result.errors.length > 10) html += moreHtml(result.errors.length - 10) + '<ul>' + result.errors.slice(10).map(errHtml).join('') + '</ul></details>';
+    html += '</div>';
   }
 
   report.innerHTML = html;

@@ -145,6 +145,7 @@ document.addEventListener('click', (e) => {
   const all = isElec ? getElectronicParams().map(normalizeElectronicParam) : getStandards();
   const row = all.find(x => x.id === btn.dataset.valId);
   if (!row || !row.validation) return;
+  if (!canDo('edit', row.line)) return showToast(`Решение по валидации — у аналитика участка линии ${row.line}`, true);
   const cur = getCurrentShiftPeriod();
   const curIdx = valShiftIndex(cur.date, cur.shiftType);
   const v = row.validation = normalizeValidation(row.validation);

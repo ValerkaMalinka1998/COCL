@@ -196,8 +196,14 @@ function dashWeeks(lines) {
 /* ============================================================
    РЕНДЕР: ГЛАВНЫЙ ЭКРАН
    ============================================================ */
-/* Отрисовка только читает данные — история и стандарты разбираются из JSON один раз */
-function renderDashboard() { dashWithTally(renderDashboardMain); }
+/* Отрисовка только читает данные — история и стандарты разбираются из JSON один раз.
+   reuse: раскрыть строку / вернуться из паспорта — данные не менялись, расчёт периода
+   берётся из dashMainMemo (сбрасывается при входе на вкладку) */
+let dashMainMemo = null;
+function renderDashboard(reuse) {
+  if (!reuse) dashMainMemo = null;
+  dashWithTally(renderDashboardMain);
+}
 function renderDashboardMain() {
   const box = $('#dashboardContent');
   if (!box) return;
@@ -212,25 +218,36 @@ function renderDashboardMain() {
   dashState.line = null;
   renderDashboardHead();
 
-
-  const lines = dashLines();
-  const slots = dashSlots(dashState.period);
-  const sum = dashSummary(lines, slots);
-  const prev = dashSummary(lines, dashSlots(dashState.period, 1));
+  // Текущая смена в ключе: дашборд открыт на мониторе — с новой сменой считаем заново
+  const cur = getCurrentShiftPeriod();
+  const key = [dashboardWorkshop, dashState.period, dashState.from, dashState.to, cur.date, cur.shiftType].join('|');
+  if (!dashMainMemo || dashMainMemo.key !== key) {
+    const lines = dashLines();
+    const slots = dashSlots(dashState.period);
+    const sum = dashSummary(lines, slots);
+    const prev = dashSummary(lines, dashSlots(dashState.period, 1));
+    dashMainMemo = {
+      key, lines, sum,
+      kpis: dashKpisHtml(sum, prev),
+      weeks: dashWeeksHtml(dashWeeks(lines)),
+      letters: dashLettersHtml(sum)
+    };
+  }
+  const mm = dashMainMemo;
 
   box.innerHTML = `
-    ${dashKpisHtml(sum, prev)}
+    ${mm.kpis}
     <div class="card dash-card">
       <h3 class="dash-h">Линии, части и машины <small>выполнение расписания CL · отклонений из проверенных пунктов · клик по линии — раскрыть</small></h3>
-      ${dashTreeHtml(lines, sum)}
+      ${dashTreeHtml(mm.lines, mm.sum)}
     </div>
     <div class="card dash-card">
       <h3 class="dash-h">Динамика по неделям <small>выполнение расписания CL и число отклонений</small></h3>
-      ${dashWeeksHtml(dashWeeks(lines))}
+      ${mm.weeks}
     </div>
     <div class="card dash-card">
       <h3 class="dash-h">Смены <small>выполнение проверок по букве смены за период</small></h3>
-      ${dashLettersHtml(sum)}
+      ${mm.letters}
     </div>`;
 }
 
@@ -250,6 +267,8 @@ function dashDoneCell(done, planned) {
     : '<span class="hist-sub">нет плана</span>';
 }
 function dashFailCell(n, total) {
+  // Проверки были, отклонений нет — «нет» зелёным вместо «0 из N»
+  if (total && !n) return `<span class="hist-c-ok" title="Проверено пунктов: ${total}, отклонений нет">нет</span>`;
   return `<span class="${n && total >= DASH_MIN_CHECKS ? 'hist-c-fail' : total ? '' : 'hist-sub'}">${dashShareText(n, total)}</span>`;
 }
 
@@ -598,7 +617,7 @@ $('#tab-dashboard')?.addEventListener('click', (e) => {
     try { localStorage.setItem('cl_dashboard_period', dashState.period); } catch (err) { /* нет доступа */ }
     return dashState.line ? renderDashboardLine() : renderDashboard();
   }
-  if (t.closest('[data-dash-back]')) { dashState.line = null; return renderDashboard(); }
+  if (t.closest('[data-dash-back]')) { dashState.line = null; return renderDashboard(true); }
   if (t.closest('[data-dash-date]')) return;
   const mach = t.closest('[data-dash-mach]');
   if (mach) { dashState.mach = dashState.mach === mach.dataset.dashMach ? '' : mach.dataset.dashMach; return renderDashboardLine(); }
@@ -613,7 +632,7 @@ $('#tab-dashboard')?.addEventListener('click', (e) => {
   if (tg) {
     const l = tg.dataset.dashToggle;
     if (!dashState.openLines.delete(l)) dashState.openLines.add(l);
-    return renderDashboard();
+    return renderDashboard(true);
   }
   const ln = t.closest('[data-dash-open-line]');
   if (ln) return openDashboardLine(ln.dataset.dashOpenLine);

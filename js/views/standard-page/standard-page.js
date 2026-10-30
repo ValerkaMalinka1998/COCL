@@ -31,7 +31,7 @@ function openStandardFullView(id, mode, push = true) {
   svFullState.standardId = id;
   svFullState.isNew = false;
   svFullState.proposalId = null;
-  svFullState.mode = mode === 'edit' && canDo('edit') ? 'edit' : 'view';
+  svFullState.mode = mode === 'edit' && canDo('edit', st.line) ? 'edit' : 'view';
   svFullState.originalData = JSON.parse(JSON.stringify(st));
 
   // ВАЖНО: если открываем сразу в режиме редактирования —
@@ -82,6 +82,7 @@ $('#svFullLinkBtn')?.addEventListener('click', () => {
 function openStandardCreatePage() {
   const line = localStorage.getItem('cl_editor_line');
   if (!line) return showToast('Сначала выберите линию', true);
+  if (!canDo('propose') && !canDo('edit', line)) return showToast(`Линия ${line} — не вашего участка: стандарты можно только копировать к себе`, true);
 
   const st = createEmptyStandard();
   st.id = uid();
@@ -172,8 +173,9 @@ function renderStandardFullView() {
   const linkBtn = $('#svFullLinkBtn');
   if (linkBtn) linkBtn.style.display = svFullState.isNew ? 'none' : 'inline-flex';
 
+  const canEdit = canDo('edit', (svFullState.editingData || svFullState.originalData || {}).line);
   const saveLbl = saveBtn && saveBtn.querySelector('span');
-  if (saveLbl) saveLbl.textContent = canDo('edit') ? (svFullState.proposalId ? 'Утвердить и сохранить' : 'Сохранить') : 'Отправить аналитику';
+  if (saveLbl) saveLbl.textContent = canEdit ? (svFullState.proposalId ? 'Утвердить и сохранить' : 'Сохранить') : 'Отправить аналитику';
   if (isEdit) {
     if (viewBtn) viewBtn.style.display = 'none';
     if (editBtn) editBtn.style.display = 'none';
@@ -183,7 +185,8 @@ function renderStandardFullView() {
   } else {
     if (viewBtn) viewBtn.style.display = 'inline-flex';
     // Оператор не правит сам — предлагает изменения аналитику
-    if (editBtn) editBtn.style.display = canDo('edit') ? 'inline-flex' : 'none';
+    // Аналитик чужого участка — только просмотр (копировать к себе — из таблицы стандартов)
+    if (editBtn) editBtn.style.display = canEdit ? 'inline-flex' : 'none';
     if (proposalBtn) proposalBtn.style.display = canDo('propose') ? 'inline-flex' : 'none';
     if (saveBtn) saveBtn.style.display = 'none';
     if (cancelBtn) cancelBtn.style.display = 'none';
@@ -336,7 +339,7 @@ function renderSvMainFields(st, isEdit) {
         <input type="text" id="svf_node" value="${escapeAttr(st.node || '')}">
       </div>
       <div class="sv-full-field-edit">
-        <label>Время на проверку (секунд)</label>
+        <label class="required">Время на проверку (секунд)</label>
         <input type="number" id="svf_durationSec" min="0" step="1"
                value="${escapeAttr(st.durationSec || 0)}"
                placeholder="60">
@@ -345,7 +348,7 @@ function renderSvMainFields(st, isEdit) {
         </p>
       </div>
       <div class="sv-full-field-edit">
-        <label>Инструмент</label>
+        <label class="required">Инструмент</label>
         <input type="text" id="svf_tool"
                value="${escapeAttr(st.tool || '')}"
                placeholder="Штангенциркуль, линейка...">

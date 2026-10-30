@@ -496,6 +496,8 @@ $('#svFullSaveBtn')?.addEventListener('click', () => {
   if (!oplNumber) return showToast('Укажите OPL №', true);
   if (!machine)   return showToast('Выберите машину', true);
   if (!node)      return showToast('Укажите узел', true);
+  if (!(toolEl ? toolEl.value.trim() : st.tool)) return showToast('Укажите инструмент', true);
+  if (!(durationEl ? parseInt(durationEl.value, 10) > 0 : st.durationSec > 0)) return showToast('Укажите время на проверку', true);
 
   // Описания и таблица точек живут только в полях страницы —
   // забираем их отсюда (раньше правки этих блоков терялись при сохранении).
@@ -592,6 +594,7 @@ $('#svFullSaveBtn')?.addEventListener('click', () => {
     if (typeof updateNotifyBadge === 'function') updateNotifyBadge();
     return;
   }
+  if (!canDo('edit', updated.line)) return showToast(`Линия ${updated.line} — не вашего участка: сохранить нельзя`, true);
   saveStandard(updated);
   // Аналитик рассматривал предложение оператора — отмечаем решение
   if (svFullState.proposalId) {

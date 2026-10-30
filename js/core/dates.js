@@ -145,3 +145,29 @@ function fmtShortDate(dateStr) {
   if (parts.length !== 3) return '';
   return `${parts[2]}.${parts[1]}`;
 }
+
+/* Номер недели ISO 8601 */
+function cilIsoWeek(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const day = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - day + 3);
+  const firstThu = new Date(d.getFullYear(), 0, 4, 12);
+  return 1 + Math.round(((d - firstThu) / 86400000 - 3 + ((firstThu.getDay() + 6) % 7)) / 7);
+}
+
+/* Значение для <input type="week">: «2026-W44» (год — ISO, по четвергу недели) */
+function cilIsoWeekValue(dateStr) {
+  const dow = (new Date(dateStr + 'T12:00:00').getDay() + 6) % 7;
+  const year = addDaysISO(dateStr, 3 - dow).slice(0, 4);
+  return `${year}-W${String(cilIsoWeek(dateStr)).padStart(2, '0')}`;
+}
+
+/* «2026-W44» → понедельник этой недели («2026-10-26»); неверное значение — '' */
+function cilIsoWeekMonday(value) {
+  const m = /^(\d{4})-W(\d{2})$/.exec(value || '');
+  if (!m) return '';
+  // 4 января всегда в 1-й ISO-неделе
+  const jan4 = `${m[1]}-01-04`;
+  const dow = (new Date(jan4 + 'T12:00:00').getDay() + 6) % 7;
+  return addDaysISO(jan4, -dow + (Number(m[2]) - 1) * 7);
+}

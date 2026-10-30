@@ -184,6 +184,14 @@
   border-radius: 0 8px 8px 0;
 }
 
+/* Наведение — вся строка: имя бренда в th, глобальный tr:hover td его не красит */
+.svm-norm tbody tr:not(.is-hl):not(.is-new):hover th,
+.svm-norm tbody tr:not(.is-hl):not(.is-new):hover td {
+  background: var(--bg-hover);
+}
+.svm-norm tbody tr:hover th { border-radius: 8px 0 0 8px; }
+.svm-norm tbody tr:hover td:last-child { border-radius: 0 8px 8px 0; }
+
 .svm-now {
   margin-left: 6px;
   padding: 1px 6px;
