@@ -498,3 +498,9 @@ test('роли: оператор только предлагает; предло
   assert.equal(fn('canDo')('edit'), true);
   app(`localStorage.removeItem('cl_current_role')`);
 });
+
+test('normalizeStandard: у стандарта без topLosses (импорт) поле — пустой массив', () => {
+  const st = plain(fn('normalizeStandard')({ id: 'x', title: 'T', line: 'SD08' }));
+  assert.deepEqual(st.topLosses, []);
+  assert.deepEqual(plain(fn('normalizeStandard')({ id: 'y', topLosses: ['a'] })).topLosses, ['a']);
+});
